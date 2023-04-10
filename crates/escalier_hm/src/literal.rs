@@ -1,9 +1,13 @@
+use derive_visitor::{Drive, DriveMut};
 use std::fmt;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Drive, DriveMut, PartialEq, Eq, Hash)]
 pub enum Literal {
+    #[drive(skip)]
     Number(String),
+    #[drive(skip)]
     String(String),
+    #[drive(skip)]
     Boolean(bool),
 }
 

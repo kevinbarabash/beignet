@@ -766,7 +766,19 @@ mod tests {
 
         let num = new_constructor(&mut a, "number", &[]);
         let str = new_constructor(&mut a, "string", &[]);
-        let param_type = new_object_type(&mut a, &[("a".to_string(), num), ("b".to_string(), str)]);
+        let param_type = new_object_type(
+            &mut a,
+            &[
+                ObjProp {
+                    name: "a".to_string(),
+                    t: num,
+                },
+                ObjProp {
+                    name: "b".to_string(),
+                    t: str,
+                },
+            ],
+        );
         let bool = new_constructor(&mut a, "boolean", &[]);
         let func = new_func_type(&mut a, &[param_type], bool);
         my_ctx.env.insert("foo".to_string(), func);
@@ -795,7 +807,19 @@ mod tests {
 
         let num = new_constructor(&mut a, "number", &[]);
         let str = new_constructor(&mut a, "string", &[]);
-        let param_type = new_object_type(&mut a, &[("a".to_string(), num), ("b".to_string(), str)]);
+        let param_type = new_object_type(
+            &mut a,
+            &[
+                ObjProp {
+                    name: "a".to_string(),
+                    t: num,
+                },
+                ObjProp {
+                    name: "b".to_string(),
+                    t: str,
+                },
+            ],
+        );
         let bool = new_constructor(&mut a, "boolean", &[]);
         let func = new_func_type(&mut a, &[param_type], bool);
         my_ctx.env.insert("foo".to_string(), func);

@@ -1,50 +1,61 @@
 // Types and type constructors
+use derive_visitor::{Drive, DriveMut};
+
 use crate::literal::Literal;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Drive, DriveMut, Copy, PartialEq, Eq, Hash)]
 pub struct ArenaType {
+    #[drive(skip)]
     pub value: usize,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Drive, DriveMut, PartialEq, Eq, Hash)]
 pub struct Variable {
     pub instance: Option<ArenaType>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Drive, DriveMut, PartialEq, Eq, Hash)]
 pub struct Constructor {
+    #[drive(skip)]
     pub name: String,
     pub types: Vec<ArenaType>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Drive, DriveMut, PartialEq, Eq, Hash)]
 pub struct Function {
     pub params: Vec<ArenaType>,
     pub ret: ArenaType,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Drive, DriveMut, PartialEq, Eq, Hash)]
 pub struct Call {
     pub args: Vec<ArenaType>,
     pub ret: ArenaType,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Drive, DriveMut, PartialEq, Eq, Hash)]
 pub struct Union {
     pub types: Vec<ArenaType>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Drive, DriveMut, PartialEq, Eq, Hash)]
 pub struct Tuple {
     pub types: Vec<ArenaType>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Drive, DriveMut, PartialEq, Eq, Hash)]
 pub struct Object {
-    pub props: Vec<(String, ArenaType)>,
+    pub props: Vec<ObjProp>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Drive, DriveMut, PartialEq, Eq, Hash)]
+pub struct ObjProp {
+    #[drive(skip)]
+    pub name: String,
+    pub t: ArenaType,
+}
+
+#[derive(Debug, Clone, Drive, DriveMut, PartialEq, Eq, Hash)]
 pub enum TypeKind {
     Variable(Variable),
     Constructor(Constructor),
@@ -55,7 +66,7 @@ pub enum TypeKind {
     Object(Object),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Drive, DriveMut, PartialEq, Eq, Hash)]
 pub struct Type {
     pub id: ArenaType,
     pub kind: TypeKind,
@@ -119,7 +130,7 @@ impl Type {
         }
     }
 
-    pub fn new_object(idx: ArenaType, props: &[(String, ArenaType)]) -> Type {
+    pub fn new_object(idx: ArenaType, props: &[ObjProp]) -> Type {
         Type {
             id: idx,
             kind: TypeKind::Object(Object {
@@ -169,8 +180,8 @@ impl Type {
             }
             TypeKind::Object(object) => {
                 let mut fields = vec![];
-                for (k, v) in &object.props {
-                    fields.push(format!("{}: {}", k, a[v.value].as_string(a)));
+                for prop in &object.props {
+                    fields.push(format!("{}: {}", prop.name, a[prop.t.value].as_string(a)));
                 }
                 format!("{{{}}}", fields.join(", "))
             }
@@ -216,7 +227,7 @@ pub fn new_tuple_type(a: &mut Vec<Type>, types: &[ArenaType]) -> ArenaType {
     a_t
 }
 
-pub fn new_object_type(a: &mut Vec<Type>, props: &[(String, ArenaType)]) -> ArenaType {
+pub fn new_object_type(a: &mut Vec<Type>, props: &[ObjProp]) -> ArenaType {
     let a_t = ArenaType { value: a.len() };
     let t = Type::new_object(a_t, props);
     a.push(t);

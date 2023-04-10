@@ -107,9 +107,9 @@ pub fn unify(alloc: &mut Vec<Type>, t1: &ArenaType, t2: &ArenaType) -> Result<()
         }
         (TypeKind::Object(object1), TypeKind::Object(object2)) => {
             // object1 must have atleast as the same properties as object2
-            for (name, t) in &object2.props {
-                if let Some(prop) = object1.props.iter().find(|props| &props.0 == name) {
-                    unify(alloc, &prop.1, t)?;
+            for ObjProp { name, t } in &object2.props {
+                if let Some(prop) = object1.props.iter().find(|prop| &prop.name == name) {
+                    unify(alloc, &prop.t, t)?;
                 } else {
                     return Err(Errors::InferenceError(format!(
                         "'{name}' is missing in {}",

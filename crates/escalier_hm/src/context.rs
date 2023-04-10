@@ -78,7 +78,10 @@ pub fn fresh(a: &mut Vec<Type>, t: &ArenaType, ctx: &Context) -> ArenaType {
                 let fields: Vec<_> = object
                     .props
                     .iter()
-                    .map(|(name, tp)| (name.clone(), freshrec(a, tp, mappings, ctx)))
+                    .map(|prop| ObjProp {
+                        name: prop.name.clone(),
+                        t: freshrec(a, &prop.t, mappings, ctx),
+                    })
                     .collect();
                 new_object_type(a, &fields)
             }

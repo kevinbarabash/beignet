@@ -49,8 +49,10 @@ pub fn infer_expression(
         Expression::Object(syntax::Object { props }) => {
             let mut prop_types = vec![];
             for (name, value) in props {
-                let t = infer_expression(a, value, ctx)?;
-                prop_types.push((name.to_owned(), t));
+                prop_types.push(ObjProp {
+                    name: name.to_owned(),
+                    t: infer_expression(a, value, ctx)?,
+                });
             }
             let t = new_object_type(a, &prop_types);
             Ok(t)
@@ -139,9 +141,9 @@ pub fn infer_expression(
 
             match (&obj_type.kind, &prop_type.kind) {
                 (TypeKind::Object(object), TypeKind::Literal(Literal::String(name))) => {
-                    for (key, t) in &object.props {
-                        if key == name {
-                            return Ok(*t);
+                    for prop in &object.props {
+                        if &prop.name == name {
+                            return Ok(prop.t);
                         }
                     }
                     Err(Errors::InferenceError(format!(
