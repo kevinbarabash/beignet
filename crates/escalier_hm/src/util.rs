@@ -10,14 +10,14 @@ use crate::types::*;
 ///
 /// Returns:
 ///     True if v occurs in type2, otherwise False
-pub fn occurs_in_type(a: &mut Vec<Type>, v: ArenaType, type2: ArenaType) -> bool {
+pub fn occurs_in_type(a: &mut Vec<Type>, v: &ArenaType, type2: &ArenaType) -> bool {
     let pruned_type2 = prune(a, type2);
-    if pruned_type2 == v {
+    if &pruned_type2 == v {
         return true;
     }
     // We clone here because we can't move out of a shared reference.
     // TODO: Consider using Rc<RefCell<Type>> to avoid unnecessary cloning.
-    match a.get(pruned_type2).unwrap().clone().kind {
+    match a.get(pruned_type2.value).unwrap().clone().kind {
         TypeKind::Variable(_) => false, // leaf node
         TypeKind::Literal(_) => false,  // leaf node
         TypeKind::Tuple(Tuple { types }) => occurs_in(a, v, &types),
@@ -27,7 +27,7 @@ pub fn occurs_in_type(a: &mut Vec<Type>, v: ArenaType, type2: ArenaType) -> bool
         }
         TypeKind::Constructor(Constructor { types, .. }) => occurs_in(a, v, &types),
         TypeKind::Function(Function { params, ret }) => {
-            occurs_in(a, v, &params) || occurs_in_type(a, v, ret)
+            occurs_in(a, v, &params) || occurs_in_type(a, v, &ret)
         }
         TypeKind::Union(Union { types }) => occurs_in(a, v, &types),
     }
@@ -42,12 +42,12 @@ pub fn occurs_in_type(a: &mut Vec<Type>, v: ArenaType, type2: ArenaType) -> bool
 /// Returns:
 ///     True if t occurs in any of types, otherwise False
 ///
-pub fn occurs_in<'a, I>(a: &mut Vec<Type>, t: ArenaType, types: I) -> bool
+pub fn occurs_in<'a, I>(a: &mut Vec<Type>, t: &ArenaType, types: I) -> bool
 where
     I: IntoIterator<Item = &'a ArenaType>,
 {
     for t2 in types.into_iter() {
-        if occurs_in_type(a, t, *t2) {
+        if occurs_in_type(a, t, t2) {
             return true;
         }
     }
@@ -68,19 +68,19 @@ where
 ///
 /// Returns:
 ///     An uninstantiated TypeVariable or a TypeOperator
-pub fn prune(a: &mut Vec<Type>, t: ArenaType) -> ArenaType {
-    let v2 = match a.get(t).unwrap().kind {
+pub fn prune(a: &mut Vec<Type>, t: &ArenaType) -> ArenaType {
+    let v2 = match a.get(t.value).unwrap().kind {
         // TODO: handle .unwrap() panicing
         TypeKind::Variable(Variable {
             instance: Some(value),
         }) => value,
         _ => {
-            return t;
+            return t.to_owned();
         }
     };
 
-    let value = prune(a, v2);
-    match &mut a.get_mut(t).unwrap().kind {
+    let value = prune(a, &v2);
+    match &mut a.get_mut(t.value).unwrap().kind {
         // TODO: handle .unwrap() panicing
         TypeKind::Variable(Variable {
             ref mut instance, ..
@@ -88,7 +88,7 @@ pub fn prune(a: &mut Vec<Type>, t: ArenaType) -> ArenaType {
             *instance = Some(value);
         }
         _ => {
-            return t;
+            return t.to_owned();
         }
     }
     value

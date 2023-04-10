@@ -18,29 +18,35 @@ use crate::util::*;
 ///
 /// Raises:
 ///     InferenceError: Raised if the types cannot be unified.
-pub fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), Errors> {
+pub fn unify(alloc: &mut Vec<Type>, t1: &ArenaType, t2: &ArenaType) -> Result<(), Errors> {
     let a = prune(alloc, t1);
     let b = prune(alloc, t2);
     // Why do we clone here?
-    let a_t = alloc.get(a).unwrap().clone();
-    let b_t = alloc.get(b).unwrap().clone();
+    let a_t = alloc.get(a.value).unwrap().clone();
+    let b_t = alloc.get(b.value).unwrap().clone();
     match (&a_t.kind, &b_t.kind) {
-        (TypeKind::Variable(_), _) => bind(alloc, a, b),
-        (_, TypeKind::Variable(_)) => bind(alloc, b, a),
+        (TypeKind::Variable(_), _) => bind(alloc, &a, &b),
+        (_, TypeKind::Variable(_)) => bind(alloc, &b, &a),
         (TypeKind::Constructor(con_a), TypeKind::Constructor(con_b)) => {
             // TODO: support type constructors with optional and default type params
             if con_a.name != con_b.name || con_a.types.len() != con_b.types.len() {
-                return Err(Errors::InferenceError(format!("type mismatch: {a} != {b}")));
+                return Err(Errors::InferenceError(format!(
+                    "type mismatch: {} != {}",
+                    a_t.as_string(alloc),
+                    b_t.as_string(alloc)
+                )));
             }
             for (p, q) in con_a.types.iter().zip(con_b.types.iter()) {
-                unify(alloc, *p, *q)?;
+                unify(alloc, p, q)?;
             }
             Ok(())
         }
         (TypeKind::Function(func_a), TypeKind::Function(func_b)) => {
             if func_a.params.len() > func_b.params.len() {
                 return Err(Errors::InferenceError(format!(
-                    "{a_t:?} is not a subtype of {b_t:?} since it requires more params",
+                    "{} is not a subtype of {} since it requires more params",
+                    a_t.as_string(alloc),
+                    b_t.as_string(alloc)
                 )));
             }
 
@@ -48,9 +54,9 @@ pub fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), 
                 // NOTE: We reverse the order of the params here because func_a
                 // should be able to accept any params that func_b can accept,
                 // its params may be more lenient.  Thus q is a subtype of p.
-                unify(alloc, *q, *p)?;
+                unify(alloc, q, p)?;
             }
-            unify(alloc, func_a.ret, func_b.ret)?;
+            unify(alloc, &func_a.ret, &func_b.ret)?;
             Ok(())
         }
         (
@@ -68,7 +74,7 @@ pub fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), 
         (TypeKind::Union(Union { types }), _) => {
             // All types in the union must be subtypes of t2
             for t in types.iter() {
-                unify(alloc, *t, b)?;
+                unify(alloc, t, &b)?;
             }
             Ok(())
         }
@@ -76,7 +82,7 @@ pub fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), 
             // If t1 is a subtype of any of the types in the union, then it is a
             // subtype of the union.
             for t2 in types.iter() {
-                if unify(alloc, a, *t2).is_ok() {
+                if unify(alloc, &a, t2).is_ok() {
                     return Ok(());
                 }
             }
@@ -95,7 +101,7 @@ pub fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), 
             }
 
             for (p, q) in tuple1.types.iter().zip(tuple2.types.iter()) {
-                unify(alloc, *p, *q)?;
+                unify(alloc, p, q)?;
             }
             Ok(())
         }
@@ -103,17 +109,20 @@ pub fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), 
             // object1 must have atleast as the same properties as object2
             for (name, t) in &object2.props {
                 if let Some(prop) = object1.props.iter().find(|props| &props.0 == name) {
-                    unify(alloc, prop.1, *t)?;
+                    unify(alloc, &prop.1, t)?;
                 } else {
                     return Err(Errors::InferenceError(format!(
-                        "'{name}' is missing in {a_t:?}"
+                        "'{name}' is missing in {}",
+                        a_t.as_string(alloc),
                     )));
                 }
             }
             Ok(())
         }
         _ => Err(Errors::InferenceError(format!(
-            "type mismatch: unify({a_t:?}, {b_t:?}) failed"
+            "type mismatch: unify({}, {}) failed",
+            a_t.as_string(alloc),
+            b_t.as_string(alloc)
         ))),
     }
 }
@@ -122,16 +131,16 @@ pub fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), 
 pub fn unify_call(
     alloc: &mut Vec<Type>,
     arg_types: &[ArenaType],
-    t2: ArenaType,
+    t2: &ArenaType,
 ) -> Result<ArenaType, Errors> {
     let ret_type = new_var_type(alloc);
     let call_type = new_func_type(alloc, arg_types, ret_type);
 
     let b = prune(alloc, t2);
-    let b_t = alloc.get(b).unwrap().clone();
+    let b_t = alloc.get(b.value).unwrap().clone();
 
     match b_t.kind {
-        TypeKind::Variable(_) => bind(alloc, b, call_type)?,
+        TypeKind::Variable(_) => bind(alloc, &b, &call_type)?,
         TypeKind::Constructor(_) => {
             // lookup definition of type constructor, and see if its instances
             // have any callable signatures
@@ -158,14 +167,14 @@ pub fn unify_call(
             }
 
             for (p, q) in arg_types.iter().zip(func.params.iter()) {
-                unify(alloc, *p, *q)?;
+                unify(alloc, p, q)?;
             }
-            unify(alloc, ret_type, func.ret)?;
+            unify(alloc, &ret_type, &func.ret)?;
         }
         TypeKind::Union(union) => {
             let mut ret_types = vec![];
             for t in union.types.iter() {
-                let ret_type = unify_call(alloc, arg_types, *t)?;
+                let ret_type = unify_call(alloc, arg_types, t)?;
                 ret_types.push(ret_type);
             }
 
@@ -179,13 +188,13 @@ pub fn unify_call(
     Ok(ret_type)
 }
 
-fn bind(alloc: &mut Vec<Type>, a: usize, b: usize) -> Result<(), Errors> {
+fn bind(alloc: &mut Vec<Type>, a: &ArenaType, b: &ArenaType) -> Result<(), Errors> {
     if a != b {
         if occurs_in_type(alloc, a, b) {
             // raise InferenceError("recursive unification")
             return Err(Errors::InferenceError("recursive unification".to_string()));
         }
-        alloc.get_mut(a).unwrap().set_instance(b);
+        alloc.get_mut(a.value).unwrap().set_instance(b);
     }
     Ok(())
 }

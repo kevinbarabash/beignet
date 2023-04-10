@@ -63,7 +63,7 @@ pub fn infer_expression(
                 .map(|arg| infer_expression(a, arg, ctx))
                 .collect::<Result<Vec<_>, _>>()?;
 
-            let ret_type = unify_call(a, &arg_types, func_type)?;
+            let ret_type = unify_call(a, &arg_types, &func_type)?;
             Ok(ret_type)
         }
         Expression::Lambda(Lambda { params, body }) => {
@@ -112,7 +112,7 @@ pub fn infer_expression(
 
             for ((.., defn), new_type) in letrec.decls.iter().zip(new_types.iter()) {
                 let defn_type = infer_expression(a, defn, &mut new_ctx)?;
-                unify(a, *new_type, defn_type)?;
+                unify(a, new_type, &defn_type)?;
             }
 
             infer_expression(a, &letrec.body, &mut new_ctx)
@@ -124,7 +124,7 @@ pub fn infer_expression(
         }) => {
             let cond_type = infer_expression(a, cond, ctx)?;
             let bool_type = new_constructor(a, "boolean", &[]);
-            unify(a, cond_type, bool_type)?;
+            unify(a, &cond_type, &bool_type)?;
             let consequent_type = infer_expression(a, consequent, ctx)?;
             let alternate_type = infer_expression(a, alternate, ctx)?;
             let t = new_union_type(a, &[consequent_type, alternate_type]);
@@ -134,8 +134,8 @@ pub fn infer_expression(
             let obj_type = infer_expression(a, obj, ctx)?;
             let prop_type = infer_expression(a, prop, ctx)?;
 
-            let obj_type = a[obj_type].clone();
-            let prop_type = a[prop_type].clone();
+            let obj_type = a[obj_type.value].clone();
+            let prop_type = a[prop_type.value].clone();
 
             match (&obj_type.kind, &prop_type.kind) {
                 (TypeKind::Object(object), TypeKind::Literal(Literal::String(name))) => {

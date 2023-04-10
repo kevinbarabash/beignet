@@ -183,7 +183,7 @@ mod tests {
         );
 
         let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
-        assert_eq!(a[t].as_string(&a), r#"(number) => number"#);
+        assert_eq!(a[t.value].as_string(&a), r#"(number) => number"#);
         Ok(())
     }
 
@@ -234,7 +234,7 @@ mod tests {
         );
 
         let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
-        assert_eq!(a[t].as_string(&a), r#"(number) => number"#);
+        assert_eq!(a[t.value].as_string(&a), r#"(number) => number"#);
 
         Ok(())
     }
@@ -306,7 +306,7 @@ mod tests {
         infer_program(&mut a, &program, &mut my_ctx)?;
 
         let t = my_ctx.env.get("result").unwrap();
-        assert_eq!(a[*t].as_string(&a), r#"(4 * true)"#);
+        assert_eq!(a[t.value].as_string(&a), r#"(4 * true)"#);
         Ok(())
     }
 
@@ -349,7 +349,7 @@ mod tests {
         infer_program(&mut a, &program, &mut my_ctx)?;
 
         let t = my_ctx.env.get("result").unwrap();
-        assert_eq!(a[*t].as_string(&a), r#"5"#);
+        assert_eq!(a[t.value].as_string(&a), r#"5"#);
         Ok(())
     }
 
@@ -379,7 +379,7 @@ mod tests {
         );
 
         let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
-        assert_eq!(a[t].as_string(&a), r#"(t21) => (t21 * t21)"#);
+        assert_eq!(a[t.value].as_string(&a), r#"(t21) => (t21 * t21)"#);
         Ok(())
     }
 
@@ -392,8 +392,8 @@ mod tests {
         let syntax = new_lambda(&["x"], &[new_expr_stmt(new_identifier("x"))]);
 
         let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
-        assert_eq!(a[t].as_string(&a), r#"(t17) => t17"#);
-        let t = &a[t];
+        assert_eq!(a[t.value].as_string(&a), r#"(t17) => t17"#);
+        let t = &a[t.value];
         eprintln!("t = {t:#?}");
         Ok(())
     }
@@ -420,7 +420,7 @@ mod tests {
 
         let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
         assert_eq!(
-            a[t].as_string(&a),
+            a[t.value].as_string(&a),
             r#"((t19) => t20) => ((t20) => t51) => (t19) => t51"#
         );
         Ok(())
@@ -442,7 +442,7 @@ mod tests {
 
         let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
         assert_eq!(
-            a[t].as_string(&a),
+            a[t.value].as_string(&a),
             r#"((t19) => t20, (t20) => t22, t19) => t22"#
         );
         Ok(())
@@ -458,7 +458,7 @@ mod tests {
         );
 
         let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
-        assert_eq!(a[t].as_string(&a), r#"number"#);
+        assert_eq!(a[t.value].as_string(&a), r#"number"#);
         Ok(())
     }
 
@@ -493,7 +493,7 @@ mod tests {
         let syntax = new_apply(new_identifier("foo"), &[new_identifier("bar")]);
 
         let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
-        assert_eq!(a[t].as_string(&a), r#"boolean"#);
+        assert_eq!(a[t.value].as_string(&a), r#"boolean"#);
         Ok(())
     }
 
@@ -522,7 +522,7 @@ mod tests {
         let result = infer_expression(&mut a, &syntax, &mut my_ctx);
         assert_eq!(
             result,
-            Err(Errors::InferenceError("Type { id: 31, kind: Function(Function { params: [28, 29], ret: 30 }) } is not a subtype of Type { id: 25, kind: Function(Function { params: [23], ret: 24 }) } since it requires more params".to_string())),
+            Err(Errors::InferenceError("(number, string) => boolean is not a subtype of (number) => boolean since it requires more params".to_string())),
         );
         Ok(())
     }
@@ -543,7 +543,7 @@ mod tests {
         );
 
         let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
-        assert_eq!(a[t].as_string(&a), r#"number"#);
+        assert_eq!(a[t.value].as_string(&a), r#"number"#);
         Ok(())
     }
 
@@ -562,7 +562,7 @@ mod tests {
         let syntax = new_apply(new_identifier("foo"), &[]);
 
         let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
-        assert_eq!(a[t].as_string(&a), r#"boolean | string"#);
+        assert_eq!(a[t.value].as_string(&a), r#"boolean | string"#);
         Ok(())
     }
 
@@ -613,7 +613,7 @@ mod tests {
 
         let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
 
-        assert_eq!(a[t].as_string(&a), "[5, \"hello\"]".to_string(),);
+        assert_eq!(a[t.value].as_string(&a), "[5, \"hello\"]".to_string(),);
 
         Ok(())
     }
@@ -627,7 +627,7 @@ mod tests {
 
         let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
 
-        assert_eq!(a[t].as_string(&a), "\"hello\"".to_string(),);
+        assert_eq!(a[t.value].as_string(&a), "\"hello\"".to_string(),);
 
         Ok(())
     }
@@ -675,7 +675,7 @@ mod tests {
 
         let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
 
-        assert_eq!(a[t].as_string(&a), "boolean".to_string(),);
+        assert_eq!(a[t.value].as_string(&a), "boolean".to_string(),);
 
         Ok(())
     }
@@ -716,7 +716,7 @@ mod tests {
 
         let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
 
-        assert_eq!(a[t].as_string(&a), "{a: 5, b: \"hello\"}".to_string(),);
+        assert_eq!(a[t.value].as_string(&a), "{a: 5, b: \"hello\"}".to_string(),);
 
         Ok(())
     }
@@ -733,7 +733,7 @@ mod tests {
 
         let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
 
-        assert_eq!(a[t].as_string(&a), "5".to_string(),);
+        assert_eq!(a[t.value].as_string(&a), "5".to_string(),);
 
         Ok(())
     }
@@ -784,7 +784,7 @@ mod tests {
 
         let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
 
-        assert_eq!(a[t].as_string(&a), "boolean".to_string(),);
+        assert_eq!(a[t.value].as_string(&a), "boolean".to_string(),);
 
         Ok(())
     }
@@ -810,8 +810,7 @@ mod tests {
         assert_eq!(
             result,
             Err(Errors::InferenceError(
-                "'a' is missing in Type { id: 28, kind: Object(Object { props: [(\"b\", 27)] }) }"
-                    .to_string()
+                "'a' is missing in {b: \"hello\"}".to_string()
             ))
         );
 
@@ -819,8 +818,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "called `Result::unwrap()` on an `Err` value: InferenceError(\"type mismatch: unify(Type { id: 22, kind: Literal(String(\\\"hello\\\")) }, Type { id: 18, kind: Constructor(Constructor { name: \\\"number\\\", types: [] }) }) failed\")"]
-    fn test_subtype_error() {
+    fn test_subtype_error() -> Result<(), Errors> {
         let (mut a, mut my_ctx) = test_env();
 
         let syntax = new_apply(
@@ -828,12 +826,20 @@ mod tests {
             &[new_number("5"), new_string("hello")],
         );
 
-        infer_expression(&mut a, &syntax, &mut my_ctx).unwrap();
+        let result = infer_expression(&mut a, &syntax, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "type mismatch: unify(\"hello\", number) failed".to_string()
+            ))
+        );
+
+        Ok(())
     }
 
     #[test]
-    #[should_panic = "called `Result::unwrap()` on an `Err` value: InferenceError(\"type mismatch: unify(Type { id: 25, kind: Literal(String(\\\"hello\\\")) }, Type { id: 20, kind: Constructor(Constructor { name: \\\"number\\\", types: [] }) }) failed\")"]
-    fn test_union_subtype_error() {
+    fn test_union_subtype_error() -> Result<(), Errors> {
         let (mut a, mut my_ctx) = test_env();
 
         let lit1 = new_lit_type(&mut a, &Literal::Number("5".to_string()));
@@ -847,7 +853,16 @@ mod tests {
             &[new_identifier("foo"), new_number("2")],
         );
 
-        infer_expression(&mut a, &syntax, &mut my_ctx).unwrap();
+        let result = infer_expression(&mut a, &syntax, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "type mismatch: unify(\"hello\", number) failed".to_string()
+            ))
+        );
+
+        Ok(())
     }
 
     #[test]
@@ -874,10 +889,10 @@ mod tests {
         infer_program(&mut a, &program, &mut my_ctx)?;
 
         let t = my_ctx.env.get("num").unwrap();
-        assert_eq!(a[*t].as_string(&a), r#"5"#);
+        assert_eq!(a[t.value].as_string(&a), r#"5"#);
 
         let t = my_ctx.env.get("str").unwrap();
-        assert_eq!(a[*t].as_string(&a), r#""hello""#);
+        assert_eq!(a[t.value].as_string(&a), r#""hello""#);
 
         Ok(())
     }
@@ -906,10 +921,10 @@ mod tests {
         infer_program(&mut a, &program, &mut my_ctx)?;
 
         let t = my_ctx.env.get("a").unwrap();
-        assert_eq!(a[*t].as_string(&a), r#"5"#);
+        assert_eq!(a[t.value].as_string(&a), r#"5"#);
 
         let t = my_ctx.env.get("b").unwrap();
-        assert_eq!(a[*t].as_string(&a), r#""hello""#);
+        assert_eq!(a[t.value].as_string(&a), r#""hello""#);
 
         Ok(())
     }
@@ -940,7 +955,7 @@ mod tests {
 
         let t = infer_expression(&mut a, &lambda, &mut my_ctx)?;
 
-        assert_eq!(a[t].as_string(&a), r#"() => number"#);
+        assert_eq!(a[t.value].as_string(&a), r#"() => number"#);
 
         Ok(())
     }

@@ -1,7 +1,10 @@
 // Types and type constructors
 use crate::literal::Literal;
 
-pub type ArenaType = usize;
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ArenaType {
+    pub value: usize,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Variable {
@@ -125,13 +128,13 @@ impl Type {
         }
     }
 
-    pub fn set_instance(&mut self, instance: ArenaType) {
+    pub fn set_instance(&mut self, instance: &ArenaType) {
         match &mut self.kind {
             TypeKind::Variable(Variable {
                 instance: ref mut inst,
                 ..
             }) => {
-                *inst = Some(instance);
+                *inst = Some(instance.to_owned());
             }
             _ => {
                 unimplemented!()
@@ -143,19 +146,19 @@ impl Type {
         match &self.kind {
             TypeKind::Variable(Variable {
                 instance: Some(inst),
-            }) => a[*inst].as_string(a),
-            TypeKind::Variable(_) => format!("t{}", self.id),
+            }) => a[inst.value].as_string(a),
+            TypeKind::Variable(_) => format!("t{}", self.id.value),
             TypeKind::Constructor(con) => match con.types.len() {
                 0 => con.name.clone(),
                 2 => {
-                    let l = a[con.types[0]].as_string(a);
-                    let r = a[con.types[1]].as_string(a);
+                    let l = a[con.types[0].value].as_string(a);
+                    let r = a[con.types[1].value].as_string(a);
                     format!("({} {} {})", l, con.name, r)
                 }
                 _ => {
                     let mut coll = vec![];
                     for v in &con.types {
-                        coll.push(a[*v].as_string(a));
+                        coll.push(a[v.value].as_string(a));
                     }
                     format!("{} {}", con.name, coll.join(" "))
                 }
@@ -167,7 +170,7 @@ impl Type {
             TypeKind::Object(object) => {
                 let mut fields = vec![];
                 for (k, v) in &object.props {
-                    fields.push(format!("{}: {}", k, a[*v].as_string(a)));
+                    fields.push(format!("{}: {}", k, a[v.value].as_string(a)));
                 }
                 format!("{{{}}}", fields.join(", "))
             }
@@ -175,7 +178,7 @@ impl Type {
                 format!(
                     "({}) => {}",
                     types_to_strings(a, &func.params).join(", "),
-                    a[func.ret].as_string(a),
+                    a[func.ret.value].as_string(a),
                 )
             }
             TypeKind::Union(union) => types_to_strings(a, &union.types).join(" | "),
@@ -186,72 +189,82 @@ impl Type {
 fn types_to_strings(a: &Vec<Type>, types: &[ArenaType]) -> Vec<String> {
     let mut strings = vec![];
     for v in types {
-        strings.push(a[*v].as_string(a));
+        strings.push(a[v.value].as_string(a));
     }
     strings
 }
 
 /// A binary type constructor which builds function types
 pub fn new_func_type(a: &mut Vec<Type>, params: &[ArenaType], ret: ArenaType) -> ArenaType {
-    let t = Type::new_function(a.len(), params, ret);
+    let a_t = ArenaType { value: a.len() };
+    let t = Type::new_function(a_t, params, ret);
     a.push(t);
-    a.len() - 1
+    a_t
 }
 
 pub fn new_union_type(a: &mut Vec<Type>, types: &[ArenaType]) -> ArenaType {
-    let t = Type::new_union(a.len(), types);
+    let a_t = ArenaType { value: a.len() };
+    let t = Type::new_union(a_t, types);
     a.push(t);
-    a.len() - 1
+    a_t
 }
 
 pub fn new_tuple_type(a: &mut Vec<Type>, types: &[ArenaType]) -> ArenaType {
-    let t = Type::new_tuple(a.len(), types);
+    let a_t = ArenaType { value: a.len() };
+    let t = Type::new_tuple(a_t, types);
     a.push(t);
-    a.len() - 1
+    a_t
 }
 
 pub fn new_object_type(a: &mut Vec<Type>, props: &[(String, ArenaType)]) -> ArenaType {
-    let t = Type::new_object(a.len(), props);
+    let a_t = ArenaType { value: a.len() };
+    let t = Type::new_object(a_t, props);
     a.push(t);
-    a.len() - 1
+    a_t
 }
 
 /// A binary type constructor which builds function types
 pub fn new_var_type(a: &mut Vec<Type>) -> ArenaType {
-    let t = Type::new_variable(a.len());
+    let a_t = ArenaType { value: a.len() };
+    let t = Type::new_variable(a_t);
     a.push(t);
-    a.len() - 1
+    a_t
 }
 
 /// A binary type constructor which builds function types
 pub fn new_constructor(a: &mut Vec<Type>, name: &str, types: &[ArenaType]) -> ArenaType {
-    let t = Type::new_constructor(a.len(), name, types);
+    let a_t = ArenaType { value: a.len() };
+    let t = Type::new_constructor(a_t, name, types);
     a.push(t);
-    a.len() - 1
+    a_t
 }
 
 pub fn new_lit_type(a: &mut Vec<Type>, lit: &Literal) -> ArenaType {
-    let t = Type::new_literal(a.len(), lit);
+    let a_t = ArenaType { value: a.len() };
+    let t = Type::new_literal(a_t, lit);
     a.push(t);
-    a.len() - 1
+    a_t
 }
 
 pub fn new_num_lit_type(a: &mut Vec<Type>, value: &str) -> ArenaType {
-    let t = Type::new_literal(a.len(), &Literal::Number(value.to_string()));
+    let a_t = ArenaType { value: a.len() };
+    let t = Type::new_literal(a_t, &Literal::Number(value.to_string()));
     a.push(t);
-    a.len() - 1
+    a_t
 }
 
 pub fn new_str_lit_type(a: &mut Vec<Type>, value: &str) -> ArenaType {
-    let t = Type::new_literal(a.len(), &Literal::String(value.to_string()));
+    let a_t = ArenaType { value: a.len() };
+    let t = Type::new_literal(a_t, &Literal::String(value.to_string()));
     a.push(t);
-    a.len() - 1
+    a_t
 }
 
 pub fn new_bool_lit_type(a: &mut Vec<Type>, value: bool) -> ArenaType {
-    let t = Type::new_literal(a.len(), &Literal::Boolean(value));
+    let a_t = ArenaType { value: a.len() };
+    let t = Type::new_literal(a_t, &Literal::Boolean(value));
     a.push(t);
-    a.len() - 1
+    a_t
 }
 
 //impl fmt::Debug for Type {

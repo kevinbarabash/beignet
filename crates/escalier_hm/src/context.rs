@@ -26,7 +26,7 @@ pub struct Context {
 ///         environment.
 pub fn get_type(a: &mut Vec<Type>, name: &str, ctx: &Context) -> Result<ArenaType, Errors> {
     if let Some(value) = ctx.env.get(name) {
-        Ok(fresh(a, *value, ctx))
+        Ok(fresh(a, value, ctx))
     } else {
         Err(Errors::InferenceError(format!(
             "Undefined symbol {:?}",
@@ -43,20 +43,20 @@ pub fn get_type(a: &mut Vec<Type>, name: &str, ctx: &Context) -> Result<ArenaTyp
 /// Args:
 ///     t: A type to be copied.
 ///     non_generic: A set of non-generic TypeVariables
-pub fn fresh(a: &mut Vec<Type>, t: ArenaType, ctx: &Context) -> ArenaType {
+pub fn fresh(a: &mut Vec<Type>, t: &ArenaType, ctx: &Context) -> ArenaType {
     // A mapping of TypeVariables to TypeVariables
     let mut mappings = HashMap::default();
 
     fn freshrec(
         a: &mut Vec<Type>,
-        tp: ArenaType,
+        tp: &ArenaType,
         mappings: &mut HashMap<ArenaType, ArenaType>,
         ctx: &Context,
     ) -> ArenaType {
         let p = prune(a, tp);
-        match &a.get(p).unwrap().clone().kind {
+        match &a.get(p.value).unwrap().clone().kind {
             TypeKind::Variable(_) => {
-                if is_generic(a, p, ctx) {
+                if is_generic(a, &p, ctx) {
                     mappings
                         .entry(p)
                         .or_insert_with(|| new_var_type(a))
@@ -78,13 +78,13 @@ pub fn fresh(a: &mut Vec<Type>, t: ArenaType, ctx: &Context) -> ArenaType {
                 let fields: Vec<_> = object
                     .props
                     .iter()
-                    .map(|(name, tp)| (name.clone(), freshrec(a, *tp, mappings, ctx)))
+                    .map(|(name, tp)| (name.clone(), freshrec(a, tp, mappings, ctx)))
                     .collect();
                 new_object_type(a, &fields)
             }
             TypeKind::Function(func) => {
                 let params = freshrec_many(a, &func.params, mappings, ctx);
-                let ret = freshrec(a, func.ret, mappings, ctx);
+                let ret = freshrec(a, &func.ret, mappings, ctx);
                 new_func_type(a, &params, ret)
             }
             TypeKind::Union(union) => {
@@ -102,7 +102,7 @@ pub fn fresh(a: &mut Vec<Type>, t: ArenaType, ctx: &Context) -> ArenaType {
     ) -> Vec<ArenaType> {
         types
             .iter()
-            .map(|x| freshrec(a, *x, mappings, ctx))
+            .map(|x| freshrec(a, x, mappings, ctx))
             .collect()
     }
 
@@ -123,6 +123,6 @@ pub fn fresh(a: &mut Vec<Type>, t: ArenaType, ctx: &Context) -> ArenaType {
 ///
 /// Returns:
 ///     True if v is a generic variable, otherwise False
-pub fn is_generic(a: &mut Vec<Type>, t: ArenaType, ctx: &Context) -> bool {
+pub fn is_generic(a: &mut Vec<Type>, t: &ArenaType, ctx: &Context) -> bool {
     !occurs_in(a, t, &ctx.non_generic)
 }
