@@ -67,29 +67,49 @@ pub fn fresh(a: &mut Vec<Type>, t: ArenaType, ctx: &Context) -> ArenaType {
             }
             TypeKind::Constructor(con) => {
                 let types = freshrec_many(a, &con.types, mappings, ctx);
-                new_constructor(a, &con.name, &types)
+                if types != con.types {
+                    new_constructor(a, &con.name, &types)
+                } else {
+                    p
+                }
             }
             TypeKind::Literal(lit) => new_lit_type(a, lit),
             TypeKind::Tuple(tuple) => {
                 let types = freshrec_many(a, &tuple.types, mappings, ctx);
-                new_tuple_type(a, &types)
+                if types != tuple.types {
+                    new_tuple_type(a, &types)
+                } else {
+                    p
+                }
             }
             TypeKind::Object(object) => {
-                let fields: Vec<_> = object
+                let props: Vec<_> = object
                     .props
                     .iter()
                     .map(|(name, tp)| (name.clone(), freshrec(a, *tp, mappings, ctx)))
                     .collect();
-                new_object_type(a, &fields)
+                if props != object.props {
+                    new_object_type(a, &props)
+                } else {
+                    p
+                }
             }
             TypeKind::Function(func) => {
                 let params = freshrec_many(a, &func.params, mappings, ctx);
                 let ret = freshrec(a, func.ret, mappings, ctx);
-                new_func_type(a, &params, ret)
+                if params != func.params || ret != func.ret {
+                    new_func_type(a, &params, ret)
+                } else {
+                    p
+                }
             }
             TypeKind::Union(union) => {
                 let types = freshrec_many(a, &union.types, mappings, ctx);
-                new_union_type(a, &types)
+                if types != union.types {
+                    new_union_type(a, &types)
+                } else {
+                    p
+                }
             }
         }
     }

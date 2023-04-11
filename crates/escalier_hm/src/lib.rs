@@ -421,7 +421,7 @@ mod tests {
         let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
         assert_eq!(
             a[t].as_string(&a),
-            r#"((t19) => t20) => ((t20) => t51) => (t19) => t51"#
+            r#"((t19) => t20) => ((t20) => t44) => (t19) => t44"#
         );
         Ok(())
     }
@@ -522,7 +522,7 @@ mod tests {
         let result = infer_expression(&mut a, &syntax, &mut my_ctx);
         assert_eq!(
             result,
-            Err(Errors::InferenceError("Type { id: 31, kind: Function(Function { params: [28, 29], ret: 30 }) } is not a subtype of Type { id: 25, kind: Function(Function { params: [23], ret: 24 }) } since it requires more params".to_string())),
+            Err(Errors::InferenceError("(number, string) => boolean is not a subtype of (number) => boolean since it requires more params".to_string())),
         );
         Ok(())
     }
@@ -810,8 +810,7 @@ mod tests {
         assert_eq!(
             result,
             Err(Errors::InferenceError(
-                "'a' is missing in Type { id: 28, kind: Object(Object { props: [(\"b\", 27)] }) }"
-                    .to_string()
+                "'a' is missing in {b: \"hello\"}".to_string()
             ))
         );
 
@@ -819,8 +818,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "called `Result::unwrap()` on an `Err` value: InferenceError(\"type mismatch: unify(Type { id: 22, kind: Literal(String(\\\"hello\\\")) }, Type { id: 18, kind: Constructor(Constructor { name: \\\"number\\\", types: [] }) }) failed\")"]
-    fn test_subtype_error() {
+    fn test_subtype_error() -> Result<(), Errors> {
         let (mut a, mut my_ctx) = test_env();
 
         let syntax = new_apply(
@@ -828,12 +826,20 @@ mod tests {
             &[new_number("5"), new_string("hello")],
         );
 
-        infer_expression(&mut a, &syntax, &mut my_ctx).unwrap();
+        let result = infer_expression(&mut a, &syntax, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "type mismatch: unify(\"hello\", number) failed".to_string()
+            ))
+        );
+
+        Ok(())
     }
 
     #[test]
-    #[should_panic = "called `Result::unwrap()` on an `Err` value: InferenceError(\"type mismatch: unify(Type { id: 25, kind: Literal(String(\\\"hello\\\")) }, Type { id: 20, kind: Constructor(Constructor { name: \\\"number\\\", types: [] }) }) failed\")"]
-    fn test_union_subtype_error() {
+    fn test_union_subtype_error() -> Result<(), Errors> {
         let (mut a, mut my_ctx) = test_env();
 
         let lit1 = new_lit_type(&mut a, &Literal::Number("5".to_string()));
@@ -847,7 +853,16 @@ mod tests {
             &[new_identifier("foo"), new_number("2")],
         );
 
-        infer_expression(&mut a, &syntax, &mut my_ctx).unwrap();
+        let result = infer_expression(&mut a, &syntax, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "type mismatch: unify(\"hello\", number) failed".to_string()
+            ))
+        );
+
+        Ok(())
     }
 
     #[test]
