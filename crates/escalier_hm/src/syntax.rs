@@ -3,9 +3,20 @@ use std::fmt;
 use crate::literal::Literal;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Block {
+    pub stmts: Vec<Statement>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum BlockOrExpr {
+    Block(Block),
+    Expr(Box<Expression>),
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Lambda {
     pub params: Vec<String>,
-    pub body: Vec<Statement>,
+    pub body: BlockOrExpr,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -56,7 +67,7 @@ pub struct Member {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum Expression {
+pub enum ExprKind {
     Lambda(Lambda),
     Identifier(Identifier),
     Literal(Literal),
@@ -68,28 +79,45 @@ pub enum Expression {
     Member(Member),
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Expression {
+    pub kind: ExprKind,
+    pub inferred_type: Option<usize>,
+}
+
 impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Expression::Lambda(Lambda { params, body }) => {
+        match &self.kind {
+            ExprKind::Lambda(Lambda { params, body }) => {
                 let params = params
                     .iter()
                     .map(|param| param.to_string())
                     .collect::<Vec<_>>();
-                let body = body.iter().map(|stmt| stmt.to_string()).collect::<Vec<_>>();
-                write!(f, "(fn ({}) => {})", params.join(", "), body.join(" "))
+
+                match body {
+                    BlockOrExpr::Block(Block { stmts }) => {
+                        let stmts = stmts
+                            .iter()
+                            .map(|stmt| stmt.to_string())
+                            .collect::<Vec<_>>();
+                        write!(f, "(fn ({}) => {})", params.join(", "), stmts.join("\n"))
+                    }
+                    BlockOrExpr::Expr(expr) => {
+                        write!(f, "(fn ({}) => {expr})", params.join(", "))
+                    }
+                }
             }
-            Expression::Identifier(Identifier { name }) => {
+            ExprKind::Identifier(Identifier { name }) => {
                 write!(f, "{}", name)
             }
-            Expression::Literal(literal) => {
+            ExprKind::Literal(literal) => {
                 write!(f, "{literal}")
             }
-            Expression::Apply(Apply { func, args }) => {
+            ExprKind::Apply(Apply { func, args }) => {
                 let args = args.iter().map(|arg| arg.to_string()).collect::<Vec<_>>();
                 write!(f, "{func}({})", args.join(", "))
             }
-            Expression::Letrec(Letrec { decls, body }) => {
+            ExprKind::Letrec(Letrec { decls, body }) => {
                 write!(f, "(letrec ")?;
                 let decls = decls
                     .iter()
@@ -98,24 +126,24 @@ impl fmt::Display for Expression {
                 write!(f, "{}", decls.join(" and "))?;
                 write!(f, " in {body})")
             }
-            Expression::IfElse(IfElse {
+            ExprKind::IfElse(IfElse {
                 cond,
                 consequent,
                 alternate,
             }) => {
                 write!(f, "(if {cond} then {consequent} else {alternate})",)
             }
-            Expression::Member(Member { obj, prop }) => {
+            ExprKind::Member(Member { obj, prop }) => {
                 write!(f, "{obj}.{prop}")
             }
-            Expression::Tuple(Tuple { elems }) => {
+            ExprKind::Tuple(Tuple { elems }) => {
                 let elems = elems
                     .iter()
                     .map(|elem| elem.to_string())
                     .collect::<Vec<_>>();
                 write!(f, "[{}]", elems.join(", "))
             }
-            Expression::Object(Object { props }) => {
+            ExprKind::Object(Object { props }) => {
                 let props = props
                     .iter()
                     .map(|(key, value)| format!("{}: {}", key, value))

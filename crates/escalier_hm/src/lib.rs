@@ -19,66 +19,119 @@ mod tests {
     use crate::syntax::{self, *};
     use crate::types::*;
 
-    pub fn new_lambda(params: &[&str], body: &[Statement]) -> Expression {
-        Expression::Lambda(Lambda {
+    pub fn new_lambda(params: &[&str], body: &Expression) -> Expression {
+        let kind = ExprKind::Lambda(Lambda {
             params: params.iter().map(|x| x.to_string()).collect(),
-            body: body.to_owned(),
-        })
+            body: BlockOrExpr::Expr(Box::from(body.to_owned())),
+        });
+        Expression {
+            kind,
+            inferred_type: None,
+        }
+    }
+
+    pub fn new_function(params: &[&str], body: &[Statement]) -> Expression {
+        let kind = ExprKind::Lambda(Lambda {
+            params: params.iter().map(|x| x.to_string()).collect(),
+            body: BlockOrExpr::Block(Block {
+                stmts: body.to_owned(),
+            }),
+        });
+        Expression {
+            kind,
+            inferred_type: None,
+        }
     }
 
     pub fn new_apply(func: Expression, args: &[Expression]) -> Expression {
-        Expression::Apply(Apply {
+        let kind = ExprKind::Apply(Apply {
             func: Box::new(func),
             args: args.to_owned(),
-        })
+        });
+        Expression {
+            kind,
+            inferred_type: None,
+        }
     }
 
     pub fn new_letrec(decls: &[(String, Expression)], body: Expression) -> Expression {
-        Expression::Letrec(Letrec {
+        let kind = ExprKind::Letrec(Letrec {
             decls: decls
                 .iter()
                 .map(|(var, defn)| (var.to_owned(), Box::new(defn.to_owned())))
                 .collect(),
             body: Box::new(body),
-        })
+        });
+        Expression {
+            kind,
+            inferred_type: None,
+        }
     }
 
     pub fn new_identifier(name: &str) -> Expression {
         // TODO: Check that `name` is a valid identifier
-        Expression::Identifier(Identifier {
+        let kind = ExprKind::Identifier(Identifier {
             name: name.to_string(),
-        })
+        });
+        Expression {
+            kind,
+            inferred_type: None,
+        }
     }
 
     pub fn new_number(value: &str) -> Expression {
-        Expression::Literal(Literal::Number(value.to_owned()))
+        let kind = ExprKind::Literal(Literal::Number(value.to_owned()));
+        Expression {
+            kind,
+            inferred_type: None,
+        }
     }
 
     pub fn new_string(value: &str) -> Expression {
-        Expression::Literal(Literal::String(value.to_owned()))
+        let kind = ExprKind::Literal(Literal::String(value.to_owned()));
+        Expression {
+            kind,
+            inferred_type: None,
+        }
     }
 
     pub fn new_boolean(value: bool) -> Expression {
-        Expression::Literal(Literal::Boolean(value))
+        let kind = ExprKind::Literal(Literal::Boolean(value));
+        Expression {
+            kind,
+            inferred_type: None,
+        }
     }
 
     pub fn new_tuple(elems: &[Expression]) -> Expression {
-        Expression::Tuple(syntax::Tuple {
+        let kind = ExprKind::Tuple(syntax::Tuple {
             elems: elems.to_owned(),
-        })
+        });
+        Expression {
+            kind,
+            inferred_type: None,
+        }
     }
 
     pub fn new_object(props: &[(String, Expression)]) -> Expression {
-        Expression::Object(syntax::Object {
+        let kind = ExprKind::Object(syntax::Object {
             props: props.to_owned(),
-        })
+        });
+        Expression {
+            kind,
+            inferred_type: None,
+        }
     }
 
     pub fn new_member(obj: &Expression, prop: &Expression) -> Expression {
-        Expression::Member(Member {
+        let kind = ExprKind::Member(Member {
             obj: Box::from(obj.to_owned()),
             prop: Box::new(prop.to_owned()),
-        })
+        });
+        Expression {
+            kind,
+            inferred_type: None,
+        }
     }
 
     pub fn new_if_else(
@@ -86,15 +139,15 @@ mod tests {
         consequent: Expression,
         alternate: Expression,
     ) -> Expression {
-        Expression::IfElse(IfElse {
+        let kind = ExprKind::IfElse(IfElse {
             cond: Box::new(cond),
             consequent: Box::new(consequent),
             alternate: Box::new(alternate),
-        })
-    }
-
-    pub fn new_expr_stmt(expr: Expression) -> Statement {
-        Statement::Expression(expr)
+        });
+        Expression {
+            kind,
+            inferred_type: None,
+        }
     }
 
     fn test_env() -> (Vec<Type>, Context) {
@@ -157,12 +210,12 @@ mod tests {
         let (mut a, mut my_ctx) = test_env();
 
         // factorial
-        let syntax = new_letrec(
+        let mut syntax = new_letrec(
             &[(
                 "factorial".to_string(),
                 new_lambda(
-                    &["n"], // fn n =>
-                    &[new_expr_stmt(new_if_else(
+                    &["n"], // (n) => times(n, factorial(pred(n))
+                    &new_if_else(
                         new_apply(new_identifier("zero"), &[new_identifier("n")]),
                         new_number("1"),
                         new_apply(
@@ -176,13 +229,13 @@ mod tests {
                                 ),
                             ],
                         ),
-                    ))],
+                    ),
                 ),
             )],
             new_identifier("factorial"),
         );
 
-        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
+        let t = infer_expression(&mut a, &mut syntax, &mut my_ctx)?;
         assert_eq!(a[t].as_string(&a), r#"(number) => number"#);
         Ok(())
     }
@@ -193,14 +246,14 @@ mod tests {
 
         // NOTE: The definitions of "even" and "odd" are correct from a types
         // perspective, but incorrect semantically.
-        let syntax = new_letrec(
+        let mut syntax = new_letrec(
             &[
                 (
                     "even".to_string(),
                     new_lambda(
-                        &["x"], // (x) =>
-                        &[new_expr_stmt(new_apply(
-                            // times(1, odd(x - 1)) - this casts it to a number
+                        &["x"], // (x) => times(1, odd(x - 1))
+                        &new_apply(
+                            // this casts odd(x - 1) to a number
                             new_identifier("times"),
                             &[
                                 new_number("1"),
@@ -209,15 +262,15 @@ mod tests {
                                     &[new_apply(new_identifier("pred"), &[new_identifier("x")])],
                                 ),
                             ],
-                        ))],
+                        ),
                     ),
                 ),
                 (
                     "odd".to_string(),
                     new_lambda(
-                        &["x"], // (x) =>
-                        &[new_expr_stmt(new_apply(
-                            // times(1, even(x - 1)) - this casts it to a number
+                        &["x"], // (x) => times(1, even(x - 1))
+                        &new_apply(
+                            // this casts even(x - 1) to a number
                             new_identifier("times"),
                             &[
                                 new_number("1"),
@@ -226,14 +279,14 @@ mod tests {
                                     &[new_apply(new_identifier("pred"), &[new_identifier("x")])],
                                 ),
                             ],
-                        ))],
+                        ),
                     ),
                 ),
             ],
             new_identifier("odd"),
         );
 
-        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
+        let t = infer_expression(&mut a, &mut syntax, &mut my_ctx)?;
         assert_eq!(a[t].as_string(&a), r#"(number) => number"#);
 
         Ok(())
@@ -245,18 +298,18 @@ mod tests {
         let (mut a, mut my_ctx) = test_env();
 
         // fn x => (pair(x(3) (x(true)))
-        let syntax = new_lambda(
+        let mut syntax = new_lambda(
             &["x"],
-            &[new_expr_stmt(new_apply(
+            &new_apply(
                 new_identifier("pair"),
                 &[
                     new_apply(new_identifier("x"), &[new_number("3")]),
                     new_apply(new_identifier("x"), &[new_boolean(true)]),
                 ],
-            ))],
+            ),
         );
 
-        infer_expression(&mut a, &syntax, &mut my_ctx).unwrap();
+        infer_expression(&mut a, &mut syntax, &mut my_ctx).unwrap();
     }
 
     #[should_panic = "called `Result::unwrap()` on an `Err` value: InferenceError(\"Undefined symbol \\\"f\\\"\")"]
@@ -265,7 +318,7 @@ mod tests {
         let (mut a, mut my_ctx) = test_env();
 
         // pair(f(3), f(true))
-        let syntax = new_apply(
+        let mut syntax = new_apply(
             new_identifier("pair"),
             &[
                 new_apply(new_identifier("f"), &[new_number("4")]),
@@ -273,7 +326,7 @@ mod tests {
             ],
         );
 
-        infer_expression(&mut a, &syntax, &mut my_ctx).unwrap();
+        infer_expression(&mut a, &mut syntax, &mut my_ctx).unwrap();
     }
 
     #[test]
@@ -288,12 +341,12 @@ mod tests {
             ],
         );
 
-        let program = Program {
+        let mut program = Program {
             statements: vec![
-                // let f = (fn x => x)
+                // let f = (x) => x
                 Statement::Declaration(Declaration {
                     var: "f".to_string(),
-                    defn: Box::from(new_lambda(&["x"], &[new_expr_stmt(new_identifier("x"))])),
+                    defn: Box::from(new_lambda(&["x"], &new_identifier("x"))),
                 }),
                 // let result = ((pair (f 4)) (f true))
                 Statement::Declaration(Declaration {
@@ -303,7 +356,7 @@ mod tests {
             ],
         };
 
-        infer_program(&mut a, &program, &mut my_ctx)?;
+        infer_program(&mut a, &mut program, &mut my_ctx)?;
 
         let t = my_ctx.env.get("result").unwrap();
         assert_eq!(a[*t].as_string(&a), r#"(4 * true)"#);
@@ -316,27 +369,24 @@ mod tests {
         let (mut a, mut my_ctx) = test_env();
 
         // fn f => f f (fail)
-        let syntax = new_lambda(
+        let mut syntax = new_lambda(
             &["f"],
-            &[new_expr_stmt(new_apply(
-                new_identifier("f"),
-                &[new_identifier("f")],
-            ))],
+            &new_apply(new_identifier("f"), &[new_identifier("f")]),
         );
 
-        infer_expression(&mut a, &syntax, &mut my_ctx).unwrap();
+        infer_expression(&mut a, &mut syntax, &mut my_ctx).unwrap();
     }
 
     #[test]
     fn test_number_literal() -> Result<(), Errors> {
         let (mut a, mut my_ctx) = test_env();
 
-        let program = Program {
+        let mut program = Program {
             statements: vec![
-                // let g = fn f => 5
+                // let g = (f) => 5
                 Statement::Declaration(Declaration {
                     var: "g".to_string(),
-                    defn: Box::from(new_lambda(&["f"], &[new_expr_stmt(new_number("5"))])),
+                    defn: Box::from(new_lambda(&["f"], &new_number("5"))),
                 }),
                 // let result = g(g)
                 Statement::Declaration(Declaration {
@@ -346,7 +396,7 @@ mod tests {
             ],
         };
 
-        infer_program(&mut a, &program, &mut my_ctx)?;
+        infer_program(&mut a, &mut program, &mut my_ctx)?;
 
         let t = my_ctx.env.get("result").unwrap();
         assert_eq!(a[*t].as_string(&a), r#"5"#);
@@ -357,13 +407,13 @@ mod tests {
     fn test_generic_nongeneric() -> Result<(), Errors> {
         let (mut a, mut my_ctx) = test_env();
 
-        let syntax = new_lambda(
+        let mut syntax = new_function(
             &["g"],
             &[
-                // let f = fn x => g
+                // let f = (x) => g
                 Statement::Declaration(Declaration {
                     var: "f".to_string(),
-                    defn: Box::from(new_lambda(&["x"], &[new_expr_stmt(new_identifier("g"))])),
+                    defn: Box::from(new_lambda(&["x"], &new_identifier("g"))),
                 }),
                 // pair (f 3, f true)
                 Statement::Return(Return {
@@ -378,7 +428,7 @@ mod tests {
             ],
         );
 
-        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
+        let t = infer_expression(&mut a, &mut syntax, &mut my_ctx)?;
         assert_eq!(a[t].as_string(&a), r#"(t21) => (t21 * t21)"#);
         Ok(())
     }
@@ -389,9 +439,9 @@ mod tests {
 
         // example that demonstrates generic and non-generic variables:
         // fn x => x
-        let syntax = new_lambda(&["x"], &[new_expr_stmt(new_identifier("x"))]);
+        let mut syntax = new_lambda(&["x"], &new_identifier("x"));
 
-        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
+        let t = infer_expression(&mut a, &mut syntax, &mut my_ctx)?;
         assert_eq!(a[t].as_string(&a), r#"(t17) => t17"#);
         let t = &a[t];
         eprintln!("t = {t:#?}");
@@ -404,24 +454,74 @@ mod tests {
 
         // Function composition
         // fn f (fn g (fn arg (f g arg)))
-        let syntax = new_lambda(
+        let mut syntax = new_lambda(
             &["f"],
-            &[new_expr_stmt(new_lambda(
+            &new_lambda(
                 &["g"],
-                &[new_expr_stmt(new_lambda(
+                &new_lambda(
                     &["arg"],
-                    &[new_expr_stmt(new_apply(
+                    &new_apply(
                         new_identifier("g"),
                         &[new_apply(new_identifier("f"), &[new_identifier("arg")])],
-                    ))],
-                ))],
-            ))],
+                    ),
+                ),
+            ),
         );
 
-        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
+        let t = infer_expression(&mut a, &mut syntax, &mut my_ctx)?;
         assert_eq!(
             a[t].as_string(&a),
-            r#"((t19) => t20) => ((t20) => t44) => (t19) => t44"#
+            r#"((t19) => t20) => ((t20) => t22) => (t19) => t22"#
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_composition_with_statements() -> Result<(), Errors> {
+        let (mut a, mut my_ctx) = test_env();
+
+        // Function composition
+        // let compose = (f) => {
+        //     let mantel = (g) => {
+        //         let core = (arg) => f(g(arg));
+        //         return core;
+        //     };
+        //     return mantel;
+        // }
+        let mut syntax = new_function(
+            &["f"],
+            &[
+                Statement::Declaration(Declaration {
+                    var: "mantel".to_string(),
+                    defn: Box::from(new_function(
+                        &["g"],
+                        &[
+                            Statement::Declaration(Declaration {
+                                var: "core".to_string(),
+                                defn: Box::from(new_lambda(
+                                    &["arg"],
+                                    &new_apply(
+                                        new_identifier("g"),
+                                        &[new_apply(new_identifier("f"), &[new_identifier("arg")])],
+                                    ),
+                                )),
+                            }),
+                            Statement::Return(Return {
+                                expr: Box::from(new_identifier("core")),
+                            }),
+                        ],
+                    )),
+                }),
+                Statement::Return(Return {
+                    expr: Box::from(new_identifier("mantel")),
+                }),
+            ],
+        );
+
+        let t = infer_expression(&mut a, &mut syntax, &mut my_ctx)?;
+        assert_eq!(
+            a[t].as_string(&a),
+            r#"((t19) => t20) => ((t20) => t26) => (t19) => t26"#
         );
         Ok(())
     }
@@ -432,15 +532,15 @@ mod tests {
 
         // Function composition
         // (fn (f, g, arg) -> (f g arg))
-        let syntax = new_lambda(
+        let mut syntax = new_lambda(
             &["f", "g", "arg"],
-            &[new_expr_stmt(new_apply(
+            &new_apply(
                 new_identifier("g"),
                 &[new_apply(new_identifier("f"), &[new_identifier("arg")])],
-            ))],
+            ),
         );
 
-        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
+        let t = infer_expression(&mut a, &mut syntax, &mut my_ctx)?;
         assert_eq!(
             a[t].as_string(&a),
             r#"((t19) => t20, (t20) => t22, t19) => t22"#
@@ -452,12 +552,12 @@ mod tests {
     fn test_subtype() -> Result<(), Errors> {
         let (mut a, mut my_ctx) = test_env();
 
-        let syntax = new_apply(
+        let mut syntax = new_apply(
             new_identifier("times"),
             &[new_number("5"), new_number("10")],
         );
 
-        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
+        let t = infer_expression(&mut a, &mut syntax, &mut my_ctx)?;
         assert_eq!(a[t].as_string(&a), r#"number"#);
         Ok(())
     }
@@ -490,9 +590,9 @@ mod tests {
         );
 
         // foo(bar)
-        let syntax = new_apply(new_identifier("foo"), &[new_identifier("bar")]);
+        let mut syntax = new_apply(new_identifier("foo"), &[new_identifier("bar")]);
 
-        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
+        let t = infer_expression(&mut a, &mut syntax, &mut my_ctx)?;
         assert_eq!(a[t].as_string(&a), r#"boolean"#);
         Ok(())
     }
@@ -517,9 +617,9 @@ mod tests {
             .insert("bar".to_string(), new_func_type(&mut a, &[num, str], bool));
 
         // foo(bar)
-        let syntax = new_apply(new_identifier("foo"), &[new_identifier("bar")]);
+        let mut syntax = new_apply(new_identifier("foo"), &[new_identifier("bar")]);
 
-        let result = infer_expression(&mut a, &syntax, &mut my_ctx);
+        let result = infer_expression(&mut a, &mut syntax, &mut my_ctx);
         assert_eq!(
             result,
             Err(Errors::InferenceError("(number, string) => boolean is not a subtype of (number) => boolean since it requires more params".to_string())),
@@ -537,12 +637,12 @@ mod tests {
             .env
             .insert("foo".to_string(), new_union_type(&mut a, &[lit1, lit2]));
 
-        let syntax = new_apply(
+        let mut syntax = new_apply(
             new_identifier("times"),
             &[new_identifier("foo"), new_number("2")],
         );
 
-        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
+        let t = infer_expression(&mut a, &mut syntax, &mut my_ctx)?;
         assert_eq!(a[t].as_string(&a), r#"number"#);
         Ok(())
     }
@@ -559,9 +659,9 @@ mod tests {
             .env
             .insert("foo".to_string(), new_union_type(&mut a, &[fn1, fn2]));
 
-        let syntax = new_apply(new_identifier("foo"), &[]);
+        let mut syntax = new_apply(new_identifier("foo"), &[]);
 
-        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
+        let t = infer_expression(&mut a, &mut syntax, &mut my_ctx)?;
         assert_eq!(a[t].as_string(&a), r#"boolean | string"#);
         Ok(())
     }
@@ -570,9 +670,9 @@ mod tests {
     fn call_with_too_few_args() -> Result<(), Errors> {
         let (mut a, mut my_ctx) = test_env();
 
-        let syntax = new_apply(new_identifier("times"), &[]);
+        let mut syntax = new_apply(new_identifier("times"), &[]);
 
-        let result = infer_expression(&mut a, &syntax, &mut my_ctx);
+        let result = infer_expression(&mut a, &mut syntax, &mut my_ctx);
 
         assert_eq!(
             result,
@@ -591,9 +691,9 @@ mod tests {
         let lit = new_num_lit_type(&mut a, "5");
         my_ctx.env.insert("foo".to_string(), lit);
 
-        let syntax = new_apply(new_identifier("foo"), &[]);
+        let mut syntax = new_apply(new_identifier("foo"), &[]);
 
-        let result = infer_expression(&mut a, &syntax, &mut my_ctx);
+        let result = infer_expression(&mut a, &mut syntax, &mut my_ctx);
 
         assert_eq!(
             result,
@@ -609,9 +709,9 @@ mod tests {
     fn infer_basic_tuple() -> Result<(), Errors> {
         let (mut a, mut my_ctx) = test_env();
 
-        let syntax = new_tuple(&[new_number("5"), new_string("hello")]);
+        let mut syntax = new_tuple(&[new_number("5"), new_string("hello")]);
 
-        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
+        let t = infer_expression(&mut a, &mut syntax, &mut my_ctx)?;
 
         assert_eq!(a[t].as_string(&a), "[5, \"hello\"]".to_string(),);
 
@@ -623,9 +723,9 @@ mod tests {
         let (mut a, mut my_ctx) = test_env();
 
         let tuple = new_tuple(&[new_number("5"), new_string("hello")]);
-        let syntax = new_member(&tuple, &new_number("1"));
+        let mut syntax = new_member(&tuple, &new_number("1"));
 
-        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
+        let t = infer_expression(&mut a, &mut syntax, &mut my_ctx)?;
 
         assert_eq!(a[t].as_string(&a), "\"hello\"".to_string(),);
 
@@ -637,9 +737,9 @@ mod tests {
         let (mut a, mut my_ctx) = test_env();
 
         let tuple = new_tuple(&[new_number("5"), new_string("hello")]);
-        let syntax = new_member(&tuple, &new_number("2"));
+        let mut syntax = new_member(&tuple, &new_number("2"));
 
-        let result = infer_expression(&mut a, &syntax, &mut my_ctx);
+        let result = infer_expression(&mut a, &mut syntax, &mut my_ctx);
 
         assert_eq!(
             result,
@@ -662,7 +762,7 @@ mod tests {
         let func = new_func_type(&mut a, &[param_type], bool);
         my_ctx.env.insert("foo".to_string(), func);
 
-        let syntax = new_apply(
+        let mut syntax = new_apply(
             new_identifier("foo"),
             &[new_tuple(&[
                 // Each element must be a subtype of the expected element type
@@ -673,7 +773,7 @@ mod tests {
             ])],
         );
 
-        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
+        let t = infer_expression(&mut a, &mut syntax, &mut my_ctx)?;
 
         assert_eq!(a[t].as_string(&a), "boolean".to_string(),);
 
@@ -691,9 +791,9 @@ mod tests {
         let func = new_func_type(&mut a, &[param_type], bool);
         my_ctx.env.insert("foo".to_string(), func);
 
-        let syntax = new_apply(new_identifier("foo"), &[new_tuple(&[new_number("5")])]);
+        let mut syntax = new_apply(new_identifier("foo"), &[new_tuple(&[new_number("5")])]);
 
-        let result = infer_expression(&mut a, &syntax, &mut my_ctx);
+        let result = infer_expression(&mut a, &mut syntax, &mut my_ctx);
 
         assert_eq!(
             result,
@@ -709,12 +809,12 @@ mod tests {
     fn infer_basic_object() -> Result<(), Errors> {
         let (mut a, mut my_ctx) = test_env();
 
-        let syntax = new_object(&[
+        let mut syntax = new_object(&[
             ("a".to_string(), new_number("5")),
             ("b".to_string(), new_string("hello")),
         ]);
 
-        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
+        let t = infer_expression(&mut a, &mut syntax, &mut my_ctx)?;
 
         assert_eq!(a[t].as_string(&a), "{a: 5, b: \"hello\"}".to_string(),);
 
@@ -729,9 +829,9 @@ mod tests {
             ("a".to_string(), new_number("5")),
             ("b".to_string(), new_string("hello")),
         ]);
-        let syntax = new_member(&object, &new_string("a"));
+        let mut syntax = new_member(&object, &new_string("a"));
 
-        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
+        let t = infer_expression(&mut a, &mut syntax, &mut my_ctx)?;
 
         assert_eq!(a[t].as_string(&a), "5".to_string(),);
 
@@ -746,9 +846,9 @@ mod tests {
             ("a".to_string(), new_number("5")),
             ("b".to_string(), new_string("hello")),
         ]);
-        let syntax = new_member(&object, &new_string("c"));
+        let mut syntax = new_member(&object, &new_string("c"));
 
-        let result = infer_expression(&mut a, &syntax, &mut my_ctx);
+        let result = infer_expression(&mut a, &mut syntax, &mut my_ctx);
 
         assert_eq!(
             result,
@@ -771,7 +871,7 @@ mod tests {
         let func = new_func_type(&mut a, &[param_type], bool);
         my_ctx.env.insert("foo".to_string(), func);
 
-        let syntax = new_apply(
+        let mut syntax = new_apply(
             new_identifier("foo"),
             &[new_object(&[
                 // Each prop must be a subtype of the expected element type
@@ -782,7 +882,7 @@ mod tests {
             ])],
         );
 
-        let t = infer_expression(&mut a, &syntax, &mut my_ctx)?;
+        let t = infer_expression(&mut a, &mut syntax, &mut my_ctx)?;
 
         assert_eq!(a[t].as_string(&a), "boolean".to_string(),);
 
@@ -800,12 +900,12 @@ mod tests {
         let func = new_func_type(&mut a, &[param_type], bool);
         my_ctx.env.insert("foo".to_string(), func);
 
-        let syntax = new_apply(
+        let mut syntax = new_apply(
             new_identifier("foo"),
             &[new_object(&[("b".to_string(), new_string("hello"))])],
         );
 
-        let result = infer_expression(&mut a, &syntax, &mut my_ctx);
+        let result = infer_expression(&mut a, &mut syntax, &mut my_ctx);
 
         assert_eq!(
             result,
@@ -821,12 +921,12 @@ mod tests {
     fn test_subtype_error() -> Result<(), Errors> {
         let (mut a, mut my_ctx) = test_env();
 
-        let syntax = new_apply(
+        let mut syntax = new_apply(
             new_identifier("times"),
             &[new_number("5"), new_string("hello")],
         );
 
-        let result = infer_expression(&mut a, &syntax, &mut my_ctx);
+        let result = infer_expression(&mut a, &mut syntax, &mut my_ctx);
 
         assert_eq!(
             result,
@@ -848,12 +948,12 @@ mod tests {
             .env
             .insert("foo".to_string(), new_union_type(&mut a, &[lit1, lit2]));
 
-        let syntax = new_apply(
+        let mut syntax = new_apply(
             new_identifier("times"),
             &[new_identifier("foo"), new_number("2")],
         );
 
-        let result = infer_expression(&mut a, &syntax, &mut my_ctx);
+        let result = infer_expression(&mut a, &mut syntax, &mut my_ctx);
 
         assert_eq!(
             result,
@@ -869,7 +969,7 @@ mod tests {
     fn test_program() -> Result<(), Errors> {
         let (mut a, mut my_ctx) = test_env();
 
-        let program = Program {
+        let mut program = Program {
             statements: vec![
                 Statement::Declaration(Declaration {
                     var: "num".to_string(),
@@ -886,7 +986,7 @@ mod tests {
             ],
         };
 
-        infer_program(&mut a, &program, &mut my_ctx)?;
+        infer_program(&mut a, &mut program, &mut my_ctx)?;
 
         let t = my_ctx.env.get("num").unwrap();
         assert_eq!(a[*t].as_string(&a), r#"5"#);
@@ -901,11 +1001,11 @@ mod tests {
     fn test_program_with_generic_func() -> Result<(), Errors> {
         let (mut a, mut my_ctx) = test_env();
 
-        let program = Program {
+        let mut program = Program {
             statements: vec![
                 Statement::Declaration(Declaration {
                     var: "id".to_string(),
-                    defn: Box::new(new_lambda(&["x"], &[new_expr_stmt(new_identifier("x"))])),
+                    defn: Box::new(new_lambda(&["x"], &new_identifier("x"))),
                 }),
                 Statement::Declaration(Declaration {
                     var: "a".to_string(),
@@ -918,7 +1018,7 @@ mod tests {
             ],
         };
 
-        infer_program(&mut a, &program, &mut my_ctx)?;
+        infer_program(&mut a, &mut program, &mut my_ctx)?;
 
         let t = my_ctx.env.get("a").unwrap();
         assert_eq!(a[*t].as_string(&a), r#"5"#);
@@ -933,7 +1033,7 @@ mod tests {
     fn test_lambda_with_multiple_statements() -> Result<(), Errors> {
         let (mut a, mut my_ctx) = test_env();
 
-        let lambda = new_lambda(
+        let mut syntax = new_function(
             &[],
             &[
                 Statement::Declaration(Declaration {
@@ -953,7 +1053,7 @@ mod tests {
             ],
         );
 
-        let t = infer_expression(&mut a, &lambda, &mut my_ctx)?;
+        let t = infer_expression(&mut a, &mut syntax, &mut my_ctx)?;
 
         assert_eq!(a[t].as_string(&a), r#"() => number"#);
 
