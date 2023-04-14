@@ -21,7 +21,12 @@ mod tests {
 
     pub fn new_lambda(params: &[&str], body: &Expression) -> Expression {
         let kind = ExprKind::Lambda(Lambda {
-            params: params.iter().map(|x| x.to_string()).collect(),
+            params: params
+                .iter()
+                .map(|name| FuncParam {
+                    pattern: new_binding(name),
+                })
+                .collect(),
             body: BlockOrExpr::Expr(Box::from(body.to_owned())),
         });
         Expression {
@@ -32,7 +37,12 @@ mod tests {
 
     pub fn new_function(params: &[&str], body: &[Statement]) -> Expression {
         let kind = ExprKind::Lambda(Lambda {
-            params: params.iter().map(|x| x.to_string()).collect(),
+            params: params
+                .iter()
+                .map(|name| FuncParam {
+                    pattern: new_binding(name),
+                })
+                .collect(),
             body: BlockOrExpr::Block(Block {
                 stmts: body.to_owned(),
             }),
@@ -145,6 +155,18 @@ mod tests {
             alternate: Box::new(alternate),
         });
         Expression {
+            kind,
+            inferred_type: None,
+        }
+    }
+
+    pub fn new_binding(name: &str) -> Pattern {
+        // TODO: Check that `name` is a valid identifier
+        let kind = PatternKind::Ident(BindingIdent {
+            name: name.to_string(),
+            mutable: false,
+        });
+        Pattern {
             kind,
             inferred_type: None,
         }
@@ -345,12 +367,12 @@ mod tests {
             statements: vec![
                 // let f = (x) => x
                 Statement::Declaration(Declaration {
-                    var: "f".to_string(),
+                    pattern: new_binding("f"),
                     defn: Box::from(new_lambda(&["x"], &new_identifier("x"))),
                 }),
                 // let result = ((pair (f 4)) (f true))
                 Statement::Declaration(Declaration {
-                    var: "result".to_string(),
+                    pattern: new_binding("result"),
                     defn: Box::new(pair),
                 }),
             ],
@@ -385,12 +407,12 @@ mod tests {
             statements: vec![
                 // let g = (f) => 5
                 Statement::Declaration(Declaration {
-                    var: "g".to_string(),
+                    pattern: new_binding("g"),
                     defn: Box::from(new_lambda(&["f"], &new_number("5"))),
                 }),
                 // let result = g(g)
                 Statement::Declaration(Declaration {
-                    var: "result".to_string(),
+                    pattern: new_binding("result"),
                     defn: Box::new(new_apply(new_identifier("g"), &[new_identifier("g")])),
                 }),
             ],
@@ -412,7 +434,7 @@ mod tests {
             &[
                 // let f = (x) => g
                 Statement::Declaration(Declaration {
-                    var: "f".to_string(),
+                    pattern: new_binding("f"),
                     defn: Box::from(new_lambda(&["x"], &new_identifier("g"))),
                 }),
                 // pair (f 3, f true)
@@ -492,12 +514,12 @@ mod tests {
             &["f"],
             &[
                 Statement::Declaration(Declaration {
-                    var: "mantel".to_string(),
+                    pattern: new_binding("mantel"),
                     defn: Box::from(new_function(
                         &["g"],
                         &[
                             Statement::Declaration(Declaration {
-                                var: "core".to_string(),
+                                pattern: new_binding("core"),
                                 defn: Box::from(new_lambda(
                                     &["arg"],
                                     &new_apply(
@@ -972,11 +994,11 @@ mod tests {
         let mut program = Program {
             statements: vec![
                 Statement::Declaration(Declaration {
-                    var: "num".to_string(),
+                    pattern: new_binding("num"),
                     defn: Box::new(new_number("5")),
                 }),
                 Statement::Declaration(Declaration {
-                    var: "str".to_string(),
+                    pattern: new_binding("str"),
                     defn: Box::new(new_string("hello")),
                 }),
                 Statement::Expression(new_apply(
@@ -1004,15 +1026,15 @@ mod tests {
         let mut program = Program {
             statements: vec![
                 Statement::Declaration(Declaration {
-                    var: "id".to_string(),
+                    pattern: new_binding("id"),
                     defn: Box::new(new_lambda(&["x"], &new_identifier("x"))),
                 }),
                 Statement::Declaration(Declaration {
-                    var: "a".to_string(),
+                    pattern: new_binding("a"),
                     defn: Box::new(new_apply(new_identifier("id"), &[new_number("5")])),
                 }),
                 Statement::Declaration(Declaration {
-                    var: "b".to_string(),
+                    pattern: new_binding("b"),
                     defn: Box::new(new_apply(new_identifier("id"), &[new_string("hello")])),
                 }),
             ],
@@ -1030,18 +1052,18 @@ mod tests {
     }
 
     #[test]
-    fn test_lambda_with_multiple_statements() -> Result<(), Errors> {
+    fn test_function_with_multiple_statements() -> Result<(), Errors> {
         let (mut a, mut my_ctx) = test_env();
 
         let mut syntax = new_function(
             &[],
             &[
                 Statement::Declaration(Declaration {
-                    var: "x".to_string(),
+                    pattern: new_binding("x"),
                     defn: Box::new(new_number("5")),
                 }),
                 Statement::Declaration(Declaration {
-                    var: "y".to_string(),
+                    pattern: new_binding("y"),
                     defn: Box::new(new_number("10")),
                 }),
                 Statement::Return(Return {
@@ -1056,6 +1078,37 @@ mod tests {
         let t = infer_expression(&mut a, &mut syntax, &mut my_ctx)?;
 
         assert_eq!(a[t].as_string(&a), r#"() => number"#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_inferred_type_on_ast_nodes() -> Result<(), Errors> {
+        let (mut a, mut my_ctx) = test_env();
+
+        let mut syntax = new_function(
+            &["x", "y"],
+            &[Statement::Return(Return {
+                expr: Box::new(new_apply(
+                    new_identifier("times"),
+                    &[new_identifier("x"), new_identifier("y")],
+                )),
+            })],
+        );
+
+        eprintln!("(avant) syntax = {syntax:#?}");
+
+        let t = infer_expression(&mut a, &mut syntax, &mut my_ctx)?;
+
+        eprintln!("(apres) syntax = {syntax:#?}");
+
+        assert_eq!(a[t].as_string(&a), r#"(number, number) => number"#);
+
+        // TODO: fix the output when printing the syntax AST
+        // TODO: walk the syntax AST and update each inferred_type with the
+        // actual type after calling `prune()` on it
+        // TODO: look up the type for those nodes where it makes sense to print
+        eprintln!("syntax = {syntax}");
 
         Ok(())
     }

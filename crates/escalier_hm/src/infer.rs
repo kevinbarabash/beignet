@@ -64,11 +64,18 @@ pub fn infer_expression<'a>(
             let mut param_types = vec![];
             let mut new_ctx = ctx.clone();
 
-            for param in params {
-                let arg_type = new_var_type(a);
-                new_ctx.env.insert(param.clone(), arg_type);
-                new_ctx.non_generic.insert(arg_type);
-                param_types.push(arg_type);
+            for FuncParam { pattern } in params {
+                let param_type = new_var_type(a);
+                if let PatternKind::Ident(BindingIdent { name, mutable: _ }) = &pattern.kind {
+                    pattern.inferred_type = Some(param_type);
+                    new_ctx.env.insert(name.to_owned(), param_type);
+                    new_ctx.non_generic.insert(param_type);
+                    param_types.push(param_type);
+                } else {
+                    return Err(Errors::InferenceError(
+                        "Other patterns are not yet supported as function params".to_owned(),
+                    ));
+                }
             }
 
             match body {
@@ -182,10 +189,17 @@ pub fn infer_statement<'a>(
     ctx: &mut Context,
 ) -> Result<ArenaType, Errors> {
     match statement {
-        Statement::Declaration(Declaration { var, defn }) => {
-            let t = infer_expression(a, defn, ctx)?;
-            ctx.env.insert(var.clone(), t);
-            Ok(t) // TODO: Should this be unit?
+        Statement::Declaration(Declaration { pattern, defn }) => {
+            if let PatternKind::Ident(BindingIdent { name, mutable: _ }) = &pattern.kind {
+                let t = infer_expression(a, defn, ctx)?;
+                ctx.env.insert(name.clone(), t);
+                pattern.inferred_type = Some(t);
+                Ok(t) // TODO: Should this be unit?
+            } else {
+                Err(Errors::InferenceError(
+                    "Can only declare variables with identifiers".to_string(),
+                ))
+            }
         }
         Statement::Expression(expr) => {
             let t = infer_expression(a, expr, ctx)?;

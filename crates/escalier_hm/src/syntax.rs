@@ -1,6 +1,110 @@
 use std::fmt;
 
 use crate::literal::Literal;
+use crate::types::ArenaType;
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct BindingIdent {
+    pub name: String,
+    pub mutable: bool,
+    // pub span: Span,
+    // pub loc: SourceLocation,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RestPat {
+    pub arg: Box<Pattern>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ObjectPat {
+    pub props: Vec<ObjectPatProp>,
+    pub optional: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ObjectPatProp {
+    KeyValue(KeyValuePatProp),
+    Shorthand(ShorthandPatProp),
+    Rest(RestPat), // TODO: create a new RestPatProp that includes a span
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct KeyValuePatProp {
+    // pub loc: SourceLocation,
+    // pub span: Span,
+    pub key: Identifier,
+    pub value: Box<Pattern>,
+    pub init: Option<Box<Expression>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ShorthandPatProp {
+    // pub loc: SourceLocation,
+    // pub span: Span,
+    pub ident: BindingIdent,
+    pub init: Option<Box<Expression>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ArrayPat {
+    // The elements are optional to support sparse arrays.
+    pub elems: Vec<Option<ArrayPatElem>>,
+    pub optional: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ArrayPatElem {
+    // TODO: add .span property
+    pub pattern: Pattern,
+    pub init: Option<Box<Expression>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LitPat {
+    pub lit: Literal,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct IsPat {
+    pub ident: BindingIdent,
+    pub is_id: Identifier,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PatternKind {
+    Ident(BindingIdent),
+    Rest(RestPat),
+    Object(ObjectPat),
+    Array(ArrayPat),
+    Lit(LitPat),
+    Is(IsPat),
+    Wildcard,
+    // This can't be used at the top level similar to rest
+    // Assign(AssignPat),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Pattern {
+    // pub loc: SourceLocation,
+    // pub span: Span,
+    pub kind: PatternKind,
+    pub inferred_type: Option<ArenaType>,
+}
+
+impl fmt::Display for Pattern {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self.kind {
+            PatternKind::Ident(BindingIdent { name, mutable: _ }) => write!(f, "{name}"),
+            PatternKind::Rest(RestPat { arg }) => write!(f, "...{arg}"),
+            PatternKind::Object(ObjectPat { props, optional }) => todo!(),
+            PatternKind::Array(ArrayPat { elems, optional }) => todo!(),
+            PatternKind::Lit(LitPat { lit }) => write!(f, "{lit}"),
+            PatternKind::Is(IsPat { ident, is_id }) => todo!(),
+            PatternKind::Wildcard => write!(f, "_"),
+        }
+    }
+}
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Block {
@@ -14,8 +118,13 @@ pub enum BlockOrExpr {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub struct FuncParam {
+    pub pattern: Pattern,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Lambda {
-    pub params: Vec<String>,
+    pub params: Vec<FuncParam>,
     pub body: BlockOrExpr,
 }
 
@@ -82,7 +191,7 @@ pub enum ExprKind {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Expression {
     pub kind: ExprKind,
-    pub inferred_type: Option<usize>,
+    pub inferred_type: Option<ArenaType>,
 }
 
 impl fmt::Display for Expression {
@@ -91,7 +200,7 @@ impl fmt::Display for Expression {
             ExprKind::Lambda(Lambda { params, body }) => {
                 let params = params
                     .iter()
-                    .map(|param| param.to_string())
+                    .map(|param| param.pattern.to_string())
                     .collect::<Vec<_>>();
 
                 match body {
@@ -100,10 +209,10 @@ impl fmt::Display for Expression {
                             .iter()
                             .map(|stmt| stmt.to_string())
                             .collect::<Vec<_>>();
-                        write!(f, "(fn ({}) => {})", params.join(", "), stmts.join("\n"))
+                        write!(f, "fn ({}) => {{{}}}", params.join(", "), stmts.join("\n"))
                     }
                     BlockOrExpr::Expr(expr) => {
-                        write!(f, "(fn ({}) => {expr})", params.join(", "))
+                        write!(f, "fn ({}) => {expr})", params.join(", "))
                     }
                 }
             }
@@ -118,7 +227,7 @@ impl fmt::Display for Expression {
                 write!(f, "{func}({})", args.join(", "))
             }
             ExprKind::Letrec(Letrec { decls, body }) => {
-                write!(f, "(letrec ")?;
+                write!(f, "let rec ")?;
                 let decls = decls
                     .iter()
                     .map(|(var, defn)| format!("{} = {}", var, defn))
@@ -131,7 +240,7 @@ impl fmt::Display for Expression {
                 consequent,
                 alternate,
             }) => {
-                write!(f, "(if {cond} then {consequent} else {alternate})",)
+                write!(f, "if ({cond}) then {{{consequent}}} else {{{alternate}}}")
             }
             ExprKind::Member(Member { obj, prop }) => {
                 write!(f, "{obj}.{prop}")
@@ -156,7 +265,7 @@ impl fmt::Display for Expression {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Declaration {
-    pub var: String,
+    pub pattern: Pattern,
     pub defn: Box<Expression>,
 }
 
@@ -175,8 +284,8 @@ pub enum Statement {
 impl fmt::Display for Statement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Statement::Declaration(Declaration { var, defn }) => {
-                write!(f, "let {var} = {defn}")
+            Statement::Declaration(Declaration { pattern, defn }) => {
+                write!(f, "let {pattern} = {defn}")
             }
             Statement::Expression(expr) => write!(f, "{expr}"),
             Statement::Return(Return { expr }) => write!(f, "return {expr}"),
