@@ -1021,6 +1021,14 @@ mod tests {
         let t = my_ctx.env.get("str").unwrap();
         assert_eq!(a[*t].as_string(&a), r#""hello""#);
 
+        eprintln!("program = {program}");
+
+        insta::assert_snapshot!(program.to_string(), @r###"
+        let num = 5
+        let str = "hello"
+        times(num, num)
+        "###);
+
         Ok(())
     }
 
@@ -1083,6 +1091,12 @@ mod tests {
         } else {
             panic!("expected a lambda");
         }
+
+        insta::assert_snapshot!(syntax.to_string(), @r###"
+        fn () => {let x = 5
+        let y = 10
+        return times(x, y)}
+        "###);
 
         Ok(())
     }
