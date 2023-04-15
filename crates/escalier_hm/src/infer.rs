@@ -1,3 +1,5 @@
+use generational_arena::Arena;
+
 use crate::context::*;
 use crate::errors::*;
 use crate::literal::*;
@@ -27,45 +29,45 @@ use crate::unify::*;
 ///         if it is not possible to unify two types such as Integer and Bool
 ///     ParseError: The abstract syntax tree rooted at node could not be parsed
 pub fn infer_expression<'a>(
-    a: &mut Vec<Type>,
+    arena: &mut Arena<Type>,
     node: &'a mut Expression,
     ctx: &mut Context,
 ) -> Result<ArenaType, Errors> {
     let t: ArenaType = match &mut node.kind {
-        ExprKind::Identifier(Identifier { name }) => get_type(a, name, ctx)?,
-        ExprKind::Literal(literal) => new_lit_type(a, literal),
+        ExprKind::Identifier(Identifier { name }) => get_type(arena, name, ctx)?,
+        ExprKind::Literal(literal) => new_lit_type(arena, literal),
         ExprKind::Tuple(syntax::Tuple { elems }) => {
             let mut element_types = vec![];
             for element in elems {
-                let t = infer_expression(a, element, ctx)?;
+                let t = infer_expression(arena, element, ctx)?;
                 element_types.push(t);
             }
-            new_tuple_type(a, &element_types)
+            new_tuple_type(arena, &element_types)
         }
         ExprKind::Object(syntax::Object { props }) => {
             let mut prop_types = vec![];
             for (name, value) in props {
-                let t = infer_expression(a, value, ctx)?;
+                let t = infer_expression(arena, value, ctx)?;
                 prop_types.push((name.to_owned(), t));
             }
-            new_object_type(a, &prop_types)
+            new_object_type(arena, &prop_types)
         }
         ExprKind::Apply(Apply { func, args }) => {
-            let func_type = infer_expression(a, func, ctx)?;
+            let func_type = infer_expression(arena, func, ctx)?;
 
             let arg_types = args
                 .iter_mut()
-                .map(|arg| infer_expression(a, arg, ctx))
+                .map(|arg| infer_expression(arena, arg, ctx))
                 .collect::<Result<Vec<_>, _>>()?;
 
-            unify_call(a, &arg_types, func_type)?
+            unify_call(arena, &arg_types, func_type)?
         }
         ExprKind::Lambda(Lambda { params, body }) => {
             let mut param_types = vec![];
             let mut new_ctx = ctx.clone();
 
             for FuncParam { pattern } in params {
-                let param_type = new_var_type(a);
+                let param_type = new_var_type(arena);
                 if let PatternKind::Ident(BindingIdent { name, mutable: _ }) = &pattern.kind {
                     pattern.inferred_type = Some(param_type);
                     new_ctx.env.insert(name.to_owned(), param_type);
@@ -82,10 +84,10 @@ pub fn infer_expression<'a>(
                 BlockOrExpr::Block(Block { stmts }) => {
                     for stmt in stmts {
                         new_ctx = new_ctx.clone();
-                        let t = infer_statement(a, stmt, &mut new_ctx)?;
+                        let t = infer_statement(arena, stmt, &mut new_ctx)?;
                         if let StmtKind::Return(_) = stmt.kind {
                             let ret_t = t;
-                            let func_t = new_func_type(a, &param_types, ret_t);
+                            let func_t = new_func_type(arena, &param_types, ret_t);
                             // TODO: warn if there are any statements after the return
                             // TODO: update AST with the inferred type
                             return Ok(func_t);
@@ -94,12 +96,12 @@ pub fn infer_expression<'a>(
 
                     // If there's no return statement in the block, then the
                     // return type for the function is `undefined`.
-                    let undefined = new_constructor(a, "undefined", &[]);
-                    new_func_type(a, &param_types, undefined)
+                    let undefined = new_constructor(arena, "undefined", &[]);
+                    new_func_type(arena, &param_types, undefined)
                 }
                 BlockOrExpr::Expr(expr) => {
-                    let ret_type = infer_expression(a, expr, &mut new_ctx)?;
-                    new_func_type(a, &param_types, ret_type)
+                    let ret_type = infer_expression(arena, expr, &mut new_ctx)?;
+                    new_func_type(arena, &param_types, ret_type)
                 }
             }
         }
@@ -111,7 +113,7 @@ pub fn infer_expression<'a>(
             let mut new_types = vec![];
 
             for (var, ..) in &letrec.decls {
-                let new_type = new_var_type(a);
+                let new_type = new_var_type(arena);
                 new_ctx.env.insert(var.clone(), new_type);
                 new_ctx.non_generic.insert(new_type);
 
@@ -121,30 +123,30 @@ pub fn infer_expression<'a>(
             // Then infer the defintions and unify them with the new types
 
             for ((.., defn), new_type) in letrec.decls.iter_mut().zip(new_types.iter()) {
-                let defn_type = infer_expression(a, defn, &mut new_ctx)?;
-                unify(a, *new_type, defn_type)?;
+                let defn_type = infer_expression(arena, defn, &mut new_ctx)?;
+                unify(arena, *new_type, defn_type)?;
             }
 
-            infer_expression(a, &mut letrec.body, &mut new_ctx)?
+            infer_expression(arena, &mut letrec.body, &mut new_ctx)?
         }
         ExprKind::IfElse(IfElse {
             cond,
             consequent,
             alternate,
         }) => {
-            let cond_type = infer_expression(a, cond, ctx)?;
-            let bool_type = new_constructor(a, "boolean", &[]);
-            unify(a, cond_type, bool_type)?;
-            let consequent_type = infer_expression(a, consequent, ctx)?;
-            let alternate_type = infer_expression(a, alternate, ctx)?;
-            new_union_type(a, &[consequent_type, alternate_type])
+            let cond_type = infer_expression(arena, cond, ctx)?;
+            let bool_type = new_constructor(arena, "boolean", &[]);
+            unify(arena, cond_type, bool_type)?;
+            let consequent_type = infer_expression(arena, consequent, ctx)?;
+            let alternate_type = infer_expression(arena, alternate, ctx)?;
+            new_union_type(arena, &[consequent_type, alternate_type])
         }
         ExprKind::Member(Member { obj, prop }) => {
-            let obj_type = infer_expression(a, obj, ctx)?;
-            let prop_type = infer_expression(a, prop, ctx)?;
+            let obj_type = infer_expression(arena, obj, ctx)?;
+            let prop_type = infer_expression(arena, prop, ctx)?;
 
-            let obj_type = a[obj_type].clone();
-            let prop_type = a[prop_type].clone();
+            let obj_type = arena[obj_type].clone();
+            let prop_type = arena[prop_type].clone();
 
             match (&obj_type.kind, &prop_type.kind) {
                 (TypeKind::Object(object), TypeKind::Literal(Literal::String(name))) => {
@@ -184,14 +186,14 @@ pub fn infer_expression<'a>(
 }
 
 pub fn infer_statement<'a>(
-    a: &'a mut Vec<Type>,
+    arena: &'a mut Arena<Type>,
     statement: &mut Statement,
     ctx: &mut Context,
 ) -> Result<ArenaType, Errors> {
     let t = match &mut statement.kind {
         StmtKind::Declaration(Declaration { pattern, defn }) => {
             if let PatternKind::Ident(BindingIdent { name, mutable: _ }) = &pattern.kind {
-                let t = infer_expression(a, defn, ctx)?;
+                let t = infer_expression(arena, defn, ctx)?;
                 ctx.env.insert(name.clone(), t);
                 pattern.inferred_type = Some(t);
                 t // TODO: Should this be unit?
@@ -201,8 +203,8 @@ pub fn infer_statement<'a>(
                 ));
             }
         }
-        StmtKind::Expression(expr) => infer_expression(a, expr, ctx)?,
-        StmtKind::Return(Return { expr }) => infer_expression(a, expr, ctx)?,
+        StmtKind::Expression(expr) => infer_expression(arena, expr, ctx)?,
+        StmtKind::Return(Return { expr }) => infer_expression(arena, expr, ctx)?,
     };
 
     statement.inferred_type = Some(t);
@@ -211,12 +213,12 @@ pub fn infer_statement<'a>(
 }
 
 pub fn infer_program<'a>(
-    a: &mut Vec<Type>,
+    arena: &mut Arena<Type>,
     node: &'a mut Program,
     ctx: &mut Context,
 ) -> Result<(), Errors> {
     for stmt in &mut node.statements {
-        infer_statement(a, stmt, ctx)?;
+        infer_statement(arena, stmt, ctx)?;
     }
 
     Ok(())

@@ -12,12 +12,26 @@ pub use crate::infer::{infer_expression, infer_program};
 
 #[cfg(test)]
 mod tests {
+    use generational_arena::Arena;
+
     use crate::context::*;
     use crate::errors::*;
     use crate::infer::*;
     use crate::literal::*;
     use crate::syntax::{self, *};
     use crate::types::*;
+
+    pub fn new_num_lit_type(arena: &mut Arena<Type>, value: &str) -> ArenaType {
+        new_lit_type(arena, &Literal::Number(value.to_string()))
+    }
+
+    pub fn new_str_lit_type(arena: &mut Arena<Type>, value: &str) -> ArenaType {
+        new_lit_type(arena, &Literal::String(value.to_string()))
+    }
+
+    pub fn new_bool_lit_type(arena: &mut Arena<Type>, value: bool) -> ArenaType {
+        new_lit_type(arena, &Literal::Boolean(value))
+    }
 
     pub fn new_lambda(params: &[&str], body: &Expression) -> Expression {
         let kind = ExprKind::Lambda(Lambda {
@@ -201,8 +215,8 @@ mod tests {
         }
     }
 
-    fn test_env() -> (Vec<Type>, Context) {
-        let mut a = vec![];
+    fn test_env() -> (Arena<Type>, Context) {
+        let mut a: Arena<Type> = Arena::new();
         let mut my_ctx = Context::default();
 
         let var1 = new_var_type(&mut a);

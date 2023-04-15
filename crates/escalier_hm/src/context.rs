@@ -1,3 +1,4 @@
+use generational_arena::Arena;
 use im::hashmap::HashMap;
 use im::hashset::HashSet;
 
@@ -24,9 +25,9 @@ pub struct Context {
 /// Raises:
 ///     ParseError: Raised if name is an undefined symbol in the type
 ///         environment.
-pub fn get_type(a: &mut Vec<Type>, name: &str, ctx: &Context) -> Result<ArenaType, Errors> {
+pub fn get_type(arena: &mut Arena<Type>, name: &str, ctx: &Context) -> Result<ArenaType, Errors> {
     if let Some(value) = ctx.env.get(name) {
-        Ok(fresh(a, *value, ctx))
+        Ok(fresh(arena, *value, ctx))
     } else {
         Err(Errors::InferenceError(format!(
             "Undefined symbol {:?}",
@@ -43,12 +44,12 @@ pub fn get_type(a: &mut Vec<Type>, name: &str, ctx: &Context) -> Result<ArenaTyp
 /// Args:
 ///     t: A type to be copied.
 ///     non_generic: A set of non-generic TypeVariables
-pub fn fresh(a: &mut Vec<Type>, t: ArenaType, ctx: &Context) -> ArenaType {
+pub fn fresh(a: &mut Arena<Type>, t: ArenaType, ctx: &Context) -> ArenaType {
     // A mapping of TypeVariables to TypeVariables
     let mut mappings = HashMap::default();
 
     fn freshrec(
-        a: &mut Vec<Type>,
+        a: &mut Arena<Type>,
         tp: ArenaType,
         mappings: &mut HashMap<ArenaType, ArenaType>,
         ctx: &Context,
@@ -115,7 +116,7 @@ pub fn fresh(a: &mut Vec<Type>, t: ArenaType, ctx: &Context) -> ArenaType {
     }
 
     pub fn freshrec_many(
-        a: &mut Vec<Type>,
+        a: &mut Arena<Type>,
         types: &[ArenaType],
         mappings: &mut HashMap<ArenaType, ArenaType>,
         ctx: &Context,
@@ -143,6 +144,6 @@ pub fn fresh(a: &mut Vec<Type>, t: ArenaType, ctx: &Context) -> ArenaType {
 ///
 /// Returns:
 ///     True if v is a generic variable, otherwise False
-pub fn is_generic(a: &mut Vec<Type>, t: ArenaType, ctx: &Context) -> bool {
+pub fn is_generic(a: &mut Arena<Type>, t: ArenaType, ctx: &Context) -> bool {
     !occurs_in(a, t, &ctx.non_generic)
 }

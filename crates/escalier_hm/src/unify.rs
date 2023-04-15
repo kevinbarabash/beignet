@@ -1,3 +1,4 @@
+use generational_arena::Arena;
 use itertools::Itertools;
 
 use crate::errors::*;
@@ -18,22 +19,26 @@ use crate::util::*;
 ///
 /// Raises:
 ///     InferenceError: Raised if the types cannot be unified.
-pub fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), Errors> {
-    let a = prune(alloc, t1);
-    let b = prune(alloc, t2);
+pub fn unify(arena: &mut Arena<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), Errors> {
+    let a = prune(arena, t1);
+    let b = prune(arena, t2);
     // Why do we clone here?
-    let a_t = alloc.get(a).unwrap().clone();
-    let b_t = alloc.get(b).unwrap().clone();
+    let a_t = arena.get(a).unwrap().clone();
+    let b_t = arena.get(b).unwrap().clone();
     match (&a_t.kind, &b_t.kind) {
-        (TypeKind::Variable(_), _) => bind(alloc, a, b),
-        (_, TypeKind::Variable(_)) => bind(alloc, b, a),
+        (TypeKind::Variable(_), _) => bind(arena, a, b),
+        (_, TypeKind::Variable(_)) => bind(arena, b, a),
         (TypeKind::Constructor(con_a), TypeKind::Constructor(con_b)) => {
             // TODO: support type constructors with optional and default type params
             if con_a.name != con_b.name || con_a.types.len() != con_b.types.len() {
-                return Err(Errors::InferenceError(format!("type mismatch: {a} != {b}")));
+                return Err(Errors::InferenceError(format!(
+                    "type mismatch: {} != {}",
+                    a_t.as_string(arena),
+                    b_t.as_string(arena),
+                )));
             }
             for (p, q) in con_a.types.iter().zip(con_b.types.iter()) {
-                unify(alloc, *p, *q)?;
+                unify(arena, *p, *q)?;
             }
             Ok(())
         }
@@ -41,8 +46,8 @@ pub fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), 
             if func_a.params.len() > func_b.params.len() {
                 return Err(Errors::InferenceError(format!(
                     "{} is not a subtype of {} since it requires more params",
-                    a_t.as_string(alloc),
-                    b_t.as_string(alloc),
+                    a_t.as_string(arena),
+                    b_t.as_string(arena),
                 )));
             }
 
@@ -50,9 +55,9 @@ pub fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), 
                 // NOTE: We reverse the order of the params here because func_a
                 // should be able to accept any params that func_b can accept,
                 // its params may be more lenient.  Thus q is a subtype of p.
-                unify(alloc, *q, *p)?;
+                unify(arena, *q, *p)?;
             }
-            unify(alloc, func_a.ret, func_b.ret)?;
+            unify(arena, func_a.ret, func_b.ret)?;
             Ok(())
         }
         (
@@ -70,7 +75,7 @@ pub fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), 
         (TypeKind::Union(Union { types }), _) => {
             // All types in the union must be subtypes of t2
             for t in types.iter() {
-                unify(alloc, *t, b)?;
+                unify(arena, *t, b)?;
             }
             Ok(())
         }
@@ -78,15 +83,15 @@ pub fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), 
             // If t1 is a subtype of any of the types in the union, then it is a
             // subtype of the union.
             for t2 in types.iter() {
-                if unify(alloc, a, *t2).is_ok() {
+                if unify(arena, a, *t2).is_ok() {
                     return Ok(());
                 }
             }
 
             Err(Errors::InferenceError(format!(
                 "type mismatch: unify({}, {}) failed",
-                a_t.as_string(alloc),
-                b_t.as_string(alloc)
+                a_t.as_string(arena),
+                b_t.as_string(arena)
             )))
         }
         (TypeKind::Tuple(tuple1), TypeKind::Tuple(tuple2)) => {
@@ -99,7 +104,7 @@ pub fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), 
             }
 
             for (p, q) in tuple1.types.iter().zip(tuple2.types.iter()) {
-                unify(alloc, *p, *q)?;
+                unify(arena, *p, *q)?;
             }
             Ok(())
         }
@@ -107,11 +112,11 @@ pub fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), 
             // object1 must have atleast as the same properties as object2
             for (name, t) in &object2.props {
                 if let Some(prop) = object1.props.iter().find(|props| &props.0 == name) {
-                    unify(alloc, prop.1, *t)?;
+                    unify(arena, prop.1, *t)?;
                 } else {
                     return Err(Errors::InferenceError(format!(
                         "'{name}' is missing in {}",
-                        a_t.as_string(alloc),
+                        a_t.as_string(arena),
                     )));
                 }
             }
@@ -119,15 +124,15 @@ pub fn unify(alloc: &mut Vec<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), 
         }
         _ => Err(Errors::InferenceError(format!(
             "type mismatch: unify({}, {}) failed",
-            a_t.as_string(alloc),
-            b_t.as_string(alloc)
+            a_t.as_string(arena),
+            b_t.as_string(arena)
         ))),
     }
 }
 
 // This function unifies and infers the return type of a function call.
 pub fn unify_call(
-    alloc: &mut Vec<Type>,
+    alloc: &mut Arena<Type>,
     arg_types: &[ArenaType],
     t2: ArenaType,
 ) -> Result<ArenaType, Errors> {
@@ -186,13 +191,13 @@ pub fn unify_call(
     Ok(ret_type)
 }
 
-fn bind(alloc: &mut Vec<Type>, a: usize, b: usize) -> Result<(), Errors> {
+fn bind(arena: &mut Arena<Type>, a: ArenaType, b: ArenaType) -> Result<(), Errors> {
     if a != b {
-        if occurs_in_type(alloc, a, b) {
+        if occurs_in_type(arena, a, b) {
             // raise InferenceError("recursive unification")
             return Err(Errors::InferenceError("recursive unification".to_string()));
         }
-        alloc.get_mut(a).unwrap().set_instance(b);
+        arena.get_mut(a).unwrap().set_instance(b);
     }
     Ok(())
 }
