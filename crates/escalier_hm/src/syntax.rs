@@ -11,6 +11,16 @@ pub struct BindingIdent {
     // pub loc: SourceLocation,
 }
 
+impl fmt::Display for BindingIdent {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.mutable {
+            write!(f, "mut {}", self.name)
+        } else {
+            write!(f, "{}", self.name)
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RestPat {
     pub arg: Box<Pattern>,
@@ -97,10 +107,36 @@ impl fmt::Display for Pattern {
         match &self.kind {
             PatternKind::Ident(BindingIdent { name, mutable: _ }) => write!(f, "{name}"),
             PatternKind::Rest(RestPat { arg }) => write!(f, "...{arg}"),
-            PatternKind::Object(ObjectPat { props, optional }) => todo!(),
-            PatternKind::Array(ArrayPat { elems, optional }) => todo!(),
+            PatternKind::Object(ObjectPat { props, optional: _ }) => {
+                let props: Vec<String> = props
+                    .iter()
+                    .map(|prop| match prop {
+                        ObjectPatProp::KeyValue(KeyValuePatProp { key, value, init }) => match init
+                        {
+                            Some(init) => format!("{}: {} = {}", key, value, init),
+                            None => format!("{}: {}", key, value),
+                        },
+                        ObjectPatProp::Shorthand(ShorthandPatProp { ident, init }) => match init {
+                            Some(init) => format!("{} = {}", ident, init),
+                            None => format!("{}", ident),
+                        },
+                        ObjectPatProp::Rest(RestPat { arg }) => format!("...{}", arg),
+                    })
+                    .collect();
+                write!(f, "{{{}}}", props.join(", "))
+            }
+            PatternKind::Array(ArrayPat { elems, optional: _ }) => {
+                let elems: Vec<String> = elems
+                    .iter()
+                    .map(|elem| match elem {
+                        Some(ArrayPatElem { pattern, init: _ }) => format!("{}", pattern),
+                        None => "".to_string(),
+                    })
+                    .collect();
+                write!(f, "[{}]", elems.join(", "))
+            }
             PatternKind::Lit(LitPat { lit }) => write!(f, "{lit}"),
-            PatternKind::Is(IsPat { ident, is_id }) => todo!(),
+            PatternKind::Is(IsPat { ident, is_id }) => write!(f, "{ident} is {is_id}"),
             PatternKind::Wildcard => write!(f, "_"),
         }
     }
@@ -131,6 +167,12 @@ pub struct Lambda {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Identifier {
     pub name: String,
+}
+
+impl fmt::Display for Identifier {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.name)
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

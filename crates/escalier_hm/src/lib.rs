@@ -1096,19 +1096,17 @@ mod tests {
             })],
         );
 
-        eprintln!("(avant) syntax = {syntax:#?}");
+        infer_expression(&mut a, &mut syntax, &mut my_ctx)?;
 
-        let t = infer_expression(&mut a, &mut syntax, &mut my_ctx)?;
+        if let ExprKind::Lambda(Lambda { params, .. }) = &syntax.kind {
+            let x_t = params[0].pattern.inferred_type.unwrap();
+            let y_t = params[0].pattern.inferred_type.unwrap();
 
-        eprintln!("(apres) syntax = {syntax:#?}");
-
-        assert_eq!(a[t].as_string(&a), r#"(number, number) => number"#);
-
-        // TODO: fix the output when printing the syntax AST
-        // TODO: walk the syntax AST and update each inferred_type with the
-        // actual type after calling `prune()` on it
-        // TODO: look up the type for those nodes where it makes sense to print
-        eprintln!("syntax = {syntax}");
+            assert_eq!(a[x_t].as_string(&a), "number");
+            assert_eq!(a[y_t].as_string(&a), "number");
+        } else {
+            panic!("expected a lambda");
+        }
 
         Ok(())
     }
