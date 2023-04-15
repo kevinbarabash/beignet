@@ -83,7 +83,7 @@ pub fn infer_expression<'a>(
                     for stmt in stmts {
                         new_ctx = new_ctx.clone();
                         let t = infer_statement(a, stmt, &mut new_ctx)?;
-                        if let Statement::Return(_) = stmt {
+                        if let StmtKind::Return(_) = stmt.kind {
                             let ret_t = t;
                             let func_t = new_func_type(a, &param_types, ret_t);
                             // TODO: warn if there are any statements after the return
@@ -188,28 +188,26 @@ pub fn infer_statement<'a>(
     statement: &mut Statement,
     ctx: &mut Context,
 ) -> Result<ArenaType, Errors> {
-    match statement {
-        Statement::Declaration(Declaration { pattern, defn }) => {
+    let t = match &mut statement.kind {
+        StmtKind::Declaration(Declaration { pattern, defn }) => {
             if let PatternKind::Ident(BindingIdent { name, mutable: _ }) = &pattern.kind {
                 let t = infer_expression(a, defn, ctx)?;
                 ctx.env.insert(name.clone(), t);
                 pattern.inferred_type = Some(t);
-                Ok(t) // TODO: Should this be unit?
+                t // TODO: Should this be unit?
             } else {
-                Err(Errors::InferenceError(
+                return Err(Errors::InferenceError(
                     "Can only declare variables with identifiers".to_string(),
-                ))
+                ));
             }
         }
-        Statement::Expression(expr) => {
-            let t = infer_expression(a, expr, ctx)?;
-            Ok(t)
-        }
-        Statement::Return(Return { expr }) => {
-            let t = infer_expression(a, expr, ctx)?;
-            Ok(t)
-        }
-    }
+        StmtKind::Expression(expr) => infer_expression(a, expr, ctx)?,
+        StmtKind::Return(Return { expr }) => infer_expression(a, expr, ctx)?,
+    };
+
+    statement.inferred_type = Some(t);
+
+    Ok(t)
 }
 
 pub fn infer_program<'a>(

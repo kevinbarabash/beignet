@@ -317,20 +317,26 @@ pub struct Return {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum Statement {
+pub enum StmtKind {
     Declaration(Declaration),
     Expression(Expression),
     Return(Return),
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Statement {
+    pub kind: StmtKind,
+    pub inferred_type: Option<ArenaType>,
+}
+
 impl fmt::Display for Statement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Statement::Declaration(Declaration { pattern, defn }) => {
+        match &self.kind {
+            StmtKind::Declaration(Declaration { pattern, defn }) => {
                 write!(f, "let {pattern} = {defn}")
             }
-            Statement::Expression(expr) => write!(f, "{expr}"),
-            Statement::Return(Return { expr }) => write!(f, "return {expr}"),
+            StmtKind::Expression(expr) => write!(f, "{expr}"),
+            StmtKind::Return(Return { expr }) => write!(f, "return {expr}"),
         }
     }
 }

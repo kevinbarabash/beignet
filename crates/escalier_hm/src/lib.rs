@@ -172,6 +172,35 @@ mod tests {
         }
     }
 
+    pub fn new_declaration(name: &str, value: &Expression) -> Statement {
+        let kind = StmtKind::Declaration(Declaration {
+            pattern: new_binding(name),
+            defn: Box::new(value.to_owned()),
+        });
+        Statement {
+            kind,
+            inferred_type: None,
+        }
+    }
+
+    pub fn new_return(value: &Expression) -> Statement {
+        let kind = StmtKind::Return(Return {
+            expr: Box::new(value.to_owned()),
+        });
+        Statement {
+            kind,
+            inferred_type: None,
+        }
+    }
+
+    pub fn new_stmt_expr(expr: &Expression) -> Statement {
+        let kind = StmtKind::Expression(expr.to_owned());
+        Statement {
+            kind,
+            inferred_type: None,
+        }
+    }
+
     fn test_env() -> (Vec<Type>, Context) {
         let mut a = vec![];
         let mut my_ctx = Context::default();
@@ -366,15 +395,9 @@ mod tests {
         let mut program = Program {
             statements: vec![
                 // let f = (x) => x
-                Statement::Declaration(Declaration {
-                    pattern: new_binding("f"),
-                    defn: Box::from(new_lambda(&["x"], &new_identifier("x"))),
-                }),
+                new_declaration("f", &new_lambda(&["x"], &new_identifier("x"))),
                 // let result = ((pair (f 4)) (f true))
-                Statement::Declaration(Declaration {
-                    pattern: new_binding("result"),
-                    defn: Box::new(pair),
-                }),
+                new_declaration("result", &pair),
             ],
         };
 
@@ -406,15 +429,12 @@ mod tests {
         let mut program = Program {
             statements: vec![
                 // let g = (f) => 5
-                Statement::Declaration(Declaration {
-                    pattern: new_binding("g"),
-                    defn: Box::from(new_lambda(&["f"], &new_number("5"))),
-                }),
+                new_declaration("g", &new_lambda(&["f"], &new_number("5"))),
                 // let result = g(g)
-                Statement::Declaration(Declaration {
-                    pattern: new_binding("result"),
-                    defn: Box::new(new_apply(new_identifier("g"), &[new_identifier("g")])),
-                }),
+                new_declaration(
+                    "result",
+                    &new_apply(new_identifier("g"), &[new_identifier("g")]),
+                ),
             ],
         };
 
@@ -433,20 +453,15 @@ mod tests {
             &["g"],
             &[
                 // let f = (x) => g
-                Statement::Declaration(Declaration {
-                    pattern: new_binding("f"),
-                    defn: Box::from(new_lambda(&["x"], &new_identifier("g"))),
-                }),
+                new_declaration("f", &new_lambda(&["x"], &new_identifier("g"))),
                 // pair (f 3, f true)
-                Statement::Return(Return {
-                    expr: Box::from(new_apply(
-                        new_identifier("pair"),
-                        &[
-                            new_apply(new_identifier("f"), &[new_number("3")]),
-                            new_apply(new_identifier("f"), &[new_boolean(true)]),
-                        ],
-                    )),
-                }),
+                new_return(&new_apply(
+                    new_identifier("pair"),
+                    &[
+                        new_apply(new_identifier("f"), &[new_number("3")]),
+                        new_apply(new_identifier("f"), &[new_boolean(true)]),
+                    ],
+                )),
             ],
         );
 
@@ -513,30 +528,26 @@ mod tests {
         let mut syntax = new_function(
             &["f"],
             &[
-                Statement::Declaration(Declaration {
-                    pattern: new_binding("mantel"),
-                    defn: Box::from(new_function(
+                new_declaration(
+                    "mantel",
+                    &new_function(
                         &["g"],
                         &[
-                            Statement::Declaration(Declaration {
-                                pattern: new_binding("core"),
-                                defn: Box::from(new_lambda(
+                            new_declaration(
+                                "core",
+                                &new_lambda(
                                     &["arg"],
                                     &new_apply(
                                         new_identifier("g"),
                                         &[new_apply(new_identifier("f"), &[new_identifier("arg")])],
                                     ),
-                                )),
-                            }),
-                            Statement::Return(Return {
-                                expr: Box::from(new_identifier("core")),
-                            }),
+                                ),
+                            ),
+                            new_return(&new_identifier("core")),
                         ],
-                    )),
-                }),
-                Statement::Return(Return {
-                    expr: Box::from(new_identifier("mantel")),
-                }),
+                    ),
+                ),
+                new_return(&new_identifier("mantel")),
             ],
         );
 
@@ -993,15 +1004,9 @@ mod tests {
 
         let mut program = Program {
             statements: vec![
-                Statement::Declaration(Declaration {
-                    pattern: new_binding("num"),
-                    defn: Box::new(new_number("5")),
-                }),
-                Statement::Declaration(Declaration {
-                    pattern: new_binding("str"),
-                    defn: Box::new(new_string("hello")),
-                }),
-                Statement::Expression(new_apply(
+                new_declaration("num", &new_number("5")),
+                new_declaration("str", &new_string("hello")),
+                new_stmt_expr(&new_apply(
                     new_identifier("times"),
                     &[new_identifier("num"), new_identifier("num")],
                 )),
@@ -1025,18 +1030,12 @@ mod tests {
 
         let mut program = Program {
             statements: vec![
-                Statement::Declaration(Declaration {
-                    pattern: new_binding("id"),
-                    defn: Box::new(new_lambda(&["x"], &new_identifier("x"))),
-                }),
-                Statement::Declaration(Declaration {
-                    pattern: new_binding("a"),
-                    defn: Box::new(new_apply(new_identifier("id"), &[new_number("5")])),
-                }),
-                Statement::Declaration(Declaration {
-                    pattern: new_binding("b"),
-                    defn: Box::new(new_apply(new_identifier("id"), &[new_string("hello")])),
-                }),
+                new_declaration("id", &new_lambda(&["x"], &new_identifier("x"))),
+                new_declaration("a", &new_apply(new_identifier("id"), &[new_number("5")])),
+                new_declaration(
+                    "b",
+                    &new_apply(new_identifier("id"), &[new_string("hello")]),
+                ),
             ],
         };
 
@@ -1058,26 +1057,32 @@ mod tests {
         let mut syntax = new_function(
             &[],
             &[
-                Statement::Declaration(Declaration {
-                    pattern: new_binding("x"),
-                    defn: Box::new(new_number("5")),
-                }),
-                Statement::Declaration(Declaration {
-                    pattern: new_binding("y"),
-                    defn: Box::new(new_number("10")),
-                }),
-                Statement::Return(Return {
-                    expr: Box::new(new_apply(
-                        new_identifier("times"),
-                        &[new_identifier("x"), new_identifier("y")],
-                    )),
-                }),
+                new_declaration("x", &new_number("5")),
+                new_declaration("y", &new_number("10")),
+                new_return(&new_apply(
+                    new_identifier("times"),
+                    &[new_identifier("x"), new_identifier("y")],
+                )),
             ],
         );
 
         let t = infer_expression(&mut a, &mut syntax, &mut my_ctx)?;
 
         assert_eq!(a[t].as_string(&a), r#"() => number"#);
+
+        if let ExprKind::Lambda(Lambda {
+            body: BlockOrExpr::Block(Block { stmts }),
+            ..
+        }) = &syntax.kind
+        {
+            let x_t = stmts[0].inferred_type.unwrap();
+            let y_t = stmts[1].inferred_type.unwrap();
+
+            assert_eq!(a[x_t].as_string(&a), "5");
+            assert_eq!(a[y_t].as_string(&a), "10");
+        } else {
+            panic!("expected a lambda");
+        }
 
         Ok(())
     }
@@ -1088,12 +1093,10 @@ mod tests {
 
         let mut syntax = new_function(
             &["x", "y"],
-            &[Statement::Return(Return {
-                expr: Box::new(new_apply(
-                    new_identifier("times"),
-                    &[new_identifier("x"), new_identifier("y")],
-                )),
-            })],
+            &[new_return(&new_apply(
+                new_identifier("times"),
+                &[new_identifier("x"), new_identifier("y")],
+            ))],
         );
 
         infer_expression(&mut a, &mut syntax, &mut my_ctx)?;
