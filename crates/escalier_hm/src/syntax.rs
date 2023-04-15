@@ -1,7 +1,7 @@
+use generational_arena::Index;
 use std::fmt;
 
 use crate::literal::Literal;
-use crate::types::ArenaType;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct BindingIdent {
@@ -99,7 +99,7 @@ pub struct Pattern {
     // pub loc: SourceLocation,
     // pub span: Span,
     pub kind: PatternKind,
-    pub inferred_type: Option<ArenaType>,
+    pub inferred_type: Option<Index>,
 }
 
 impl fmt::Display for Pattern {
@@ -233,7 +233,7 @@ pub enum ExprKind {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Expression {
     pub kind: ExprKind,
-    pub inferred_type: Option<ArenaType>,
+    pub inferred_type: Option<Index>,
 }
 
 impl fmt::Display for Expression {
@@ -326,7 +326,7 @@ pub enum StmtKind {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Statement {
     pub kind: StmtKind,
-    pub inferred_type: Option<ArenaType>,
+    pub inferred_type: Option<Index>,
 }
 
 impl fmt::Display for Statement {
