@@ -12,7 +12,7 @@ pub use crate::infer::{infer_expression, infer_program};
 
 #[cfg(test)]
 mod tests {
-    use generational_arena::Arena;
+    use generational_arena::{Arena, Index};
 
     use crate::context::*;
     use crate::errors::*;
@@ -21,15 +21,15 @@ mod tests {
     use crate::syntax::{self, *};
     use crate::types::*;
 
-    pub fn new_num_lit_type(arena: &mut Arena<Type>, value: &str) -> ArenaType {
+    pub fn new_num_lit_type(arena: &mut Arena<Type>, value: &str) -> Index {
         new_lit_type(arena, &Literal::Number(value.to_string()))
     }
 
-    pub fn new_str_lit_type(arena: &mut Arena<Type>, value: &str) -> ArenaType {
+    pub fn new_str_lit_type(arena: &mut Arena<Type>, value: &str) -> Index {
         new_lit_type(arena, &Literal::String(value.to_string()))
     }
 
-    pub fn new_bool_lit_type(arena: &mut Arena<Type>, value: bool) -> ArenaType {
+    pub fn new_bool_lit_type(arena: &mut Arena<Type>, value: bool) -> Index {
         new_lit_type(arena, &Literal::Boolean(value))
     }
 

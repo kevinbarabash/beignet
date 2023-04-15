@@ -3,45 +3,43 @@ use generational_arena::{Arena, Index};
 
 use crate::literal::Literal;
 
-pub type ArenaType = Index;
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Variable {
     pub id: usize,
-    pub instance: Option<ArenaType>,
+    pub instance: Option<Index>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Constructor {
     pub name: String,
-    pub types: Vec<ArenaType>,
+    pub types: Vec<Index>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Function {
-    pub params: Vec<ArenaType>,
-    pub ret: ArenaType,
+    pub params: Vec<Index>,
+    pub ret: Index,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Call {
-    pub args: Vec<ArenaType>,
-    pub ret: ArenaType,
+    pub args: Vec<Index>,
+    pub ret: Index,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Union {
-    pub types: Vec<ArenaType>,
+    pub types: Vec<Index>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Tuple {
-    pub types: Vec<ArenaType>,
+    pub types: Vec<Index>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Object {
-    pub props: Vec<(String, ArenaType)>,
+    pub props: Vec<(String, Index)>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -57,7 +55,7 @@ pub enum TypeKind {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Type {
-    // pub id: ArenaType,
+    // pub id: Index,
     pub kind: TypeKind,
 }
 
@@ -67,7 +65,7 @@ pub struct Type {
 /// only assigned lazily, when required.
 
 impl Type {
-    pub fn set_instance(&mut self, instance: ArenaType) {
+    pub fn set_instance(&mut self, instance: Index) {
         match &mut self.kind {
             TypeKind::Variable(Variable {
                 instance: ref mut inst,
@@ -128,7 +126,7 @@ impl Type {
     }
 }
 
-fn types_to_strings(a: &Arena<Type>, types: &[ArenaType]) -> Vec<String> {
+fn types_to_strings(a: &Arena<Type>, types: &[Index]) -> Vec<String> {
     let mut strings = vec![];
     for v in types {
         strings.push(a[*v].as_string(a));
@@ -137,7 +135,7 @@ fn types_to_strings(a: &Arena<Type>, types: &[ArenaType]) -> Vec<String> {
 }
 
 /// A binary type constructor which builds function types
-pub fn new_func_type(arena: &mut Arena<Type>, params: &[ArenaType], ret: ArenaType) -> ArenaType {
+pub fn new_func_type(arena: &mut Arena<Type>, params: &[Index], ret: Index) -> Index {
     arena.insert(Type {
         kind: TypeKind::Function(Function {
             params: params.to_vec(),
@@ -146,7 +144,7 @@ pub fn new_func_type(arena: &mut Arena<Type>, params: &[ArenaType], ret: ArenaTy
     })
 }
 
-pub fn new_union_type(arena: &mut Arena<Type>, types: &[ArenaType]) -> ArenaType {
+pub fn new_union_type(arena: &mut Arena<Type>, types: &[Index]) -> Index {
     arena.insert(Type {
         kind: TypeKind::Union(Union {
             types: types.to_vec(),
@@ -154,7 +152,7 @@ pub fn new_union_type(arena: &mut Arena<Type>, types: &[ArenaType]) -> ArenaType
     })
 }
 
-pub fn new_tuple_type(arena: &mut Arena<Type>, types: &[ArenaType]) -> ArenaType {
+pub fn new_tuple_type(arena: &mut Arena<Type>, types: &[Index]) -> Index {
     arena.insert(Type {
         kind: TypeKind::Tuple(Tuple {
             types: types.to_vec(),
@@ -162,7 +160,7 @@ pub fn new_tuple_type(arena: &mut Arena<Type>, types: &[ArenaType]) -> ArenaType
     })
 }
 
-pub fn new_object_type(arena: &mut Arena<Type>, props: &[(String, ArenaType)]) -> ArenaType {
+pub fn new_object_type(arena: &mut Arena<Type>, props: &[(String, Index)]) -> Index {
     arena.insert(Type {
         kind: TypeKind::Object(Object {
             props: props.to_vec(),
@@ -171,7 +169,7 @@ pub fn new_object_type(arena: &mut Arena<Type>, props: &[(String, ArenaType)]) -
 }
 
 /// A binary type constructor which builds function types
-pub fn new_var_type(arena: &mut Arena<Type>) -> ArenaType {
+pub fn new_var_type(arena: &mut Arena<Type>) -> Index {
     arena.insert(Type {
         kind: TypeKind::Variable(Variable {
             instance: None,
@@ -181,7 +179,7 @@ pub fn new_var_type(arena: &mut Arena<Type>) -> ArenaType {
 }
 
 /// A binary type constructor which builds function types
-pub fn new_constructor(arena: &mut Arena<Type>, name: &str, types: &[ArenaType]) -> ArenaType {
+pub fn new_constructor(arena: &mut Arena<Type>, name: &str, types: &[Index]) -> Index {
     arena.insert(Type {
         kind: TypeKind::Constructor(Constructor {
             name: name.to_string(),
@@ -190,7 +188,7 @@ pub fn new_constructor(arena: &mut Arena<Type>, name: &str, types: &[ArenaType])
     })
 }
 
-pub fn new_lit_type(arena: &mut Arena<Type>, lit: &Literal) -> ArenaType {
+pub fn new_lit_type(arena: &mut Arena<Type>, lit: &Literal) -> Index {
     arena.insert(Type {
         kind: TypeKind::Literal(lit.clone()),
     })

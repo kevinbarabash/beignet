@@ -1,4 +1,4 @@
-use generational_arena::Arena;
+use generational_arena::{Arena, Index};
 
 use crate::types::*;
 
@@ -12,7 +12,7 @@ use crate::types::*;
 ///
 /// Returns:
 ///     True if v occurs in type2, otherwise False
-pub fn occurs_in_type(a: &mut Arena<Type>, v: ArenaType, type2: ArenaType) -> bool {
+pub fn occurs_in_type(a: &mut Arena<Type>, v: Index, type2: Index) -> bool {
     let pruned_type2 = prune(a, type2);
     if pruned_type2 == v {
         return true;
@@ -44,9 +44,9 @@ pub fn occurs_in_type(a: &mut Arena<Type>, v: ArenaType, type2: ArenaType) -> bo
 /// Returns:
 ///     True if t occurs in any of types, otherwise False
 ///
-pub fn occurs_in<'a, I>(a: &mut Arena<Type>, t: ArenaType, types: I) -> bool
+pub fn occurs_in<'a, I>(a: &mut Arena<Type>, t: Index, types: I) -> bool
 where
-    I: IntoIterator<Item = &'a ArenaType>,
+    I: IntoIterator<Item = &'a Index>,
 {
     for t2 in types.into_iter() {
         if occurs_in_type(a, t, *t2) {
@@ -70,7 +70,7 @@ where
 ///
 /// Returns:
 ///     An uninstantiated TypeVariable or a TypeOperator
-pub fn prune(a: &mut Arena<Type>, t: ArenaType) -> ArenaType {
+pub fn prune(a: &mut Arena<Type>, t: Index) -> Index {
     let v2 = match a.get(t).unwrap().kind {
         // TODO: handle .unwrap() panicing
         TypeKind::Variable(Variable {

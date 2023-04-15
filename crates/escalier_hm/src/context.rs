@@ -1,4 +1,4 @@
-use generational_arena::Arena;
+use generational_arena::{Arena, Index};
 use im::hashmap::HashMap;
 use im::hashset::HashSet;
 
@@ -9,11 +9,11 @@ use crate::util::*;
 #[derive(Clone, Debug, Default)]
 pub struct Context {
     // The type environment mapping from identifier names to types
-    pub env: HashMap<String, ArenaType>,
+    pub env: HashMap<String, Index>,
     // A set of non-generic TypeVariables.
     // NOTE: The same type variable can be both generic and non-generic in
     // different contexts.
-    pub non_generic: HashSet<ArenaType>,
+    pub non_generic: HashSet<Index>,
 }
 
 /// Get the type of identifier name from the type context ctx.
@@ -25,7 +25,7 @@ pub struct Context {
 /// Raises:
 ///     ParseError: Raised if name is an undefined symbol in the type
 ///         environment.
-pub fn get_type(arena: &mut Arena<Type>, name: &str, ctx: &Context) -> Result<ArenaType, Errors> {
+pub fn get_type(arena: &mut Arena<Type>, name: &str, ctx: &Context) -> Result<Index, Errors> {
     if let Some(value) = ctx.env.get(name) {
         Ok(fresh(arena, *value, ctx))
     } else {
@@ -44,16 +44,16 @@ pub fn get_type(arena: &mut Arena<Type>, name: &str, ctx: &Context) -> Result<Ar
 /// Args:
 ///     t: A type to be copied.
 ///     non_generic: A set of non-generic TypeVariables
-pub fn fresh(a: &mut Arena<Type>, t: ArenaType, ctx: &Context) -> ArenaType {
+pub fn fresh(a: &mut Arena<Type>, t: Index, ctx: &Context) -> Index {
     // A mapping of TypeVariables to TypeVariables
     let mut mappings = HashMap::default();
 
     fn freshrec(
         a: &mut Arena<Type>,
-        tp: ArenaType,
-        mappings: &mut HashMap<ArenaType, ArenaType>,
+        tp: Index,
+        mappings: &mut HashMap<Index, Index>,
         ctx: &Context,
-    ) -> ArenaType {
+    ) -> Index {
         let p = prune(a, tp);
         match &a.get(p).unwrap().clone().kind {
             TypeKind::Variable(_) => {
@@ -117,10 +117,10 @@ pub fn fresh(a: &mut Arena<Type>, t: ArenaType, ctx: &Context) -> ArenaType {
 
     pub fn freshrec_many(
         a: &mut Arena<Type>,
-        types: &[ArenaType],
-        mappings: &mut HashMap<ArenaType, ArenaType>,
+        types: &[Index],
+        mappings: &mut HashMap<Index, Index>,
         ctx: &Context,
-    ) -> Vec<ArenaType> {
+    ) -> Vec<Index> {
         types
             .iter()
             .map(|x| freshrec(a, *x, mappings, ctx))
@@ -144,6 +144,6 @@ pub fn fresh(a: &mut Arena<Type>, t: ArenaType, ctx: &Context) -> ArenaType {
 ///
 /// Returns:
 ///     True if v is a generic variable, otherwise False
-pub fn is_generic(a: &mut Arena<Type>, t: ArenaType, ctx: &Context) -> bool {
+pub fn is_generic(a: &mut Arena<Type>, t: Index, ctx: &Context) -> bool {
     !occurs_in(a, t, &ctx.non_generic)
 }

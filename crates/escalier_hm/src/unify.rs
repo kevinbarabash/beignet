@@ -1,4 +1,4 @@
-use generational_arena::Arena;
+use generational_arena::{Arena, Index};
 use itertools::Itertools;
 
 use crate::errors::*;
@@ -19,7 +19,7 @@ use crate::util::*;
 ///
 /// Raises:
 ///     InferenceError: Raised if the types cannot be unified.
-pub fn unify(arena: &mut Arena<Type>, t1: ArenaType, t2: ArenaType) -> Result<(), Errors> {
+pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors> {
     let a = prune(arena, t1);
     let b = prune(arena, t2);
     // Why do we clone here?
@@ -133,9 +133,9 @@ pub fn unify(arena: &mut Arena<Type>, t1: ArenaType, t2: ArenaType) -> Result<()
 // This function unifies and infers the return type of a function call.
 pub fn unify_call(
     alloc: &mut Arena<Type>,
-    arg_types: &[ArenaType],
-    t2: ArenaType,
-) -> Result<ArenaType, Errors> {
+    arg_types: &[Index],
+    t2: Index,
+) -> Result<Index, Errors> {
     let ret_type = new_var_type(alloc);
     let call_type = new_func_type(alloc, arg_types, ret_type);
 
@@ -191,7 +191,7 @@ pub fn unify_call(
     Ok(ret_type)
 }
 
-fn bind(arena: &mut Arena<Type>, a: ArenaType, b: ArenaType) -> Result<(), Errors> {
+fn bind(arena: &mut Arena<Type>, a: Index, b: Index) -> Result<(), Errors> {
     if a != b {
         if occurs_in_type(arena, a, b) {
             // raise InferenceError("recursive unification")

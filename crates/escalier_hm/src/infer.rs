@@ -1,4 +1,4 @@
-use generational_arena::Arena;
+use generational_arena::{Arena, Index};
 
 use crate::context::*;
 use crate::errors::*;
@@ -32,8 +32,8 @@ pub fn infer_expression<'a>(
     arena: &mut Arena<Type>,
     node: &'a mut Expression,
     ctx: &mut Context,
-) -> Result<ArenaType, Errors> {
-    let t: ArenaType = match &mut node.kind {
+) -> Result<Index, Errors> {
+    let t: Index = match &mut node.kind {
         ExprKind::Identifier(Identifier { name }) => get_type(arena, name, ctx)?,
         ExprKind::Literal(literal) => new_lit_type(arena, literal),
         ExprKind::Tuple(syntax::Tuple { elems }) => {
@@ -189,7 +189,7 @@ pub fn infer_statement<'a>(
     arena: &'a mut Arena<Type>,
     statement: &mut Statement,
     ctx: &mut Context,
-) -> Result<ArenaType, Errors> {
+) -> Result<Index, Errors> {
     let t = match &mut statement.kind {
         StmtKind::Declaration(Declaration { pattern, defn }) => {
             if let PatternKind::Ident(BindingIdent { name, mutable: _ }) = &pattern.kind {
