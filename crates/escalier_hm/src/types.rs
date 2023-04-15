@@ -7,6 +7,7 @@ pub type ArenaType = Index;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Variable {
+    pub id: usize,
     pub instance: Option<ArenaType>,
 }
 
@@ -84,10 +85,10 @@ impl Type {
         match &self.kind {
             TypeKind::Variable(Variable {
                 instance: Some(inst),
+                ..
             }) => arena[*inst].as_string(arena),
-            TypeKind::Variable(_) => {
-                // TODO: figure out how to get the id of the type variable
-                "t?".to_string()
+            TypeKind::Variable(Variable { id, .. }) => {
+                format!("t{id}")
             }
             TypeKind::Constructor(con) => match con.types.len() {
                 0 => con.name.clone(),
@@ -172,7 +173,10 @@ pub fn new_object_type(arena: &mut Arena<Type>, props: &[(String, ArenaType)]) -
 /// A binary type constructor which builds function types
 pub fn new_var_type(arena: &mut Arena<Type>) -> ArenaType {
     arena.insert(Type {
-        kind: TypeKind::Variable(Variable { instance: None }),
+        kind: TypeKind::Variable(Variable {
+            instance: None,
+            id: arena.len(),
+        }),
     })
 }
 
