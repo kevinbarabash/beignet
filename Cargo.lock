@@ -439,6 +439,10 @@ dependencies = [
  "im",
  "insta",
  "itertools",
+ "swc_atoms",
+ "swc_common",
+ "swc_ecma_ast",
+ "tree-sitter",
 ]
 
 [[package]]

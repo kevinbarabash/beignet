@@ -1,4 +1,5 @@
 // Based on https://github.com/tcr/rust-hindley-milner/blob/master/src/lib.rs
+mod ast;
 mod context;
 mod errors;
 mod infer;
