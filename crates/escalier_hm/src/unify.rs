@@ -1,5 +1,6 @@
 use generational_arena::{Arena, Index};
 use itertools::Itertools;
+use std::collections::HashMap;
 
 use crate::errors::*;
 use crate::literal::*;
@@ -132,22 +133,26 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
 
 // This function unifies and infers the return type of a function call.
 pub fn unify_call(
-    alloc: &mut Arena<Type>,
+    arena: &mut Arena<Type>,
     arg_types: &[Index],
     t2: Index,
 ) -> Result<Index, Errors> {
-    let ret_type = new_var_type(alloc);
-    let call_type = new_func_type(alloc, arg_types, ret_type);
+    let ret_type = new_var_type(arena);
+    let call_type = new_func_type(arena, arg_types, ret_type, None);
 
-    let b = prune(alloc, t2);
-    let b_t = alloc.get(b).unwrap().clone();
+    let b = prune(arena, t2);
+    let b_t = arena.get(b).unwrap().clone();
 
     match b_t.kind {
-        TypeKind::Variable(_) => bind(alloc, b, call_type)?,
+        TypeKind::Variable(_) => bind(arena, b, call_type)?,
         TypeKind::Constructor(_) => {
             // lookup definition of type constructor, and see if its instances
             // have any callable signatures
             todo!("constructor");
+        }
+        TypeKind::Ref(Ref { name }) => {
+            // TODO: lookup name in scope, and see if it has any callable signatures
+            todo!("check if {name} has any callable signatures");
         }
         TypeKind::Literal(lit) => {
             return Err(Errors::InferenceError(format!(
@@ -161,6 +166,12 @@ pub fn unify_call(
             return Err(Errors::InferenceError("object is not callable".to_string()));
         }
         TypeKind::Function(func) => {
+            let func = if func.type_params.is_some() {
+                instantiate_func(arena, &func)
+            } else {
+                func
+            };
+
             if arg_types.len() < func.params.len() {
                 return Err(Errors::InferenceError(format!(
                     "too few arguments to function: expected {}, got {}",
@@ -170,19 +181,19 @@ pub fn unify_call(
             }
 
             for (p, q) in arg_types.iter().zip(func.params.iter()) {
-                unify(alloc, *p, *q)?;
+                unify(arena, *p, *q)?;
             }
-            unify(alloc, ret_type, func.ret)?;
+            unify(arena, ret_type, func.ret)?;
         }
         TypeKind::Union(union) => {
             let mut ret_types = vec![];
             for t in union.types.iter() {
-                let ret_type = unify_call(alloc, arg_types, *t)?;
+                let ret_type = unify_call(arena, arg_types, *t)?;
                 ret_types.push(ret_type);
             }
 
             return Ok(new_union_type(
-                alloc,
+                arena,
                 &ret_types.into_iter().unique().collect_vec(),
             ));
         }
@@ -200,4 +211,102 @@ fn bind(arena: &mut Arena<Type>, a: Index, b: Index) -> Result<(), Errors> {
         arena.get_mut(a).unwrap().set_instance(b);
     }
     Ok(())
+}
+
+fn instantiate_func(arena: &mut Arena<Type>, func: &Function) -> Function {
+    // A mapping of TypeVariables to TypeVariables
+    let mut mappings: HashMap<String, Index> = HashMap::default();
+
+    if let Some(type_params) = &func.type_params {
+        for tp in type_params {
+            mappings.insert(tp.name.to_owned(), new_var_type(arena));
+        }
+    }
+
+    fn instrec(arena: &mut Arena<Type>, tp: Index, mappings: &HashMap<String, Index>) -> Index {
+        let p = prune(arena, tp);
+        match &arena.get(p).unwrap().clone().kind {
+            TypeKind::Variable(_) => {
+                p
+                // TODO: Try to figure out a test case where we'd need to do this as well.
+                // if is_generic(arena, p, ctx) {
+                //     mappings
+                //         .entry(p)
+                //         .or_insert_with(|| new_var_type(arena))
+                //         .to_owned()
+                // } else {
+                //     p
+                // }
+            }
+            TypeKind::Constructor(con) => {
+                let types = instrec_many(arena, &con.types, mappings);
+                if types != con.types {
+                    new_constructor(arena, &con.name, &types)
+                } else {
+                    p
+                }
+            }
+            TypeKind::Ref(Ref { name }) => match mappings.get(name) {
+                Some(tp) => *tp,
+                None => new_type_ref(arena, name),
+            },
+            TypeKind::Literal(lit) => new_lit_type(arena, lit),
+            TypeKind::Tuple(tuple) => {
+                let types = instrec_many(arena, &tuple.types, mappings);
+                if types != tuple.types {
+                    new_tuple_type(arena, &types)
+                } else {
+                    p
+                }
+            }
+            TypeKind::Object(object) => {
+                let props: Vec<_> = object
+                    .props
+                    .iter()
+                    .map(|(name, tp)| (name.clone(), instrec(arena, *tp, mappings)))
+                    .collect();
+                if props != object.props {
+                    new_object_type(arena, &props)
+                } else {
+                    p
+                }
+            }
+            TypeKind::Function(func) => {
+                let params = instrec_many(arena, &func.params, mappings);
+                let ret = instrec(arena, func.ret, mappings);
+                let type_params = func.type_params.clone();
+                // TODO: copy the type params
+                if params != func.params || ret != func.ret {
+                    new_func_type(arena, &params, ret, type_params)
+                } else {
+                    p
+                }
+            }
+            TypeKind::Union(union) => {
+                let types = instrec_many(arena, &union.types, mappings);
+                if types != union.types {
+                    new_union_type(arena, &types)
+                } else {
+                    p
+                }
+            }
+        }
+    }
+
+    pub fn instrec_many(
+        a: &mut Arena<Type>,
+        types: &[Index],
+        mappings: &HashMap<String, Index>,
+    ) -> Vec<Index> {
+        types.iter().map(|x| instrec(a, *x, mappings)).collect()
+    }
+
+    let params = instrec_many(arena, &func.params, &mappings);
+    let ret = instrec(arena, func.ret, &mappings);
+
+    Function {
+        params: params.to_vec(),
+        ret,
+        type_params: None,
+    }
 }

@@ -1,4 +1,5 @@
 use generational_arena::{Arena, Index};
+use std::collections::BTreeMap;
 
 use crate::context::*;
 use crate::errors::*;
@@ -6,6 +7,7 @@ use crate::literal::*;
 use crate::syntax::{self, *};
 use crate::types::*;
 use crate::unify::*;
+use crate::util::*;
 
 /// Computes the type of the expression given by node.
 ///
@@ -62,6 +64,7 @@ pub fn infer_expression<'a>(
 
             unify_call(arena, &arg_types, func_type)?
         }
+        // TODO: Add support for explicit type parameters
         ExprKind::Lambda(Lambda { params, body }) => {
             let mut param_types = vec![];
             let mut new_ctx = ctx.clone();
@@ -84,10 +87,10 @@ pub fn infer_expression<'a>(
                 BlockOrExpr::Block(Block { stmts }) => {
                     for stmt in stmts {
                         new_ctx = new_ctx.clone();
-                        let t = infer_statement(arena, stmt, &mut new_ctx)?;
+                        let t = infer_statement(arena, stmt, &mut new_ctx, false)?;
                         if let StmtKind::Return(_) = stmt.kind {
                             let ret_t = t;
-                            let func_t = new_func_type(arena, &param_types, ret_t);
+                            let func_t = new_func_type(arena, &param_types, ret_t, None);
                             // TODO: warn if there are any statements after the return
                             // TODO: update AST with the inferred type
                             return Ok(func_t);
@@ -97,11 +100,11 @@ pub fn infer_expression<'a>(
                     // If there's no return statement in the block, then the
                     // return type for the function is `undefined`.
                     let undefined = new_constructor(arena, "undefined", &[]);
-                    new_func_type(arena, &param_types, undefined)
+                    new_func_type(arena, &param_types, undefined, None)
                 }
                 BlockOrExpr::Expr(expr) => {
                     let ret_type = infer_expression(arena, expr, &mut new_ctx)?;
-                    new_func_type(arena, &param_types, ret_type)
+                    new_func_type(arena, &param_types, ret_type, None)
                 }
             }
         }
@@ -189,14 +192,21 @@ pub fn infer_statement<'a>(
     arena: &'a mut Arena<Type>,
     statement: &mut Statement,
     ctx: &mut Context,
+    top_level: bool,
 ) -> Result<Index, Errors> {
     let t = match &mut statement.kind {
         StmtKind::Declaration(Declaration { pattern, defn }) => {
             if let PatternKind::Ident(BindingIdent { name, mutable: _ }) = &pattern.kind {
-                let t = infer_expression(arena, defn, ctx)?;
-                ctx.env.insert(name.clone(), t);
-                pattern.inferred_type = Some(t);
-                t // TODO: Should this be unit?
+                let idx = infer_expression(arena, defn, ctx)?;
+                let t = arena.get(idx).unwrap().clone();
+                let idx = match &t.kind {
+                    TypeKind::Function(func) if top_level => generalize_func(arena, func),
+                    _ => idx,
+                };
+
+                ctx.env.insert(name.clone(), idx);
+                pattern.inferred_type = Some(idx);
+                idx // TODO: Should this be unit?
             } else {
                 return Err(Errors::InferenceError(
                     "Can only declare variables with identifiers".to_string(),
@@ -218,8 +228,95 @@ pub fn infer_program<'a>(
     ctx: &mut Context,
 ) -> Result<(), Errors> {
     for stmt in &mut node.statements {
-        infer_statement(arena, stmt, ctx)?;
+        infer_statement(arena, stmt, ctx, true)?;
     }
 
     Ok(())
+}
+
+// TODO:
+// - find all type variables in the type
+// - create type params for them
+// - replace the type variables with the corresponding type params
+// - return the new function type with the newly created type params
+
+pub fn generalize_func(arena: &'_ mut Arena<Type>, func: &Function) -> Index {
+    // A mapping of TypeVariables to TypeVariables
+    let mut mappings = BTreeMap::default();
+
+    fn generalize_rec(
+        arena: &mut Arena<Type>,
+        tp: Index,
+        mappings: &mut BTreeMap<Index, Ref>,
+    ) -> Index {
+        let p = prune(arena, tp);
+        // We clone here because we can't move out of a shared reference.
+        // TODO: Consider using Rc<RefCell<Type>> to avoid unnecessary cloning.
+        let a_t = arena.get(p).unwrap().clone();
+        match &a_t.kind {
+            TypeKind::Variable(_) => {
+                // Replace with a type reference/constructor
+                let name = match mappings.get(&p) {
+                    Some(tref) => tref.name.clone(),
+                    None => {
+                        let name = ((mappings.len() as u8) + 65) as char;
+                        let name = format!("{}", name);
+                        // let name = format!("'{}", mappings.len());
+                        mappings.insert(p, Ref { name: name.clone() });
+                        name
+                    }
+                };
+                new_type_ref(arena, &name)
+            }
+            TypeKind::Constructor(con) => {
+                let types = generalize_rec_many(arena, &con.types, mappings);
+                new_constructor(arena, &con.name, &types)
+            }
+            TypeKind::Ref(Ref { name }) => new_type_ref(arena, name),
+            TypeKind::Literal(lit) => new_lit_type(arena, lit),
+            TypeKind::Tuple(tuple) => {
+                let types = generalize_rec_many(arena, &tuple.types, mappings);
+                new_tuple_type(arena, &types)
+            }
+            TypeKind::Object(object) => {
+                let fields: Vec<_> = object
+                    .props
+                    .iter()
+                    .map(|(name, tp)| (name.clone(), generalize_rec(arena, *tp, mappings)))
+                    .collect();
+                new_object_type(arena, &fields)
+            }
+            TypeKind::Function(func) => {
+                let params = generalize_rec_many(arena, &func.params, mappings);
+                let ret = generalize_rec(arena, func.ret, mappings);
+                new_func_type(arena, &params, ret, None)
+            }
+            TypeKind::Union(union) => {
+                let types = generalize_rec_many(arena, &union.types, mappings);
+                new_union_type(arena, &types)
+            }
+        }
+    }
+
+    pub fn generalize_rec_many(
+        a: &mut Arena<Type>,
+        types: &[Index],
+        mappings: &mut BTreeMap<Index, Ref>,
+    ) -> Vec<Index> {
+        types
+            .iter()
+            .map(|x| generalize_rec(a, *x, mappings))
+            .collect()
+    }
+
+    let params = generalize_rec_many(arena, &func.params, &mut mappings);
+    let ret = generalize_rec(arena, func.ret, &mut mappings);
+    let type_params: Vec<TypeParam> = mappings
+        .iter()
+        .map(|(_, v)| TypeParam {
+            name: v.name.clone(),
+        })
+        .collect();
+
+    new_func_type(arena, &params, ret, Some(type_params))
 }
