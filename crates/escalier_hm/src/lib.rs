@@ -576,6 +576,41 @@ mod tests {
     }
 
     #[test]
+    fn test_composition_generalized() -> Result<(), Errors> {
+        let (mut a, mut my_ctx) = test_env();
+
+        // Function composition
+        // fn f (fn g (fn arg (f g arg)))
+        let syntax = new_lambda(
+            &["f"],
+            &new_lambda(
+                &["g"],
+                &new_lambda(
+                    &["arg"],
+                    &new_apply(
+                        new_identifier("g"),
+                        &[new_apply(new_identifier("f"), &[new_identifier("arg")])],
+                    ),
+                ),
+            ),
+        );
+
+        let mut program = Program {
+            statements: vec![new_declaration("compose", &syntax)],
+        };
+
+        infer_program(&mut a, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("compose").unwrap();
+        assert_eq!(
+            a[*t].as_string(&a),
+            r#"<A, B, C>((A) => B) => ((B) => C) => (A) => C"#
+        );
+
+        Ok(())
+    }
+
+    #[test]
     fn test_fun() -> Result<(), Errors> {
         let (mut a, mut my_ctx) = test_env();
 
@@ -1074,6 +1109,28 @@ mod tests {
 
         let t = my_ctx.env.get("b").unwrap();
         assert_eq!(a[*t].as_string(&a), r#""hello""#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_program_with_generic_func_multiple_type_params() -> Result<(), Errors> {
+        let (mut a, mut my_ctx) = test_env();
+
+        let mut program = Program {
+            statements: vec![
+                new_declaration("fst", &new_lambda(&["x", "y"], &new_identifier("x"))),
+                new_declaration("snd", &new_lambda(&["x", "y"], &new_identifier("y"))),
+            ],
+        };
+
+        infer_program(&mut a, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("fst").unwrap();
+        assert_eq!(a[*t].as_string(&a), r#"<A, B>(A, B) => A"#);
+
+        let t = my_ctx.env.get("snd").unwrap();
+        assert_eq!(a[*t].as_string(&a), r#"<A, B>(A, B) => B"#);
 
         Ok(())
     }
