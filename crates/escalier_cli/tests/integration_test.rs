@@ -1,3 +1,4 @@
+use escalier_ast::types::Type;
 use escalier_ast::values::{Program, StmtKind};
 use escalier_codegen::*;
 use escalier_infer::TypeError;
@@ -34,7 +35,7 @@ fn infer(input: &str) -> String {
     }
 }
 
-fn infer_prog(src: &str) -> (Program, Checker) {
+fn infer_prog(src: &str) -> (Program<Type>, Checker) {
     let result = parse(src);
     let mut prog = match result {
         Ok(prog) => prog,

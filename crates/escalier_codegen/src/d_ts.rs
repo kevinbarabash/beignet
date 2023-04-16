@@ -14,7 +14,7 @@ use escalier_ast::{types, values};
 use escalier_infer::{immutable_obj_type, Context, Scope, TypeError};
 
 pub fn codegen_d_ts(
-    program: &values::Program,
+    program: &values::Program<Type>,
     scope: &Scope,
 ) -> core::result::Result<String, Vec<TypeError>> {
     Ok(print_d_ts(&build_d_ts(program, scope)?))
@@ -67,7 +67,7 @@ fn build_type_params_from_type_params(
 }
 
 fn build_d_ts(
-    program: &values::Program,
+    program: &values::Program<Type>,
     scope: &Scope,
 ) -> core::result::Result<Program, Vec<TypeError>> {
     // TODO: Create a common `Export` type

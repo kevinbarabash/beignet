@@ -19,7 +19,7 @@ pub enum TypeError {
     ConsequentMustReturnVoid,
 
     // Mutability
-    NonMutableBindingAssignment(Box<Assign>),
+    NonMutableBindingAssignment(Box<Assign<Type>>),
     UnexpectedImutableValue,
     ObjectIsNotMutable,
     PropertyIsNotMutable,
@@ -65,7 +65,7 @@ pub enum TypeError {
     TypeInstantiationFailure,
 
     // Types
-    MissingTypeAnnotation(Box<Statement>),
+    MissingTypeAnnotation(Box<Statement<Type>>),
     AliasTypeMismatch,
 
     // Objects

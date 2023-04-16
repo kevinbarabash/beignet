@@ -14,7 +14,7 @@ impl Checker {
     // into the appropriate context.
     pub fn infer_fn_param(
         &mut self,
-        param: &mut EFnParam,
+        param: &mut EFnParam<Type>,
         type_param_map: &HashMap<String, Type>,
     ) -> Result<(Subst, TFnParam), Vec<TypeError>> {
         let (ps, mut pa, pt) =
@@ -57,7 +57,7 @@ impl Checker {
     }
 }
 
-pub fn pattern_to_tpat(pattern: &Pattern) -> TPat {
+pub fn pattern_to_tpat(pattern: &Pattern<Type>) -> TPat {
     match &pattern.kind {
         PatternKind::Ident(binding_ident) => TPat::Ident(types::BindingIdent {
             name: binding_ident.name.to_owned(),

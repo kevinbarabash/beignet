@@ -17,7 +17,7 @@ use crate::checker::{Checker, Report, ScopeKind};
 impl Checker {
     pub fn infer_expr(
         &mut self,
-        expr: &mut Expr,
+        expr: &mut Expr<Type>,
         is_lvalue: bool,
     ) -> Result<(Subst, Type), Vec<TypeError>> {
         self.push_report();
@@ -837,7 +837,7 @@ impl Checker {
     fn infer_property_type(
         &mut self,
         obj_t: &mut Type,
-        prop: &mut MemberProp,
+        prop: &mut MemberProp<Type>,
         is_lvalue: bool,
     ) -> Result<(Subst, Type), Vec<TypeError>> {
         // TODO: figure out when we have to copy .mutable from `obj_t` to the `t`
@@ -957,7 +957,7 @@ impl Checker {
     fn get_prop_value(
         &mut self,
         obj: &TObject,
-        prop: &mut MemberProp,
+        prop: &mut MemberProp<Type>,
         is_lvalue: bool,
         obj_is_mutable: bool,
     ) -> Result<(Subst, Type), Vec<TypeError>> {

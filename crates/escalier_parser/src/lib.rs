@@ -2,6 +2,7 @@
 use std::ffi::CString;
 use std::os::raw::c_char;
 
+use escalier_ast::types::Type;
 use escalier_ast::values::*;
 
 mod expr;
@@ -46,7 +47,7 @@ fn log(str: &str) {
     eprintln!("{}", str);
 }
 
-pub fn parse(src: &str) -> Result<Program, ParseError> {
+pub fn parse(src: &str) -> Result<Program<Type>, ParseError> {
     let mut parser = tree_sitter::Parser::new();
     parser
         .set_language(tree_sitter_escalier::language())
@@ -64,7 +65,7 @@ pub fn parse(src: &str) -> Result<Program, ParseError> {
 
         let children = root.children(&mut cursor);
 
-        let mut body: Vec<Statement> = vec![];
+        let mut body: Vec<Statement<Type>> = vec![];
         for child in children {
             if let Some(stmt) = parse_statement(&child, src)? {
                 body.push(stmt);

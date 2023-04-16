@@ -17,8 +17,8 @@ use crate::checker::Checker;
 impl Checker {
     pub fn infer_type_ann(
         &mut self,
-        type_ann: &mut TypeAnn,
-        type_params: &mut Option<Vec<TypeParam>>,
+        type_ann: &mut TypeAnn<Type>,
+        type_params: &mut Option<Vec<TypeParam<Type>>>,
     ) -> Result<(Subst, Type), Vec<TypeError>> {
         let mut type_params = if type_params.is_none() {
             match &mut type_ann.kind {
@@ -56,7 +56,7 @@ impl Checker {
 
     pub fn infer_type_ann_with_params(
         &mut self,
-        type_ann: &mut TypeAnn,
+        type_ann: &mut TypeAnn<Type>,
         type_param_map: &HashMap<String, Type>,
     ) -> Result<(Subst, Type), Vec<TypeError>> {
         self.infer_type_ann_rec(type_ann, type_param_map)
@@ -64,7 +64,7 @@ impl Checker {
 
     fn infer_type_ann_rec(
         &mut self,
-        type_ann: &mut TypeAnn,
+        type_ann: &mut TypeAnn<Type>,
         type_param_map: &HashMap<String, Type>,
     ) -> Result<(Subst, Type), Vec<TypeError>> {
         let (s, mut t) = match &mut type_ann.kind {

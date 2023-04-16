@@ -1,3 +1,4 @@
+use escalier_ast::types::Type;
 use escalier_ast::values::*;
 
 use crate::expr::parse_expression;
@@ -9,7 +10,7 @@ use crate::util::*;
 pub fn parse_statement(
     node: &tree_sitter::Node,
     src: &str,
-) -> Result<Option<Statement>, ParseError> {
+) -> Result<Option<Statement<Type>>, ParseError> {
     let kind = match node.kind() {
         "lexical_declaration" => {
             return parse_declaration(node, false, src);
@@ -110,7 +111,7 @@ fn parse_declaration(
     node: &tree_sitter::Node,
     declare: bool,
     src: &str,
-) -> Result<Option<Statement>, ParseError> {
+) -> Result<Option<Statement<Type>>, ParseError> {
     if node.has_error() {
         // TODO: get actual error node so that we can report where the error is
         return Err(ParseError::from("Error parsing declaration"));
@@ -188,7 +189,10 @@ fn parse_declaration(
     }))
 }
 
-fn parse_class_decl(node: &tree_sitter::Node, src: &str) -> Result<Option<Statement>, ParseError> {
+fn parse_class_decl(
+    node: &tree_sitter::Node,
+    src: &str,
+) -> Result<Option<Statement<Type>>, ParseError> {
     if node.has_error() {
         // TODO: get actual error node so that we can report where the error is
         return Err(ParseError::from("Error parsing declaration"));
@@ -197,7 +201,7 @@ fn parse_class_decl(node: &tree_sitter::Node, src: &str) -> Result<Option<Statem
     let name_node = node.child_by_field_name("name").unwrap();
     let body_node = node.child_by_field_name("body").unwrap();
 
-    let mut class_members: Vec<ClassMember> = vec![];
+    let mut class_members: Vec<ClassMember<Type>> = vec![];
     let mut cursor = body_node.walk();
     for child in body_node.named_children(&mut cursor) {
         let kind = child.kind();
@@ -313,14 +317,17 @@ fn parse_class_decl(node: &tree_sitter::Node, src: &str) -> Result<Option<Statem
     Ok(Some(stmt))
 }
 
-pub fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Block, ParseError> {
+pub fn parse_block_statement(
+    node: &tree_sitter::Node,
+    src: &str,
+) -> Result<Block<Type>, ParseError> {
     assert_eq!(node.kind(), "statement_block");
 
     let mut cursor = node.walk();
 
     let child_count = node.named_child_count();
 
-    let mut stmts: Vec<Statement> = vec![];
+    let mut stmts: Vec<Statement<Type>> = vec![];
 
     for (i, child) in node.named_children(&mut cursor).into_iter().enumerate() {
         let is_last = i == child_count - 1;

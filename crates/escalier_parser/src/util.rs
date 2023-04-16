@@ -1,3 +1,4 @@
+use escalier_ast::types::Type;
 use escalier_ast::values::*;
 
 use crate::parse_error::ParseError;
@@ -14,7 +15,7 @@ pub fn text_for_node(node: &tree_sitter::Node, src: &str) -> Result<String, Pars
 pub fn parse_type_params_for_node(
     node: &tree_sitter::Node,
     src: &str,
-) -> Result<Option<Vec<TypeParam>>, ParseError> {
+) -> Result<Option<Vec<TypeParam<Type>>>, ParseError> {
     let type_params = match node.child_by_field_name("type_parameters") {
         Some(type_params) => {
             let mut cursor = type_params.walk();
@@ -61,7 +62,7 @@ pub fn parse_type_params_for_node(
 pub fn parse_formal_parameters(
     node: &tree_sitter::Node,
     src: &str,
-) -> Result<Vec<EFnParam>, ParseError> {
+) -> Result<Vec<EFnParam<Type>>, ParseError> {
     assert_eq!(node.kind(), "formal_parameters");
 
     let mut cursor = node.walk();

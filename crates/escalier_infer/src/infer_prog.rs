@@ -1,11 +1,11 @@
-use escalier_ast::types::{TObjElem, TObject, TProp, TPropKey, TypeKind};
+use escalier_ast::types::{TObjElem, TObject, TProp, TPropKey, Type, TypeKind};
 use escalier_ast::values::*;
 
 use crate::type_error::TypeError;
 
 use crate::checker::Checker;
 
-pub fn infer_prog(prog: &mut Program, checker: &mut Checker) -> Result<(), Vec<TypeError>> {
+pub fn infer_prog(prog: &mut Program<Type>, checker: &mut Checker) -> Result<(), Vec<TypeError>> {
     // TODO: replace with Class type once it exists
     // We use {_name: "Promise"} to differentiate it from other
     // object types.
