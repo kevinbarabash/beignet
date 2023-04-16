@@ -44,41 +44,42 @@ pub fn get_type(arena: &mut Arena<Type>, name: &str, ctx: &Context) -> Result<In
 /// Args:
 ///     t: A type to be copied.
 ///     non_generic: A set of non-generic TypeVariables
-pub fn fresh(a: &mut Arena<Type>, t: Index, ctx: &Context) -> Index {
+pub fn fresh(arena: &mut Arena<Type>, t: Index, ctx: &Context) -> Index {
     // A mapping of TypeVariables to TypeVariables
     let mut mappings = HashMap::default();
 
     fn freshrec(
-        a: &mut Arena<Type>,
+        arena: &mut Arena<Type>,
         tp: Index,
         mappings: &mut HashMap<Index, Index>,
         ctx: &Context,
     ) -> Index {
-        let p = prune(a, tp);
-        match &a.get(p).unwrap().clone().kind {
+        let p = prune(arena, tp);
+        match &arena.get(p).unwrap().clone().kind {
             TypeKind::Variable(_) => {
-                if is_generic(a, p, ctx) {
+                if is_generic(arena, p, ctx) {
                     mappings
                         .entry(p)
-                        .or_insert_with(|| new_var_type(a))
+                        .or_insert_with(|| new_var_type(arena))
                         .to_owned()
                 } else {
                     p
                 }
             }
             TypeKind::Constructor(con) => {
-                let types = freshrec_many(a, &con.types, mappings, ctx);
+                let types = freshrec_many(arena, &con.types, mappings, ctx);
                 if types != con.types {
-                    new_constructor(a, &con.name, &types)
+                    new_constructor(arena, &con.name, &types)
                 } else {
                     p
                 }
             }
-            TypeKind::Literal(lit) => new_lit_type(a, lit),
+            TypeKind::Ref(Ref { name }) => new_type_ref(arena, name),
+            TypeKind::Literal(lit) => new_lit_type(arena, lit),
             TypeKind::Tuple(tuple) => {
-                let types = freshrec_many(a, &tuple.types, mappings, ctx);
+                let types = freshrec_many(arena, &tuple.types, mappings, ctx);
                 if types != tuple.types {
-                    new_tuple_type(a, &types)
+                    new_tuple_type(arena, &types)
                 } else {
                     p
                 }
@@ -87,27 +88,29 @@ pub fn fresh(a: &mut Arena<Type>, t: Index, ctx: &Context) -> Index {
                 let props: Vec<_> = object
                     .props
                     .iter()
-                    .map(|(name, tp)| (name.clone(), freshrec(a, *tp, mappings, ctx)))
+                    .map(|(name, tp)| (name.clone(), freshrec(arena, *tp, mappings, ctx)))
                     .collect();
                 if props != object.props {
-                    new_object_type(a, &props)
+                    new_object_type(arena, &props)
                 } else {
                     p
                 }
             }
             TypeKind::Function(func) => {
-                let params = freshrec_many(a, &func.params, mappings, ctx);
-                let ret = freshrec(a, func.ret, mappings, ctx);
+                let params = freshrec_many(arena, &func.params, mappings, ctx);
+                let ret = freshrec(arena, func.ret, mappings, ctx);
+                let type_params = func.type_params.clone();
+                // TODO: copy the type params
                 if params != func.params || ret != func.ret {
-                    new_func_type(a, &params, ret)
+                    new_func_type(arena, &params, ret, type_params)
                 } else {
                     p
                 }
             }
             TypeKind::Union(union) => {
-                let types = freshrec_many(a, &union.types, mappings, ctx);
+                let types = freshrec_many(arena, &union.types, mappings, ctx);
                 if types != union.types {
-                    new_union_type(a, &types)
+                    new_union_type(arena, &types)
                 } else {
                     p
                 }
@@ -127,7 +130,7 @@ pub fn fresh(a: &mut Arena<Type>, t: Index, ctx: &Context) -> Index {
             .collect()
     }
 
-    freshrec(a, t, &mut mappings, ctx)
+    freshrec(arena, t, &mut mappings, ctx)
 }
 
 /// Checks whether a given variable occurs in a list of non-generic variables

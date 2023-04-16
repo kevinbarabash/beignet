@@ -16,9 +16,21 @@ pub struct Constructor {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Ref {
+    pub name: String,
+    // TODO: Add support for type args
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Function {
     pub params: Vec<Index>,
     pub ret: Index,
+    pub type_params: Option<Vec<TypeParam>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TypeParam {
+    pub name: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -46,6 +58,7 @@ pub struct Object {
 pub enum TypeKind {
     Variable(Variable),
     Constructor(Constructor),
+    Ref(Ref),
     Literal(Literal),
     Function(Function),
     Union(Union),
@@ -103,6 +116,7 @@ impl Type {
                     format!("{} {}", con.name, coll.join(" "))
                 }
             },
+            TypeKind::Ref(Ref { name }) => name.clone(),
             TypeKind::Literal(lit) => lit.to_string(),
             TypeKind::Tuple(tuple) => {
                 format!("[{}]", types_to_strings(arena, &tuple.types).join(", "))
@@ -115,8 +129,17 @@ impl Type {
                 format!("{{{}}}", fields.join(", "))
             }
             TypeKind::Function(func) => {
+                let type_params = if let Some(type_params) = &func.type_params {
+                    let type_params = type_params
+                        .iter()
+                        .map(|tp| tp.name.clone())
+                        .collect::<Vec<_>>();
+                    format!("<{}>", type_params.join(", "))
+                } else {
+                    "".to_string()
+                };
                 format!(
-                    "({}) => {}",
+                    "{type_params}({}) => {}",
                     types_to_strings(arena, &func.params).join(", "),
                     arena[func.ret].as_string(arena),
                 )
@@ -135,11 +158,17 @@ fn types_to_strings(a: &Arena<Type>, types: &[Index]) -> Vec<String> {
 }
 
 /// A binary type constructor which builds function types
-pub fn new_func_type(arena: &mut Arena<Type>, params: &[Index], ret: Index) -> Index {
+pub fn new_func_type(
+    arena: &mut Arena<Type>,
+    params: &[Index],
+    ret: Index,
+    type_params: Option<Vec<TypeParam>>,
+) -> Index {
     arena.insert(Type {
         kind: TypeKind::Function(Function {
             params: params.to_vec(),
             ret,
+            type_params: type_params.map(|x| x.to_vec()),
         }),
     })
 }
@@ -184,6 +213,14 @@ pub fn new_constructor(arena: &mut Arena<Type>, name: &str, types: &[Index]) -> 
         kind: TypeKind::Constructor(Constructor {
             name: name.to_string(),
             types: types.to_vec(),
+        }),
+    })
+}
+
+pub fn new_type_ref(arena: &mut Arena<Type>, name: &str) -> Index {
+    arena.insert(Type {
+        kind: TypeKind::Ref(Ref {
+            name: name.to_string(),
         }),
     })
 }

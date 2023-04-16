@@ -224,20 +224,22 @@ mod tests {
         let pair_type = new_constructor(&mut a, "*", &[var1, var2]);
         my_ctx.env.insert(
             "pair".to_string(),
-            new_func_type(&mut a, &[var1, var2], pair_type),
+            new_func_type(&mut a, &[var1, var2], pair_type, None),
         );
 
         let int_t = new_constructor(&mut a, "number", &[]);
         let bool_t = new_constructor(&mut a, "boolean", &[]);
-        my_ctx
-            .env
-            .insert("zero".to_string(), new_func_type(&mut a, &[int_t], bool_t));
+        my_ctx.env.insert(
+            "zero".to_string(),
+            new_func_type(&mut a, &[int_t], bool_t, None),
+        );
 
         let num1_t = new_constructor(&mut a, "number", &[]);
         let num2_t = new_constructor(&mut a, "number", &[]);
-        my_ctx
-            .env
-            .insert("pred".to_string(), new_func_type(&mut a, &[num1_t], num2_t));
+        my_ctx.env.insert(
+            "pred".to_string(),
+            new_func_type(&mut a, &[num1_t], num2_t, None),
+        );
 
         // It isn't necessary to create separate instances of `number` for each of
         // these.  When interferring types from code we'll want separate instances
@@ -248,11 +250,11 @@ mod tests {
         let num3_t = new_constructor(&mut a, "number", &[]);
         my_ctx.env.insert(
             "times".to_string(),
-            new_func_type(&mut a, &[num1_t, num2_t], num3_t),
+            new_func_type(&mut a, &[num1_t, num2_t], num3_t, None),
         );
         my_ctx.env.insert(
             "add".to_string(),
-            new_func_type(&mut a, &[num1_t, num2_t], num3_t),
+            new_func_type(&mut a, &[num1_t, num2_t], num3_t, None),
         );
 
         my_ctx
@@ -618,10 +620,10 @@ mod tests {
         let str = new_constructor(&mut a, "string", &[]);
 
         // foo: ((number, string) => boolean) => boolean
-        let cb = new_func_type(&mut a, &[num, str], bool);
+        let cb = new_func_type(&mut a, &[num, str], bool, None);
         my_ctx
             .env
-            .insert("foo".to_string(), new_func_type(&mut a, &[cb], bool));
+            .insert("foo".to_string(), new_func_type(&mut a, &[cb], bool, None));
 
         // bar: (number | string) => true
         // It's okay for the callback arg to take fewer params since extra params
@@ -633,7 +635,7 @@ mod tests {
         let true_type = new_bool_lit_type(&mut a, true);
         my_ctx.env.insert(
             "bar".to_string(),
-            new_func_type(&mut a, &[num_or_str], true_type),
+            new_func_type(&mut a, &[num_or_str], true_type, None),
         );
 
         // foo(bar)
@@ -653,15 +655,16 @@ mod tests {
         let str = new_constructor(&mut a, "string", &[]);
 
         // foo: ((number) => boolean) => boolean
-        let cb = new_func_type(&mut a, &[num], bool);
+        let cb = new_func_type(&mut a, &[num], bool, None);
         my_ctx
             .env
-            .insert("foo".to_string(), new_func_type(&mut a, &[cb], bool));
+            .insert("foo".to_string(), new_func_type(&mut a, &[cb], bool, None));
 
         // bar: (number, string) => true
-        my_ctx
-            .env
-            .insert("bar".to_string(), new_func_type(&mut a, &[num, str], bool));
+        my_ctx.env.insert(
+            "bar".to_string(),
+            new_func_type(&mut a, &[num, str], bool, None),
+        );
 
         // foo(bar)
         let mut syntax = new_apply(new_identifier("foo"), &[new_identifier("bar")]);
@@ -700,8 +703,8 @@ mod tests {
 
         let bool = new_constructor(&mut a, "boolean", &[]);
         let str = new_constructor(&mut a, "string", &[]);
-        let fn1 = new_func_type(&mut a, &[], bool);
-        let fn2 = new_func_type(&mut a, &[], str);
+        let fn1 = new_func_type(&mut a, &[], bool, None);
+        let fn2 = new_func_type(&mut a, &[], str, None);
         my_ctx
             .env
             .insert("foo".to_string(), new_union_type(&mut a, &[fn1, fn2]));
@@ -806,7 +809,7 @@ mod tests {
         let str = new_constructor(&mut a, "string", &[]);
         let param_type = new_tuple_type(&mut a, &[num, str]);
         let bool = new_constructor(&mut a, "boolean", &[]);
-        let func = new_func_type(&mut a, &[param_type], bool);
+        let func = new_func_type(&mut a, &[param_type], bool, None);
         my_ctx.env.insert("foo".to_string(), func);
 
         let mut syntax = new_apply(
@@ -835,7 +838,7 @@ mod tests {
         let str = new_constructor(&mut a, "string", &[]);
         let param_type = new_tuple_type(&mut a, &[num, str]);
         let bool = new_constructor(&mut a, "boolean", &[]);
-        let func = new_func_type(&mut a, &[param_type], bool);
+        let func = new_func_type(&mut a, &[param_type], bool, None);
         my_ctx.env.insert("foo".to_string(), func);
 
         let mut syntax = new_apply(new_identifier("foo"), &[new_tuple(&[new_number("5")])]);
@@ -915,7 +918,7 @@ mod tests {
         let str = new_constructor(&mut a, "string", &[]);
         let param_type = new_object_type(&mut a, &[("a".to_string(), num), ("b".to_string(), str)]);
         let bool = new_constructor(&mut a, "boolean", &[]);
-        let func = new_func_type(&mut a, &[param_type], bool);
+        let func = new_func_type(&mut a, &[param_type], bool, None);
         my_ctx.env.insert("foo".to_string(), func);
 
         let mut syntax = new_apply(
@@ -944,7 +947,7 @@ mod tests {
         let str = new_constructor(&mut a, "string", &[]);
         let param_type = new_object_type(&mut a, &[("a".to_string(), num), ("b".to_string(), str)]);
         let bool = new_constructor(&mut a, "boolean", &[]);
-        let func = new_func_type(&mut a, &[param_type], bool);
+        let func = new_func_type(&mut a, &[param_type], bool, None);
         my_ctx.env.insert("foo".to_string(), func);
 
         let mut syntax = new_apply(
@@ -1062,6 +1065,9 @@ mod tests {
         };
 
         infer_program(&mut a, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("id").unwrap();
+        assert_eq!(a[*t].as_string(&a), r#"<A>(A) => A"#);
 
         let t = my_ctx.env.get("a").unwrap();
         assert_eq!(a[*t].as_string(&a), r#"5"#);

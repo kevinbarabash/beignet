@@ -22,13 +22,19 @@ pub fn occurs_in_type(a: &mut Arena<Type>, v: Index, type2: Index) -> bool {
     match a.get(pruned_type2).unwrap().clone().kind {
         TypeKind::Variable(_) => false, // leaf node
         TypeKind::Literal(_) => false,  // leaf node
+        TypeKind::Ref(_) => false,      // leaf node
         TypeKind::Tuple(Tuple { types }) => occurs_in(a, v, &types),
         TypeKind::Object(Object { props }) => {
             let types = props.iter().map(|(_, v)| *v).collect::<Vec<_>>();
             occurs_in(a, v, &types)
         }
         TypeKind::Constructor(Constructor { types, .. }) => occurs_in(a, v, &types),
-        TypeKind::Function(Function { params, ret }) => {
+        TypeKind::Function(Function {
+            params,
+            ret,
+            type_params: _,
+        }) => {
+            // TODO: check type_params as well
             occurs_in(a, v, &params) || occurs_in_type(a, v, ret)
         }
         TypeKind::Union(Union { types }) => occurs_in(a, v, &types),
