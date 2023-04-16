@@ -3,9 +3,10 @@ use std::cmp::Ordering;
 
 use lsp_types::*;
 
+use escalier_ast::types::Type;
 use escalier_ast::values::*;
 
-pub fn get_semantic_tokens(prog: &mut Program) -> Vec<SemanticToken> {
+pub fn get_semantic_tokens(prog: &mut Program<Type>) -> Vec<SemanticToken> {
     let mut visitor = SemanticTokenVisitor { raw_tokens: vec![] };
     prog.drive_mut(&mut visitor);
 
@@ -61,14 +62,18 @@ pub struct RawSemanticToken {
     pub token_modifiers_bitset: u32,
 }
 
+type ExprType = Expr<Type>;
+type StatementType = Statement<Type>;
+type TypeAnnType = TypeAnn<Type>;
+
 #[derive(VisitorMut)]
-#[visitor(Expr(enter), Statement(enter), TypeAnn(enter))]
+#[visitor(ExprType(enter), StatementType(enter), TypeAnnType(enter))]
 struct SemanticTokenVisitor {
     pub raw_tokens: Vec<RawSemanticToken>,
 }
 
 impl SemanticTokenVisitor {
-    fn enter_expr(&mut self, expr: &Expr) {
+    fn enter_expr_type(&mut self, expr: &Expr<Type>) {
         // PARAMETER = 3
         // VARIABLE = 4
         // PROPERTY = 5
@@ -120,7 +125,7 @@ impl SemanticTokenVisitor {
         }
     }
 
-    fn enter_statement(&mut self, stmt: &Statement) {
+    fn enter_statement_type(&mut self, stmt: &Statement<Type>) {
         if let StmtKind::TypeDecl(type_decl) = &stmt.kind {
             let Ident { loc, .. } = type_decl.id;
             self.raw_tokens.push(RawSemanticToken {
@@ -134,7 +139,7 @@ impl SemanticTokenVisitor {
         }
     }
 
-    fn enter_type_ann(&mut self, type_ann: &TypeAnn) {
+    fn enter_type_ann_type(&mut self, type_ann: &TypeAnn<Type>) {
         // TYPE = 0
         // TYPE_PARAMATER = 2
         // KEYWORD = 8

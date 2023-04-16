@@ -231,13 +231,19 @@ impl LanguageServer {
     }
 }
 
+type ExprType = Expr<Type>;
+type PatternType = Pattern<Type>;
+type ProgramType = Program<Type>;
+type StatementType = Statement<Type>;
+type TypeAnnType = TypeAnn<Type>;
+
 #[derive(VisitorMut)]
 #[visitor(
-    Expr(enter),
-    Pattern(enter),
-    Program(enter),
-    Statement(enter),
-    TypeAnn(enter)
+    ExprType(enter),
+    PatternType(enter),
+    ProgramType(enter),
+    StatementType(enter),
+    TypeAnnType(enter)
 )]
 struct GetTypeVisitor {
     cursor_pos: Position,
@@ -255,7 +261,7 @@ fn is_pos_in_source_loc(pos: &Position, src_loc: &SourceLocation) -> bool {
 
 // TODO: use is_pos_in_source_loc to terminate certain branches of the visitor
 impl GetTypeVisitor {
-    fn enter_expr(&mut self, expr: &Expr) {
+    fn enter_expr_type(&mut self, expr: &Expr<Type>) {
         if is_pos_in_source_loc(&self.cursor_pos, &expr.loc) {
             if let Some(t) = &expr.inferred_type {
                 self.t = Some(t.to_owned())
@@ -263,7 +269,7 @@ impl GetTypeVisitor {
         }
     }
 
-    fn enter_pattern(&mut self, pattern: &Pattern) {
+    fn enter_pattern_type(&mut self, pattern: &Pattern<Type>) {
         if is_pos_in_source_loc(&self.cursor_pos, &pattern.loc) {
             if let Some(t) = &pattern.inferred_type {
                 self.t = Some(t.to_owned())
@@ -271,16 +277,16 @@ impl GetTypeVisitor {
         }
     }
 
-    fn enter_program(&mut self, _program: &Program) {
+    fn enter_program_type(&mut self, _program: &Program<Type>) {
         eprintln!("enter_program");
         // Do nothing b/c Program doesn't have an .inferred_type field
     }
 
-    fn enter_statement(&mut self, _stmt: &Statement) {
+    fn enter_statement_type(&mut self, _stmt: &Statement<Type>) {
         eprintln!("enter_statement");
         // Do nothing b/c Statement doesn't have an .inferred_type field (yet)
     }
-    fn enter_type_ann(&mut self, type_ann: &TypeAnn) {
+    fn enter_type_ann_type(&mut self, type_ann: &TypeAnn<Type>) {
         if is_pos_in_source_loc(&self.cursor_pos, &type_ann.loc) {
             if let Some(t) = &type_ann.inferred_type {
                 self.t = Some(t.to_owned())
@@ -289,7 +295,7 @@ impl GetTypeVisitor {
     }
 }
 
-fn get_type_at_location(program: &mut Program, cursor_pos: &Position) -> Option<Type> {
+fn get_type_at_location(program: &mut Program<Type>, cursor_pos: &Position) -> Option<Type> {
     let mut visitor = GetTypeVisitor {
         cursor_pos: cursor_pos.to_owned(),
         t: None,

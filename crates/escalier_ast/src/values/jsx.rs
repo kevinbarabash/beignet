@@ -16,16 +16,22 @@ pub struct JSXText {
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct JSXExprContainer {
+pub struct JSXExprContainer<T: 'static>
+where
+    T: Drive + DriveMut,
+{
     #[drive(skip)]
     pub loc: SourceLocation,
     #[drive(skip)]
     pub span: Span,
-    pub expr: Box<Expr>,
+    pub expr: Box<Expr<T>>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct JSXElement {
+pub struct JSXElement<T: 'static>
+where
+    T: Drive + DriveMut,
+{
     #[drive(skip)]
     pub loc: SourceLocation,
     #[drive(skip)]
@@ -33,32 +39,41 @@ pub struct JSXElement {
     // Other ASTs make have JSXOpeningElement and JSXClosingElement
     #[drive(skip)]
     pub name: String,
-    pub attrs: Vec<JSXAttr>,
-    pub children: Vec<JSXElementChild>,
+    pub attrs: Vec<JSXAttr<T>>,
+    pub children: Vec<JSXElementChild<T>>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub enum JSXElementChild {
+pub enum JSXElementChild<T: 'static>
+where
+    T: Drive + DriveMut,
+{
     JSXText(JSXText),
-    JSXExprContainer(JSXExprContainer),
-    JSXElement(Box<JSXElement>),
+    JSXExprContainer(JSXExprContainer<T>),
+    JSXElement(Box<JSXElement<T>>),
     // JSXSpreadChild(JSXSpreadChild),
     // JSXFragment(JSXFragment),
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct JSXAttr {
+pub struct JSXAttr<T: 'static>
+where
+    T: Drive + DriveMut,
+{
     #[drive(skip)]
     pub loc: SourceLocation,
     #[drive(skip)]
     pub span: Span,
     #[drive(skip)]
     pub ident: Ident,
-    pub value: JSXAttrValue,
+    pub value: JSXAttrValue<T>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub enum JSXAttrValue {
+pub enum JSXAttrValue<T: 'static>
+where
+    T: Drive + DriveMut,
+{
     Lit(Lit),
-    JSXExprContainer(JSXExprContainer),
+    JSXExprContainer(JSXExprContainer<T>),
 }

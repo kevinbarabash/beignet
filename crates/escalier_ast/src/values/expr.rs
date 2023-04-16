@@ -1,6 +1,5 @@
 use derive_visitor::{Drive, DriveMut};
 
-use crate::types::Type;
 use crate::values::block::Block;
 use crate::values::class::Class;
 use crate::values::common::{SourceLocation, Span};
@@ -13,60 +12,87 @@ use crate::values::stmt::Statement;
 use crate::values::type_ann::{TypeAnn, TypeParam};
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct Program {
-    pub body: Vec<Statement>,
+pub struct Program<T: 'static>
+where
+    T: Drive + DriveMut,
+{
+    pub body: Vec<Statement<T>>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct App {
-    pub lam: Box<Expr>,
-    pub args: Vec<ExprOrSpread>,
-    pub type_args: Option<Vec<TypeAnn>>,
+pub struct App<T: 'static>
+where
+    T: Drive + DriveMut,
+{
+    pub lam: Box<Expr<T>>,
+    pub args: Vec<ExprOrSpread<T>>,
+    pub type_args: Option<Vec<TypeAnn<T>>>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct Fix {
-    pub expr: Box<Expr>,
+pub struct Fix<T: 'static>
+where
+    T: Drive + DriveMut,
+{
+    pub expr: Box<Expr<T>>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct IfElse {
-    pub cond: Box<Expr>,
-    pub consequent: Block,
-    pub alternate: Option<Block>,
+pub struct IfElse<T: 'static>
+where
+    T: Drive + DriveMut,
+{
+    pub cond: Box<Expr<T>>,
+    pub consequent: Block<T>,
+    pub alternate: Option<Block<T>>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct LetExpr {
-    pub pat: Pattern,
-    pub expr: Box<Expr>,
+pub struct LetExpr<T: 'static>
+where
+    T: Drive + DriveMut,
+{
+    pub pat: Pattern<T>,
+    pub expr: Box<Expr<T>>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub enum BlockOrExpr {
-    Block(Block),
-    Expr(Box<Expr>),
+pub enum BlockOrExpr<T: 'static>
+where
+    T: Drive + DriveMut,
+{
+    Block(Block<T>),
+    Expr(Box<Expr<T>>),
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct Lambda {
-    pub params: Vec<EFnParam>,
-    pub body: BlockOrExpr,
+pub struct Lambda<T: 'static>
+where
+    T: Drive + DriveMut,
+{
+    pub params: Vec<EFnParam<T>>,
+    pub body: BlockOrExpr<T>,
     #[drive(skip)]
     pub is_async: bool,
-    pub return_type: Option<TypeAnn>,
-    pub type_params: Option<Vec<TypeParam>>,
+    pub return_type: Option<TypeAnn<T>>,
+    pub type_params: Option<Vec<TypeParam<T>>>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct EFnParam {
-    pub pat: Pattern,
-    pub type_ann: Option<TypeAnn>,
+pub struct EFnParam<T: 'static>
+where
+    T: Drive + DriveMut,
+{
+    pub pat: Pattern<T>,
+    pub type_ann: Option<TypeAnn<T>>,
     #[drive(skip)]
     pub optional: bool,
 }
 
-impl EFnParam {
+impl<T: 'static> EFnParam<T>
+where
+    T: Drive + DriveMut,
+{
     pub fn get_name(&self, index: &usize) -> String {
         match &self.pat.kind {
             PatternKind::Ident(BindingIdent { name, .. }) => name.to_owned(),
@@ -76,9 +102,12 @@ impl EFnParam {
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct Assign {
-    pub left: Box<Expr>,
-    pub right: Box<Expr>,
+pub struct Assign<T: 'static>
+where
+    T: Drive + DriveMut,
+{
+    pub left: Box<Expr<T>>,
+    pub right: Box<Expr<T>>,
     pub op: AssignOp,
 }
 
@@ -94,10 +123,13 @@ pub enum AssignOp {
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct BinaryExpr {
+pub struct BinaryExpr<T: 'static>
+where
+    T: Drive + DriveMut,
+{
     pub op: BinOp,
-    pub left: Box<Expr>,
-    pub right: Box<Expr>,
+    pub left: Box<Expr<T>>,
+    pub right: Box<Expr<T>>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
@@ -115,9 +147,12 @@ pub enum BinOp {
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct UnaryExpr {
+pub struct UnaryExpr<T: 'static>
+where
+    T: Drive + DriveMut,
+{
     pub op: UnaryOp,
-    pub arg: Box<Expr>,
+    pub arg: Box<Expr<T>>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
@@ -126,67 +161,100 @@ pub enum UnaryOp {
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct Obj {
-    pub props: Vec<PropOrSpread>,
+pub struct Obj<T: 'static>
+where
+    T: Drive + DriveMut,
+{
+    pub props: Vec<PropOrSpread<T>>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub enum PropOrSpread {
-    Spread(SpreadElement),
-    Prop(Box<Prop>),
+pub enum PropOrSpread<T: 'static>
+where
+    T: Drive + DriveMut,
+{
+    Spread(SpreadElement<T>),
+    Prop(Box<Prop<T>>),
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct SpreadElement {
-    pub expr: Box<Expr>,
+pub struct SpreadElement<T: 'static>
+where
+    T: Drive + DriveMut,
+{
+    pub expr: Box<Expr<T>>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub enum Prop {
+pub enum Prop<T: 'static>
+where
+    T: Drive + DriveMut,
+{
     #[drive(skip)]
     Shorthand(Ident),
-    KeyValue(KeyValueProp),
+    KeyValue(KeyValueProp<T>),
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct KeyValueProp {
+pub struct KeyValueProp<T: 'static>
+where
+    T: Drive + DriveMut,
+{
     #[drive(skip)]
     pub key: Ident,
-    pub value: Box<Expr>,
+    pub value: Box<Expr<T>>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct Await {
-    pub expr: Box<Expr>,
+pub struct Await<T: 'static>
+where
+    T: Drive + DriveMut,
+{
+    pub expr: Box<Expr<T>>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct Tuple {
-    pub elems: Vec<ExprOrSpread>,
+pub struct Tuple<T: 'static>
+where
+    T: Drive + DriveMut,
+{
+    pub elems: Vec<ExprOrSpread<T>>,
 }
 
 // TODO: make this a enum instead of a struct
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct ExprOrSpread {
+pub struct ExprOrSpread<T: 'static>
+where
+    T: Drive + DriveMut,
+{
     #[drive(skip)]
     pub spread: Option<Span>,
-    pub expr: Box<Expr>,
+    pub expr: Box<Expr<T>>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct Member {
-    pub obj: Box<Expr>,
+pub struct Member<T: 'static>
+where
+    T: Drive + DriveMut,
+{
+    pub obj: Box<Expr<T>>,
     #[drive(skip)]
-    pub prop: MemberProp,
+    pub prop: MemberProp<T>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum MemberProp {
+pub enum MemberProp<T: 'static>
+where
+    T: Drive + DriveMut,
+{
     Ident(Ident),
-    Computed(ComputedPropName),
+    Computed(ComputedPropName<T>),
 }
 
-impl MemberProp {
+impl<T: 'static> MemberProp<T>
+where
+    T: Drive + DriveMut,
+{
     pub fn name(&self) -> String {
         match self {
             MemberProp::Ident(Ident { name, .. }) => name.to_owned(),
@@ -196,12 +264,15 @@ impl MemberProp {
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct ComputedPropName {
+pub struct ComputedPropName<T: 'static>
+where
+    T: Drive + DriveMut,
+{
     #[drive(skip)]
     pub loc: SourceLocation,
     #[drive(skip)]
     pub span: Span, // includes enclosing []
-    pub expr: Box<Expr>,
+    pub expr: Box<Expr<T>>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
@@ -215,41 +286,56 @@ pub struct TemplateElem {
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct TemplateLiteral {
-    pub exprs: Vec<Expr>,
+pub struct TemplateLiteral<T: 'static>
+where
+    T: Drive + DriveMut,
+{
+    pub exprs: Vec<Expr<T>>,
     pub quasis: Vec<TemplateElem>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct TaggedTemplateLiteral {
+pub struct TaggedTemplateLiteral<T: 'static>
+where
+    T: Drive + DriveMut,
+{
     #[drive(skip)]
     pub tag: Ident,
     // TODO: figure out how to track the span of the `template` part
-    pub template: TemplateLiteral,
+    pub template: TemplateLiteral<T>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct Match {
-    pub expr: Box<Expr>,
-    pub arms: Vec<Arm>,
+pub struct Match<T: 'static>
+where
+    T: Drive + DriveMut,
+{
+    pub expr: Box<Expr<T>>,
+    pub arms: Vec<Arm<T>>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct Arm {
+pub struct Arm<T: 'static>
+where
+    T: Drive + DriveMut,
+{
     #[drive(skip)]
     pub loc: SourceLocation,
     #[drive(skip)]
     pub span: Span,
-    pub pattern: Pattern,
-    pub guard: Option<Expr>,
-    pub body: Block,
+    pub pattern: Pattern<T>,
+    pub guard: Option<Expr<T>>,
+    pub body: Block<T>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct New {
-    pub expr: Box<Expr>, // should resolve to an object with a constructor signature
-    pub args: Vec<ExprOrSpread>,
-    pub type_args: Option<Vec<TypeAnn>>,
+pub struct New<T: 'static>
+where
+    T: Drive + DriveMut,
+{
+    pub expr: Box<Expr<T>>, // should resolve to an object with a constructor signature
+    pub args: Vec<ExprOrSpread<T>>,
+    pub type_args: Option<Vec<TypeAnn<T>>>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
@@ -261,46 +347,55 @@ pub struct Regex {
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct DoExpr {
-    pub body: Block,
+pub struct DoExpr<T: 'static>
+where
+    T: Drive + DriveMut,
+{
+    pub body: Block<T>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub enum ExprKind {
-    App(App),
-    New(New), // like App but for calling constructors to create a new instance
-    Fix(Fix),
+pub enum ExprKind<T: 'static>
+where
+    T: Drive + DriveMut,
+{
+    App(App<T>),
+    New(New<T>), // like App but for calling constructors to create a new instance
+    Fix(Fix<T>),
     #[drive(skip)]
     Ident(Ident),
-    IfElse(IfElse),
-    JSXElement(JSXElement),
-    Lambda(Lambda),
-    Assign(Assign),
-    LetExpr(LetExpr), // should only be used in `if let` expressions
+    IfElse(IfElse<T>),
+    JSXElement(JSXElement<T>),
+    Lambda(Lambda<T>),
+    Assign(Assign<T>),
+    LetExpr(LetExpr<T>), // should only be used in `if let` expressions
     Lit(Lit),
     #[drive(skip)]
     Keyword(Keyword),
-    BinaryExpr(BinaryExpr),
-    UnaryExpr(UnaryExpr),
-    Obj(Obj),
-    Await(Await),
-    Tuple(Tuple),
-    Member(Member),
+    BinaryExpr(BinaryExpr<T>),
+    UnaryExpr(UnaryExpr<T>),
+    Obj(Obj<T>),
+    Await(Await<T>),
+    Tuple(Tuple<T>),
+    Member(Member<T>),
     Empty,
-    TemplateLiteral(TemplateLiteral),
-    TaggedTemplateLiteral(TaggedTemplateLiteral),
-    Match(Match),
-    Class(Class),
+    TemplateLiteral(TemplateLiteral<T>),
+    TaggedTemplateLiteral(TaggedTemplateLiteral<T>),
+    Match(Match<T>),
+    Class(Class<T>),
     Regex(Regex),
-    DoExpr(DoExpr),
+    DoExpr(DoExpr<T>),
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct Expr {
+pub struct Expr<T: 'static>
+where
+    T: Drive + DriveMut,
+{
     #[drive(skip)]
     pub loc: SourceLocation,
     #[drive(skip)]
     pub span: Span,
-    pub kind: ExprKind,
-    pub inferred_type: Option<Type>,
+    pub kind: ExprKind<T>,
+    pub inferred_type: Option<T>,
 }

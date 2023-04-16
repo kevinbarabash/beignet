@@ -1,3 +1,4 @@
+use escalier_ast::types::Type;
 use escalier_ast::values::*;
 
 use crate::expr::parse_expression;
@@ -6,7 +7,7 @@ use crate::parse_error::ParseError;
 use crate::pattern::parse_pattern;
 use crate::util::*;
 
-pub fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, ParseError> {
+pub fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn<Type>, ParseError> {
     if node.has_error() {
         // TODO: get actual error node so that we can report where the error is
         return Err(ParseError::from("Error parsing type annotation"));
@@ -162,7 +163,7 @@ pub fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, Pa
                 }
             }
 
-            let elems: Vec<TObjElem> = node
+            let elems: Vec<TObjElem<Type>> = node
                 .named_children(&mut cursor)
                 .into_iter()
                 .map(|prop| {
@@ -238,7 +239,7 @@ pub fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, Pa
                                 }
                             }
 
-                            let pat: Pattern = Pattern {
+                            let pat: Pattern<Type> = Pattern {
                                 loc: SourceLocation::from(&name_node),
                                 span: name_node.byte_range(),
                                 kind: PatternKind::Ident(BindingIdent {
@@ -270,7 +271,7 @@ pub fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, Pa
                         kind => panic!("Unsupport prop kind in object_type: '{kind}'"),
                     }
                 })
-                .collect::<Result<Vec<TObjElem>, ParseError>>()?;
+                .collect::<Result<Vec<TObjElem<Type>>, ParseError>>()?;
 
             TypeAnnKind::Object(ObjectType { elems })
         }
@@ -372,7 +373,7 @@ pub fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, Pa
         "template_literal_type" => todo!(),
         "intersection_type" => {
             let mut cursor = node.walk();
-            let mut types: Vec<TypeAnn> = vec![];
+            let mut types: Vec<TypeAnn<Type>> = vec![];
 
             for t in node.named_children(&mut cursor) {
                 let t = parse_type_ann(&t, src)?;
@@ -390,7 +391,7 @@ pub fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, Pa
         }
         "union_type" => {
             let mut cursor = node.walk();
-            let mut types: Vec<TypeAnn> = vec![];
+            let mut types: Vec<TypeAnn<Type>> = vec![];
 
             for t in node.named_children(&mut cursor) {
                 let t = parse_type_ann(&t, src)?;

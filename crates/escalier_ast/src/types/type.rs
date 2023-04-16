@@ -7,7 +7,7 @@ use crate::types::keyword::TKeyword;
 use crate::types::lam::TLam;
 use crate::types::lit::TLit;
 use crate::types::obj::TObjElem;
-use crate::types::provenance::Provenance;
+use crate::types::provenance::{GetProvenance, Provenance};
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TApp {
@@ -143,7 +143,13 @@ pub struct Type {
     #[drive(skip)]
     pub mutable: bool,
     #[drive(skip)]
-    pub provenance: Option<Box<Provenance>>,
+    pub provenance: Option<Box<Provenance<Self>>>,
+}
+
+impl GetProvenance<Type> for Type {
+    fn get_provenance(&self) -> Option<Provenance<Self>> {
+        self.provenance.as_ref().map(|p| p.as_ref().clone())
+    }
 }
 
 impl PartialOrd for Type {
