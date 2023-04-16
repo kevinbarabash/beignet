@@ -18,8 +18,8 @@ impl Checker {
     // into the appropriate context.
     pub fn infer_pattern(
         &mut self,
-        pat: &mut Pattern<Type>,
-        type_ann: &mut Option<TypeAnn<Type>>,
+        pat: &mut Pattern,
+        type_ann: &mut Option<TypeAnn>,
         type_param_map: &HashMap<String, Type>,
     ) -> Result<(Subst, Assump, Type), Vec<TypeError>> {
         // Keeps track of all of the variables the need to be introduced by this pattern.
@@ -52,8 +52,8 @@ impl Checker {
 
     pub fn infer_pattern_and_init(
         &mut self,
-        pattern: &mut Pattern<Type>,
-        type_ann: &mut Option<TypeAnn<Type>>,
+        pattern: &mut Pattern,
+        type_ann: &mut Option<TypeAnn>,
         init: &(Subst, Type),
         pu: &PatternUsage,
     ) -> Result<Subst, Vec<TypeError>> {
@@ -105,7 +105,7 @@ impl Checker {
 
     fn infer_pattern_rec(
         &mut self,
-        pat: &mut Pattern<Type>,
+        pat: &mut Pattern,
         assump: &mut Assump,
     ) -> Result<Type, Vec<TypeError>> {
         let result: Result<Type, Vec<TypeError>> = match &mut pat.kind {

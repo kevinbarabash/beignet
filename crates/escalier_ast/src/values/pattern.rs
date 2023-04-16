@@ -1,6 +1,7 @@
 use derive_visitor::{Drive, DriveMut, Visitor};
 use std::collections::BTreeSet;
 
+use crate::types::Type;
 use crate::values::common::{SourceLocation, Span};
 use crate::values::expr::Expr;
 use crate::values::ident::*;
@@ -10,16 +11,13 @@ use crate::values::Lit;
 // - one for assignment (obj, ident, array, rest)
 // - one for pattern matching/if let
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub enum PatternKind<T: 'static>
-where
-    T: Drive + DriveMut,
-{
+pub enum PatternKind {
     // TODO: use Ident instead of BindingIdent, there's no need to
     // have BindingIdent which simply wraps Ident
     Ident(BindingIdent),
-    Rest(RestPat<T>),
-    Object(ObjectPat<T>),
-    Array(ArrayPat<T>),
+    Rest(RestPat),
+    Object(ObjectPat),
+    Array(ArrayPat),
     Lit(LitPat),
     Is(IsPat),
     Wildcard,
@@ -28,23 +26,17 @@ where
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct Pattern<T: 'static>
-where
-    T: Drive + DriveMut,
-{
+pub struct Pattern {
     #[drive(skip)]
     pub loc: SourceLocation,
     #[drive(skip)]
     pub span: Span,
-    pub kind: PatternKind<T>,
+    pub kind: PatternKind,
     #[drive(skip)]
-    pub inferred_type: Option<T>,
+    pub inferred_type: Option<Type>,
 }
 
-impl<T: 'static> Pattern<T>
-where
-    T: Drive + DriveMut,
-{
+impl Pattern {
     pub fn get_name(&self, index: &usize) -> String {
         match &self.kind {
             PatternKind::Ident(BindingIdent { name, .. }) => name.to_owned(),
@@ -67,88 +59,64 @@ pub struct IsPat {
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct RestPat<T: 'static>
-where
-    T: Drive + DriveMut,
-{
-    pub arg: Box<Pattern<T>>,
+pub struct RestPat {
+    pub arg: Box<Pattern>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct ArrayPat<T: 'static>
-where
-    T: Drive + DriveMut,
-{
+pub struct ArrayPat {
     // The elements are optional to support sparse arrays.
-    pub elems: Vec<Option<ArrayPatElem<T>>>,
+    pub elems: Vec<Option<ArrayPatElem>>,
     #[drive(skip)]
     pub optional: bool,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct ArrayPatElem<T: 'static>
-where
-    T: Drive + DriveMut,
-{
+pub struct ArrayPatElem {
     // TODO: add .span property
-    pub pattern: Pattern<T>,
+    pub pattern: Pattern,
     #[drive(skip)] // TODO: derive visitor for Expr as well
-    pub init: Option<Box<Expr<T>>>,
+    pub init: Option<Box<Expr>>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct ObjectPat<T: 'static>
-where
-    T: Drive + DriveMut,
-{
-    pub props: Vec<ObjectPatProp<T>>,
+pub struct ObjectPat {
+    pub props: Vec<ObjectPatProp>,
     #[drive(skip)]
     pub optional: bool,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub enum ObjectPatProp<T: 'static>
-where
-    T: Drive + DriveMut,
-{
-    KeyValue(KeyValuePatProp<T>),
-    Shorthand(ShorthandPatProp<T>),
-    Rest(RestPat<T>), // TODO: create a new RestPatProp that includes a span
+pub enum ObjectPatProp {
+    KeyValue(KeyValuePatProp),
+    Shorthand(ShorthandPatProp),
+    Rest(RestPat), // TODO: create a new RestPatProp that includes a span
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct KeyValuePatProp<T: 'static>
-where
-    T: Drive + DriveMut,
-{
+pub struct KeyValuePatProp {
     #[drive(skip)]
     pub loc: SourceLocation,
     #[drive(skip)]
     pub span: Span,
     #[drive(skip)]
     pub key: Ident,
-    pub value: Box<Pattern<T>>,
+    pub value: Box<Pattern>,
     #[drive(skip)] // TODO: derive visitor for Expr as well
-    pub init: Option<Box<Expr<T>>>,
+    pub init: Option<Box<Expr>>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct ShorthandPatProp<T: 'static>
-where
-    T: Drive + DriveMut,
-{
+pub struct ShorthandPatProp {
     #[drive(skip)]
     pub loc: SourceLocation,
     #[drive(skip)]
     pub span: Span,
     pub ident: BindingIdent,
-    pub init: Option<Box<Expr<T>>>,
+    pub init: Option<Box<Expr>>,
 }
 
-pub fn is_refutable<T>(pat: &Pattern<T>) -> bool
-where
-    T: Drive + DriveMut,
-{
+pub fn is_refutable(pat: &Pattern) -> bool {
     match &pat.kind {
         // irrefutable
         PatternKind::Ident(_) => false,
@@ -178,10 +146,7 @@ where
     }
 }
 
-pub fn is_irrefutable<T>(pat: &Pattern<T>) -> bool
-where
-    T: Drive + DriveMut,
-{
+pub fn is_irrefutable(pat: &Pattern) -> bool {
     !is_refutable(pat)
 }
 
@@ -197,10 +162,7 @@ impl BindingCollector {
     }
 }
 
-pub fn get_binding<T>(pat: &Pattern<T>) -> BTreeSet<String>
-where
-    T: Drive + DriveMut,
-{
+pub fn get_binding(pat: &Pattern) -> BTreeSet<String> {
     let mut collector = BindingCollector::default();
     pat.drive(&mut collector);
     collector.bindings
@@ -209,7 +171,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::Type;
     use crate::values::common::DUMMY_LOC;
 
     fn ident(name: &str) -> Ident {
@@ -229,10 +190,7 @@ mod tests {
         }
     }
 
-    fn ident_pattern<T>(name: &str) -> Pattern<T>
-    where
-        T: Drive + DriveMut,
-    {
+    fn ident_pattern(name: &str) -> Pattern {
         let kind = PatternKind::Ident(BindingIdent {
             loc: DUMMY_LOC,
             name: name.to_owned(),
@@ -247,10 +205,7 @@ mod tests {
         }
     }
 
-    fn num_lit_pat<T>(value: &str) -> Pattern<T>
-    where
-        T: Drive + DriveMut,
-    {
+    fn num_lit_pat(value: &str) -> Pattern {
         let kind = PatternKind::Lit(LitPat {
             lit: Lit::num(String::from(value), 0..0, DUMMY_LOC),
         });
@@ -264,13 +219,13 @@ mod tests {
 
     #[test]
     fn ident_is_irrefutable() {
-        let ident = ident_pattern::<Type>("foo");
+        let ident = ident_pattern("foo");
         assert!(is_irrefutable(&ident));
     }
 
     #[test]
     fn rest_is_irrefutable() {
-        let ident = ident_pattern::<Type>("foo");
+        let ident = ident_pattern("foo");
         let kind = PatternKind::Rest(RestPat {
             arg: Box::from(ident),
         });
@@ -288,7 +243,7 @@ mod tests {
         let kind = PatternKind::Object(ObjectPat {
             props: vec![ObjectPatProp::KeyValue(KeyValuePatProp {
                 key: ident("foo"),
-                value: Box::from(ident_pattern::<Type>("foo")),
+                value: Box::from(ident_pattern("foo")),
                 init: None,
                 loc: DUMMY_LOC,
                 span: 0..0,
@@ -310,7 +265,7 @@ mod tests {
             props: vec![
                 ObjectPatProp::KeyValue(KeyValuePatProp {
                     key: ident("foo"),
-                    value: Box::from(ident_pattern::<Type>("foo")),
+                    value: Box::from(ident_pattern("foo")),
                     init: None,
                     loc: DUMMY_LOC,
                     span: 0..0,
@@ -338,7 +293,7 @@ mod tests {
     fn array_with_all_irrefutable_elements_is_irrefutable() {
         let kind = PatternKind::Array(ArrayPat {
             elems: vec![Some(ArrayPatElem {
-                pattern: ident_pattern::<Type>("foo"),
+                pattern: ident_pattern("foo"),
                 init: None,
             })],
             optional: false,
@@ -357,7 +312,7 @@ mod tests {
         let kind = PatternKind::Array(ArrayPat {
             elems: vec![
                 Some(ArrayPatElem {
-                    pattern: ident_pattern::<Type>("foo"),
+                    pattern: ident_pattern("foo"),
                     init: None,
                 }),
                 Some(ArrayPatElem {
@@ -378,12 +333,12 @@ mod tests {
 
     #[test]
     fn literal_pattern_is_refutable() {
-        assert!(is_refutable(&num_lit_pat::<Type>("5")));
+        assert!(is_refutable(&num_lit_pat("5")));
     }
 
     #[test]
     fn is_is_refutable() {
-        let kind: PatternKind<Type> = PatternKind::Is(IsPat {
+        let kind = PatternKind::Is(IsPat {
             ident: binding_ident("foo"),
             is_id: ident("string"),
         });

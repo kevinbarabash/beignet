@@ -1,4 +1,3 @@
-use escalier_ast::types::Type;
 use escalier_ast::values::*;
 use unescape::unescape;
 
@@ -9,7 +8,7 @@ use crate::stmt::*;
 use crate::type_ann::parse_type_ann;
 use crate::util::*;
 
-pub fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr<Type>, ParseError> {
+pub fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, ParseError> {
     if node.has_error() {
         // TODO: get actual error node so that we can report where the error is
         return Err(ParseError::from("Error parsing expression"));
@@ -410,7 +409,7 @@ pub fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr<Type
                 .named_children(&mut cursor)
                 .into_iter()
                 .map(|arm| parse_arm(&arm, src))
-                .collect::<Result<Vec<Arm<Type>>, ParseError>>()?;
+                .collect::<Result<Vec<Arm>, ParseError>>()?;
 
             ExprKind::Match(Match {
                 expr: Box::from(expr),
@@ -485,7 +484,7 @@ pub fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr<Type
     // $.call_expression
 }
 
-fn parse_if_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr<Type>, ParseError> {
+fn parse_if_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, ParseError> {
     assert_eq!(node.kind(), "if_expression");
 
     let condition = node.child_by_field_name("condition").unwrap();
@@ -531,7 +530,7 @@ fn parse_if_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr<Type>
     })
 }
 
-fn parse_arm(node: &tree_sitter::Node, src: &str) -> Result<Arm<Type>, ParseError> {
+fn parse_arm(node: &tree_sitter::Node, src: &str) -> Result<Arm, ParseError> {
     let pat = node.child_by_field_name("pattern").unwrap();
     let body = node.child_by_field_name("value").unwrap();
     let body = match body.kind() {
@@ -564,7 +563,7 @@ fn parse_arm(node: &tree_sitter::Node, src: &str) -> Result<Arm<Type>, ParseErro
 fn parse_template_string(
     node: &tree_sitter::Node,
     src: &str,
-) -> Result<TemplateLiteral<Type>, ParseError> {
+) -> Result<TemplateLiteral, ParseError> {
     assert_eq!(node.kind(), "template_string");
 
     let mut cursor = node.walk();
@@ -572,7 +571,7 @@ fn parse_template_string(
 
     let mut start = node.byte_range().start + 1; // + 1 skips initial backtick
     let mut quasis: Vec<TemplateElem> = vec![];
-    let mut exprs: Vec<Expr<Type>> = vec![];
+    let mut exprs: Vec<Expr> = vec![];
 
     for child in children {
         if child.kind() != "template_substitution" {
@@ -622,7 +621,7 @@ fn parse_template_string(
     Ok(TemplateLiteral { exprs, quasis })
 }
 
-fn parse_jsx_attrs(node: &tree_sitter::Node, src: &str) -> Result<Vec<JSXAttr<Type>>, ParseError> {
+fn parse_jsx_attrs(node: &tree_sitter::Node, src: &str) -> Result<Vec<JSXAttr>, ParseError> {
     let mut cursor = node.walk();
     let attrs = node.children_by_field_name("attribute", &mut cursor);
     attrs
@@ -663,7 +662,7 @@ fn parse_jsx_attrs(node: &tree_sitter::Node, src: &str) -> Result<Vec<JSXAttr<Ty
         .collect::<Result<Vec<_>, ParseError>>()
 }
 
-fn parse_jsx_element(node: &tree_sitter::Node, src: &str) -> Result<JSXElement<Type>, ParseError> {
+fn parse_jsx_element(node: &tree_sitter::Node, src: &str) -> Result<JSXElement, ParseError> {
     match node.kind() {
         "jsx_element" => {
             let mut cursor = node.walk();

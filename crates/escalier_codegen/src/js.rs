@@ -12,7 +12,6 @@ use swc_ecma_codegen::*;
 use swc_ecma_transforms_react::{react, Options, Runtime};
 use swc_ecma_visit::*;
 
-use escalier_ast::types::Type;
 use escalier_ast::values;
 use values::LetExpr;
 
@@ -32,7 +31,7 @@ impl Context {
     }
 }
 
-pub fn codegen_js(src: &str, program: &values::Program<Type>) -> (String, String) {
+pub fn codegen_js(src: &str, program: &values::Program) -> (String, String) {
     let mut ctx = Context { temp_id: 0 };
     let program = build_js(program, &mut ctx);
 
@@ -82,7 +81,7 @@ fn print_js(src: &str, program: &Program) -> (String, String) {
     (output_code, String::from_utf8(source_map_buf).unwrap())
 }
 
-fn build_js(program: &values::Program<Type>, ctx: &mut Context) -> Program {
+fn build_js(program: &values::Program, ctx: &mut Context) -> Program {
     let body: Vec<ModuleItem> = program
         .body
         .iter()
@@ -170,8 +169,8 @@ fn build_js(program: &values::Program<Type>, ctx: &mut Context) -> Program {
 }
 
 fn build_var_decl(
-    pattern: &values::Pattern<Type>,
-    init: Option<&values::Expr<Type>>,
+    pattern: &values::Pattern,
+    init: Option<&values::Expr>,
     stmts: &mut Vec<Stmt>,
     ctx: &mut Context,
 ) -> VarDecl {
@@ -191,7 +190,7 @@ fn build_var_decl(
 // TODO: See if we can avoid returning an Option<> here so that we don't have
 // to unwrap() in when calling it from build_expr().
 fn build_pattern(
-    pattern: &values::Pattern<Type>,
+    pattern: &values::Pattern,
     stmts: &mut Vec<Stmt>,
     ctx: &mut Context,
 ) -> Option<Pat> {
@@ -307,7 +306,7 @@ fn build_pattern(
     }
 }
 
-fn build_expr(expr: &values::Expr<Type>, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Expr {
+fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Expr {
     let span = swc_common::Span {
         lo: BytePos(expr.span.start as u32 + 1),
         hi: BytePos(expr.span.end as u32 + 1),
@@ -727,7 +726,7 @@ fn build_finalizer(expr: &Expr, finalizer: &BlockFinalizer) -> Stmt {
 // `None`, the last statement will be an actual return statement returning the
 // final expression.
 fn build_body_block_stmt(
-    body: &values::Block<Type>,
+    body: &values::Block,
     finalizer: &BlockFinalizer,
     ctx: &mut Context,
 ) -> BlockStmt {
@@ -827,9 +826,9 @@ fn build_body_block_stmt(
 }
 
 fn build_let_expr(
-    let_expr: &values::LetExpr<Type>,
-    consequent: &values::Block<Type>,
-    alternate: Option<&values::Block<Type>>,
+    let_expr: &values::LetExpr,
+    consequent: &values::Block,
+    alternate: Option<&values::Block>,
     stmts: &mut Vec<Stmt>,
     ctx: &mut Context,
 ) -> Expr {
@@ -876,7 +875,7 @@ fn build_let_expr(
 }
 
 fn build_arm(
-    arm: &values::Arm<Type>,
+    arm: &values::Arm,
     id: &Ident,
     ret_id: &Ident,
     stmts: &mut Vec<Stmt>,
@@ -919,7 +918,7 @@ fn build_arm(
 }
 
 fn build_jsx_element(
-    elem: &values::JSXElement<Type>,
+    elem: &values::JSXElement,
     stmts: &mut Vec<Stmt>,
     ctx: &mut Context,
 ) -> JSXElement {
@@ -1019,7 +1018,7 @@ fn build_lit(lit: &values::Lit) -> Lit {
     }
 }
 
-fn build_class(class: &values::Class<Type>, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Class {
+fn build_class(class: &values::Class, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Class {
     let body: Vec<ClassMember> = class
         .body
         .iter()
@@ -1140,7 +1139,7 @@ fn build_class(class: &values::Class<Type>, stmts: &mut Vec<Stmt>, ctx: &mut Con
     }
 }
 
-fn build_cond_for_pat(pat: &values::Pattern<Type>, id: &Ident) -> Option<Expr> {
+fn build_cond_for_pat(pat: &values::Pattern, id: &Ident) -> Option<Expr> {
     if values::is_refutable(pat) {
         // Right now the only refutable pattern we support is LitPat.
         // In the future there will be other refutable patterns such as
@@ -1171,7 +1170,7 @@ fn build_cond_for_pat(pat: &values::Pattern<Type>, id: &Ident) -> Option<Expr> {
 }
 
 fn build_template_literal(
-    template: &values::TemplateLiteral<Type>,
+    template: &values::TemplateLiteral,
     stmt: &mut Vec<Stmt>,
     ctx: &mut Context,
 ) -> Tpl {
@@ -1227,7 +1226,7 @@ struct Condition {
     check: Check,
 }
 
-fn get_conds_for_pat(pat: &values::Pattern<Type>, conds: &mut Vec<Condition>, path: &mut Path) {
+fn get_conds_for_pat(pat: &values::Pattern, conds: &mut Vec<Condition>, path: &mut Path) {
     match &pat.kind {
         // irrefutable
         values::PatternKind::Ident(_) => (),

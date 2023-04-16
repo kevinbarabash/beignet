@@ -9,83 +9,62 @@ use crate::values::pattern::Pattern;
 use crate::values::type_ann::{TypeAnn, TypeParam};
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct ClassDecl<T: 'static>
-where
-    T: Drive + DriveMut,
-{
+pub struct ClassDecl {
     #[drive(skip)]
     pub ident: Ident, // Why do have `ident` here an in `Class`?
-    pub class: Box<Class<T>>,
+    pub class: Box<Class>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct VarDecl<T: 'static>
-where
-    T: Drive + DriveMut,
-{
-    pub pattern: Pattern<T>,
-    pub type_ann: Option<TypeAnn<T>>,
-    pub init: Option<Box<Expr<T>>>,
+pub struct VarDecl {
+    pub pattern: Pattern,
+    pub type_ann: Option<TypeAnn>,
+    pub init: Option<Box<Expr>>,
     #[drive(skip)]
     pub declare: bool,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct TypeDecl<T: 'static>
-where
-    T: Drive + DriveMut,
-{
+pub struct TypeDecl {
     #[drive(skip)]
     pub declare: bool,
     #[drive(skip)]
     pub id: Ident,
-    pub type_ann: TypeAnn<T>,
-    pub type_params: Option<Vec<TypeParam<T>>>,
+    pub type_ann: TypeAnn,
+    pub type_params: Option<Vec<TypeParam>>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct ForStmt<T: 'static>
-where
-    T: Drive + DriveMut,
-{
-    pub pattern: Box<Pattern<T>>,
-    pub expr: Box<Expr<T>>,
-    pub body: Block<T>,
+pub struct ForStmt {
+    pub pattern: Box<Pattern>,
+    pub expr: Box<Expr>,
+    pub body: Block,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct ReturnStmt<T: 'static>
-where
-    T: Drive + DriveMut,
-{
-    pub arg: Option<Box<Expr<T>>>,
+pub struct ReturnStmt {
+    pub arg: Option<Box<Expr>>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub enum StmtKind<T: 'static>
-where
-    T: Drive + DriveMut,
-{
+pub enum StmtKind {
     // Declarations
-    ClassDecl(ClassDecl<T>),
-    VarDecl(VarDecl<T>),
-    TypeDecl(TypeDecl<T>),
+    ClassDecl(ClassDecl),
+    VarDecl(VarDecl),
+    TypeDecl(TypeDecl),
 
     // Statements
-    ExprStmt(Expr<T>),
-    ForStmt(ForStmt<T>),
-    ReturnStmt(ReturnStmt<T>),
+    ExprStmt(Expr),
+    ForStmt(ForStmt),
+    ReturnStmt(ReturnStmt),
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct Statement<T: 'static>
-where
-    T: Drive + DriveMut,
-{
+pub struct Statement {
     #[drive(skip)]
     pub loc: SourceLocation,
     #[drive(skip)]
     pub span: Span,
-    pub kind: StmtKind<T>,
-    // pub inferred_type: Option<T>,
+    pub kind: StmtKind,
+    // pub inferred_type: Option<Type>,
 }

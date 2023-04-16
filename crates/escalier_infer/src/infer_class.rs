@@ -15,10 +15,7 @@ fn is_promise(t: &Type) -> bool {
 }
 
 impl Checker {
-    pub fn infer_class(
-        &mut self,
-        class: &mut Class<Type>,
-    ) -> Result<(Subst, Type), Vec<TypeError>> {
+    pub fn infer_class(&mut self, class: &mut Class) -> Result<(Subst, Type), Vec<TypeError>> {
         let interface = self.infer_interface_from_class(class)?;
 
         let class_name = class.ident.name.to_owned();
@@ -327,10 +324,7 @@ impl Checker {
         Ok((s, statics_t))
     }
 
-    fn infer_interface_from_class(
-        &mut self,
-        class: &mut Class<Type>,
-    ) -> Result<Scheme, Vec<TypeError>> {
+    fn infer_interface_from_class(&mut self, class: &mut Class) -> Result<Scheme, Vec<TypeError>> {
         let mut instance_elems: Vec<TObjElem> = vec![];
 
         for member in &mut class.body {

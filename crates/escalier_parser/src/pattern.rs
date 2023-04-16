@@ -1,4 +1,3 @@
-use escalier_ast::types::Type;
 use escalier_ast::values::*;
 
 use crate::expr::parse_expression;
@@ -6,7 +5,7 @@ use crate::literal::parse_literal;
 use crate::parse_error::ParseError;
 use crate::util::*;
 
-pub fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern<Type>, ParseError> {
+pub fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, ParseError> {
     if node.has_error() {
         // TODO: get actual error node so that we can report where the error is
         return Err(ParseError::from("Error parsing pattern"));
@@ -187,10 +186,7 @@ pub fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern<Type
     })
 }
 
-pub fn parse_refutable_pattern(
-    node: &tree_sitter::Node,
-    src: &str,
-) -> Result<Pattern<Type>, ParseError> {
+pub fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, ParseError> {
     let child = if node.kind() == "refutable_pattern" {
         node.named_child(0).unwrap()
     } else {

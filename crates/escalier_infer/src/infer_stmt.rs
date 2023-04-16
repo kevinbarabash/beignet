@@ -15,7 +15,7 @@ use crate::checker::{Checker, ScopeKind};
 impl Checker {
     pub fn infer_stmt(
         &mut self,
-        stmt: &mut Statement<Type>,
+        stmt: &mut Statement,
         top_level: bool,
     ) -> Result<(Subst, Type), Vec<TypeError>> {
         match &mut stmt.kind {
@@ -172,7 +172,7 @@ impl Checker {
         }
     }
 
-    pub fn infer_block(&mut self, body: &mut Block<Type>) -> Result<(Subst, Type), Vec<TypeError>> {
+    pub fn infer_block(&mut self, body: &mut Block) -> Result<(Subst, Type), Vec<TypeError>> {
         self.push_scope(ScopeKind::Inherit);
 
         let mut t = self.from_type_kind(TypeKind::Keyword(TKeyword::Undefined));
@@ -192,7 +192,7 @@ impl Checker {
 
     pub fn infer_block_or_expr(
         &mut self,
-        body: &mut BlockOrExpr<Type>,
+        body: &mut BlockOrExpr,
     ) -> Result<(Subst, Type), Vec<TypeError>> {
         match body {
             BlockOrExpr::Block(block) => {
@@ -228,24 +228,21 @@ impl Checker {
     }
 }
 
-type ReturnStmtType = ReturnStmt<Type>;
-type LambdaType = Lambda<Type>;
-
 #[derive(VisitorMut, Default, Debug)]
-#[visitor(ReturnStmtType(enter), LambdaType(enter, exit))]
+#[visitor(ReturnStmt(enter), Lambda(enter, exit))]
 struct FindReturnsVisitor {
-    pub ret_stmts: Vec<ReturnStmt<Type>>,
+    pub ret_stmts: Vec<ReturnStmt>,
     pub lambda_count: u32,
 }
 
 impl FindReturnsVisitor {
-    fn enter_lambda_type(&mut self, _: &mut Lambda<Type>) {
+    fn enter_lambda(&mut self, _: &mut Lambda) {
         self.lambda_count += 1;
     }
-    fn exit_lambda_type(&mut self, _: &mut Lambda<Type>) {
+    fn exit_lambda(&mut self, _: &mut Lambda) {
         self.lambda_count -= 1;
     }
-    fn enter_return_stmt_type(&mut self, ret_stmt: &mut ReturnStmt<Type>) {
+    fn enter_return_stmt(&mut self, ret_stmt: &mut ReturnStmt) {
         if self.lambda_count == 0 {
             self.ret_stmts.push(ret_stmt.to_owned());
         }

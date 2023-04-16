@@ -6,44 +6,32 @@ use crate::values::ident::Ident;
 use crate::values::type_ann::{TypeAnn, TypeParam};
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct Class<T: 'static>
-where
-    T: Drive + DriveMut,
-{
+pub struct Class {
     #[drive(skip)]
     pub ident: Ident, // Why do have `ident` here an in `ClassDecl`?
-    pub body: Vec<ClassMember<T>>,
-    pub type_params: Option<Vec<TypeParam<T>>>,
+    pub body: Vec<ClassMember>,
+    pub type_params: Option<Vec<TypeParam>>,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub enum ClassMember<T: 'static>
-where
-    T: Drive + DriveMut,
-{
-    Constructor(Constructor<T>),
-    Method(ClassMethod<T>),
-    Prop(ClassProp<T>),
+pub enum ClassMember {
+    Constructor(Constructor),
+    Method(ClassMethod),
+    Prop(ClassProp),
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct Constructor<T: 'static>
-where
-    T: Drive + DriveMut,
-{
-    pub params: Vec<EFnParam<T>>,
-    pub body: Block<T>,
+pub struct Constructor {
+    pub params: Vec<EFnParam>,
+    pub body: Block,
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct ClassMethod<T: 'static>
-where
-    T: Drive + DriveMut,
-{
+pub struct ClassMethod {
     #[drive(skip)]
     pub key: Ident,
     pub kind: MethodKind,
-    pub lambda: Lambda<T>,
+    pub lambda: Lambda,
     #[drive(skip)]
     pub is_static: bool,
     #[drive(skip)]
@@ -59,14 +47,11 @@ pub enum MethodKind {
 }
 
 #[derive(Clone, Debug, Drive, DriveMut, PartialEq, Eq)]
-pub struct ClassProp<T: 'static>
-where
-    T: Drive + DriveMut,
-{
+pub struct ClassProp {
     #[drive(skip)]
     pub key: Ident,
-    pub value: Option<Box<Expr<T>>>,
-    pub type_ann: Option<Box<TypeAnn<T>>>,
+    pub value: Option<Box<Expr>>,
+    pub type_ann: Option<Box<TypeAnn>>,
     #[drive(skip)]
     pub is_static: bool,
     #[drive(skip)]
