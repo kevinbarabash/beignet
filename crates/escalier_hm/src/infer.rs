@@ -267,6 +267,7 @@ pub fn infer_statement<'a>(
 ) -> Result<Index, Errors> {
     let t = match &mut statement.kind {
         StmtKind::VarDecl(VarDecl {
+            rec,
             pattern,
             init: defn,
             ..
@@ -277,16 +278,72 @@ pub fn infer_statement<'a>(
             {
                 match defn {
                     Some(init) => {
-                        let idx = infer_expression(arena, init.as_mut(), ctx)?;
-                        let t = arena.get(idx).unwrap().clone();
-                        let idx = match &t.kind {
-                            TypeKind::Function(func) if top_level => generalize_func(arena, func),
-                            _ => idx,
+                        // ExprKind::Letrec(letrec) => {
+                        //     let mut new_ct// ExprKind::Letrec(letrec) => {
+                        //     let mut new_ctx = ctx.clone();
+
+                        //     // Create all of the types new types first
+
+                        //     let mut new_types = vec![];
+
+                        //     for (var, ..) in &letrec.decls {
+                        //         let new_type = new_var_type(arena);
+                        //         new_ctx.env.insert(var.clone(), new_type);
+                        //         new_ctx.non_generic.insert(new_type);
+
+                        //         new_types.push(new_type);
+                        //     }
+
+                        //     // Then infer the defintions and unify them with the new types
+
+                        //     for ((.., defn), new_type) in letrec.decls.iter_mut().zip(new_types.iter()) {
+                        //         let defn_type = infer_expression(arena, defn, &mut new_ctx)?;
+                        //         unify(arena, *new_type, defn_type)?;
+                        //     }
+
+                        //     infer_expression(arena, &mut letrec.body, &mut new_ctx)?
+                        // }
+
+                        let result_t = if *rec {
+                            let mut new_ctx = ctx.clone();
+                            let new_type = new_var_type(arena);
+                            new_ctx.env.insert(name.clone(), new_type);
+                            new_ctx.non_generic.insert(new_type);
+
+                            let init_type = infer_expression(arena, init.as_mut(), &mut new_ctx)?;
+                            unify(arena, new_type, init_type)?;
+
+                            // TODO: dedupe with the copy of this below
+                            let t = arena.get(init_type).unwrap().clone();
+                            let init_type = match &t.kind {
+                                TypeKind::Function(func) if top_level => {
+                                    generalize_func(arena, func)
+                                }
+                                _ => init_type,
+                            };
+
+                            ctx.env.insert(name.clone(), init_type);
+                            pattern.inferred_type = Some(init_type);
+
+                            init_type
+                        } else {
+                            let idx = infer_expression(arena, init.as_mut(), ctx)?;
+
+                            // TODO: dedupe with the copy of this above
+                            let t = arena.get(idx).unwrap().clone();
+                            let idx = match &t.kind {
+                                TypeKind::Function(func) if top_level => {
+                                    generalize_func(arena, func)
+                                }
+                                _ => idx,
+                            };
+
+                            ctx.env.insert(name.clone(), idx);
+                            pattern.inferred_type = Some(idx);
+                            idx
                         };
 
-                        ctx.env.insert(name.clone(), idx);
-                        pattern.inferred_type = Some(idx);
-                        idx // TODO: Should this be unit?
+                        result_t // TODO: Should this be unit?
                     }
                     None => todo!(),
                 }

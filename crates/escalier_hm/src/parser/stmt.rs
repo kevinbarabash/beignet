@@ -130,42 +130,14 @@ fn parse_declaration(
     };
 
     let kind = if rec {
-        // `let fib = fix((fib) => (n) => ...)`
-        // TODO: Fix always wraps a lambda
-
         let value = decl.child_by_field_name("value").unwrap();
-
-        let lambda_expr = Expr {
-            loc: SourceLocation::from(&decl),
-            span: decl.byte_range(),
-            kind: ExprKind::Lambda(Lambda {
-                params: vec![EFnParam {
-                    pat: pattern.clone(),
-                    type_ann: type_ann.clone(),
-                    optional: false,
-                }],
-                body: BlockOrExpr::Expr(Box::from(parse_expression(&value, src)?)),
-                is_async: false,
-                return_type: None,
-                type_params: None, // TODO: support type params on VarDecls
-            }),
-            inferred_type: None,
-        };
-
-        let fix = Expr {
-            loc: SourceLocation::from(&decl),
-            span: decl.byte_range(),
-            kind: ExprKind::Fix(Fix {
-                expr: Box::from(lambda_expr),
-            }),
-            inferred_type: None,
-        };
 
         StmtKind::VarDecl(VarDecl {
             pattern,
             type_ann,
-            init: Some(Box::from(fix)),
+            init: Some(Box::from(parse_expression(&value, src)?)),
             declare,
+            rec,
         })
     } else {
         let init = if let Some(init) = decl.child_by_field_name("value") {
@@ -179,6 +151,7 @@ fn parse_declaration(
             type_ann,
             init,
             declare,
+            rec,
         })
     };
 

@@ -111,28 +111,29 @@ mod tests {
     /// evaluated. Evaluates the expressions, printing the type or errors arising
     /// from each.
 
-    // #[test]
-    // fn test_factorial() -> Result<(), Errors> {
-    //     let (mut a, mut my_ctx) = test_env();
+    #[test]
+    fn test_factorial() -> Result<(), Errors> {
+        let (mut a, mut my_ctx) = test_env();
 
-    //     // factorial
-    //     let src = r#"
-    //     let rec fact = (n) => {
-    //         if (zero(n)) {
-    //             1
-    //         } else {
-    //             times(n, fact(pred(n)))
-    //         }
-    //     };
-    //     "#;
-    //     let mut program = parse(src).unwrap();
+        // factorial
+        let src = r#"
+        let rec fact = (n) => {
+            return if (zero(n)) {
+                1
+            } else {
+                times(n, fact(pred(n)))
+            };
+        };
+        "#;
+        let mut program = parse(src).unwrap();
 
-    //     infer_program(&mut a, &mut program, &mut my_ctx)?;
-    //     let t = my_ctx.env.get("fact").unwrap();
+        infer_program(&mut a, &mut program, &mut my_ctx)?;
+        let t = my_ctx.env.get("fact").unwrap();
 
-    //     assert_eq!(a[*t].as_string(&a), r#"(number) => number"#);
-    //     Ok(())
-    // }
+        // TODO: simplify union types
+        assert_eq!(a[*t].as_string(&a), r#"(number) => 1 | number"#);
+        Ok(())
+    }
 
     // #[test]
     // fn test_mutual_recursion() -> Result<(), Errors> {
