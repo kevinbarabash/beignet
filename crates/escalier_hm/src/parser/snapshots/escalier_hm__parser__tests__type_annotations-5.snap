@@ -1,0 +1,128 @@
+---
+source: crates/escalier_hm/src/parser/mod.rs
+expression: "parse(\"let FOO: \\\"foo\\\" = \\\"foo\\\";\")"
+---
+Ok(
+    Program {
+        statements: [
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 23,
+                    },
+                },
+                span: 0..23,
+                kind: VarDecl(
+                    VarDecl {
+                        pattern: Pattern {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 4,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 7,
+                                },
+                            },
+                            span: 4..7,
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "FOO",
+                                    mutable: false,
+                                    span: 4..7,
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 0,
+                                            column: 4,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 7,
+                                        },
+                                    },
+                                },
+                            ),
+                            inferred_type: None,
+                        },
+                        type_ann: Some(
+                            TypeAnn {
+                                kind: Lit(
+                                    Str(
+                                        Str {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 9,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 14,
+                                                },
+                                            },
+                                            span: 9..14,
+                                            value: "foo",
+                                        },
+                                    ),
+                                ),
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 9,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 14,
+                                    },
+                                },
+                                span: 9..14,
+                                inferred_type: None,
+                            },
+                        ),
+                        init: Some(
+                            Expr {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 17,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 22,
+                                    },
+                                },
+                                span: 17..22,
+                                kind: Lit(
+                                    Str(
+                                        Str {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 17,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 22,
+                                                },
+                                            },
+                                            span: 17..22,
+                                            value: "foo",
+                                        },
+                                    ),
+                                ),
+                                inferred_type: None,
+                            },
+                        ),
+                        declare: false,
+                    },
+                ),
+                inferred_type: None,
+            },
+        ],
+    },
+)

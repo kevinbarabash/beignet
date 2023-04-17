@@ -443,6 +443,8 @@ dependencies = [
  "swc_common",
  "swc_ecma_ast",
  "tree-sitter",
+ "tree_sitter_escalier",
+ "unescape",
 ]
 
 [[package]]

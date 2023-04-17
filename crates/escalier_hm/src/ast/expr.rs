@@ -1,3 +1,5 @@
+use generational_arena::Index;
+
 use crate::ast::block::Block;
 use crate::ast::class::Class;
 use crate::ast::common::{SourceLocation, Span};
@@ -8,11 +10,10 @@ use crate::ast::lit::Lit;
 use crate::ast::pattern::{Pattern, PatternKind};
 use crate::ast::stmt::Statement;
 use crate::ast::type_ann::{TypeAnn, TypeParam};
-use crate::types::Type;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Program {
-    pub body: Vec<Statement>,
+    pub statements: Vec<Statement>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -281,5 +282,5 @@ pub struct Expr {
     pub loc: SourceLocation,
     pub span: Span,
     pub kind: ExprKind,
-    pub inferred_type: Option<Type>,
+    pub inferred_type: Option<Index>,
 }
