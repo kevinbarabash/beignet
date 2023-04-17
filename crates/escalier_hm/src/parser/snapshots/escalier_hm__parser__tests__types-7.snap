@@ -1,0 +1,138 @@
+---
+source: crates/escalier_hm/src/parser/mod.rs
+expression: "parse(\"let nested_arr: string[][] = [];\")"
+---
+Ok(
+    Program {
+        statements: [
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 32,
+                    },
+                },
+                span: 0..32,
+                kind: VarDecl(
+                    VarDecl {
+                        pattern: Pattern {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 4,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 14,
+                                },
+                            },
+                            span: 4..14,
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "nested_arr",
+                                    mutable: false,
+                                    span: 4..14,
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 0,
+                                            column: 4,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 14,
+                                        },
+                                    },
+                                },
+                            ),
+                            inferred_type: None,
+                        },
+                        type_ann: Some(
+                            TypeAnn {
+                                kind: Array(
+                                    ArrayType {
+                                        elem_type: TypeAnn {
+                                            kind: Array(
+                                                ArrayType {
+                                                    elem_type: TypeAnn {
+                                                        kind: Keyword(
+                                                            KeywordType {
+                                                                keyword: String,
+                                                            },
+                                                        ),
+                                                        loc: SourceLocation {
+                                                            start: Position {
+                                                                line: 0,
+                                                                column: 16,
+                                                            },
+                                                            end: Position {
+                                                                line: 0,
+                                                                column: 22,
+                                                            },
+                                                        },
+                                                        span: 16..22,
+                                                        inferred_type: None,
+                                                    },
+                                                },
+                                            ),
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 16,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 24,
+                                                },
+                                            },
+                                            span: 16..24,
+                                            inferred_type: None,
+                                        },
+                                    },
+                                ),
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 16,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 26,
+                                    },
+                                },
+                                span: 16..26,
+                                inferred_type: None,
+                            },
+                        ),
+                        init: Some(
+                            Expr {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 29,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 31,
+                                    },
+                                },
+                                span: 29..31,
+                                kind: Tuple(
+                                    Tuple {
+                                        elems: [],
+                                    },
+                                ),
+                                inferred_type: None,
+                            },
+                        ),
+                        declare: false,
+                    },
+                ),
+                inferred_type: None,
+            },
+        ],
+    },
+)

@@ -1,10 +1,9 @@
-use std::collections::BTreeSet;
+use generational_arena::Index;
 
 use crate::ast::common::{SourceLocation, Span};
 use crate::ast::expr::Expr;
 use crate::ast::ident::*;
 use crate::ast::Lit;
-use crate::types::Type;
 
 // TODO: split this into separate patterns:
 // - one for assignment (obj, ident, array, rest)
@@ -29,7 +28,7 @@ pub struct Pattern {
     pub loc: SourceLocation,
     pub span: Span,
     pub kind: PatternKind,
-    pub inferred_type: Option<Type>,
+    pub inferred_type: Option<Index>,
 }
 
 impl Pattern {

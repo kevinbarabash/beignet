@@ -1,10 +1,11 @@
+use generational_arena::Index;
+
 use crate::ast::common::{SourceLocation, Span};
 use crate::ast::expr::Expr;
 use crate::ast::ident::Ident;
 use crate::ast::keyword::Keyword;
 use crate::ast::lit::Lit;
 use crate::ast::pattern::Pattern;
-use crate::types::Type;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TypeAnnFnParam {
@@ -177,7 +178,7 @@ pub struct TypeAnn {
     pub kind: TypeAnnKind,
     pub loc: SourceLocation,
     pub span: Span,
-    pub inferred_type: Option<Type>,
+    pub inferred_type: Option<Index>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

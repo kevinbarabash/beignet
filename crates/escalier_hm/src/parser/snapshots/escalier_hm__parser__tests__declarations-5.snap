@@ -1,0 +1,115 @@
+---
+source: crates/escalier_hm/src/parser/mod.rs
+expression: "parse(r#\"let mut msg: string = \"hello, world\";\"#)"
+---
+Ok(
+    Program {
+        statements: [
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 37,
+                    },
+                },
+                span: 0..37,
+                kind: VarDecl(
+                    VarDecl {
+                        pattern: Pattern {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 4,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 11,
+                                },
+                            },
+                            span: 4..11,
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "msg",
+                                    mutable: true,
+                                    span: 4..11,
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 0,
+                                            column: 4,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 11,
+                                        },
+                                    },
+                                },
+                            ),
+                            inferred_type: None,
+                        },
+                        type_ann: Some(
+                            TypeAnn {
+                                kind: Keyword(
+                                    KeywordType {
+                                        keyword: String,
+                                    },
+                                ),
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 13,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 19,
+                                    },
+                                },
+                                span: 13..19,
+                                inferred_type: None,
+                            },
+                        ),
+                        init: Some(
+                            Expr {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 22,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 36,
+                                    },
+                                },
+                                span: 22..36,
+                                kind: Lit(
+                                    Str(
+                                        Str {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 22,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 36,
+                                                },
+                                            },
+                                            span: 22..36,
+                                            value: "hello, world",
+                                        },
+                                    ),
+                                ),
+                                inferred_type: None,
+                            },
+                        ),
+                        declare: false,
+                    },
+                ),
+                inferred_type: None,
+            },
+        ],
+    },
+)

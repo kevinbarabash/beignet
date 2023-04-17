@@ -1,0 +1,243 @@
+---
+source: crates/escalier_hm/src/parser/mod.rs
+expression: "parse(\"`(${x}, ${y})`\")"
+---
+Ok(
+    Program {
+        statements: [
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 14,
+                    },
+                },
+                span: 0..14,
+                kind: ExprStmt(
+                    Expr {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 14,
+                            },
+                        },
+                        span: 0..14,
+                        kind: TemplateLiteral(
+                            TemplateLiteral {
+                                exprs: [
+                                    Expr {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 4,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 5,
+                                            },
+                                        },
+                                        span: 4..5,
+                                        kind: Ident(
+                                            Ident {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 4,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 5,
+                                                    },
+                                                },
+                                                span: 4..5,
+                                                name: "x",
+                                            },
+                                        ),
+                                        inferred_type: None,
+                                    },
+                                    Expr {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 10,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 11,
+                                            },
+                                        },
+                                        span: 10..11,
+                                        kind: Ident(
+                                            Ident {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 10,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 11,
+                                                    },
+                                                },
+                                                span: 10..11,
+                                                name: "y",
+                                            },
+                                        ),
+                                        inferred_type: None,
+                                    },
+                                ],
+                                quasis: [
+                                    TemplateElem {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 2,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 6,
+                                            },
+                                        },
+                                        span: 1..2,
+                                        raw: Str(
+                                            Str {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 2,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 6,
+                                                    },
+                                                },
+                                                span: 1..2,
+                                                value: "(",
+                                            },
+                                        ),
+                                        cooked: Str(
+                                            Str {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 2,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 6,
+                                                    },
+                                                },
+                                                span: 1..2,
+                                                value: "(",
+                                            },
+                                        ),
+                                    },
+                                    TemplateElem {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 8,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 12,
+                                            },
+                                        },
+                                        span: 6..8,
+                                        raw: Str(
+                                            Str {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 8,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 12,
+                                                    },
+                                                },
+                                                span: 6..8,
+                                                value: ", ",
+                                            },
+                                        ),
+                                        cooked: Str(
+                                            Str {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 8,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 12,
+                                                    },
+                                                },
+                                                span: 6..8,
+                                                value: ", ",
+                                            },
+                                        ),
+                                    },
+                                    TemplateElem {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 0,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 14,
+                                            },
+                                        },
+                                        span: 12..13,
+                                        raw: Str(
+                                            Str {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 0,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 14,
+                                                    },
+                                                },
+                                                span: 12..13,
+                                                value: ")",
+                                            },
+                                        ),
+                                        cooked: Str(
+                                            Str {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 0,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 14,
+                                                    },
+                                                },
+                                                span: 12..13,
+                                                value: ")",
+                                            },
+                                        ),
+                                    },
+                                ],
+                            },
+                        ),
+                        inferred_type: None,
+                    },
+                ),
+                inferred_type: None,
+            },
+        ],
+    },
+)

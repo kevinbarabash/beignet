@@ -2,13 +2,13 @@ use tree_sitter::Node;
 
 pub type Span = std::ops::Range<usize>;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub struct Position {
     pub line: u32,
     pub column: u32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub struct SourceLocation {
     pub start: Position,
     pub end: Position,

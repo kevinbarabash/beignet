@@ -1,0 +1,58 @@
+---
+source: crates/escalier_hm/src/parser/mod.rs
+expression: "parse(\"1.23;\")"
+---
+Ok(
+    Program {
+        statements: [
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 5,
+                    },
+                },
+                span: 0..5,
+                kind: ExprStmt(
+                    Expr {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 4,
+                            },
+                        },
+                        span: 0..4,
+                        kind: Lit(
+                            Num(
+                                Num {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 4,
+                                        },
+                                    },
+                                    span: 0..4,
+                                    value: "1.23",
+                                },
+                            ),
+                        ),
+                        inferred_type: None,
+                    },
+                ),
+                inferred_type: None,
+            },
+        ],
+    },
+)

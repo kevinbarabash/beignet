@@ -1,0 +1,76 @@
+---
+source: crates/escalier_hm/src/parser/mod.rs
+expression: "parse(\"foo();\")"
+---
+Ok(
+    Program {
+        statements: [
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 6,
+                    },
+                },
+                span: 0..6,
+                kind: ExprStmt(
+                    Expr {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 5,
+                            },
+                        },
+                        span: 0..5,
+                        kind: App(
+                            App {
+                                lam: Expr {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 3,
+                                        },
+                                    },
+                                    span: 0..3,
+                                    kind: Ident(
+                                        Ident {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 0,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 3,
+                                                },
+                                            },
+                                            span: 0..3,
+                                            name: "foo",
+                                        },
+                                    ),
+                                    inferred_type: None,
+                                },
+                                args: [],
+                                type_args: None,
+                            },
+                        ),
+                        inferred_type: None,
+                    },
+                ),
+                inferred_type: None,
+            },
+        ],
+    },
+)

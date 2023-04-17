@@ -1,7 +1,7 @@
 // Types and type constructors
 use generational_arena::{Arena, Index};
 
-use crate::literal::Literal;
+use crate::ast::Lit;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Variable {
@@ -59,7 +59,7 @@ pub enum TypeKind {
     Variable(Variable),
     Constructor(Constructor),
     Ref(Ref),
-    Literal(Literal),
+    Literal(Lit),
     Function(Function),
     Union(Union),
     Tuple(Tuple),
@@ -129,14 +129,15 @@ impl Type {
                 format!("{{{}}}", fields.join(", "))
             }
             TypeKind::Function(func) => {
-                let type_params = if let Some(type_params) = &func.type_params {
-                    let type_params = type_params
-                        .iter()
-                        .map(|tp| tp.name.clone())
-                        .collect::<Vec<_>>();
-                    format!("<{}>", type_params.join(", "))
-                } else {
-                    "".to_string()
+                let type_params = match &func.type_params {
+                    Some(type_params) if !type_params.is_empty() => {
+                        let type_params = type_params
+                            .iter()
+                            .map(|tp| tp.name.clone())
+                            .collect::<Vec<_>>();
+                        format!("<{}>", type_params.join(", "))
+                    }
+                    _ => "".to_string(),
                 };
                 format!(
                     "{type_params}({}) => {}",
@@ -225,7 +226,7 @@ pub fn new_type_ref(arena: &mut Arena<Type>, name: &str) -> Index {
     })
 }
 
-pub fn new_lit_type(arena: &mut Arena<Type>, lit: &Literal) -> Index {
+pub fn new_lit_type(arena: &mut Arena<Type>, lit: &Lit) -> Index {
     arena.insert(Type {
         kind: TypeKind::Literal(lit.clone()),
     })

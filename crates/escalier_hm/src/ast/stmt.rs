@@ -1,3 +1,5 @@
+use generational_arena::Index;
+
 use crate::ast::block::Block;
 use crate::ast::class::Class;
 use crate::ast::common::{SourceLocation, Span};
@@ -58,5 +60,5 @@ pub struct Statement {
     pub loc: SourceLocation,
     pub span: Span,
     pub kind: StmtKind,
-    // pub inferred_type: Option<Type>,
+    pub inferred_type: Option<Index>,
 }

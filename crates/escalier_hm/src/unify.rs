@@ -2,8 +2,8 @@ use generational_arena::{Arena, Index};
 use itertools::Itertools;
 use std::collections::HashMap;
 
+use crate::ast::Lit;
 use crate::errors::*;
-use crate::literal::*;
 use crate::types::*;
 use crate::util::*;
 
@@ -61,18 +61,21 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
             unify(arena, func_a.ret, func_b.ret)?;
             Ok(())
         }
-        (
-            TypeKind::Literal(Literal::Number(_)),
-            TypeKind::Constructor(Constructor { name, .. }),
-        ) if name == "number" => Ok(()),
-        (
-            TypeKind::Literal(Literal::String(_)),
-            TypeKind::Constructor(Constructor { name, .. }),
-        ) if name == "string" => Ok(()),
-        (
-            TypeKind::Literal(Literal::Boolean(_)),
-            TypeKind::Constructor(Constructor { name, .. }),
-        ) if name == "boolean" => Ok(()),
+        (TypeKind::Literal(Lit::Num(_)), TypeKind::Constructor(Constructor { name, .. }))
+            if name == "number" =>
+        {
+            Ok(())
+        }
+        (TypeKind::Literal(Lit::Str(_)), TypeKind::Constructor(Constructor { name, .. }))
+            if name == "string" =>
+        {
+            Ok(())
+        }
+        (TypeKind::Literal(Lit::Bool(_)), TypeKind::Constructor(Constructor { name, .. }))
+            if name == "boolean" =>
+        {
+            Ok(())
+        }
         (TypeKind::Union(Union { types }), _) => {
             // All types in the union must be subtypes of t2
             for t in types.iter() {

@@ -1,0 +1,123 @@
+---
+source: crates/escalier_hm/src/parser/mod.rs
+expression: "parse(\"<Foo><Bar>{baz}</Bar></Foo>\")"
+---
+Ok(
+    Program {
+        statements: [
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 27,
+                    },
+                },
+                span: 0..27,
+                kind: ExprStmt(
+                    Expr {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 27,
+                            },
+                        },
+                        span: 0..27,
+                        kind: JSXElement(
+                            JSXElement {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 0,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 27,
+                                    },
+                                },
+                                span: 0..27,
+                                name: "Foo",
+                                attrs: [],
+                                children: [
+                                    JSXElement(
+                                        JSXElement {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 5,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 21,
+                                                },
+                                            },
+                                            span: 5..21,
+                                            name: "Bar",
+                                            attrs: [],
+                                            children: [
+                                                JSXExprContainer(
+                                                    JSXExprContainer {
+                                                        loc: SourceLocation {
+                                                            start: Position {
+                                                                line: 0,
+                                                                column: 10,
+                                                            },
+                                                            end: Position {
+                                                                line: 0,
+                                                                column: 15,
+                                                            },
+                                                        },
+                                                        span: 10..15,
+                                                        expr: Expr {
+                                                            loc: SourceLocation {
+                                                                start: Position {
+                                                                    line: 0,
+                                                                    column: 11,
+                                                                },
+                                                                end: Position {
+                                                                    line: 0,
+                                                                    column: 14,
+                                                                },
+                                                            },
+                                                            span: 11..14,
+                                                            kind: Ident(
+                                                                Ident {
+                                                                    loc: SourceLocation {
+                                                                        start: Position {
+                                                                            line: 0,
+                                                                            column: 11,
+                                                                        },
+                                                                        end: Position {
+                                                                            line: 0,
+                                                                            column: 14,
+                                                                        },
+                                                                    },
+                                                                    span: 11..14,
+                                                                    name: "baz",
+                                                                },
+                                                            ),
+                                                            inferred_type: None,
+                                                        },
+                                                    },
+                                                ),
+                                            ],
+                                        },
+                                    ),
+                                ],
+                            },
+                        ),
+                        inferred_type: None,
+                    },
+                ),
+                inferred_type: None,
+            },
+        ],
+    },
+)

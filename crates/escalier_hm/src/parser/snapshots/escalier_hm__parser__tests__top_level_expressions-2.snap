@@ -1,0 +1,106 @@
+---
+source: crates/escalier_hm/src/parser/mod.rs
+expression: "parse(\"123;\\n\\\"hello\\\";\")"
+---
+Ok(
+    Program {
+        statements: [
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 4,
+                    },
+                },
+                span: 0..4,
+                kind: ExprStmt(
+                    Expr {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 3,
+                            },
+                        },
+                        span: 0..3,
+                        kind: Lit(
+                            Num(
+                                Num {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 3,
+                                        },
+                                    },
+                                    span: 0..3,
+                                    value: "123",
+                                },
+                            ),
+                        ),
+                        inferred_type: None,
+                    },
+                ),
+                inferred_type: None,
+            },
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 8,
+                    },
+                },
+                span: 5..13,
+                kind: ExprStmt(
+                    Expr {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 7,
+                            },
+                        },
+                        span: 5..12,
+                        kind: Lit(
+                            Str(
+                                Str {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 1,
+                                            column: 0,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 7,
+                                        },
+                                    },
+                                    span: 5..12,
+                                    value: "hello",
+                                },
+                            ),
+                        ),
+                        inferred_type: None,
+                    },
+                ),
+                inferred_type: None,
+            },
+        ],
+    },
+)
