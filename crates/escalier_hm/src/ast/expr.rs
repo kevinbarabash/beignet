@@ -24,11 +24,6 @@ pub struct App {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Fix {
-    pub expr: Box<Expr>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct IfElse {
     pub cond: Box<Expr>,
     pub consequent: Block,
@@ -253,7 +248,6 @@ pub struct DoExpr {
 pub enum ExprKind {
     App(App),
     New(New), // like App but for calling constructors to create a new instance
-    Fix(Fix),
     Ident(Ident),
     IfElse(IfElse),
     JSXElement(JSXElement),

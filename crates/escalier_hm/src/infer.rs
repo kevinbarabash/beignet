@@ -127,31 +127,6 @@ pub fn infer_expression<'a>(
                 }
             }
         }
-        // TODO: move this to Statement
-        // ExprKind::Letrec(letrec) => {
-        //     let mut new_ctx = ctx.clone();
-
-        //     // Create all of the types new types first
-
-        //     let mut new_types = vec![];
-
-        //     for (var, ..) in &letrec.decls {
-        //         let new_type = new_var_type(arena);
-        //         new_ctx.env.insert(var.clone(), new_type);
-        //         new_ctx.non_generic.insert(new_type);
-
-        //         new_types.push(new_type);
-        //     }
-
-        //     // Then infer the defintions and unify them with the new types
-
-        //     for ((.., defn), new_type) in letrec.decls.iter_mut().zip(new_types.iter()) {
-        //         let defn_type = infer_expression(arena, defn, &mut new_ctx)?;
-        //         unify(arena, *new_type, defn_type)?;
-        //     }
-
-        //     infer_expression(arena, &mut letrec.body, &mut new_ctx)?
-        // }
         ExprKind::IfElse(IfElse {
             cond,
             consequent,
@@ -222,7 +197,6 @@ pub fn infer_expression<'a>(
             }
         }
         ExprKind::New(_) => todo!(),
-        ExprKind::Fix(_) => todo!(),
         ExprKind::JSXElement(_) => todo!(),
         ExprKind::Assign(_) => todo!(),
         ExprKind::LetExpr(_) => todo!(),
@@ -278,32 +252,6 @@ pub fn infer_statement<'a>(
             {
                 match defn {
                     Some(init) => {
-                        // ExprKind::Letrec(letrec) => {
-                        //     let mut new_ct// ExprKind::Letrec(letrec) => {
-                        //     let mut new_ctx = ctx.clone();
-
-                        //     // Create all of the types new types first
-
-                        //     let mut new_types = vec![];
-
-                        //     for (var, ..) in &letrec.decls {
-                        //         let new_type = new_var_type(arena);
-                        //         new_ctx.env.insert(var.clone(), new_type);
-                        //         new_ctx.non_generic.insert(new_type);
-
-                        //         new_types.push(new_type);
-                        //     }
-
-                        //     // Then infer the defintions and unify them with the new types
-
-                        //     for ((.., defn), new_type) in letrec.decls.iter_mut().zip(new_types.iter()) {
-                        //         let defn_type = infer_expression(arena, defn, &mut new_ctx)?;
-                        //         unify(arena, *new_type, defn_type)?;
-                        //     }
-
-                        //     infer_expression(arena, &mut letrec.body, &mut new_ctx)?
-                        // }
-
                         let result_t = if *rec {
                             let mut new_ctx = ctx.clone();
                             let new_type = new_var_type(arena);
