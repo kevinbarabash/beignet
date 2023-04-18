@@ -55,55 +55,7 @@ mod tests {
     }
 
     fn test_env() -> (Arena<Type>, Context) {
-        let mut a: Arena<Type> = Arena::new();
-        let mut my_ctx = Context::default();
-
-        let var1 = new_var_type(&mut a);
-        let var2 = new_var_type(&mut a);
-        let pair_type = new_constructor(&mut a, "*", &[var1, var2]);
-        my_ctx.env.insert(
-            "pair".to_string(),
-            new_func_type(&mut a, &[var1, var2], pair_type, None),
-        );
-
-        let int_t = new_constructor(&mut a, "number", &[]);
-        let bool_t = new_constructor(&mut a, "boolean", &[]);
-        my_ctx.env.insert(
-            "zero".to_string(),
-            new_func_type(&mut a, &[int_t], bool_t, None),
-        );
-
-        let num1_t = new_constructor(&mut a, "number", &[]);
-        let num2_t = new_constructor(&mut a, "number", &[]);
-        my_ctx.env.insert(
-            "pred".to_string(),
-            new_func_type(&mut a, &[num1_t], num2_t, None),
-        );
-
-        // It isn't necessary to create separate instances of `number` for each of
-        // these.  When interferring types from code we'll want separate instances
-        // so that we can link each back to the expression from which it was
-        // inferred.
-        let num1_t = new_constructor(&mut a, "number", &[]);
-        let num2_t = new_constructor(&mut a, "number", &[]);
-        let num3_t = new_constructor(&mut a, "number", &[]);
-        my_ctx.env.insert(
-            "times".to_string(),
-            new_func_type(&mut a, &[num1_t, num2_t], num3_t, None),
-        );
-        my_ctx.env.insert(
-            "add".to_string(),
-            new_func_type(&mut a, &[num1_t, num2_t], num3_t, None),
-        );
-
-        // my_ctx
-        //     .env
-        //     .insert("true".to_string(), new_bool_lit_type(&mut a, true));
-        // my_ctx
-        //     .env
-        //     .insert("false".to_string(), new_bool_lit_type(&mut a, false));
-
-        (a, my_ctx)
+        (Arena::new(), Context::default())
     }
 
     /// Sets up some predefined types using the type constructors TypeVariable,
@@ -113,31 +65,31 @@ mod tests {
 
     #[test]
     fn test_factorial() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
         // factorial
         let src = r#"
         let rec fact = (n) => {
-            return if (zero(n)) {
+            return if (n == 0) {
                 1
             } else {
-                times(n, fact(pred(n)))
+                n * fact(n - 1)
             };
         };
         "#;
         let mut program = parse(src).unwrap();
 
-        infer_program(&mut a, &mut program, &mut my_ctx)?;
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
         let t = my_ctx.env.get("fact").unwrap();
 
         // TODO: simplify union types
-        assert_eq!(a[*t].as_string(&a), r#"(number) => 1 | number"#);
+        assert_eq!(arena[*t].as_string(&arena), r#"(number) => 1 | number"#);
         Ok(())
     }
 
     // #[test]
     // fn test_mutual_recursion() -> Result<(), Errors> {
-    //     let (mut a, mut my_ctx) = test_env();
+    //     let (mut arena, mut my_ctx) = test_env();
 
     //     // NOTE: The definitions of "even" and "odd" are correct from a types
     //     // perspective, but incorrect semantically.
@@ -181,8 +133,8 @@ mod tests {
     //         new_identifier("odd"),
     //     );
 
-    //     let t = infer_expression(&mut a, &mut syntax, &mut my_ctx)?;
-    //     assert_eq!(a[t].as_string(&a), r#"(number) => number"#);
+    //     let t = infer_expression(&mut arena, &mut syntax, &mut my_ctx)?;
+    //     assert_eq!(arena[t].as_string(&arena), r#"(number) => number"#);
 
     //     Ok(())
     // }
@@ -190,56 +142,56 @@ mod tests {
     #[should_panic]
     #[test]
     fn test_mismatch() {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
-        let src = r#"(x) => pair(x(3), x(true));"#;
+        let src = r#"(x) => [x(3), x(true)];"#;
 
         let mut program = parse(src).unwrap();
-        infer_program(&mut a, &mut program, &mut my_ctx).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx).unwrap();
     }
 
     #[should_panic = "called `Result::unwrap()` on an `Err` value: InferenceError(\"Undefined symbol \\\"f\\\"\")"]
     #[test]
     fn test_pair() {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
-        let src = r#"pair(f(3), f(true));"#;
+        let src = r#"[f(3), f(true)];"#;
 
         let mut program = parse(src).unwrap();
-        infer_program(&mut a, &mut program, &mut my_ctx).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx).unwrap();
     }
 
     #[test]
     fn test_mul() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
         let src = r#"
             let f = (x) => x;
-            let result = pair(f(4), f(true));
+            let result = [f(4), f(true)];
         "#;
 
         let mut program = parse(src).unwrap();
-        infer_program(&mut a, &mut program, &mut my_ctx)?;
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
         let t = my_ctx.env.get("result").unwrap();
-        assert_eq!(a[*t].as_string(&a), r#"(4 * true)"#);
+        assert_eq!(arena[*t].as_string(&arena), r#"[4, true]"#);
         Ok(())
     }
 
     #[should_panic = "recursive unification"]
     #[test]
     fn test_recursive() {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
         let src = r#"(f) => f(f);"#;
 
         let mut program = parse(src).unwrap();
-        infer_program(&mut a, &mut program, &mut my_ctx).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx).unwrap();
     }
 
     #[test]
     fn test_number_literal() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
         let src = r#"
         let g = (f) => 5;
@@ -247,60 +199,60 @@ mod tests {
         "#;
 
         let mut program = parse(src).unwrap();
-        infer_program(&mut a, &mut program, &mut my_ctx)?;
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
         let t = my_ctx.env.get("result").unwrap();
-        assert_eq!(a[*t].as_string(&a), r#"5"#);
+        assert_eq!(arena[*t].as_string(&arena), r#"5"#);
         Ok(())
     }
 
     #[test]
     fn test_generic_nongeneric() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
         let src = r#"
         let result = (g) => {
             let f = (x) => g;
-            return pair(f(3), f(true));
+            return [f(3), f(true)];
         };"#;
 
         let mut program = parse(src).unwrap();
 
-        infer_program(&mut a, &mut program, &mut my_ctx)?;
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
         let t = my_ctx.env.get("result").unwrap();
-        assert_eq!(a[*t].as_string(&a), r#"<A>(A) => (A * A)"#);
+        assert_eq!(arena[*t].as_string(&arena), r#"<A>(A) => [A, A]"#);
         Ok(())
     }
 
     #[test]
     fn test_basic_generics() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
         // example that demonstrates generic and non-generic variables:
         let src = r#"let result = (x) => x;"#;
         let mut program = parse(src).unwrap();
 
-        infer_program(&mut a, &mut program, &mut my_ctx)?;
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
         let t = my_ctx.env.get("result").unwrap();
-        assert_eq!(a[*t].as_string(&a), r#"<A>(A) => A"#);
+        assert_eq!(arena[*t].as_string(&arena), r#"<A>(A) => A"#);
 
         Ok(())
     }
 
     #[test]
     fn test_composition() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
         // Function composition
         // fn f (fn g (fn arg (f g arg)))
         let src = r#"let result = (f) => (g) => (arg) => g(f(arg));"#;
         let mut program = parse(src).unwrap();
 
-        infer_program(&mut a, &mut program, &mut my_ctx)?;
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
         let t = my_ctx.env.get("result").unwrap();
         assert_eq!(
-            a[*t].as_string(&a),
+            arena[*t].as_string(&arena),
             r#"<A, B, C>((A) => B) => ((B) => C) => (A) => C"#
         );
         Ok(())
@@ -308,7 +260,7 @@ mod tests {
 
     #[test]
     fn test_composition_with_statements() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
         // Function composition
         let src = r#"
@@ -322,10 +274,10 @@ mod tests {
         "#;
         let mut program = parse(src).unwrap();
 
-        infer_program(&mut a, &mut program, &mut my_ctx)?;
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
         let t = my_ctx.env.get("result").unwrap();
         assert_eq!(
-            a[*t].as_string(&a),
+            arena[*t].as_string(&arena),
             r#"<A, B, C>((A) => B) => ((B) => C) => (A) => C"#
         );
         Ok(())
@@ -333,32 +285,34 @@ mod tests {
 
     #[test]
     fn test_subtype() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
         let src = r#"
+        let times = (x, y) => x * y;
         let result = times(5, 10);
         "#;
         let mut program = parse(src).unwrap();
 
-        infer_program(&mut a, &mut program, &mut my_ctx)?;
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
         let t = my_ctx.env.get("result").unwrap();
-        assert_eq!(a[*t].as_string(&a), r#"number"#);
+        assert_eq!(arena[*t].as_string(&arena), r#"number"#);
         Ok(())
     }
 
     #[test]
     fn test_callback_subtyping() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
-        let num = new_constructor(&mut a, "number", &[]);
-        let bool = new_constructor(&mut a, "boolean", &[]);
-        let str = new_constructor(&mut a, "string", &[]);
+        let num = new_constructor(&mut arena, "number", &[]);
+        let bool = new_constructor(&mut arena, "boolean", &[]);
+        let str = new_constructor(&mut arena, "string", &[]);
 
         // foo: ((number, string) => boolean) => boolean
-        let cb = new_func_type(&mut a, &[num, str], bool, None);
-        my_ctx
-            .env
-            .insert("foo".to_string(), new_func_type(&mut a, &[cb], bool, None));
+        let cb = new_func_type(&mut arena, &[num, str], bool, None);
+        my_ctx.env.insert(
+            "foo".to_string(),
+            new_func_type(&mut arena, &[cb], bool, None),
+        );
 
         // bar: (number | string) => true
         // It's okay for the callback arg to take fewer params since extra params
@@ -366,46 +320,47 @@ mod tests {
         // expected params since the callback will only be called with the expected
         // types.  Lastly, it's okay for the return type to be a subtype of the
         // expected return type since it still conforms to the expected type.
-        let num_or_str = new_union_type(&mut a, &[num, str]);
-        let true_type = new_bool_lit_type(&mut a, true);
+        let num_or_str = new_union_type(&mut arena, &[num, str]);
+        let true_type = new_bool_lit_type(&mut arena, true);
         my_ctx.env.insert(
             "bar".to_string(),
-            new_func_type(&mut a, &[num_or_str], true_type, None),
+            new_func_type(&mut arena, &[num_or_str], true_type, None),
         );
 
         let src = r#"let result = foo(bar);"#;
         let mut program = parse(src).unwrap();
 
-        infer_program(&mut a, &mut program, &mut my_ctx)?;
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
         let t = my_ctx.env.get("result").unwrap();
-        assert_eq!(a[*t].as_string(&a), r#"boolean"#);
+        assert_eq!(arena[*t].as_string(&arena), r#"boolean"#);
         Ok(())
     }
 
     #[test]
     fn test_callback_error_too_many_params() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
-        let num = new_constructor(&mut a, "number", &[]);
-        let bool = new_constructor(&mut a, "boolean", &[]);
-        let str = new_constructor(&mut a, "string", &[]);
+        let num = new_constructor(&mut arena, "number", &[]);
+        let bool = new_constructor(&mut arena, "boolean", &[]);
+        let str = new_constructor(&mut arena, "string", &[]);
 
         // foo: ((number) => boolean) => boolean
-        let cb = new_func_type(&mut a, &[num], bool, None);
-        my_ctx
-            .env
-            .insert("foo".to_string(), new_func_type(&mut a, &[cb], bool, None));
+        let cb = new_func_type(&mut arena, &[num], bool, None);
+        my_ctx.env.insert(
+            "foo".to_string(),
+            new_func_type(&mut arena, &[cb], bool, None),
+        );
 
         // bar: (number, string) => true
         my_ctx.env.insert(
             "bar".to_string(),
-            new_func_type(&mut a, &[num, str], bool, None),
+            new_func_type(&mut arena, &[num, str], bool, None),
         );
 
         let src = r#"let result = foo(bar);"#;
         let mut program = parse(src).unwrap();
 
-        let result = infer_program(&mut a, &mut program, &mut my_ctx);
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
         assert_eq!(
             result,
             Err(Errors::InferenceError("(number, string) => boolean is not a subtype of (number) => boolean since it requires more params".to_string())),
@@ -415,52 +370,58 @@ mod tests {
 
     #[test]
     fn test_union_subtype() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
-        let lit1 = new_num_lit_type(&mut a, "5");
-        let lit2 = new_num_lit_type(&mut a, "10");
+        let lit1 = new_num_lit_type(&mut arena, "5");
+        let lit2 = new_num_lit_type(&mut arena, "10");
         my_ctx
             .env
-            .insert("foo".to_string(), new_union_type(&mut a, &[lit1, lit2]));
+            .insert("foo".to_string(), new_union_type(&mut arena, &[lit1, lit2]));
 
-        let src = r#"let result = times(foo, 2);"#;
+        let src = r#"
+        let times = (x, y) => x * y;
+        let result = times(foo, 2);
+        "#;
         let mut program = parse(src).unwrap();
 
-        infer_program(&mut a, &mut program, &mut my_ctx)?;
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
         let t = my_ctx.env.get("result").unwrap();
-        assert_eq!(a[*t].as_string(&a), r#"number"#);
+        assert_eq!(arena[*t].as_string(&arena), r#"number"#);
         Ok(())
     }
 
     #[test]
     fn test_calling_a_union() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
-        let bool = new_constructor(&mut a, "boolean", &[]);
-        let str = new_constructor(&mut a, "string", &[]);
-        let fn1 = new_func_type(&mut a, &[], bool, None);
-        let fn2 = new_func_type(&mut a, &[], str, None);
+        let bool = new_constructor(&mut arena, "boolean", &[]);
+        let str = new_constructor(&mut arena, "string", &[]);
+        let fn1 = new_func_type(&mut arena, &[], bool, None);
+        let fn2 = new_func_type(&mut arena, &[], str, None);
         my_ctx
             .env
-            .insert("foo".to_string(), new_union_type(&mut a, &[fn1, fn2]));
+            .insert("foo".to_string(), new_union_type(&mut arena, &[fn1, fn2]));
 
         let src = r#"let result = foo();"#;
         let mut program = parse(src).unwrap();
 
-        infer_program(&mut a, &mut program, &mut my_ctx)?;
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
         let t = my_ctx.env.get("result").unwrap();
-        assert_eq!(a[*t].as_string(&a), r#"boolean | string"#);
+        assert_eq!(arena[*t].as_string(&arena), r#"boolean | string"#);
         Ok(())
     }
 
     #[test]
     fn call_with_too_few_args() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
-        let src = r#"let result = times();"#;
+        let src = r#"
+        let times = (x, y) => x * y;
+        let result = times();
+        "#;
         let mut program = parse(src).unwrap();
 
-        let result = infer_program(&mut a, &mut program, &mut my_ctx);
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
 
         assert_eq!(
             result,
@@ -474,15 +435,15 @@ mod tests {
 
     #[test]
     fn literal_isnt_callable() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
-        let lit = new_num_lit_type(&mut a, "5");
+        let lit = new_num_lit_type(&mut arena, "5");
         my_ctx.env.insert("foo".to_string(), lit);
 
         let src = r#"let result = foo();"#;
         let mut program = parse(src).unwrap();
 
-        let result = infer_program(&mut a, &mut program, &mut my_ctx);
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
 
         assert_eq!(
             result,
@@ -496,21 +457,21 @@ mod tests {
 
     #[test]
     fn infer_basic_tuple() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
         let src = r#"let result = [5, "hello"];"#;
         let mut program = parse(src).unwrap();
 
-        infer_program(&mut a, &mut program, &mut my_ctx)?;
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
         let t = my_ctx.env.get("result").unwrap();
-        assert_eq!(a[*t].as_string(&a), "[5, \"hello\"]".to_string(),);
+        assert_eq!(arena[*t].as_string(&arena), "[5, \"hello\"]".to_string(),);
 
         Ok(())
     }
 
     #[test]
     fn tuple_member() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
         let src = r#"
         let tuple = [5, "hello"];
@@ -518,16 +479,16 @@ mod tests {
         "#;
         let mut program = parse(src).unwrap();
 
-        infer_program(&mut a, &mut program, &mut my_ctx)?;
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
         let t = my_ctx.env.get("result").unwrap();
-        assert_eq!(a[*t].as_string(&a), "\"hello\"".to_string(),);
+        assert_eq!(arena[*t].as_string(&arena), "\"hello\"".to_string(),);
 
         Ok(())
     }
 
     #[test]
     fn tuple_member_error_out_of_bounds() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
         let src = r#"
         let tuple = [5, "hello"];
@@ -535,7 +496,7 @@ mod tests {
         "#;
         let mut program = parse(src).unwrap();
 
-        let result = infer_program(&mut a, &mut program, &mut my_ctx);
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
 
         assert_eq!(
             result,
@@ -549,40 +510,40 @@ mod tests {
 
     #[test]
     fn tuple_subtyping() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
-        let num = new_constructor(&mut a, "number", &[]);
-        let str = new_constructor(&mut a, "string", &[]);
-        let param_type = new_tuple_type(&mut a, &[num, str]);
-        let bool = new_constructor(&mut a, "boolean", &[]);
-        let func = new_func_type(&mut a, &[param_type], bool, None);
+        let num = new_constructor(&mut arena, "number", &[]);
+        let str = new_constructor(&mut arena, "string", &[]);
+        let param_type = new_tuple_type(&mut arena, &[num, str]);
+        let bool = new_constructor(&mut arena, "boolean", &[]);
+        let func = new_func_type(&mut arena, &[param_type], bool, None);
         my_ctx.env.insert("foo".to_string(), func);
 
         let src = r#"let result = foo([5, "hello", true]);"#;
         let mut program = parse(src).unwrap();
 
-        infer_program(&mut a, &mut program, &mut my_ctx)?;
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
         let t = my_ctx.env.get("result").unwrap();
-        assert_eq!(a[*t].as_string(&a), "boolean".to_string(),);
+        assert_eq!(arena[*t].as_string(&arena), "boolean".to_string(),);
 
         Ok(())
     }
 
     #[test]
     fn tuple_subtyping_not_enough_elements() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
-        let num = new_constructor(&mut a, "number", &[]);
-        let str = new_constructor(&mut a, "string", &[]);
-        let param_type = new_tuple_type(&mut a, &[num, str]);
-        let bool = new_constructor(&mut a, "boolean", &[]);
-        let func = new_func_type(&mut a, &[param_type], bool, None);
+        let num = new_constructor(&mut arena, "number", &[]);
+        let str = new_constructor(&mut arena, "string", &[]);
+        let param_type = new_tuple_type(&mut arena, &[num, str]);
+        let bool = new_constructor(&mut arena, "boolean", &[]);
+        let func = new_func_type(&mut arena, &[param_type], bool, None);
         my_ctx.env.insert("foo".to_string(), func);
 
         let src = r#"let result = foo([5]);"#;
         let mut program = parse(src).unwrap();
 
-        let result = infer_program(&mut a, &mut program, &mut my_ctx);
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
 
         assert_eq!(
             result,
@@ -596,22 +557,25 @@ mod tests {
 
     #[test]
     fn infer_basic_object() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
         let src = r#"let result = {a: 5, b: "hello"};"#;
         let mut program = parse(src).unwrap();
 
-        infer_program(&mut a, &mut program, &mut my_ctx)?;
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
         let t = my_ctx.env.get("result").unwrap();
 
-        assert_eq!(a[*t].as_string(&a), "{a: 5, b: \"hello\"}".to_string(),);
+        assert_eq!(
+            arena[*t].as_string(&arena),
+            "{a: 5, b: \"hello\"}".to_string(),
+        );
 
         Ok(())
     }
 
     #[test]
     fn object_member() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
         let src = r#"
         let obj = {a: 5, b: "hello"};
@@ -619,17 +583,17 @@ mod tests {
         "#;
         let mut program = parse(src).unwrap();
 
-        infer_program(&mut a, &mut program, &mut my_ctx)?;
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
         let t = my_ctx.env.get("result").unwrap();
 
-        assert_eq!(a[*t].as_string(&a), "5".to_string(),);
+        assert_eq!(arena[*t].as_string(&arena), "5".to_string(),);
 
         Ok(())
     }
 
     #[test]
     fn object_member_missing_prop() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
         let src = r#"
         let obj = {a: 5, b: "hello"};
@@ -637,7 +601,7 @@ mod tests {
         "#;
         let mut program = parse(src).unwrap();
 
-        let result = infer_program(&mut a, &mut program, &mut my_ctx);
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
 
         assert_eq!(
             result,
@@ -651,13 +615,16 @@ mod tests {
 
     #[test]
     fn object_subtyping() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
-        let num = new_constructor(&mut a, "number", &[]);
-        let str = new_constructor(&mut a, "string", &[]);
-        let param_type = new_object_type(&mut a, &[("a".to_string(), num), ("b".to_string(), str)]);
-        let bool = new_constructor(&mut a, "boolean", &[]);
-        let func = new_func_type(&mut a, &[param_type], bool, None);
+        let num = new_constructor(&mut arena, "number", &[]);
+        let str = new_constructor(&mut arena, "string", &[]);
+        let param_type = new_object_type(
+            &mut arena,
+            &[("a".to_string(), num), ("b".to_string(), str)],
+        );
+        let bool = new_constructor(&mut arena, "boolean", &[]);
+        let func = new_func_type(&mut arena, &[param_type], bool, None);
         my_ctx.env.insert("foo".to_string(), func);
 
         // Each prop must be a subtype of the expected element type
@@ -665,29 +632,32 @@ mod tests {
         let src = r#"let result = foo({a: 5, b: "hello", c: true});"#;
         let mut program = parse(src).unwrap();
 
-        infer_program(&mut a, &mut program, &mut my_ctx)?;
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
         let t = my_ctx.env.get("result").unwrap();
 
-        assert_eq!(a[*t].as_string(&a), "boolean".to_string(),);
+        assert_eq!(arena[*t].as_string(&arena), "boolean".to_string(),);
 
         Ok(())
     }
 
     #[test]
     fn object_subtyping_missing_prop() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
-        let num = new_constructor(&mut a, "number", &[]);
-        let str = new_constructor(&mut a, "string", &[]);
-        let param_type = new_object_type(&mut a, &[("a".to_string(), num), ("b".to_string(), str)]);
-        let bool = new_constructor(&mut a, "boolean", &[]);
-        let func = new_func_type(&mut a, &[param_type], bool, None);
+        let num = new_constructor(&mut arena, "number", &[]);
+        let str = new_constructor(&mut arena, "string", &[]);
+        let param_type = new_object_type(
+            &mut arena,
+            &[("a".to_string(), num), ("b".to_string(), str)],
+        );
+        let bool = new_constructor(&mut arena, "boolean", &[]);
+        let func = new_func_type(&mut arena, &[param_type], bool, None);
         my_ctx.env.insert("foo".to_string(), func);
 
         let src = r#"let result = foo({b: "hello"});"#;
         let mut program = parse(src).unwrap();
 
-        let result = infer_program(&mut a, &mut program, &mut my_ctx);
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
 
         assert_eq!(
             result,
@@ -701,12 +671,15 @@ mod tests {
 
     #[test]
     fn test_subtype_error() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
-        let src = r#"let result = times(5, "hello");"#;
+        let src = r#"
+        let times = (x, y) => x * y;
+        let result = times(5, "hello");
+        "#;
         let mut program = parse(src).unwrap();
 
-        let result = infer_program(&mut a, &mut program, &mut my_ctx);
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
 
         assert_eq!(
             result,
@@ -720,18 +693,21 @@ mod tests {
 
     #[test]
     fn test_union_subtype_error() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
-        let lit1 = new_num_lit_type(&mut a, "5");
-        let lit2 = new_str_lit_type(&mut a, "hello");
+        let lit1 = new_num_lit_type(&mut arena, "5");
+        let lit2 = new_str_lit_type(&mut arena, "hello");
         my_ctx
             .env
-            .insert("foo".to_string(), new_union_type(&mut a, &[lit1, lit2]));
+            .insert("foo".to_string(), new_union_type(&mut arena, &[lit1, lit2]));
 
-        let src = r#"let result = times(foo, "world");"#;
+        let src = r#"
+        let times = (x, y) => x * y;
+        let result = times(foo, "world");
+        "#;
         let mut program = parse(src).unwrap();
 
-        let result = infer_program(&mut a, &mut program, &mut my_ctx);
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
 
         assert_eq!(
             result,
@@ -745,22 +721,22 @@ mod tests {
 
     #[test]
     fn test_program() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
         let src = r#"
         let num = 5;
         let str = "hello";
-        times(num, num);
+        num * num;
         "#;
         let mut program = parse(src).unwrap();
 
-        infer_program(&mut a, &mut program, &mut my_ctx)?;
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
         let t = my_ctx.env.get("num").unwrap();
-        assert_eq!(a[*t].as_string(&a), r#"5"#);
+        assert_eq!(arena[*t].as_string(&arena), r#"5"#);
 
         let t = my_ctx.env.get("str").unwrap();
-        assert_eq!(a[*t].as_string(&a), r#""hello""#);
+        assert_eq!(arena[*t].as_string(&arena), r#""hello""#);
 
         // TODO: implement std::fmt for Program et al
         // eprintln!("program = {program}");
@@ -776,7 +752,7 @@ mod tests {
 
     #[test]
     fn test_program_with_generic_func() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
         let src = r#"
         let id = (x) => x;
@@ -785,23 +761,23 @@ mod tests {
         "#;
         let mut program = parse(src).unwrap();
 
-        infer_program(&mut a, &mut program, &mut my_ctx)?;
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
         let t = my_ctx.env.get("id").unwrap();
-        assert_eq!(a[*t].as_string(&a), r#"<A>(A) => A"#);
+        assert_eq!(arena[*t].as_string(&arena), r#"<A>(A) => A"#);
 
         let t = my_ctx.env.get("a").unwrap();
-        assert_eq!(a[*t].as_string(&a), r#"5"#);
+        assert_eq!(arena[*t].as_string(&arena), r#"5"#);
 
         let t = my_ctx.env.get("b").unwrap();
-        assert_eq!(a[*t].as_string(&a), r#""hello""#);
+        assert_eq!(arena[*t].as_string(&arena), r#""hello""#);
 
         Ok(())
     }
 
     #[test]
     fn test_program_with_generic_func_multiple_type_params() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
         let src = r#"
         let fst = (x, y) => x;
@@ -809,34 +785,34 @@ mod tests {
         "#;
         let mut program = parse(src).unwrap();
 
-        infer_program(&mut a, &mut program, &mut my_ctx)?;
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
         let t = my_ctx.env.get("fst").unwrap();
-        assert_eq!(a[*t].as_string(&a), r#"<A, B>(A, B) => A"#);
+        assert_eq!(arena[*t].as_string(&arena), r#"<A, B>(A, B) => A"#);
 
         let t = my_ctx.env.get("snd").unwrap();
-        assert_eq!(a[*t].as_string(&a), r#"<A, B>(A, B) => B"#);
+        assert_eq!(arena[*t].as_string(&arena), r#"<A, B>(A, B) => B"#);
 
         Ok(())
     }
 
     #[test]
     fn test_function_with_multiple_statements() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
         let src = r#"
         let result = () => {
             let x = 5;
             let y = 10;
-            return times(x, y);
+            return x * y;
         };
         "#;
         let mut program = parse(src).unwrap();
 
-        infer_program(&mut a, &mut program, &mut my_ctx)?;
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
         let t = my_ctx.env.get("result").unwrap();
-        assert_eq!(a[*t].as_string(&a), r#"() => number"#);
+        assert_eq!(arena[*t].as_string(&arena), r#"() => number"#);
 
         if let StmtKind::VarDecl(VarDecl {
             init: Some(init), ..
@@ -852,8 +828,8 @@ mod tests {
                 // let x_t = stmts[0].inferred_type.unwrap();
                 // let y_t = stmts[1].inferred_type.unwrap();
 
-                // assert_eq!(a[x_t].as_string(&a), "5");
-                // assert_eq!(a[y_t].as_string(&a), "10");
+                // assert_eq!(a[x_t].as_string(&arena), "5");
+                // assert_eq!(a[y_t].as_string(&arena), "10");
             } else {
                 panic!("expected a lambda");
             }
@@ -873,12 +849,12 @@ mod tests {
 
     #[test]
     fn test_inferred_type_on_ast_nodes() -> Result<(), Errors> {
-        let (mut a, mut my_ctx) = test_env();
+        let (mut arena, mut my_ctx) = test_env();
 
-        let src = r#"let result = (x, y) => times(x, y);"#;
+        let src = r#"let result = (x, y) => x * y;"#;
         let mut program = parse(src).unwrap();
 
-        infer_program(&mut a, &mut program, &mut my_ctx)?;
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
         if let StmtKind::VarDecl(VarDecl {
             init: Some(init), ..
@@ -888,8 +864,8 @@ mod tests {
                 let x_t = params[0].pat.inferred_type.unwrap();
                 let y_t = params[1].pat.inferred_type.unwrap();
 
-                assert_eq!(a[x_t].as_string(&a), "number");
-                assert_eq!(a[y_t].as_string(&a), "number");
+                assert_eq!(arena[x_t].as_string(&arena), "number");
+                assert_eq!(arena[y_t].as_string(&arena), "number");
             } else {
                 panic!("expected a lambda");
             }
@@ -897,6 +873,20 @@ mod tests {
             panic!("expected a variable declaration");
         }
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_unary_op() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"let neg = (x) => -x;"#;
+        let mut program = parse(src).unwrap();
+
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+        let t = my_ctx.env.get("neg").unwrap();
+
+        assert_eq!(arena[*t].as_string(&arena), r#"(number) => number"#);
         Ok(())
     }
 }
