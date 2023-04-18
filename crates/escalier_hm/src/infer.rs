@@ -200,9 +200,37 @@ pub fn infer_expression<'a>(
         ExprKind::JSXElement(_) => todo!(),
         ExprKind::Assign(_) => todo!(),
         ExprKind::LetExpr(_) => todo!(),
-        ExprKind::Keyword(_) => todo!(),
-        ExprKind::BinaryExpr(_) => todo!(),
-        ExprKind::UnaryExpr(_) => todo!(),
+        ExprKind::Keyword(_) => todo!(), // null, undefined, etc.
+        ExprKind::BinaryExpr(BinaryExpr { op, left, right }) => {
+            let number = new_constructor(arena, "number", &[]);
+            let boolean = new_constructor(arena, "boolean", &[]);
+            let left_type = infer_expression(arena, left, ctx)?;
+            let right_type = infer_expression(arena, right, ctx)?;
+            unify(arena, left_type, number)?;
+            unify(arena, right_type, number)?;
+
+            match op {
+                BinOp::Add => number,
+                BinOp::Sub => number,
+                BinOp::Mul => number,
+                BinOp::Div => number,
+                BinOp::EqEq => boolean,
+                BinOp::NotEq => boolean,
+                BinOp::Gt => boolean,
+                BinOp::GtEq => boolean,
+                BinOp::Lt => boolean,
+                BinOp::LtEq => boolean,
+            }
+        }
+        ExprKind::UnaryExpr(UnaryExpr { op, arg }) => {
+            let number = new_constructor(arena, "number", &[]);
+            let arg_type = infer_expression(arena, arg, ctx)?;
+            unify(arena, arg_type, number)?;
+
+            match op {
+                UnaryOp::Minus => number,
+            }
+        }
         ExprKind::Await(_) => todo!(),
         ExprKind::Empty => todo!(),
         ExprKind::TemplateLiteral(_) => todo!(),
