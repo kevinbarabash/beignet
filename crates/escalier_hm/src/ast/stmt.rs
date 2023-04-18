@@ -20,6 +20,7 @@ pub struct VarDecl {
     pub type_ann: Option<TypeAnn>,
     pub init: Option<Box<Expr>>,
     pub declare: bool,
+    pub rec: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
