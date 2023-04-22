@@ -902,8 +902,25 @@ mod tests {
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
         let t = my_ctx.env.get("foo").unwrap();
 
-        eprintln!("foo: {:#?}", arena[*t]);
         assert_eq!(arena[*t].as_string(&arena), r#"() => Promise<5>"#);
+        Ok(())
+    }
+
+    #[test]
+    fn test_async_without_return() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let foo = async () => {
+            let sum = 5 + 10;
+        };
+        "#;
+        let mut program = parse(src).unwrap();
+
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+        let t = my_ctx.env.get("foo").unwrap();
+
+        assert_eq!(arena[*t].as_string(&arena), r#"() => Promise<undefined>"#);
         Ok(())
     }
 
@@ -924,11 +941,32 @@ mod tests {
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
         let t = my_ctx.env.get("bar").unwrap();
 
-        eprintln!("bar: {:#?}", arena[*t]);
+        assert_eq!(arena[*t].as_string(&arena), r#"() => Promise<5>"#);
         assert_eq!(arena[*t].as_string(&arena), r#"() => Promise<5>"#);
 
-        eprintln!("baz: {:#?}", arena[*t]);
-        assert_eq!(arena[*t].as_string(&arena), r#"() => Promise<5>"#);
+        Ok(())
+    }
+
+    #[test]
+    fn test_await_outside_of_async() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let foo = async () => 5;
+        let bar = () => {
+            let x = await foo();
+            return x;
+        };
+        "#;
+        let mut program = parse(src).unwrap();
+
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "Can't use await outside of an async function".to_string()
+            ))
+        );
 
         Ok(())
     }
@@ -943,13 +981,13 @@ mod tests {
         let mut program = parse(src).unwrap();
 
         let result = infer_program(&mut arena, &mut program, &mut my_ctx);
-
         assert_eq!(
             result,
             Err(Errors::InferenceError(
                 "type mismatch: unify(5, Promise<t1>) failed".to_string()
             ))
         );
+
         Ok(())
     }
 
