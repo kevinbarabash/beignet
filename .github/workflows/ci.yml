@@ -122,6 +122,8 @@ jobs:
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/escalier-lang/rust-grcov
     steps:
       - name: Checkout
         uses: actions/checkout@v3
