@@ -96,6 +96,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Install grcov
+        run: apt-get install -y grcov
+
       - name: Setup Nodejs and npm
         uses: actions/setup-node@v3
         with:
