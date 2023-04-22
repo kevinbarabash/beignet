@@ -113,7 +113,12 @@ impl Type {
                     for v in &con.types {
                         coll.push(arena[*v].as_string(arena));
                     }
-                    format!("{} {}", con.name, coll.join(" "))
+
+                    if coll.is_empty() {
+                        con.name.to_string()
+                    } else {
+                        format!("{}<{}>", con.name, coll.join(", "))
+                    }
                 }
             },
             TypeKind::Ref(Ref { name }) => name.clone(),

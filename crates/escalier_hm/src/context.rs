@@ -14,6 +14,8 @@ pub struct Context {
     // NOTE: The same type variable can be both generic and non-generic in
     // different contexts.
     pub non_generic: HashSet<Index>,
+    // Whether we're in an async function body or not.
+    pub is_async: bool,
 }
 
 /// Get the type of identifier name from the type context ctx.

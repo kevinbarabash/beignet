@@ -889,4 +889,70 @@ mod tests {
         assert_eq!(arena[*t].as_string(&arena), r#"(number) => number"#);
         Ok(())
     }
+
+    #[test]
+    fn test_async_return_type() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let foo = async () => 5;
+        "#;
+        let mut program = parse(src).unwrap();
+
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+        let t = my_ctx.env.get("foo").unwrap();
+
+        eprintln!("foo: {:#?}", arena[*t]);
+        assert_eq!(arena[*t].as_string(&arena), r#"() => Promise<5>"#);
+        Ok(())
+    }
+
+    #[test]
+    fn test_await_in_async() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let foo = async () => 5;
+        let bar = async () => {
+            let x = await foo();
+            return x;
+        };
+        let baz = async () => foo();
+        "#;
+        let mut program = parse(src).unwrap();
+
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+        let t = my_ctx.env.get("bar").unwrap();
+
+        eprintln!("bar: {:#?}", arena[*t]);
+        assert_eq!(arena[*t].as_string(&arena), r#"() => Promise<5>"#);
+
+        eprintln!("baz: {:#?}", arena[*t]);
+        assert_eq!(arena[*t].as_string(&arena), r#"() => Promise<5>"#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_await_non_promise() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let foo = async () => await 5;
+        "#;
+        let mut program = parse(src).unwrap();
+
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "type mismatch: unify(5, Promise<t1>) failed".to_string()
+            ))
+        );
+        Ok(())
+    }
+
+    // TODO: write a test to ensure that Promise<5> is a subtype of Promise<number>
+    // In general, generic types should be covariant across their type parameters.
 }
