@@ -81,9 +81,15 @@ pub fn infer_expression<'a>(
             unify_call(arena, &arg_types, func_type)?
         }
         // TODO: Add support for explicit type parameters
-        ExprKind::Lambda(Lambda { params, body, .. }) => {
+        ExprKind::Lambda(Lambda {
+            params,
+            body,
+            is_async,
+            ..
+        }) => {
             let mut param_types = vec![];
             let mut new_ctx = ctx.clone();
+            new_ctx.is_async = *is_async;
 
             for EFnParam { pat: pattern, .. } in params.iter_mut() {
                 let param_type = new_var_type(arena);
@@ -102,30 +108,31 @@ pub fn infer_expression<'a>(
                 }
             }
 
-            match body {
-                BlockOrExpr::Block(Block { stmts, .. }) => {
-                    for stmt in stmts.iter_mut() {
-                        new_ctx = new_ctx.clone();
-                        let t = infer_statement(arena, stmt, &mut new_ctx, false)?;
-                        if let StmtKind::ReturnStmt(_) = stmt.kind {
-                            let ret_t = t;
-                            let func_t = new_func_type(arena, &param_types, ret_t, None);
-                            // TODO: warn if there are any statements after the return
-                            // TODO: update AST with the inferred type
-                            return Ok(func_t);
+            let mut body_t = 'outer: {
+                match body {
+                    BlockOrExpr::Block(Block { stmts, .. }) => {
+                        for stmt in stmts.iter_mut() {
+                            new_ctx = new_ctx.clone();
+                            let t = infer_statement(arena, stmt, &mut new_ctx, false)?;
+                            if let StmtKind::ReturnStmt(_) = stmt.kind {
+                                // TODO: warn about unreachable code.
+                                break 'outer t;
+                            }
                         }
-                    }
 
-                    // If there's no return statement in the block, then the
-                    // return type for the function is `undefined`.
-                    let undefined = new_constructor(arena, "undefined", &[]);
-                    new_func_type(arena, &param_types, undefined, None)
+                        // If we don't encounter a return statement, we assume
+                        // the return type is `undefined`.
+                        new_constructor(arena, "undefined", &[])
+                    }
+                    BlockOrExpr::Expr(expr) => infer_expression(arena, expr, &mut new_ctx)?,
                 }
-                BlockOrExpr::Expr(expr) => {
-                    let ret_type = infer_expression(arena, expr, &mut new_ctx)?;
-                    new_func_type(arena, &param_types, ret_type, None)
-                }
+            };
+
+            if *is_async && !is_promise(&arena[body_t]) {
+                body_t = new_constructor(arena, "Promise", &[body_t]);
             }
+
+            new_func_type(arena, &param_types, body_t, None)
         }
         ExprKind::IfElse(IfElse {
             cond,
@@ -231,7 +238,23 @@ pub fn infer_expression<'a>(
                 UnaryOp::Minus => number,
             }
         }
-        ExprKind::Await(_) => todo!(),
+        ExprKind::Await(Await { expr, .. }) => {
+            if !ctx.is_async {
+                return Err(Errors::InferenceError(
+                    "Can't use await outside of an async function".to_string(),
+                ));
+            }
+
+            let expr_t = infer_expression(arena, expr, ctx)?;
+            let inner_t = new_var_type(arena);
+            // TODO: Merge Constructor and TypeRef
+            // NOTE: This isn't quite right because we can await non-promise values.
+            // That being said, we should avoid doing so.
+            let promise_t = new_constructor(arena, "Promise", &[inner_t]);
+            unify(arena, expr_t, promise_t)?;
+
+            inner_t
+        }
         ExprKind::Empty => todo!(),
         ExprKind::TemplateLiteral(_) => todo!(),
         ExprKind::TaggedTemplateLiteral(_) => todo!(),
@@ -244,6 +267,15 @@ pub fn infer_expression<'a>(
     node.inferred_type = Some(t);
 
     Ok(t)
+}
+
+fn is_promise(t: &Type) -> bool {
+    matches!(
+        t,
+        Type {
+            kind: TypeKind::Constructor(types::Constructor { name, .. })
+        } if name == "Promise"
+    )
 }
 
 pub fn infer_block(
