@@ -261,7 +261,7 @@ pub fn infer_expression<'a>(
         ExprKind::Match(_) => todo!(),
         ExprKind::Class(_) => todo!(),
         ExprKind::Regex(_) => todo!(),
-        ExprKind::DoExpr(_) => todo!(),
+        ExprKind::DoExpr(DoExpr { body }) => infer_block(arena, body, ctx)?,
     };
 
     node.inferred_type = Some(t);
