@@ -1042,8 +1042,12 @@ mod tests {
         let src = r#"
         let x: number = 5;
         let foo: () => number = () => 10;
-        let arr: number[] = [1, 2, 3];
+        let arr1: number[] = [1, 2, 3];
+        let arr2: Array<string> = ["hello", "world"];
         let p: { x: number, y: number } = { x: 5, y: 10 };
+        let tuple: [number, string] = [5, "hello"];
+        let union: number | string = 5;
+        let union_arr: (number | string)[] = [5, "hello"];
 
         // This should be valid, but we don't support it yet
         // let bar: (number) => number = <A>(a: A) => a;
