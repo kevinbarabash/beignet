@@ -202,7 +202,8 @@ pub fn unify_call(
         }
     }
 
-    Ok(ret_type)
+    // We need to prune the return type, because it might be a type variable.
+    Ok(prune(arena, ret_type))
 }
 
 fn bind(arena: &mut Arena<Type>, a: Index, b: Index) -> Result<(), Errors> {
