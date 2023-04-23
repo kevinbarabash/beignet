@@ -175,7 +175,10 @@ pub fn infer_expression<'a>(
                         "Couldn't find property '{name}' on object",
                     )));
                 }
-                (TypeKind::Tuple(tuple), MemberProp::Computed(ComputedPropName { expr, .. })) => {
+                (
+                    TypeKind::Constructor(tuple),
+                    MemberProp::Computed(ComputedPropName { expr, .. }),
+                ) if tuple.name == "@@tuple" => {
                     let prop_type = infer_expression(arena, expr.as_mut(), ctx)?;
                     match &arena[prop_type].kind {
                         TypeKind::Literal(Lit::Num(Num { value, .. })) => {
@@ -580,18 +583,6 @@ pub fn generalize_func(arena: &'_ mut Arena<Type>, func: &Function) -> Index {
             TypeKind::Constructor(con) => {
                 let types = generalize_rec_many(arena, &con.types, mappings);
                 new_constructor(arena, &con.name, &types)
-            }
-            TypeKind::Tuple(tuple) => {
-                let types = generalize_rec_many(arena, &tuple.types, mappings);
-                new_tuple_type(arena, &types)
-            }
-            TypeKind::Union(union) => {
-                let types = generalize_rec_many(arena, &union.types, mappings);
-                new_union_type(arena, &types)
-            }
-            TypeKind::Intersection(intersection) => {
-                let types = generalize_rec_many(arena, &intersection.types, mappings);
-                new_intersection_type(arena, &types)
             }
         }
     }

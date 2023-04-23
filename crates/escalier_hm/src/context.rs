@@ -102,30 +102,6 @@ pub fn fresh(arena: &mut Arena<Type>, t: Index, ctx: &Context) -> Index {
                     p
                 }
             }
-            TypeKind::Tuple(tuple) => {
-                let types = freshrec_many(arena, &tuple.types, mappings, ctx);
-                if types != tuple.types {
-                    new_tuple_type(arena, &types)
-                } else {
-                    p
-                }
-            }
-            TypeKind::Union(union) => {
-                let types = freshrec_many(arena, &union.types, mappings, ctx);
-                if types != union.types {
-                    new_union_type(arena, &types)
-                } else {
-                    p
-                }
-            }
-            TypeKind::Intersection(intersection) => {
-                let types = freshrec_many(arena, &intersection.types, mappings, ctx);
-                if types != intersection.types {
-                    new_intersection_type(arena, &types)
-                } else {
-                    p
-                }
-            }
         }
     }
 

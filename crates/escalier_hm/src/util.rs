@@ -36,9 +36,6 @@ pub fn occurs_in_type(a: &mut Arena<Type>, v: Index, type2: Index) -> bool {
             occurs_in(a, v, &params) || occurs_in_type(a, v, ret)
         }
         TypeKind::Constructor(Constructor { types, .. }) => occurs_in(a, v, &types),
-        TypeKind::Tuple(Tuple { types }) => occurs_in(a, v, &types),
-        TypeKind::Union(Union { types }) => occurs_in(a, v, &types),
-        TypeKind::Intersection(Intersection { types }) => occurs_in(a, v, &types),
     }
 }
 
