@@ -720,6 +720,27 @@ mod tests {
     }
 
     #[test]
+    fn test_union_subtype_error_with_type_ann() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let x: number | string = true;
+        "#;
+        let mut program = parse(src).unwrap();
+
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "type mismatch: unify(true, number | string) failed".to_string()
+            ))
+        );
+
+        Ok(())
+    }
+
+    #[test]
     fn test_program() -> Result<(), Errors> {
         let (mut arena, mut my_ctx) = test_env();
 
