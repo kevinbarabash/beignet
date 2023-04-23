@@ -63,12 +63,8 @@ pub struct Object {
 pub enum TypeKind {
     Variable(Variable),
     Constructor(Constructor),
-    Ref(Ref),
     Literal(Lit),
     Function(Function),
-    Union(Union),
-    Intersection(Intersection),
-    Tuple(Tuple),
     Object(Object),
 }
 
@@ -107,31 +103,24 @@ impl Type {
             TypeKind::Variable(Variable { id, .. }) => {
                 format!("t{id}")
             }
-            TypeKind::Constructor(con) => match con.types.len() {
-                0 => con.name.clone(),
-                2 => {
-                    let l = arena[con.types[0]].as_string(arena);
-                    let r = arena[con.types[1]].as_string(arena);
-                    format!("({} {} {})", l, con.name, r)
-                }
+            TypeKind::Constructor(Constructor { name, types }) => match name.as_str() {
+                "@@tuple" => format!("[{}]", types_to_strings(arena, types).join(", ")),
+                "@@union" => types_to_strings(arena, types).join(" | "),
+                "@@intersection" => types_to_strings(arena, types).join(" & "),
                 _ => {
                     let mut coll = vec![];
-                    for v in &con.types {
+                    for v in types {
                         coll.push(arena[*v].as_string(arena));
                     }
 
                     if coll.is_empty() {
-                        con.name.to_string()
+                        name.to_string()
                     } else {
-                        format!("{}<{}>", con.name, coll.join(", "))
+                        format!("{}<{}>", name, coll.join(", "))
                     }
                 }
             },
-            TypeKind::Ref(Ref { name }) => name.clone(),
             TypeKind::Literal(lit) => lit.to_string(),
-            TypeKind::Tuple(tuple) => {
-                format!("[{}]", types_to_strings(arena, &tuple.types).join(", "))
-            }
             TypeKind::Object(object) => {
                 let mut fields = vec![];
                 for (k, v) in &object.props {
@@ -155,10 +144,6 @@ impl Type {
                     types_to_strings(arena, &func.params).join(", "),
                     arena[func.ret].as_string(arena),
                 )
-            }
-            TypeKind::Union(union) => types_to_strings(arena, &union.types).join(" | "),
-            TypeKind::Intersection(intersection) => {
-                types_to_strings(arena, &intersection.types).join(" & ")
             }
         }
     }
@@ -189,27 +174,15 @@ pub fn new_func_type(
 }
 
 pub fn new_union_type(arena: &mut Arena<Type>, types: &[Index]) -> Index {
-    arena.insert(Type {
-        kind: TypeKind::Union(Union {
-            types: types.to_vec(),
-        }),
-    })
+    new_constructor(arena, "@@union", types)
 }
 
 pub fn new_intersection_type(arena: &mut Arena<Type>, types: &[Index]) -> Index {
-    arena.insert(Type {
-        kind: TypeKind::Intersection(Intersection {
-            types: types.to_vec(),
-        }),
-    })
+    new_constructor(arena, "@@intersection", types)
 }
 
 pub fn new_tuple_type(arena: &mut Arena<Type>, types: &[Index]) -> Index {
-    arena.insert(Type {
-        kind: TypeKind::Tuple(Tuple {
-            types: types.to_vec(),
-        }),
-    })
+    new_constructor(arena, "@@tuple", types)
 }
 
 pub fn new_object_type(arena: &mut Arena<Type>, props: &[(String, Index)]) -> Index {
@@ -236,14 +209,6 @@ pub fn new_constructor(arena: &mut Arena<Type>, name: &str, types: &[Index]) -> 
         kind: TypeKind::Constructor(Constructor {
             name: name.to_string(),
             types: types.to_vec(),
-        }),
-    })
-}
-
-pub fn new_type_ref(arena: &mut Arena<Type>, name: &str) -> Index {
-    arena.insert(Type {
-        kind: TypeKind::Ref(Ref {
-            name: name.to_string(),
         }),
     })
 }
