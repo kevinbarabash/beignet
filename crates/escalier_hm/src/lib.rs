@@ -1034,4 +1034,134 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_let_with_type_ann() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let x: number = 5;
+        let flag: boolean = true;
+        let foo: () => number = () => 10;
+        let bar: () => undefined = () => {};
+        let arr1: number[] = [1, 2, 3];
+        let arr2: Array<string> = ["hello", "world"];
+        let p: { x: number, y: number } = { x: 5, y: 10 };
+        let tuple: [number, string] = [5, "hello"];
+        let union: number | string = 5;
+        let union_arr: (number | string)[] = [5, "hello"];
+
+        // This should be valid, but we don't support it yet
+        // let baz: (number) => number = <A>(a: A) => a;
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("x").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"number"#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_function_overloads() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        declare let add: ((a: number, b: number) => number) & ((a: string, b: string) => string);
+        let sum = add(5, 10);
+        let msg = add("hello, ", "world");
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("sum").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"number"#);
+
+        let t = my_ctx.env.get("msg").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"string"#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_function_no_valid_overload() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        declare let add: ((a: number, b: number) => number) & ((a: string, b: string) => string);
+        add(5, "world");
+        "#;
+        let mut program = parse(src).unwrap();
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "no valid overload for args".to_string()
+            ))
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_declare_cant_have_initializer() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        declare let add: (a: number, b: number) => number = (a, b) => a + b;
+        "#;
+        let mut program = parse(src).unwrap();
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "Variable declarations using `declare` cannot have an initializer".to_string()
+            ))
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_declare_must_have_type_annotations() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        declare let add;
+        "#;
+        let mut program = parse(src).unwrap();
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "Variable declarations using `declare` must have a type annotation".to_string()
+            ))
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_normal_decl_must_have_initializer() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let add: (a: number, b: number) => number;
+        "#;
+        let mut program = parse(src).unwrap();
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "Variable declarations not using `declare` must have an initializer".to_string()
+            ))
+        );
+
+        Ok(())
+    }
 }

@@ -112,6 +112,15 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
             }
             Ok(())
         }
+        (TypeKind::Tuple(tuple), TypeKind::Constructor(Constructor { name, types }))
+            if name == "Array" =>
+        {
+            let q = types[0];
+            for p in &tuple.types {
+                unify(arena, *p, q)?;
+            }
+            Ok(())
+        }
         (TypeKind::Object(object1), TypeKind::Object(object2)) => {
             // object1 must have atleast as the same properties as object2
             for (name, t) in &object2.props {
@@ -188,9 +197,9 @@ pub fn unify_call(
             }
             unify(arena, ret_type, func.ret)?;
         }
-        TypeKind::Union(union) => {
+        TypeKind::Union(Union { types }) => {
             let mut ret_types = vec![];
-            for t in union.types.iter() {
+            for t in types.iter() {
                 let ret_type = unify_call(arena, arg_types, *t)?;
                 ret_types.push(ret_type);
             }
@@ -198,6 +207,20 @@ pub fn unify_call(
             return Ok(new_union_type(
                 arena,
                 &ret_types.into_iter().unique().collect_vec(),
+            ));
+        }
+        TypeKind::Intersection(Intersection { types }) => {
+            for t in types.iter() {
+                // TODO: if there are multiple overloads that unify, pick the
+                // best one.
+                let result = unify_call(arena, arg_types, *t);
+                match result {
+                    Ok(ret_type) => return Ok(ret_type),
+                    Err(_) => continue,
+                }
+            }
+            return Err(Errors::InferenceError(
+                "no valid overload for args".to_string(),
             ));
         }
     }
@@ -227,6 +250,7 @@ fn instantiate_func(arena: &mut Arena<Type>, func: &Function) -> Function {
         }
     }
 
+    // TODO: dedupe with freshrec and generalize_rec
     fn instrec(arena: &mut Arena<Type>, tp: Index, mappings: &HashMap<String, Index>) -> Index {
         let p = prune(arena, tp);
         match &arena.get(p).unwrap().clone().kind {
@@ -242,27 +266,11 @@ fn instantiate_func(arena: &mut Arena<Type>, func: &Function) -> Function {
                 //     p
                 // }
             }
-            TypeKind::Constructor(con) => {
-                let types = instrec_many(arena, &con.types, mappings);
-                if types != con.types {
-                    new_constructor(arena, &con.name, &types)
-                } else {
-                    p
-                }
-            }
             TypeKind::Ref(Ref { name }) => match mappings.get(name) {
                 Some(tp) => *tp,
                 None => new_type_ref(arena, name),
             },
             TypeKind::Literal(lit) => new_lit_type(arena, lit),
-            TypeKind::Tuple(tuple) => {
-                let types = instrec_many(arena, &tuple.types, mappings);
-                if types != tuple.types {
-                    new_tuple_type(arena, &types)
-                } else {
-                    p
-                }
-            }
             TypeKind::Object(object) => {
                 let props: Vec<_> = object
                     .props
@@ -286,10 +294,34 @@ fn instantiate_func(arena: &mut Arena<Type>, func: &Function) -> Function {
                     p
                 }
             }
+            TypeKind::Constructor(con) => {
+                let types = instrec_many(arena, &con.types, mappings);
+                if types != con.types {
+                    new_constructor(arena, &con.name, &types)
+                } else {
+                    p
+                }
+            }
+            TypeKind::Tuple(tuple) => {
+                let types = instrec_many(arena, &tuple.types, mappings);
+                if types != tuple.types {
+                    new_tuple_type(arena, &types)
+                } else {
+                    p
+                }
+            }
             TypeKind::Union(union) => {
                 let types = instrec_many(arena, &union.types, mappings);
                 if types != union.types {
                     new_union_type(arena, &types)
+                } else {
+                    p
+                }
+            }
+            TypeKind::Intersection(intersection) => {
+                let types = instrec_many(arena, &intersection.types, mappings);
+                if types != intersection.types {
+                    new_intersection_type(arena, &types)
                 } else {
                     p
                 }

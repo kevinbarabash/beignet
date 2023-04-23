@@ -45,6 +45,11 @@ pub struct Union {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Intersection {
+    pub types: Vec<Index>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Tuple {
     pub types: Vec<Index>,
 }
@@ -62,6 +67,7 @@ pub enum TypeKind {
     Literal(Lit),
     Function(Function),
     Union(Union),
+    Intersection(Intersection),
     Tuple(Tuple),
     Object(Object),
 }
@@ -151,6 +157,9 @@ impl Type {
                 )
             }
             TypeKind::Union(union) => types_to_strings(arena, &union.types).join(" | "),
+            TypeKind::Intersection(intersection) => {
+                types_to_strings(arena, &intersection.types).join(" & ")
+            }
         }
     }
 }
@@ -182,6 +191,14 @@ pub fn new_func_type(
 pub fn new_union_type(arena: &mut Arena<Type>, types: &[Index]) -> Index {
     arena.insert(Type {
         kind: TypeKind::Union(Union {
+            types: types.to_vec(),
+        }),
+    })
+}
+
+pub fn new_intersection_type(arena: &mut Arena<Type>, types: &[Index]) -> Index {
+    arena.insert(Type {
+        kind: TypeKind::Intersection(Intersection {
             types: types.to_vec(),
         }),
     })
