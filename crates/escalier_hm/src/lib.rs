@@ -939,9 +939,11 @@ mod tests {
         let mut program = parse(src).unwrap();
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
-        let t = my_ctx.env.get("bar").unwrap();
 
+        let t = my_ctx.env.get("bar").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"() => Promise<5>"#);
+
+        let t = my_ctx.env.get("baz").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"() => Promise<5>"#);
 
         Ok(())
@@ -993,4 +995,43 @@ mod tests {
 
     // TODO: write a test to ensure that Promise<5> is a subtype of Promise<number>
     // In general, generic types should be covariant across their type parameters.
+
+    #[test]
+    fn test_do_expr() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let sum = do {
+            let msg = do {
+                "hello";
+            };
+            let x = 5;
+            let y = 10;
+            [msg, x + y];
+        };
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("sum").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"["hello", number]"#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_empty_do_expr() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let sum = do {};
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("sum").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"undefined"#);
+
+        Ok(())
+    }
 }
