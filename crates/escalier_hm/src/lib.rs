@@ -1102,4 +1102,64 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_declare_cant_have_initializer() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        declare let add: (a: number, b: number) => number = (a, b) => a + b;
+        "#;
+        let mut program = parse(src).unwrap();
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "Variable declarations using `declare` cannot have an initializer".to_string()
+            ))
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_declare_must_have_type_annotations() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        declare let add;
+        "#;
+        let mut program = parse(src).unwrap();
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "Variable declarations using `declare` must have a type annotation".to_string()
+            ))
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_normal_decl_must_have_initializer() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let add: (a: number, b: number) => number;
+        "#;
+        let mut program = parse(src).unwrap();
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "Variable declarations not using `declare` must have an initializer".to_string()
+            ))
+        );
+
+        Ok(())
+    }
 }
