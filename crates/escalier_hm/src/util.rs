@@ -23,12 +23,10 @@ pub fn occurs_in_type(a: &mut Arena<Type>, v: Index, type2: Index) -> bool {
         TypeKind::Variable(_) => false, // leaf node
         TypeKind::Literal(_) => false,  // leaf node
         TypeKind::Ref(_) => false,      // leaf node
-        TypeKind::Tuple(Tuple { types }) => occurs_in(a, v, &types),
         TypeKind::Object(Object { props }) => {
             let types = props.iter().map(|(_, v)| *v).collect::<Vec<_>>();
             occurs_in(a, v, &types)
         }
-        TypeKind::Constructor(Constructor { types, .. }) => occurs_in(a, v, &types),
         TypeKind::Function(Function {
             params,
             ret,
@@ -37,7 +35,10 @@ pub fn occurs_in_type(a: &mut Arena<Type>, v: Index, type2: Index) -> bool {
             // TODO: check type_params as well
             occurs_in(a, v, &params) || occurs_in_type(a, v, ret)
         }
+        TypeKind::Constructor(Constructor { types, .. }) => occurs_in(a, v, &types),
+        TypeKind::Tuple(Tuple { types }) => occurs_in(a, v, &types),
         TypeKind::Union(Union { types }) => occurs_in(a, v, &types),
+        TypeKind::Intersection(Intersection { types }) => occurs_in(a, v, &types),
     }
 }
 

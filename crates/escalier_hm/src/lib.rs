@@ -1034,4 +1034,68 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_let_with_type_ann() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let x: number = 5;
+        let foo: () => number = () => 10;
+        let arr: number[] = [1, 2, 3];
+        let p: { x: number, y: number } = { x: 5, y: 10 };
+
+        // This should be valid, but we don't support it yet
+        // let bar: (number) => number = <A>(a: A) => a;
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("x").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"number"#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_function_overloads() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        declare let add: ((a: number, b: number) => number) & ((a: string, b: string) => string);
+        let sum = add(5, 10);
+        let msg = add("hello, ", "world");
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("sum").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"number"#);
+
+        let t = my_ctx.env.get("msg").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"string"#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_function_no_valid_overload() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        declare let add: ((a: number, b: number) => number) & ((a: string, b: string) => string);
+        add(5, "world");
+        "#;
+        let mut program = parse(src).unwrap();
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "no valid overload for args".to_string()
+            ))
+        );
+
+        Ok(())
+    }
 }

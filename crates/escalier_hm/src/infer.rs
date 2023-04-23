@@ -293,6 +293,114 @@ pub fn infer_block(
     Ok(result_t)
 }
 
+pub fn infer_type_ann<'a>(
+    arena: &'a mut Arena<Type>,
+    type_ann: &mut TypeAnn,
+    ctx: &mut Context,
+) -> Result<Index, Errors> {
+    // TODO: handle type params
+
+    let idx = match &mut type_ann.kind {
+        TypeAnnKind::Lam(LamType {
+            params,
+            ret,
+            type_params,
+        }) => {
+            let params = params
+                .iter_mut()
+                .map(|param| infer_type_ann(arena, &mut param.type_ann, ctx))
+                .collect::<Result<Vec<_>, _>>()?;
+
+            let ret_idx = infer_type_ann(arena, ret.as_mut(), ctx)?;
+
+            let type_params = type_params.as_mut().map(|type_params| {
+                type_params
+                    .iter_mut()
+                    .map(|param| types::TypeParam {
+                        name: param.name.name.clone(),
+                    })
+                    .collect()
+            });
+
+            new_func_type(arena, &params, ret_idx, type_params)
+        }
+        TypeAnnKind::Lit(lit) => new_lit_type(arena, lit),
+        TypeAnnKind::Keyword(KeywordType { keyword }) => match keyword {
+            Keyword::Number => new_constructor(arena, "number", &[]),
+            Keyword::Boolean => new_constructor(arena, "boolean", &[]),
+            Keyword::String => new_constructor(arena, "string", &[]),
+            Keyword::Null => new_constructor(arena, "null", &[]),
+            Keyword::Self_ => todo!(),
+            Keyword::Symbol => new_constructor(arena, "symbol", &[]),
+            Keyword::Undefined => new_constructor(arena, "undefined", &[]),
+            Keyword::Never => new_constructor(arena, "never", &[]),
+        },
+        TypeAnnKind::Object(obj) => {
+            let mut props = Vec::new();
+            for elem in obj.elems.iter_mut() {
+                match elem {
+                    TObjElem::Index(_) => {
+                        todo!();
+                    }
+                    TObjElem::Prop(prop) => {
+                        let prop_idx = infer_type_ann(arena, &mut prop.type_ann, ctx)?;
+                        props.push((prop.name.clone(), prop_idx));
+                    }
+                }
+            }
+            new_object_type(arena, &props)
+        }
+        TypeAnnKind::TypeRef(TypeRef { name, type_args }) => match type_args {
+            Some(type_args) => {
+                let mut type_args_idxs = Vec::new();
+                for type_arg in type_args.iter_mut() {
+                    type_args_idxs.push(infer_type_ann(arena, type_arg, ctx)?);
+                }
+                new_constructor(arena, name, &type_args_idxs)
+            }
+            None => new_constructor(arena, name, &[]),
+        },
+        TypeAnnKind::Union(UnionType { types }) => {
+            let mut idxs = Vec::new();
+            for type_ann in types.iter_mut() {
+                idxs.push(infer_type_ann(arena, type_ann, ctx)?);
+            }
+            new_union_type(arena, &idxs)
+        }
+        TypeAnnKind::Intersection(IntersectionType { types }) => {
+            let mut idxs = Vec::new();
+            for type_ann in types.iter_mut() {
+                idxs.push(infer_type_ann(arena, type_ann, ctx)?);
+            }
+            new_intersection_type(arena, &idxs)
+        }
+        TypeAnnKind::Tuple(TupleType { types }) => {
+            let mut idxs = Vec::new();
+            for type_ann in types.iter_mut() {
+                idxs.push(infer_type_ann(arena, type_ann, ctx)?);
+            }
+            new_tuple_type(arena, &idxs)
+        }
+        TypeAnnKind::Array(ArrayType { elem_type }) => {
+            let idx = infer_type_ann(arena, elem_type, ctx)?;
+            new_constructor(arena, "Array", &[idx])
+        }
+
+        // TODO: Create types for all of these
+        TypeAnnKind::KeyOf(_) => todo!(),
+        TypeAnnKind::Query(_) => todo!(),
+        TypeAnnKind::IndexedAccess(_) => todo!(),
+        TypeAnnKind::Mapped(_) => todo!(),
+        TypeAnnKind::Conditional(_) => todo!(),
+        TypeAnnKind::Mutable(_) => todo!(),
+        TypeAnnKind::Infer(_) => todo!(),
+    };
+
+    type_ann.inferred_type = Some(idx);
+
+    Ok(idx)
+}
+
 pub fn infer_statement<'a>(
     arena: &'a mut Arena<Type>,
     statement: &mut Statement,
@@ -303,57 +411,78 @@ pub fn infer_statement<'a>(
         StmtKind::VarDecl(VarDecl {
             rec,
             pattern,
-            init: defn,
+            init,
+            type_ann,
+            declare,
             ..
         }) => {
+            // TODO: handle all patterns
             if let PatternKind::Ident(BindingIdent {
                 name, mutable: _, ..
             }) = &pattern.kind
             {
-                match defn {
-                    Some(init) => {
-                        let result_t = if *rec {
+                match (declare, init, type_ann) {
+                    (false, Some(init), type_ann) => {
+                        let init_idx = if *rec {
                             let mut new_ctx = ctx.clone();
-                            let new_type = new_var_type(arena);
-                            new_ctx.env.insert(name.clone(), new_type);
-                            new_ctx.non_generic.insert(new_type);
+                            let new_idx = new_var_type(arena);
+                            new_ctx.env.insert(name.clone(), new_idx);
+                            new_ctx.non_generic.insert(new_idx);
 
-                            let init_type = infer_expression(arena, init.as_mut(), &mut new_ctx)?;
-                            unify(arena, new_type, init_type)?;
+                            let init_idx = infer_expression(arena, init.as_mut(), &mut new_ctx)?;
+                            unify(arena, new_idx, init_idx)?;
 
-                            // TODO: dedupe with the copy of this below
-                            let t = arena.get(init_type).unwrap().clone();
-                            let init_type = match &t.kind {
-                                TypeKind::Function(func) if top_level => {
-                                    generalize_func(arena, func)
-                                }
-                                _ => init_type,
-                            };
-
-                            ctx.env.insert(name.clone(), init_type);
-                            pattern.inferred_type = Some(init_type);
-
-                            init_type
+                            init_idx
                         } else {
-                            let idx = infer_expression(arena, init.as_mut(), ctx)?;
-
-                            // TODO: dedupe with the copy of this above
-                            let t = arena.get(idx).unwrap().clone();
-                            let idx = match &t.kind {
-                                TypeKind::Function(func) if top_level => {
-                                    generalize_func(arena, func)
-                                }
-                                _ => idx,
-                            };
-
-                            ctx.env.insert(name.clone(), idx);
-                            pattern.inferred_type = Some(idx);
-                            idx
+                            infer_expression(arena, init.as_mut(), ctx)?
                         };
 
-                        result_t // TODO: Should this be unit?
+                        let init_type = arena.get(init_idx).unwrap().clone();
+                        let init_idx = match &init_type.kind {
+                            TypeKind::Function(func) if top_level => generalize_func(arena, func),
+                            _ => init_idx,
+                        };
+
+                        let idx = match type_ann {
+                            Some(type_ann) => {
+                                let type_ann_idx = infer_type_ann(arena, type_ann, ctx)?;
+
+                                // `init_idx` must be a subtype of `type_ann_idx`
+                                unify(arena, init_idx, type_ann_idx)?;
+
+                                type_ann_idx
+                            }
+                            None => init_idx,
+                        };
+
+                        ctx.env.insert(name.clone(), idx);
+                        pattern.inferred_type = Some(idx);
+
+                        idx // TODO: Should this be unit?
                     }
-                    None => todo!(),
+                    (false, None, _) => {
+                        return Err(Errors::InferenceError(
+                            "Variable declarations not using `declare` must have an initializer"
+                                .to_string(),
+                        ))
+                    }
+                    (true, None, Some(type_ann)) => {
+                        let idx = infer_type_ann(arena, type_ann, ctx)?;
+                        ctx.env.insert(name.clone(), idx);
+                        idx
+                    }
+                    (true, Some(_), _) => {
+                        return Err(Errors::InferenceError(
+                            "Variable declarations using `declare` cannot have an initializer"
+                                .to_string(),
+                        ))
+                    }
+                    (true, None, None) => {
+                        return Err(Errors::InferenceError(
+                            "Variable declarations using `declare` must have a type annotation"
+                                .to_string(),
+                        ))
+                    }
                 }
             } else {
                 return Err(Errors::InferenceError(
@@ -374,7 +503,10 @@ pub fn infer_statement<'a>(
             }
         }
         StmtKind::ClassDecl(_) => todo!(),
-        StmtKind::TypeDecl(_) => todo!(),
+        StmtKind::TypeDecl(_) => {
+            // TODO: add support for type declarations
+            todo!()
+        }
         StmtKind::ForStmt(_) => todo!(),
     };
 
@@ -405,6 +537,7 @@ pub fn generalize_func(arena: &'_ mut Arena<Type>, func: &Function) -> Index {
     // A mapping of TypeVariables to TypeVariables
     let mut mappings = BTreeMap::default();
 
+    // TODO: dedupe with freshrec and instrec
     fn generalize_rec(
         arena: &mut Arena<Type>,
         tp: Index,
@@ -429,16 +562,8 @@ pub fn generalize_func(arena: &'_ mut Arena<Type>, func: &Function) -> Index {
                 };
                 new_type_ref(arena, &name)
             }
-            TypeKind::Constructor(con) => {
-                let types = generalize_rec_many(arena, &con.types, mappings);
-                new_constructor(arena, &con.name, &types)
-            }
             TypeKind::Ref(Ref { name }) => new_type_ref(arena, name),
             TypeKind::Literal(lit) => new_lit_type(arena, lit),
-            TypeKind::Tuple(tuple) => {
-                let types = generalize_rec_many(arena, &tuple.types, mappings);
-                new_tuple_type(arena, &types)
-            }
             TypeKind::Object(object) => {
                 let fields: Vec<_> = object
                     .props
@@ -452,9 +577,21 @@ pub fn generalize_func(arena: &'_ mut Arena<Type>, func: &Function) -> Index {
                 let ret = generalize_rec(arena, func.ret, mappings);
                 new_func_type(arena, &params, ret, None)
             }
+            TypeKind::Constructor(con) => {
+                let types = generalize_rec_many(arena, &con.types, mappings);
+                new_constructor(arena, &con.name, &types)
+            }
+            TypeKind::Tuple(tuple) => {
+                let types = generalize_rec_many(arena, &tuple.types, mappings);
+                new_tuple_type(arena, &types)
+            }
             TypeKind::Union(union) => {
                 let types = generalize_rec_many(arena, &union.types, mappings);
                 new_union_type(arena, &types)
+            }
+            TypeKind::Intersection(intersection) => {
+                let types = generalize_rec_many(arena, &intersection.types, mappings);
+                new_intersection_type(arena, &types)
             }
         }
     }
