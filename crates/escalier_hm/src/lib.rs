@@ -1041,7 +1041,9 @@ mod tests {
 
         let src = r#"
         let x: number = 5;
+        let flag: boolean = true;
         let foo: () => number = () => 10;
+        let bar: () => undefined = () => {};
         let arr1: number[] = [1, 2, 3];
         let arr2: Array<string> = ["hello", "world"];
         let p: { x: number, y: number } = { x: 5, y: 10 };
@@ -1050,7 +1052,7 @@ mod tests {
         let union_arr: (number | string)[] = [5, "hello"];
 
         // This should be valid, but we don't support it yet
-        // let bar: (number) => number = <A>(a: A) => a;
+        // let baz: (number) => number = <A>(a: A) => a;
         "#;
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
