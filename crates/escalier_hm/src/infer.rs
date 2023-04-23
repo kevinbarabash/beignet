@@ -563,9 +563,8 @@ pub fn generalize_func(arena: &'_ mut Arena<Type>, func: &Function) -> Index {
                         name
                     }
                 };
-                new_type_ref(arena, &name)
+                new_constructor(arena, &name, &[])
             }
-            TypeKind::Ref(Ref { name }) => new_type_ref(arena, name),
             TypeKind::Literal(lit) => new_lit_type(arena, lit),
             TypeKind::Object(object) => {
                 let fields: Vec<_> = object

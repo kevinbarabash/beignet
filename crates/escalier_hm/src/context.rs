@@ -69,7 +69,6 @@ pub fn fresh(arena: &mut Arena<Type>, t: Index, ctx: &Context) -> Index {
                     p
                 }
             }
-            TypeKind::Ref(Ref { name }) => new_type_ref(arena, name),
             TypeKind::Literal(lit) => new_lit_type(arena, lit),
             TypeKind::Object(object) => {
                 let props: Vec<_> = object

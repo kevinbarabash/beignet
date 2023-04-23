@@ -193,15 +193,10 @@ pub fn unify_call(
                     ));
                 }
                 _ => {
-                    // lookup definition of type constructor, and see if its instances
-                    // have any callable signatures
-                    todo!("constructor");
+                    // TODO: lookup name in scope, and see if it has any callable signatures
+                    todo!("check if {name} has any callable signatures");
                 }
             }
-        }
-        TypeKind::Ref(Ref { name }) => {
-            // TODO: lookup name in scope, and see if it has any callable signatures
-            todo!("check if {name} has any callable signatures");
         }
         TypeKind::Literal(lit) => {
             return Err(Errors::InferenceError(format!(
@@ -274,10 +269,6 @@ fn instantiate_func(arena: &mut Arena<Type>, func: &Function) -> Function {
                 //     p
                 // }
             }
-            TypeKind::Ref(Ref { name }) => match mappings.get(name) {
-                Some(tp) => *tp,
-                None => new_type_ref(arena, name),
-            },
             TypeKind::Literal(lit) => new_lit_type(arena, lit),
             TypeKind::Object(object) => {
                 let props: Vec<_> = object
@@ -303,6 +294,12 @@ fn instantiate_func(arena: &mut Arena<Type>, func: &Function) -> Function {
                 }
             }
             TypeKind::Constructor(con) => {
+                let p = if let Some(idx) = mappings.get(&con.name) {
+                    *idx
+                } else {
+                    p
+                };
+
                 let types = instrec_many(arena, &con.types, mappings);
                 if types != con.types {
                     new_constructor(arena, &con.name, &types)

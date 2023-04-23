@@ -63,12 +63,8 @@ pub struct Object {
 pub enum TypeKind {
     Variable(Variable),
     Constructor(Constructor),
-    Ref(Ref),
     Literal(Lit),
     Function(Function),
-    // Union(Union),
-    // Intersection(Intersection),
-    // Tuple(Tuple),
     Object(Object),
 }
 
@@ -111,28 +107,19 @@ impl Type {
                 "@@tuple" => format!("[{}]", types_to_strings(arena, types).join(", ")),
                 "@@union" => types_to_strings(arena, types).join(" | "),
                 "@@intersection" => types_to_strings(arena, types).join(" & "),
-                _ => match types.len() {
-                    0 => name.clone(),
-                    2 => {
-                        let l = arena[types[0]].as_string(arena);
-                        let r = arena[types[1]].as_string(arena);
-                        format!("({} {} {})", l, name, r)
+                _ => {
+                    let mut coll = vec![];
+                    for v in types {
+                        coll.push(arena[*v].as_string(arena));
                     }
-                    _ => {
-                        let mut coll = vec![];
-                        for v in types {
-                            coll.push(arena[*v].as_string(arena));
-                        }
 
-                        if coll.is_empty() {
-                            name.to_string()
-                        } else {
-                            format!("{}<{}>", name, coll.join(", "))
-                        }
+                    if coll.is_empty() {
+                        name.to_string()
+                    } else {
+                        format!("{}<{}>", name, coll.join(", "))
                     }
-                },
+                }
             },
-            TypeKind::Ref(Ref { name }) => name.clone(),
             TypeKind::Literal(lit) => lit.to_string(),
             TypeKind::Object(object) => {
                 let mut fields = vec![];
@@ -222,14 +209,6 @@ pub fn new_constructor(arena: &mut Arena<Type>, name: &str, types: &[Index]) -> 
         kind: TypeKind::Constructor(Constructor {
             name: name.to_string(),
             types: types.to_vec(),
-        }),
-    })
-}
-
-pub fn new_type_ref(arena: &mut Arena<Type>, name: &str) -> Index {
-    arena.insert(Type {
-        kind: TypeKind::Ref(Ref {
-            name: name.to_string(),
         }),
     })
 }

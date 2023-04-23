@@ -22,7 +22,6 @@ pub fn occurs_in_type(a: &mut Arena<Type>, v: Index, type2: Index) -> bool {
     match a.get(pruned_type2).unwrap().clone().kind {
         TypeKind::Variable(_) => false, // leaf node
         TypeKind::Literal(_) => false,  // leaf node
-        TypeKind::Ref(_) => false,      // leaf node
         TypeKind::Object(Object { props }) => {
             let types = props.iter().map(|(_, v)| *v).collect::<Vec<_>>();
             occurs_in(a, v, &types)
