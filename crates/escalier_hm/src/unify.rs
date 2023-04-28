@@ -127,15 +127,32 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
         }
         (TypeKind::Object(object1), TypeKind::Object(object2)) => {
             // object1 must have atleast as the same properties as object2
-            for (name, t) in &object2.props {
-                if let Some(prop) = object1.props.iter().find(|props| &props.0 == name) {
-                    unify(arena, prop.1, *t)?;
-                } else {
-                    return Err(Errors::InferenceError(format!(
-                        "'{name}' is missing in {}",
-                        a_t.as_string(arena),
-                    )));
+            for prop2 in &object2.props {
+                for prop1 in &object1.props {
+                    match (prop1, prop2) {
+                        (TObjElem::Prop(prop1), TObjElem::Prop(prop2))
+                            if prop1.name == prop2.name =>
+                        {
+                            unify(arena, prop1.t, prop2.t)?;
+                            return Ok(());
+                        }
+                        _ => (),
+                    }
                 }
+
+                match prop2 {
+                    TObjElem::Index(_) => todo!(),
+                    TObjElem::Prop(TProp { name, .. }) => {
+                        let name = match name {
+                            TPropKey::NumberKey(name) => name.to_string(),
+                            TPropKey::StringKey(name) => name.to_string(),
+                        };
+                        return Err(Errors::InferenceError(format!(
+                            "'{name}' is missing in {}",
+                            a_t.as_string(arena),
+                        )));
+                    }
+                };
             }
             Ok(())
         }
@@ -274,7 +291,16 @@ fn instantiate_func(arena: &mut Arena<Type>, func: &Function) -> Function {
                 let props: Vec<_> = object
                     .props
                     .iter()
-                    .map(|(name, tp)| (name.clone(), instrec(arena, *tp, mappings)))
+                    .map(|prop| match prop {
+                        TObjElem::Index(index) => {
+                            let t = instrec(arena, index.t, mappings);
+                            TObjElem::Index(TIndex { t, ..index.clone() })
+                        }
+                        TObjElem::Prop(prop) => {
+                            let t = instrec(arena, prop.t, mappings);
+                            TObjElem::Prop(TProp { t, ..prop.clone() })
+                        }
+                    })
                     .collect();
                 if props != object.props {
                     new_object_type(arena, &props)

@@ -3,6 +3,7 @@ mod ast;
 mod context;
 mod errors;
 mod infer;
+mod infer_pattern;
 mod parser;
 mod types;
 mod unify;
@@ -22,7 +23,7 @@ mod tests {
     use crate::context::*;
     use crate::errors::*;
     use crate::infer::*;
-    use crate::types::*;
+    use crate::types::{self, *};
 
     fn new_bool_lit_type(arena: &mut Arena<Type>, value: bool) -> Index {
         arena.insert(Type {
@@ -621,7 +622,20 @@ mod tests {
         let str = new_constructor(&mut arena, "string", &[]);
         let param_type = new_object_type(
             &mut arena,
-            &[("a".to_string(), num), ("b".to_string(), str)],
+            &[
+                types::TObjElem::Prop(types::TProp {
+                    name: types::TPropKey::StringKey("a".to_string()),
+                    t: num,
+                    optional: false,
+                    mutable: false,
+                }),
+                types::TObjElem::Prop(types::TProp {
+                    name: types::TPropKey::StringKey("b".to_string()),
+                    t: str,
+                    optional: false,
+                    mutable: false,
+                }),
+            ],
         );
         let bool = new_constructor(&mut arena, "boolean", &[]);
         let func = new_func_type(&mut arena, &[param_type], bool, None);
@@ -648,7 +662,20 @@ mod tests {
         let str = new_constructor(&mut arena, "string", &[]);
         let param_type = new_object_type(
             &mut arena,
-            &[("a".to_string(), num), ("b".to_string(), str)],
+            &[
+                types::TObjElem::Prop(types::TProp {
+                    name: types::TPropKey::StringKey("a".to_string()),
+                    t: num,
+                    optional: false,
+                    mutable: false,
+                }),
+                types::TObjElem::Prop(types::TProp {
+                    name: types::TPropKey::StringKey("b".to_string()),
+                    t: str,
+                    optional: false,
+                    mutable: false,
+                }),
+            ],
         );
         let bool = new_constructor(&mut arena, "boolean", &[]);
         let func = new_func_type(&mut arena, &[param_type], bool, None);

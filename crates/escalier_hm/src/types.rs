@@ -54,9 +54,48 @@ pub struct Tuple {
     pub types: Vec<Index>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TIndex {
+    pub key: TIndexKey,
+    pub mutable: bool,
+    pub t: Index,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TIndexKey {
+    pub name: String,
+    pub t: Index,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum TPropKey {
+    StringKey(String),
+    NumberKey(String),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TProp {
+    pub name: TPropKey,
+    pub optional: bool,
+    pub mutable: bool,
+    pub t: Index,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum TObjElem {
+    // Call(TCallable),
+    // Constructor(TCallable),
+    // Method(TMethod),
+    // Getter(TGetter),
+    // Setter(TSetter),
+    Index(TIndex),
+    Prop(TProp),
+    // RestSpread - we can use this instead of converting {a, ...x} to {a} & tvar
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Object {
-    pub props: Vec<(String, Index)>,
+    pub props: Vec<TObjElem>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -123,8 +162,34 @@ impl Type {
             TypeKind::Literal(lit) => lit.to_string(),
             TypeKind::Object(object) => {
                 let mut fields = vec![];
-                for (k, v) in &object.props {
-                    fields.push(format!("{}: {}", k, arena[*v].as_string(arena)));
+                for prop in &object.props {
+                    match prop {
+                        TObjElem::Index(TIndex { key, mutable, t }) => {
+                            let t = arena[*t].as_string(arena);
+                            if *mutable {
+                                fields.push(format!("{}: mut {}", key.name, t));
+                            } else {
+                                fields.push(format!("{}: {}", key.name, t));
+                            }
+                        }
+                        TObjElem::Prop(TProp {
+                            name,
+                            optional,
+                            mutable: _,
+                            t,
+                        }) => {
+                            let name = match name {
+                                TPropKey::StringKey(s) => s,
+                                TPropKey::NumberKey(n) => n,
+                            };
+                            let t = arena[*t].as_string(arena);
+                            if *optional {
+                                fields.push(format!("{}?: {}", name, t));
+                            } else {
+                                fields.push(format!("{}: {}", name, t));
+                            }
+                        }
+                    }
                 }
                 format!("{{{}}}", fields.join(", "))
             }
@@ -185,10 +250,10 @@ pub fn new_tuple_type(arena: &mut Arena<Type>, types: &[Index]) -> Index {
     new_constructor(arena, "@@tuple", types)
 }
 
-pub fn new_object_type(arena: &mut Arena<Type>, props: &[(String, Index)]) -> Index {
+pub fn new_object_type(arena: &mut Arena<Type>, elems: &[TObjElem]) -> Index {
     arena.insert(Type {
         kind: TypeKind::Object(Object {
-            props: props.to_vec(),
+            props: elems.to_vec(),
         }),
     })
 }

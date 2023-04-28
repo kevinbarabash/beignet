@@ -74,7 +74,16 @@ pub fn fresh(arena: &mut Arena<Type>, t: Index, ctx: &Context) -> Index {
                 let props: Vec<_> = object
                     .props
                     .iter()
-                    .map(|(name, tp)| (name.clone(), freshrec(arena, *tp, mappings, ctx)))
+                    .map(|prop| match prop {
+                        TObjElem::Index(index) => {
+                            let t = freshrec(arena, index.t, mappings, ctx);
+                            TObjElem::Index(TIndex { t, ..index.clone() })
+                        }
+                        TObjElem::Prop(prop) => {
+                            let t = freshrec(arena, prop.t, mappings, ctx);
+                            TObjElem::Prop(TProp { t, ..prop.clone() })
+                        }
+                    })
                     .collect();
                 if props != object.props {
                     new_object_type(arena, &props)
