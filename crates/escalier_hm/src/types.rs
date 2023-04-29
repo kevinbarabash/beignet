@@ -278,6 +278,10 @@ pub fn new_constructor(arena: &mut Arena<Type>, name: &str, types: &[Index]) -> 
     })
 }
 
+pub fn new_rest_type(arena: &mut Arena<Type>, t: Index) -> Index {
+    new_constructor(arena, "Array", &[t])
+}
+
 pub fn new_lit_type(arena: &mut Arena<Type>, lit: &Lit) -> Index {
     arena.insert(Type {
         kind: TypeKind::Literal(lit.clone()),

@@ -44,7 +44,32 @@ pub fn infer_pattern(
                 }
                 t
             }
-            PatternKind::Rest(_) => todo!(),
+            PatternKind::Rest(RestPat { arg }) => {
+                let arg_type = match &arg.kind {
+                    PatternKind::Ident(BindingIdent { name, mutable, .. }) => {
+                        let t = new_var_type(arena);
+                        if assump
+                            .insert(
+                                name.to_owned(),
+                                Binding {
+                                    mutable: *mutable,
+                                    // NOTE: We set the binding's type to Array<T>
+                                    // instead of T.
+                                    t: new_constructor(arena, "Array", &[t]),
+                                },
+                            )
+                            .is_some()
+                        {
+                            return Err(Errors::InferenceError(
+                                "Duplicate identifier in pattern".to_string(),
+                            ));
+                        }
+                        t
+                    }
+                    _ => infer_pattern_rec(arena, arg.as_mut(), assump, ctx)?,
+                };
+                new_rest_type(arena, arg_type)
+            }
             PatternKind::Object(ObjectPat { props, .. }) => {
                 let mut rest_opt_ty: Option<Index> = None;
                 let mut elems: Vec<types::TObjElem> = vec![];
@@ -103,10 +128,6 @@ pub fn infer_pattern(
                 }
 
                 let obj_type = new_object_type(arena, &elems);
-                // let obj_type = self.from_type_kind(TypeKind::Object(TObject {
-                //     elems,
-                //     is_interface: false,
-                // }));
 
                 match rest_opt_ty {
                     // TODO: Replace this with a proper Rest/Spread type
@@ -115,7 +136,23 @@ pub fn infer_pattern(
                     None => obj_type,
                 }
             }
-            PatternKind::Tuple(_) => todo!(),
+            PatternKind::Tuple(TuplePat { elems, optional: _ }) => {
+                let mut elem_types = vec![];
+                for elem in elems.iter_mut() {
+                    let t = match elem {
+                        Some(elem) => {
+                            // TODO:
+                            // - handle elem.init
+                            // - check for multiple rest patterns
+                            infer_pattern_rec(arena, &mut elem.pattern, assump, ctx)?
+                        }
+                        None => new_constructor(arena, "undefined", &[]),
+                    };
+                    elem_types.push(t);
+                }
+
+                new_tuple_type(arena, &elem_types)
+            }
             PatternKind::Lit(_) => todo!(),
             PatternKind::Is(IsPat { ident, is_id }) => {
                 let t = match is_id.name.as_str() {
@@ -129,7 +166,7 @@ pub fn infer_pattern(
 
                 t
             }
-            PatternKind::Wildcard => todo!(),
+            PatternKind::Wildcard => new_var_type(arena),
         };
 
         Ok(t)

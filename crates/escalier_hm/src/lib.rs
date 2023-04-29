@@ -1284,4 +1284,31 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_pattern_matching_array() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        // TODO: allow trailing `,` when doing pattern matching
+        let src = r#"
+        declare let array: Array<number>;
+        let name = match (array) {
+            [] -> 0,
+            [a] -> a,
+            [a, b] -> a + b,
+            [_, _, ...rest] -> rest
+        };
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("name").unwrap();
+        assert_eq!(
+            arena[*t].as_string(&arena),
+            // TODO: update unions to merge elements whenever possible
+            r#"0 | number | number | Array<number>"#
+        );
+
+        Ok(())
+    }
 }

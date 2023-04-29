@@ -59,12 +59,12 @@ pub struct RestPat {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TuplePat {
     // The elements are optional to support sparse arrays.
-    pub elems: Vec<Option<ArrayPatElem>>,
+    pub elems: Vec<Option<TuplePatElem>>,
     pub optional: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ArrayPatElem {
+pub struct TuplePatElem {
     // TODO: add .span property
     pub pattern: Pattern,
     pub init: Option<Box<Expr>>,
@@ -276,7 +276,7 @@ mod tests {
     #[test]
     fn array_with_all_irrefutable_elements_is_irrefutable() {
         let kind = PatternKind::Tuple(TuplePat {
-            elems: vec![Some(ArrayPatElem {
+            elems: vec![Some(TuplePatElem {
                 pattern: ident_pattern("foo"),
                 init: None,
             })],
@@ -295,11 +295,11 @@ mod tests {
     fn array_with_one_refutable_prop_is_refutable() {
         let kind = PatternKind::Tuple(TuplePat {
             elems: vec![
-                Some(ArrayPatElem {
+                Some(TuplePatElem {
                     pattern: ident_pattern("foo"),
                     init: None,
                 }),
-                Some(ArrayPatElem {
+                Some(TuplePatElem {
                     pattern: num_lit_pat("5"),
                     init: None,
                 }),
