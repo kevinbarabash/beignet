@@ -80,11 +80,11 @@ Ok(
                                                         },
                                                     },
                                                     span: 11..17,
-                                                    kind: Array(
-                                                        ArrayPat {
+                                                    kind: Tuple(
+                                                        TuplePat {
                                                             elems: [
                                                                 Some(
-                                                                    ArrayPatElem {
+                                                                    TuplePatElem {
                                                                         pattern: Pattern {
                                                                             loc: SourceLocation {
                                                                                 start: Position {
@@ -120,7 +120,7 @@ Ok(
                                                                     },
                                                                 ),
                                                                 Some(
-                                                                    ArrayPatElem {
+                                                                    TuplePatElem {
                                                                         pattern: Pattern {
                                                                             loc: SourceLocation {
                                                                                 start: Position {

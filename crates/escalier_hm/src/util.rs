@@ -22,10 +22,10 @@ pub fn occurs_in_type(a: &mut Arena<Type>, v: Index, type2: Index) -> bool {
     match a.get(pruned_type2).unwrap().clone().kind {
         TypeKind::Variable(_) => false, // leaf node
         TypeKind::Literal(_) => false,  // leaf node
-        TypeKind::Object(Object { props }) => {
-            let types = props.iter().map(|(_, v)| *v).collect::<Vec<_>>();
-            occurs_in(a, v, &types)
-        }
+        TypeKind::Object(Object { props }) => props.iter().any(|prop| match prop {
+            TObjElem::Index(index) => occurs_in_type(a, v, index.t),
+            TObjElem::Prop(prop) => occurs_in_type(a, v, prop.t),
+        }),
         TypeKind::Function(Function {
             params,
             ret,

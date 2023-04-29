@@ -146,19 +146,19 @@ pub fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, Par
                             ParseError::from("'right' field not found on assignment_pattern")
                         })?;
 
-                        Ok(Some(ArrayPatElem {
+                        Ok(Some(TuplePatElem {
                             pattern: parse_pattern(&left, src)?,
                             init: Some(Box::from(parse_expression(&right, src)?)),
                         }))
                     }
-                    _ => Ok(Some(ArrayPatElem {
+                    _ => Ok(Some(TuplePatElem {
                         pattern: parse_pattern(&child, src)?,
                         init: None,
                     })),
                 })
                 .collect::<Result<Vec<_>, ParseError>>()?;
 
-            PatternKind::Array(ArrayPat {
+            PatternKind::Tuple(TuplePat {
                 elems,
                 optional: false,
             })
@@ -220,14 +220,14 @@ pub fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pa
                 .into_iter()
                 // TODO: make elems in ArrayPat non-optional
                 .map(|elem| {
-                    Ok(Some(ArrayPatElem {
+                    Ok(Some(TuplePatElem {
                         pattern: parse_refutable_pattern(&elem, src)?,
                         init: None,
                     }))
                 })
                 .collect::<Result<Vec<_>, ParseError>>()?;
 
-            PatternKind::Array(ArrayPat {
+            PatternKind::Tuple(TuplePat {
                 elems,
                 optional: false,
             })

@@ -31,11 +31,11 @@ Ok(
                                 },
                             },
                             span: 4..28,
-                            kind: Array(
-                                ArrayPat {
+                            kind: Tuple(
+                                TuplePat {
                                     elems: [
                                         Some(
-                                            ArrayPatElem {
+                                            TuplePatElem {
                                                 pattern: Pattern {
                                                     loc: SourceLocation {
                                                         start: Position {
@@ -71,7 +71,7 @@ Ok(
                                             },
                                         ),
                                         Some(
-                                            ArrayPatElem {
+                                            TuplePatElem {
                                                 pattern: Pattern {
                                                     loc: SourceLocation {
                                                         start: Position {
@@ -98,11 +98,11 @@ Ok(
                                                                     },
                                                                 },
                                                                 span: 13..27,
-                                                                kind: Array(
-                                                                    ArrayPat {
+                                                                kind: Tuple(
+                                                                    TuplePat {
                                                                         elems: [
                                                                             Some(
-                                                                                ArrayPatElem {
+                                                                                TuplePatElem {
                                                                                     pattern: Pattern {
                                                                                         loc: SourceLocation {
                                                                                             start: Position {
@@ -138,7 +138,7 @@ Ok(
                                                                                 },
                                                                             ),
                                                                             Some(
-                                                                                ArrayPatElem {
+                                                                                TuplePatElem {
                                                                                     pattern: Pattern {
                                                                                         loc: SourceLocation {
                                                                                             start: Position {

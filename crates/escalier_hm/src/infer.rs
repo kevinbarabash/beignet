@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 use crate::ast::{self as syntax, *};
 use crate::context::*;
 use crate::errors::*;
+use crate::infer_pattern::*;
 use crate::types::{self, *};
 use crate::unify::*;
 use crate::util::*;
@@ -47,18 +48,26 @@ pub fn infer_expression<'a>(
             new_tuple_type(arena, &element_types)
         }
         ExprKind::Obj(syntax::Obj { props }) => {
-            let mut prop_types = vec![];
+            let mut prop_types: Vec<types::TObjElem> = vec![];
             for prop_or_spread in props.iter_mut() {
                 match prop_or_spread {
                     PropOrSpread::Spread(_) => todo!(),
                     PropOrSpread::Prop(prop) => match prop.as_mut() {
                         Prop::Shorthand(ident) => {
-                            let t = get_type(arena, &ident.name, ctx)?;
-                            prop_types.push((ident.name.to_owned(), t));
+                            prop_types.push(types::TObjElem::Prop(types::TProp {
+                                name: TPropKey::StringKey(ident.name.to_owned()),
+                                t: get_type(arena, &ident.name, ctx)?,
+                                mutable: false,
+                                optional: false,
+                            }));
                         }
                         Prop::KeyValue(KeyValueProp { key, value }) => {
-                            let t = infer_expression(arena, value, ctx)?;
-                            prop_types.push((key.name.to_owned(), t));
+                            prop_types.push(types::TObjElem::Prop(types::TProp {
+                                name: TPropKey::StringKey(key.name.to_owned()),
+                                t: infer_expression(arena, value.as_mut(), ctx)?,
+                                mutable: false,
+                                optional: false,
+                            }));
                         }
                     },
                 }
@@ -165,10 +174,15 @@ pub fn infer_expression<'a>(
 
             match (&obj_type.kind, prop) {
                 (TypeKind::Object(object), MemberProp::Ident(Ident { name, .. })) => {
-                    for (key, t) in &object.props {
-                        if key == name {
-                            // TODO: update AST with the inferred type
-                            return Ok(*t);
+                    for prop in &object.props {
+                        if let types::TObjElem::Prop(prop) = &prop {
+                            let key = match &prop.name {
+                                TPropKey::StringKey(key) => key,
+                                TPropKey::NumberKey(key) => key,
+                            };
+                            if key == name {
+                                return Ok(prop.t);
+                            }
                         }
                     }
                     return Err(Errors::InferenceError(format!(
@@ -261,7 +275,34 @@ pub fn infer_expression<'a>(
         ExprKind::Empty => todo!(),
         ExprKind::TemplateLiteral(_) => todo!(),
         ExprKind::TaggedTemplateLiteral(_) => todo!(),
-        ExprKind::Match(_) => todo!(),
+        ExprKind::Match(Match { expr, arms }) => {
+            let expr_idx = infer_expression(arena, expr, ctx)?;
+            let mut body_types: Vec<Index> = vec![];
+
+            for arm in arms.iter_mut() {
+                let (pat_bindings, pat_idx) = infer_pattern(arena, &mut arm.pattern, ctx)?;
+
+                // Checks that the pattern is a sub-type of expr
+                unify(arena, pat_idx, expr_idx)?;
+
+                let mut new_ctx = ctx.clone();
+                for (name, binding) in pat_bindings {
+                    // TODO: Update .env to store bindings so that we can handle
+                    // mutability correctly
+                    new_ctx.env.insert(name, binding.t);
+                }
+
+                body_types.push(infer_block(arena, &mut arm.body, &mut new_ctx)?);
+            }
+
+            let t0 = prune(arena, body_types[0]);
+            eprintln!("t0 = {}", arena[t0].as_string(arena));
+
+            let t1 = prune(arena, body_types[1]);
+            eprintln!("t1 = {}", arena[t1].as_string(arena));
+
+            new_union_type(arena, &body_types)
+        }
         ExprKind::Class(_) => todo!(),
         ExprKind::Regex(_) => todo!(),
         ExprKind::DoExpr(DoExpr { body }) => infer_block(arena, body, ctx)?,
@@ -299,7 +340,7 @@ pub fn infer_block(
 pub fn infer_type_ann<'a>(
     arena: &'a mut Arena<Type>,
     type_ann: &mut TypeAnn,
-    ctx: &mut Context,
+    _ctx: &mut Context,
 ) -> Result<Index, Errors> {
     // TODO: handle type params
 
@@ -311,10 +352,10 @@ pub fn infer_type_ann<'a>(
         }) => {
             let params = params
                 .iter_mut()
-                .map(|param| infer_type_ann(arena, &mut param.type_ann, ctx))
+                .map(|param| infer_type_ann(arena, &mut param.type_ann, _ctx))
                 .collect::<Result<Vec<_>, _>>()?;
 
-            let ret_idx = infer_type_ann(arena, ret.as_mut(), ctx)?;
+            let ret_idx = infer_type_ann(arena, ret.as_mut(), _ctx)?;
 
             let type_params = type_params.as_mut().map(|type_params| {
                 type_params
@@ -339,15 +380,19 @@ pub fn infer_type_ann<'a>(
             Keyword::Never => new_constructor(arena, "never", &[]),
         },
         TypeAnnKind::Object(obj) => {
-            let mut props = Vec::new();
+            let mut props: Vec<types::TObjElem> = Vec::new();
             for elem in obj.elems.iter_mut() {
                 match elem {
-                    TObjElem::Index(_) => {
+                    syntax::TObjElem::Index(_) => {
                         todo!();
                     }
-                    TObjElem::Prop(prop) => {
-                        let prop_idx = infer_type_ann(arena, &mut prop.type_ann, ctx)?;
-                        props.push((prop.name.clone(), prop_idx));
+                    syntax::TObjElem::Prop(prop) => {
+                        props.push(types::TObjElem::Prop(types::TProp {
+                            name: TPropKey::StringKey(prop.name.to_owned()),
+                            t: infer_type_ann(arena, &mut prop.type_ann, _ctx)?,
+                            mutable: false,
+                            optional: false,
+                        }));
                     }
                 }
             }
@@ -357,7 +402,7 @@ pub fn infer_type_ann<'a>(
             Some(type_args) => {
                 let mut type_args_idxs = Vec::new();
                 for type_arg in type_args.iter_mut() {
-                    type_args_idxs.push(infer_type_ann(arena, type_arg, ctx)?);
+                    type_args_idxs.push(infer_type_ann(arena, type_arg, _ctx)?);
                 }
                 new_constructor(arena, name, &type_args_idxs)
             }
@@ -366,36 +411,36 @@ pub fn infer_type_ann<'a>(
         TypeAnnKind::Union(UnionType { types }) => {
             let mut idxs = Vec::new();
             for type_ann in types.iter_mut() {
-                idxs.push(infer_type_ann(arena, type_ann, ctx)?);
+                idxs.push(infer_type_ann(arena, type_ann, _ctx)?);
             }
             new_union_type(arena, &idxs)
         }
         TypeAnnKind::Intersection(IntersectionType { types }) => {
             let mut idxs = Vec::new();
             for type_ann in types.iter_mut() {
-                idxs.push(infer_type_ann(arena, type_ann, ctx)?);
+                idxs.push(infer_type_ann(arena, type_ann, _ctx)?);
             }
             new_intersection_type(arena, &idxs)
         }
         TypeAnnKind::Tuple(TupleType { types }) => {
             let mut idxs = Vec::new();
             for type_ann in types.iter_mut() {
-                idxs.push(infer_type_ann(arena, type_ann, ctx)?);
+                idxs.push(infer_type_ann(arena, type_ann, _ctx)?);
             }
             new_tuple_type(arena, &idxs)
         }
         TypeAnnKind::Array(ArrayType { elem_type }) => {
-            let idx = infer_type_ann(arena, elem_type, ctx)?;
+            let idx = infer_type_ann(arena, elem_type, _ctx)?;
             new_constructor(arena, "Array", &[idx])
         }
+        TypeAnnKind::IndexedAccess(_) => todo!(),
+        TypeAnnKind::Mutable(_) => todo!(),
+        TypeAnnKind::Query(_) => todo!(),
 
         // TODO: Create types for all of these
         TypeAnnKind::KeyOf(_) => todo!(),
-        TypeAnnKind::Query(_) => todo!(),
-        TypeAnnKind::IndexedAccess(_) => todo!(),
         TypeAnnKind::Mapped(_) => todo!(),
         TypeAnnKind::Conditional(_) => todo!(),
-        TypeAnnKind::Mutable(_) => todo!(),
         TypeAnnKind::Infer(_) => todo!(),
     };
 
@@ -570,7 +615,16 @@ pub fn generalize_func(arena: &'_ mut Arena<Type>, func: &Function) -> Index {
                 let fields: Vec<_> = object
                     .props
                     .iter()
-                    .map(|(name, tp)| (name.clone(), generalize_rec(arena, *tp, mappings)))
+                    .map(|prop| match prop {
+                        types::TObjElem::Index(index) => {
+                            let t = generalize_rec(arena, index.t, mappings);
+                            types::TObjElem::Index(types::TIndex { t, ..index.clone() })
+                        }
+                        types::TObjElem::Prop(prop) => {
+                            let t = generalize_rec(arena, prop.t, mappings);
+                            types::TObjElem::Prop(types::TProp { t, ..prop.clone() })
+                        }
+                    })
                     .collect();
                 new_object_type(arena, &fields)
             }

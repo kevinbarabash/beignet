@@ -2,7 +2,7 @@ use generational_arena::{Arena, Index};
 use itertools::Itertools;
 use std::collections::HashMap;
 
-use crate::ast::Lit;
+use crate::ast::{Bool, Lit, Num, Str};
 use crate::errors::*;
 use crate::types::*;
 use crate::util::*;
@@ -73,7 +73,13 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
         {
             let q = array.types[0];
             for p in &tuple.types {
-                unify(arena, *p, q)?;
+                let p_t = arena[*p].clone();
+                match p_t.kind {
+                    TypeKind::Constructor(Constructor { name, types }) if name == "Array" => {
+                        unify(arena, types[0], q)?;
+                    }
+                    _ => unify(arena, *p, q)?,
+                }
             }
             Ok(())
         }
@@ -110,6 +116,28 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
             unify(arena, func_a.ret, func_b.ret)?;
             Ok(())
         }
+        (TypeKind::Literal(lit1), TypeKind::Literal(lit2)) => {
+            let equal = match (&lit1, &lit2) {
+                (Lit::Bool(Bool { value: value1, .. }), Lit::Bool(Bool { value: value2, .. })) => {
+                    value1 == value2
+                }
+                (Lit::Num(Num { value: value1, .. }), Lit::Num(Num { value: value2, .. })) => {
+                    value1 == value2
+                }
+                (Lit::Str(Str { value: value1, .. }), Lit::Str(Str { value: value2, .. })) => {
+                    value1 == value2
+                }
+                _ => false,
+            };
+            if !equal {
+                return Err(Errors::InferenceError(format!(
+                    "type mismatch: {} != {}",
+                    a_t.as_string(arena),
+                    b_t.as_string(arena),
+                )));
+            }
+            Ok(())
+        }
         (TypeKind::Literal(Lit::Num(_)), TypeKind::Constructor(Constructor { name, .. }))
             if name == "number" =>
         {
@@ -127,15 +155,34 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
         }
         (TypeKind::Object(object1), TypeKind::Object(object2)) => {
             // object1 must have atleast as the same properties as object2
-            for (name, t) in &object2.props {
-                if let Some(prop) = object1.props.iter().find(|props| &props.0 == name) {
-                    unify(arena, prop.1, *t)?;
-                } else {
-                    return Err(Errors::InferenceError(format!(
-                        "'{name}' is missing in {}",
-                        a_t.as_string(arena),
-                    )));
+            'outer: for prop2 in &object2.props {
+                for prop1 in &object1.props {
+                    match (prop1, prop2) {
+                        (TObjElem::Prop(prop1), TObjElem::Prop(prop2))
+                            if prop1.name == prop2.name =>
+                        {
+                            unify(arena, prop1.t, prop2.t)?;
+                            continue 'outer;
+                        }
+                        _ => (),
+                    }
                 }
+
+                // If we haven't found a matching property, then we report an
+                // appropriate type error.
+                match prop2 {
+                    TObjElem::Index(_) => todo!(),
+                    TObjElem::Prop(TProp { name, .. }) => {
+                        let name = match name {
+                            TPropKey::NumberKey(name) => name.to_string(),
+                            TPropKey::StringKey(name) => name.to_string(),
+                        };
+                        return Err(Errors::InferenceError(format!(
+                            "'{name}' is missing in {}",
+                            a_t.as_string(arena),
+                        )));
+                    }
+                };
             }
             Ok(())
         }
@@ -274,7 +321,16 @@ fn instantiate_func(arena: &mut Arena<Type>, func: &Function) -> Function {
                 let props: Vec<_> = object
                     .props
                     .iter()
-                    .map(|(name, tp)| (name.clone(), instrec(arena, *tp, mappings)))
+                    .map(|prop| match prop {
+                        TObjElem::Index(index) => {
+                            let t = instrec(arena, index.t, mappings);
+                            TObjElem::Index(TIndex { t, ..index.clone() })
+                        }
+                        TObjElem::Prop(prop) => {
+                            let t = instrec(arena, prop.t, mappings);
+                            TObjElem::Prop(TProp { t, ..prop.clone() })
+                        }
+                    })
                     .collect();
                 if props != object.props {
                     new_object_type(arena, &props)

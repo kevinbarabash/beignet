@@ -15,7 +15,7 @@ pub enum PatternKind {
     Ident(BindingIdent),
     Rest(RestPat),
     Object(ObjectPat),
-    Array(ArrayPat),
+    Tuple(TuplePat),
     Lit(LitPat),
     Is(IsPat),
     Wildcard,
@@ -57,14 +57,14 @@ pub struct RestPat {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ArrayPat {
+pub struct TuplePat {
     // The elements are optional to support sparse arrays.
-    pub elems: Vec<Option<ArrayPatElem>>,
+    pub elems: Vec<Option<TuplePatElem>>,
     pub optional: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ArrayPatElem {
+pub struct TuplePatElem {
     // TODO: add .span property
     pub pattern: Pattern,
     pub init: Option<Box<Expr>>,
@@ -117,7 +117,7 @@ pub fn is_refutable(pat: &Pattern) -> bool {
             ObjectPatProp::Shorthand(_) => false, // corresponds to {x} or {x = 5}
             ObjectPatProp::Rest(RestPat { arg, .. }) => is_refutable(arg),
         }),
-        PatternKind::Array(ArrayPat { elems, .. }) => {
+        PatternKind::Tuple(TuplePat { elems, .. }) => {
             elems.iter().any(|elem| {
                 match elem {
                     Some(elem) => is_refutable(&elem.pattern),
@@ -275,8 +275,8 @@ mod tests {
 
     #[test]
     fn array_with_all_irrefutable_elements_is_irrefutable() {
-        let kind = PatternKind::Array(ArrayPat {
-            elems: vec![Some(ArrayPatElem {
+        let kind = PatternKind::Tuple(TuplePat {
+            elems: vec![Some(TuplePatElem {
                 pattern: ident_pattern("foo"),
                 init: None,
             })],
@@ -293,13 +293,13 @@ mod tests {
 
     #[test]
     fn array_with_one_refutable_prop_is_refutable() {
-        let kind = PatternKind::Array(ArrayPat {
+        let kind = PatternKind::Tuple(TuplePat {
             elems: vec![
-                Some(ArrayPatElem {
+                Some(TuplePatElem {
                     pattern: ident_pattern("foo"),
                     init: None,
                 }),
-                Some(ArrayPatElem {
+                Some(TuplePatElem {
                     pattern: num_lit_pat("5"),
                     init: None,
                 }),
