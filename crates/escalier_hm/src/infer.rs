@@ -181,7 +181,14 @@ pub fn infer_expression<'a>(
                                 TPropKey::NumberKey(key) => key,
                             };
                             if key == name {
-                                return Ok(prop.t);
+                                let prop_t = match prop.optional {
+                                    true => {
+                                        let undefined = new_constructor(arena, "undefined", &[]);
+                                        new_union_type(arena, &[prop.t, undefined])
+                                    }
+                                    false => prop.t,
+                                };
+                                return Ok(prop_t);
                             }
                         }
                     }
@@ -337,8 +344,8 @@ pub fn infer_block(
     Ok(result_t)
 }
 
-pub fn infer_type_ann<'a>(
-    arena: &'a mut Arena<Type>,
+pub fn infer_type_ann(
+    arena: &mut Arena<Type>,
     type_ann: &mut TypeAnn,
     _ctx: &mut Context,
 ) -> Result<Index, Errors> {
@@ -390,8 +397,8 @@ pub fn infer_type_ann<'a>(
                         props.push(types::TObjElem::Prop(types::TProp {
                             name: TPropKey::StringKey(prop.name.to_owned()),
                             t: infer_type_ann(arena, &mut prop.type_ann, _ctx)?,
-                            mutable: false,
-                            optional: false,
+                            mutable: prop.mutable,
+                            optional: prop.optional,
                         }));
                     }
                 }
@@ -464,79 +471,184 @@ pub fn infer_statement<'a>(
             declare,
             ..
         }) => {
-            // TODO: handle all patterns
-            if let PatternKind::Ident(BindingIdent {
-                name, mutable: _, ..
-            }) = &pattern.kind
-            {
-                match (declare, init, type_ann) {
-                    (false, Some(init), type_ann) => {
-                        let init_idx = if *rec {
-                            let mut new_ctx = ctx.clone();
-                            let new_idx = new_var_type(arena);
-                            new_ctx.env.insert(name.clone(), new_idx);
-                            new_ctx.non_generic.insert(new_idx);
+            let (pat_bindings, pat_type) = infer_pattern(arena, pattern, ctx)?;
 
-                            let init_idx = infer_expression(arena, init.as_mut(), &mut new_ctx)?;
-                            unify(arena, new_idx, init_idx)?;
+            match (declare, init, type_ann) {
+                (false, Some(init), type_ann) => {
+                    let init_idx = if *rec {
+                        let mut new_ctx = ctx.clone();
+
+                        // let new_idx = new_var_type(arena);
+                        for (name, binding) in &pat_bindings {
+                            new_ctx.env.insert(name.clone(), binding.t);
+                            new_ctx.non_generic.insert(binding.t);
+                        }
+
+                        infer_expression(arena, init.as_mut(), &mut new_ctx)?
+                    } else {
+                        infer_expression(arena, init.as_mut(), ctx)?
+                    };
+
+                    let init_type = arena.get(init_idx).unwrap().clone();
+                    let init_idx = match &init_type.kind {
+                        TypeKind::Function(func) if top_level => generalize_func(arena, func),
+                        _ => init_idx,
+                    };
+                    eprintln!("init_idx = {}", arena[init_idx].as_string(arena));
+
+                    let idx = match type_ann {
+                        Some(type_ann) => {
+                            let type_ann_idx = infer_type_ann(arena, type_ann, ctx)?;
+
+                            // The initializer must conform to the type annotation's
+                            // inferred type.
+                            unify(arena, init_idx, type_ann_idx)?;
+                            // Results in bindings introduced by the LHS pattern
+                            // having their types inferred.
+                            // It's okay for pat_type to be the super type here
+                            // because all initializers it introduces are type
+                            // variables.  It also prevents patterns from including
+                            // variables that don't exist in the type annotation.
+                            unify(arena, type_ann_idx, pat_type)?;
+
+                            type_ann_idx
+                        }
+                        None => {
+                            // Results in bindings introduced by the LHS pattern
+                            // having their types inferred.
+                            // It's okay for pat_type to be the super type here
+                            // because all initializers it introduces are type
+                            // variables.  It also prevents patterns from including
+                            // variables that don't exist in the initializer.
+                            unify(arena, init_idx, pat_type)?;
 
                             init_idx
-                        } else {
-                            infer_expression(arena, init.as_mut(), ctx)?
-                        };
+                        }
+                    };
 
-                        let init_type = arena.get(init_idx).unwrap().clone();
-                        let init_idx = match &init_type.kind {
-                            TypeKind::Function(func) if top_level => generalize_func(arena, func),
-                            _ => init_idx,
-                        };
-
-                        let idx = match type_ann {
-                            Some(type_ann) => {
-                                let type_ann_idx = infer_type_ann(arena, type_ann, ctx)?;
-
-                                // `init_idx` must be a subtype of `type_ann_idx`
-                                unify(arena, init_idx, type_ann_idx)?;
-
-                                type_ann_idx
-                            }
-                            None => init_idx,
-                        };
-
-                        ctx.env.insert(name.clone(), idx);
-                        pattern.inferred_type = Some(idx);
-
-                        idx // TODO: Should this be unit?
+                    for (name, binding) in &pat_bindings {
+                        eprintln!(
+                            "inserting binding for {name}, {}",
+                            arena[binding.t].as_string(arena)
+                        );
+                        ctx.env.insert(name.clone(), binding.t);
                     }
-                    (false, None, _) => {
-                        return Err(Errors::InferenceError(
-                            "Variable declarations not using `declare` must have an initializer"
-                                .to_string(),
-                        ))
-                    }
-                    (true, None, Some(type_ann)) => {
-                        let idx = infer_type_ann(arena, type_ann, ctx)?;
-                        ctx.env.insert(name.clone(), idx);
-                        idx
-                    }
-                    (true, Some(_), _) => {
-                        return Err(Errors::InferenceError(
-                            "Variable declarations using `declare` cannot have an initializer"
-                                .to_string(),
-                        ))
-                    }
-                    (true, None, None) => {
-                        return Err(Errors::InferenceError(
-                            "Variable declarations using `declare` must have a type annotation"
-                                .to_string(),
-                        ))
-                    }
+
+                    pattern.inferred_type = Some(idx);
+
+                    idx // TODO: Should this be unit?
                 }
-            } else {
-                return Err(Errors::InferenceError(
-                    "Can only declare variables with identifiers".to_string(),
-                ));
+                (false, None, _) => {
+                    return Err(Errors::InferenceError(
+                        "Variable declarations not using `declare` must have an initializer"
+                            .to_string(),
+                    ))
+                }
+                (true, None, Some(type_ann)) => {
+                    let idx = infer_type_ann(arena, type_ann, ctx)?;
+
+                    unify(arena, idx, pat_type)?;
+
+                    for (name, binding) in &pat_bindings {
+                        eprintln!(
+                            "inserting binding for {name}, {}",
+                            arena[binding.t].as_string(arena)
+                        );
+                        ctx.env.insert(name.clone(), binding.t);
+                    }
+
+                    idx
+                }
+                (true, Some(_), _) => {
+                    return Err(Errors::InferenceError(
+                        "Variable declarations using `declare` cannot have an initializer"
+                            .to_string(),
+                    ))
+                }
+                (true, None, None) => {
+                    return Err(Errors::InferenceError(
+                        "Variable declarations using `declare` must have a type annotation"
+                            .to_string(),
+                    ))
+                }
             }
+
+            // match &pattern.kind {
+            //     PatternKind::Ident(BindingIdent {
+            //         name, mutable: _, ..
+            //     }) => {
+            //         match (declare, init, type_ann) {
+            //             (false, Some(init), type_ann) => {
+            //                 let init_idx = if *rec {
+            //                     let mut new_ctx = ctx.clone();
+            //                     let new_idx = new_var_type(arena);
+            //                     new_ctx.env.insert(name.clone(), new_idx);
+            //                     new_ctx.non_generic.insert(new_idx);
+
+            //                     let init_idx =
+            //                         infer_expression(arena, init.as_mut(), &mut new_ctx)?;
+            //                     unify(arena, new_idx, init_idx)?;
+
+            //                     init_idx
+            //                 } else {
+            //                     infer_expression(arena, init.as_mut(), ctx)?
+            //                 };
+
+            //                 let init_type = arena.get(init_idx).unwrap().clone();
+            //                 let init_idx = match &init_type.kind {
+            //                     TypeKind::Function(func) if top_level => {
+            //                         generalize_func(arena, func)
+            //                     }
+            //                     _ => init_idx,
+            //                 };
+
+            //                 let idx = match type_ann {
+            //                     Some(type_ann) => {
+            //                         let type_ann_idx = infer_type_ann(arena, type_ann, ctx)?;
+
+            //                         // `init_idx` must be a subtype of `type_ann_idx`
+            //                         unify(arena, init_idx, type_ann_idx)?;
+
+            //                         type_ann_idx
+            //                     }
+            //                     None => init_idx,
+            //                 };
+
+            //                 ctx.env.insert(name.clone(), idx);
+            //                 pattern.inferred_type = Some(idx);
+
+            //                 idx // TODO: Should this be unit?
+            //             }
+            //             (false, None, _) => return Err(Errors::InferenceError(
+            //                 "Variable declarations not using `declare` must have an initializer"
+            //                     .to_string(),
+            //             )),
+            //             (true, None, Some(type_ann)) => {
+            //                 let idx = infer_type_ann(arena, type_ann, ctx)?;
+            //                 ctx.env.insert(name.clone(), idx);
+            //                 idx
+            //             }
+            //             (true, Some(_), _) => {
+            //                 return Err(Errors::InferenceError(
+            //                     "Variable declarations using `declare` cannot have an initializer"
+            //                         .to_string(),
+            //                 ))
+            //             }
+            //             (true, None, None) => {
+            //                 return Err(Errors::InferenceError(
+            //                     "Variable declarations using `declare` must have a type annotation"
+            //                         .to_string(),
+            //                 ))
+            //             }
+            //         }
+            //     }
+            //     PatternKind::Rest(_) => todo!(),
+            //     PatternKind::Object(ObjectPat { props, optional: _ }) => {}
+            //     PatternKind::Tuple(_) => todo!(),
+            //     PatternKind::Lit(_) => todo!(),
+            //     PatternKind::Is(_) => todo!(),
+            //     PatternKind::Wildcard => todo!(),
+            // }
         }
         StmtKind::ExprStmt(expr) => infer_expression(arena, expr, ctx)?,
         StmtKind::ReturnStmt(ReturnStmt { arg: expr }) => {

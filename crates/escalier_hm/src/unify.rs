@@ -164,7 +164,22 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
                         (TObjElem::Prop(prop1), TObjElem::Prop(prop2))
                             if prop1.name == prop2.name =>
                         {
-                            unify(arena, prop1.t, prop2.t)?;
+                            // TODO: check the optionality of the props
+                            let p1_t = match prop1.optional {
+                                true => {
+                                    let undefined = new_constructor(arena, "undefined", &[]);
+                                    new_union_type(arena, &[prop1.t, undefined])
+                                }
+                                false => prop1.t,
+                            };
+                            let p2_t = match prop2.optional {
+                                true => {
+                                    let undefined = new_constructor(arena, "undefined", &[]);
+                                    new_union_type(arena, &[prop2.t, undefined])
+                                }
+                                false => prop2.t,
+                            };
+                            unify(arena, p1_t, p2_t)?;
                             continue 'outer;
                         }
                         _ => (),
