@@ -153,7 +153,7 @@ pub fn infer_pattern(
 
                 new_tuple_type(arena, &elem_types)
             }
-            PatternKind::Lit(_) => todo!(),
+            PatternKind::Lit(LitPat { lit }) => new_lit_type(arena, lit),
             PatternKind::Is(IsPat { ident, is_id }) => {
                 let t = match is_id.name.as_str() {
                     "number" => new_constructor(arena, "number", &[]),

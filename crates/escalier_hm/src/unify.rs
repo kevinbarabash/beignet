@@ -2,7 +2,7 @@ use generational_arena::{Arena, Index};
 use itertools::Itertools;
 use std::collections::HashMap;
 
-use crate::ast::Lit;
+use crate::ast::{Bool, Lit, Num, Str};
 use crate::errors::*;
 use crate::types::*;
 use crate::util::*;
@@ -116,6 +116,28 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
             unify(arena, func_a.ret, func_b.ret)?;
             Ok(())
         }
+        (TypeKind::Literal(lit1), TypeKind::Literal(lit2)) => {
+            let equal = match (&lit1, &lit2) {
+                (Lit::Bool(Bool { value: value1, .. }), Lit::Bool(Bool { value: value2, .. })) => {
+                    value1 == value2
+                }
+                (Lit::Num(Num { value: value1, .. }), Lit::Num(Num { value: value2, .. })) => {
+                    value1 == value2
+                }
+                (Lit::Str(Str { value: value1, .. }), Lit::Str(Str { value: value2, .. })) => {
+                    value1 == value2
+                }
+                _ => false,
+            };
+            if !equal {
+                return Err(Errors::InferenceError(format!(
+                    "type mismatch: {} != {}",
+                    a_t.as_string(arena),
+                    b_t.as_string(arena),
+                )));
+            }
+            Ok(())
+        }
         (TypeKind::Literal(Lit::Num(_)), TypeKind::Constructor(Constructor { name, .. }))
             if name == "number" =>
         {
@@ -133,19 +155,21 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
         }
         (TypeKind::Object(object1), TypeKind::Object(object2)) => {
             // object1 must have atleast as the same properties as object2
-            for prop2 in &object2.props {
+            'outer: for prop2 in &object2.props {
                 for prop1 in &object1.props {
                     match (prop1, prop2) {
                         (TObjElem::Prop(prop1), TObjElem::Prop(prop2))
                             if prop1.name == prop2.name =>
                         {
                             unify(arena, prop1.t, prop2.t)?;
-                            return Ok(());
+                            continue 'outer;
                         }
                         _ => (),
                     }
                 }
 
+                // If we haven't found a matching property, then we report an
+                // appropriate type error.
                 match prop2 {
                     TObjElem::Index(_) => todo!(),
                     TObjElem::Prop(TProp { name, .. }) => {

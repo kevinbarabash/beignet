@@ -1292,7 +1292,7 @@ mod tests {
         // TODO: allow trailing `,` when doing pattern matching
         let src = r#"
         declare let array: Array<number>;
-        let name = match (array) {
+        let result = match (array) {
             [] -> 0,
             [a] -> a,
             [a, b] -> a + b,
@@ -1302,12 +1302,56 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("name").unwrap();
+        let t = my_ctx.env.get("result").unwrap();
         assert_eq!(
             arena[*t].as_string(&arena),
             // TODO: update unions to merge elements whenever possible
             r#"0 | number | number | Array<number>"#
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_pattern_matching_object() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        // TODO: allow trailing `,` when doing pattern matching
+        // TODO: add support for omitting fields in object patterns
+        let src = r#"
+        declare let action: {type: "insert", key: string, value: string} | {type: "delete", key: string};
+        let key = match (action) {
+            {type: "insert", key, value} -> key,
+            {type: "delete", key} -> key
+        };
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("key").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"string | string"#);
+
+        Ok(())
+    }
+
+    // TODO: add support for assigning to patterns
+    #[test]
+    #[ignore]
+    fn test_object_pattern_assignment() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        // TODO: allow trailing `,` when doing pattern matching
+        let src = r#"
+        let {x, y} = {x: 5, y: 10};
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("x").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"5"#);
+
+        let t = my_ctx.env.get("y").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"10"#);
 
         Ok(())
     }
