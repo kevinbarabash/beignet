@@ -31,8 +31,8 @@ Ok(
                                 },
                             },
                             span: 4..28,
-                            kind: Array(
-                                ArrayPat {
+                            kind: Tuple(
+                                TuplePat {
                                     elems: [
                                         Some(
                                             ArrayPatElem {
@@ -98,8 +98,8 @@ Ok(
                                                                     },
                                                                 },
                                                                 span: 13..27,
-                                                                kind: Array(
-                                                                    ArrayPat {
+                                                                kind: Tuple(
+                                                                    TuplePat {
                                                                         elems: [
                                                                             Some(
                                                                                 ArrayPatElem {

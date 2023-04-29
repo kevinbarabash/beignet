@@ -322,8 +322,8 @@ Ok(
                                                                                             },
                                                                                         },
                                                                                         span: 109..133,
-                                                                                        kind: Array(
-                                                                                            ArrayPat {
+                                                                                        kind: Tuple(
+                                                                                            TuplePat {
                                                                                                 elems: [
                                                                                                     Some(
                                                                                                         ArrayPatElem {

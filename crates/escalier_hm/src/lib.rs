@@ -1212,4 +1212,76 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_pattern_matching_is_patterns() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        // TODO: allow trailing `,` when doing pattern matching
+        let src = r#"
+        declare let expr: number | string;
+        let name = match (expr) {
+            x is number -> x + 1,
+            x is string -> "bar"
+        };
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("name").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"number | "bar""#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_pattern_matching_does_not_refine_expr() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        // TODO: allow trailing `,` when doing pattern matching
+        let src = r#"
+        declare let expr: number | string;
+        let name = match (expr) {
+            x is number -> expr + 1,
+            x is string -> "bar"
+        };
+        "#;
+        let mut program = parse(src).unwrap();
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "type mismatch: string != number".to_string()
+            ))
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_pattern_not_a_subtype_of_expr() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        // TODO: allow trailing `,` when doing pattern matching
+        let src = r#"
+        declare let expr: number | string;
+        let name = match (expr) {
+            x is number -> "foo",
+            x is string -> "bar",
+            x is boolean -> "baz"
+        };
+        "#;
+        let mut program = parse(src).unwrap();
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "type mismatch: unify(boolean, number | string) failed".to_string()
+            ))
+        );
+
+        Ok(())
+    }
 }

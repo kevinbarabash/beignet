@@ -158,7 +158,7 @@ pub fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, Par
                 })
                 .collect::<Result<Vec<_>, ParseError>>()?;
 
-            PatternKind::Array(ArrayPat {
+            PatternKind::Tuple(TuplePat {
                 elems,
                 optional: false,
             })
@@ -227,7 +227,7 @@ pub fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pa
                 })
                 .collect::<Result<Vec<_>, ParseError>>()?;
 
-            PatternKind::Array(ArrayPat {
+            PatternKind::Tuple(TuplePat {
                 elems,
                 optional: false,
             })

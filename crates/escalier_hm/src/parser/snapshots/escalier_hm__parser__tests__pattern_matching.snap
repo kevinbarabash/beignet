@@ -400,8 +400,8 @@ Ok(
                                                         },
                                                     },
                                                     span: 107..122,
-                                                    kind: Array(
-                                                        ArrayPat {
+                                                    kind: Tuple(
+                                                        TuplePat {
                                                             elems: [
                                                                 Some(
                                                                     ArrayPatElem {

@@ -80,8 +80,8 @@ Ok(
                                                         },
                                                     },
                                                     span: 11..30,
-                                                    kind: Array(
-                                                        ArrayPat {
+                                                    kind: Tuple(
+                                                        TuplePat {
                                                             elems: [
                                                                 Some(
                                                                     ArrayPatElem {
