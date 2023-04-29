@@ -260,6 +260,32 @@ mod tests {
     }
 
     #[test]
+    fn test_skk() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let S = (f) => (g) => (x) => f(x)(g(x));
+        let K = (x) => (y) => x;
+        let I = S(K)(K);
+        "#;
+        let mut program = parse(src).unwrap();
+
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("S").unwrap();
+        assert_eq!(
+            arena[*t].as_string(&arena),
+            r#"<A, B, C>((A) => (B) => C) => ((A) => B) => (A) => C"#
+        );
+        let t = my_ctx.env.get("K").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"<A, B>(A) => (B) => A"#);
+        let t = my_ctx.env.get("I").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"<A>(A) => A"#);
+
+        Ok(())
+    }
+
+    #[test]
     fn test_composition_with_statements() -> Result<(), Errors> {
         let (mut arena, mut my_ctx) = test_env();
 

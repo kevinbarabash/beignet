@@ -192,6 +192,10 @@ fn infer_skk() {
     let I = S(K)(K);
     "#;
     let (_, checker) = infer_prog(src);
+    let result = format!("{}", checker.lookup_value("S").unwrap());
+    insta::assert_snapshot!(result, @"<A, B, C>(f: (A) => (B) => C) => (g: (A) => B) => (x: A) => C");
+    let result = format!("{}", checker.lookup_value("K").unwrap());
+    insta::assert_snapshot!(result, @"<A, B>(x: A) => (y: B) => A");
     let result = format!("{}", checker.lookup_value("I").unwrap());
     insta::assert_snapshot!(result, @"<A>(x: A) => A");
 }

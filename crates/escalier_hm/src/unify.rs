@@ -99,6 +99,9 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
             Ok(())
         }
         (TypeKind::Function(func_a), TypeKind::Function(func_b)) => {
+            // Is this the right place to instantiate the function types?
+            let func_a = instantiate_func(arena, func_a);
+            let func_b = instantiate_func(arena, func_b);
             if func_a.params.len() > func_b.params.len() {
                 return Err(Errors::InferenceError(format!(
                     "{} is not a subtype of {} since it requires more params",
