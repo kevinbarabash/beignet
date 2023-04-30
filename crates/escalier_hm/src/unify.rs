@@ -65,8 +65,15 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
                 )));
             }
 
-            for (p, q) in tuple1.types.iter().zip(tuple2.types.iter()) {
-                unify(arena, *p, *q)?;
+            for (i, (p, q)) in tuple1.types.iter().zip(tuple2.types.iter()).enumerate() {
+                let q_t = arena[*q].clone();
+                match q_t.kind {
+                    TypeKind::Rest(_) => {
+                        let rest_p = new_tuple_type(arena, &tuple1.types[i..]);
+                        unify(arena, rest_p, *q)?;
+                    }
+                    _ => unify(arena, *p, *q)?,
+                }
             }
             Ok(())
         }
@@ -80,12 +87,24 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
                     TypeKind::Constructor(Constructor { name, types }) if name == "Array" => {
                         unify(arena, types[0], q)?;
                     }
+                    TypeKind::Rest(_) => {
+                        unify(arena, *p, b)?;
+                    }
                     _ => unify(arena, *p, q)?,
                 }
             }
             Ok(())
         }
-
+        (TypeKind::Rest(rest), TypeKind::Constructor(array))
+            if (array.name == "Array" || array.name == "@@tuple") =>
+        {
+            unify(arena, rest.arg, b)
+        }
+        (TypeKind::Constructor(array), TypeKind::Rest(rest))
+            if (array.name == "Array" || array.name == "@@tuple") =>
+        {
+            unify(arena, a, rest.arg)
+        }
         (TypeKind::Constructor(con_a), TypeKind::Constructor(con_b)) => {
             // TODO: support type constructors with optional and default type params
             if con_a.name != con_b.name || con_a.types.len() != con_b.types.len() {
@@ -320,7 +339,11 @@ pub fn unify_call(
             )));
         }
         TypeKind::Object(_) => {
+            // TODO: check if the object has a callbale signature
             return Err(Errors::InferenceError("object is not callable".to_string()));
+        }
+        TypeKind::Rest(_) => {
+            return Err(Errors::InferenceError("rest is not callable".to_string()));
         }
         TypeKind::Function(func) => {
             let func = if func.type_params.is_some() {
@@ -403,6 +426,14 @@ fn instantiate_func(arena: &mut Arena<Type>, func: &Function) -> Function {
                     .collect();
                 if props != object.props {
                     new_object_type(arena, &props)
+                } else {
+                    p
+                }
+            }
+            TypeKind::Rest(rest) => {
+                let t = instrec(arena, rest.arg, mappings);
+                if t != rest.arg {
+                    new_rest_type(arena, t)
                 } else {
                     p
                 }

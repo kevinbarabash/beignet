@@ -639,6 +639,10 @@ pub fn generalize_func(arena: &'_ mut Arena<Type>, func: &Function) -> Index {
                     .collect();
                 new_object_type(arena, &fields)
             }
+            TypeKind::Rest(rest) => {
+                let arg = generalize_rec(arena, rest.arg, mappings);
+                new_rest_type(arena, arg)
+            }
             TypeKind::Function(func) => {
                 let params = generalize_rec_many(arena, &func.params, mappings);
                 let ret = generalize_rec(arena, func.ret, mappings);
