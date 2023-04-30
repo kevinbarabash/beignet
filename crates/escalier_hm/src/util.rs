@@ -26,6 +26,7 @@ pub fn occurs_in_type(a: &mut Arena<Type>, v: Index, type2: Index) -> bool {
             TObjElem::Index(index) => occurs_in_type(a, v, index.t),
             TObjElem::Prop(prop) => occurs_in_type(a, v, prop.t),
         }),
+        TypeKind::Rest(Rest { arg }) => occurs_in_type(a, v, arg),
         TypeKind::Function(Function {
             params,
             ret,

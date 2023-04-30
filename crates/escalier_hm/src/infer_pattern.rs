@@ -45,29 +45,7 @@ pub fn infer_pattern(
                 t
             }
             PatternKind::Rest(RestPat { arg }) => {
-                let arg_type = match &arg.kind {
-                    PatternKind::Ident(BindingIdent { name, mutable, .. }) => {
-                        let t = new_var_type(arena);
-                        if assump
-                            .insert(
-                                name.to_owned(),
-                                Binding {
-                                    mutable: *mutable,
-                                    // NOTE: We set the binding's type to Array<T>
-                                    // instead of T.
-                                    t: new_constructor(arena, "Array", &[t]),
-                                },
-                            )
-                            .is_some()
-                        {
-                            return Err(Errors::InferenceError(
-                                "Duplicate identifier in pattern".to_string(),
-                            ));
-                        }
-                        t
-                    }
-                    _ => infer_pattern_rec(arena, arg.as_mut(), assump, ctx)?,
-                };
+                let arg_type = infer_pattern_rec(arena, arg.as_mut(), assump, ctx)?;
                 new_rest_type(arena, arg_type)
             }
             PatternKind::Object(ObjectPat { props, .. }) => {

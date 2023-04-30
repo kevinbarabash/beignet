@@ -1482,23 +1482,39 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
-    fn test_tuple_destrcuturing_assignment_with_rest() -> Result<(), Errors> {
+    fn test_tuple_destructuring_assignment_with_rest() -> Result<(), Errors> {
         let (mut arena, mut my_ctx) = test_env();
 
-        // TODO: handle destructuring of arrays with rest as well
         let src = r#"
         declare let tuple: [number, string, boolean];
-        let [a, ...rest] = tuple;
+        let [a, ...tuple_rest] = tuple;
         "#;
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
         let t = my_ctx.env.get("a").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"number"#);
-
-        let t = my_ctx.env.get("rest").unwrap();
+        let t = my_ctx.env.get("tuple_rest").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"[string, boolean]"#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_array_destructuring_assignment_with_rest() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        declare let array: Array<string>;
+        let [a, ...array_rest] = array;
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("a").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"string | undefined"#);
+        let t = my_ctx.env.get("array_rest").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"Array<string>"#);
 
         Ok(())
     }

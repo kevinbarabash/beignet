@@ -98,6 +98,13 @@ pub struct Object {
     pub props: Vec<TObjElem>,
 }
 
+// NOTE: this is only used for the rest element in array patterns since we
+// treat `{a, ...x}` as `{a} & x` where `x` is a type variable.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Rest {
+    pub arg: Index,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TypeKind {
     Variable(Variable),
@@ -105,6 +112,7 @@ pub enum TypeKind {
     Literal(Lit),
     Function(Function),
     Object(Object),
+    Rest(Rest),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -193,6 +201,9 @@ impl Type {
                 }
                 format!("{{{}}}", fields.join(", "))
             }
+            TypeKind::Rest(rest) => {
+                format!("...{}", arena[rest.arg].as_string(arena))
+            }
             TypeKind::Function(func) => {
                 let type_params = match &func.type_params {
                     Some(type_params) if !type_params.is_empty() => {
@@ -279,7 +290,9 @@ pub fn new_constructor(arena: &mut Arena<Type>, name: &str, types: &[Index]) -> 
 }
 
 pub fn new_rest_type(arena: &mut Arena<Type>, t: Index) -> Index {
-    new_constructor(arena, "Array", &[t])
+    arena.insert(Type {
+        kind: TypeKind::Rest(Rest { arg: t }),
+    })
 }
 
 pub fn new_lit_type(arena: &mut Arena<Type>, lit: &Lit) -> Index {

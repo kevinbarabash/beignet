@@ -91,6 +91,14 @@ pub fn fresh(arena: &mut Arena<Type>, t: Index, ctx: &Context) -> Index {
                     p
                 }
             }
+            TypeKind::Rest(rest) => {
+                let arg = freshrec(arena, rest.arg, mappings, ctx);
+                if arg != rest.arg {
+                    new_rest_type(arena, arg)
+                } else {
+                    p
+                }
+            }
             TypeKind::Function(func) => {
                 let params = freshrec_many(arena, &func.params, mappings, ctx);
                 let ret = freshrec(arena, func.ret, mappings, ctx);
