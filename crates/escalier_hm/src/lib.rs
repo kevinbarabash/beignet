@@ -83,8 +83,7 @@ mod tests {
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
         let t = my_ctx.env.get("fact").unwrap();
 
-        // TODO: simplify union types
-        assert_eq!(arena[*t].as_string(&arena), r#"(number) => 1 | number"#);
+        assert_eq!(arena[*t].as_string(&arena), r#"(number) => number"#);
         Ok(())
     }
 
@@ -1060,7 +1059,7 @@ mod tests {
         assert_eq!(
             result,
             Err(Errors::InferenceError(
-                "type mismatch: unify(5, Promise<t1>) failed".to_string()
+                "type mismatch: unify(5, Promise<t2>) failed".to_string()
             ))
         );
 
@@ -1360,24 +1359,163 @@ mod tests {
         Ok(())
     }
 
-    // TODO: add support for assigning to patterns
     #[test]
-    #[ignore]
-    fn test_object_pattern_assignment() -> Result<(), Errors> {
+    fn member_access_on_union() -> Result<(), Errors> {
         let (mut arena, mut my_ctx) = test_env();
 
         // TODO: allow trailing `,` when doing pattern matching
+        // TODO: add support for omitting fields in object patterns
         let src = r#"
-        let {x, y} = {x: 5, y: 10};
+        declare let obj: {a: number, b: string} | {b: boolean};
+        let b = obj.b;
         "#;
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("x").unwrap();
-        assert_eq!(arena[*t].as_string(&arena), r#"5"#);
+        let t = my_ctx.env.get("b").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"string | boolean"#);
 
-        let t = my_ctx.env.get("y").unwrap();
-        assert_eq!(arena[*t].as_string(&arena), r#"10"#);
+        Ok(())
+    }
+
+    #[test]
+    fn member_access_optional_property() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        declare let obj: {a?: number, b: string};
+        let a = obj.a;
+        let b = obj.b;
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("a").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"number | undefined"#);
+        let t = my_ctx.env.get("b").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"string"#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_object_destructuring_assignment() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        // TODO: add support for omitting fields in object patterns
+        let src = r#"
+        declare let obj: {a?: number, b: string, c: boolean};
+        let {a, b, c} = obj;
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("a").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"number | undefined"#);
+
+        let t = my_ctx.env.get("b").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"string"#);
+
+        let t = my_ctx.env.get("c").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"boolean"#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_object_destructuring_assignment_with_rest() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        declare let obj: {a?: number, b: string, c: boolean};
+        let {a, ...rest} = obj;
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("a").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"number | undefined"#);
+        let t = my_ctx.env.get("rest").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"{b: string, c: boolean}"#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_object_nested_destructuring_assignment() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        declare let obj: {a: {b: {c: string}}};
+        let {a: {b: {c}}} = obj;
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("c").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"string"#);
+
+        assert_eq!(my_ctx.env.get("a"), None);
+        assert_eq!(my_ctx.env.get("b"), None);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_tuple_destrcuturing_assignment() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        declare let tuple: [number, string, boolean];
+        let [a, b, c] = tuple;
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("a").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"number"#);
+
+        let t = my_ctx.env.get("b").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"string"#);
+
+        Ok(())
+    }
+
+    #[test]
+    #[ignore]
+    fn test_tuple_destrcuturing_assignment_with_rest() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        // TODO: handle destructuring of arrays with rest as well
+        let src = r#"
+        declare let tuple: [number, string, boolean];
+        let [a, ...rest] = tuple;
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("a").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"number"#);
+
+        let t = my_ctx.env.get("rest").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"[string, boolean]"#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_tuple_nested_destrcuturing_assignment() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        declare let tuple: [number, [string, [boolean]]];
+        let [_, [_, [c]]] = tuple;
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("c").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"boolean"#);
 
         Ok(())
     }

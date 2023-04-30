@@ -435,6 +435,7 @@ dependencies = [
 name = "escalier_hm"
 version = "0.1.0"
 dependencies = [
+ "defaultmap",
  "generational-arena",
  "im",
  "insta",

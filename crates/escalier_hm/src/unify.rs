@@ -1,5 +1,7 @@
+use defaultmap::*;
 use generational_arena::{Arena, Index};
 use itertools::Itertools;
+use std::collections::BTreeSet;
 use std::collections::HashMap;
 
 use crate::ast::{Bool, Lit, Num, Str};
@@ -164,7 +166,21 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
                         (TObjElem::Prop(prop1), TObjElem::Prop(prop2))
                             if prop1.name == prop2.name =>
                         {
-                            unify(arena, prop1.t, prop2.t)?;
+                            let p1_t = match prop1.optional {
+                                true => {
+                                    let undefined = new_constructor(arena, "undefined", &[]);
+                                    new_union_type(arena, &[prop1.t, undefined])
+                                }
+                                false => prop1.t,
+                            };
+                            let p2_t = match prop2.optional {
+                                true => {
+                                    let undefined = new_constructor(arena, "undefined", &[]);
+                                    new_union_type(arena, &[prop2.t, undefined])
+                                }
+                                false => prop2.t,
+                            };
+                            unify(arena, p1_t, p2_t)?;
                             continue 'outer;
                         }
                         _ => (),
@@ -188,6 +204,56 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
                 };
             }
             Ok(())
+        }
+        (TypeKind::Object(object1), TypeKind::Constructor(intersection))
+            if intersection.name == "@@intersection" =>
+        {
+            let obj_types: Vec<_> = intersection
+                .types
+                .iter()
+                .filter(|t| matches!(&arena[**t].kind, TypeKind::Object(_)))
+                .cloned()
+                .collect();
+            let rest_types: Vec<_> = intersection
+                .types
+                .iter()
+                .filter(|t| matches!(&&arena[**t].kind, TypeKind::Variable(_)))
+                .cloned()
+                .collect();
+            // TODO: check for other variants, if there are we should error
+
+            let obj_type = simplify_intersection(arena, &obj_types);
+
+            match rest_types.len() {
+                0 => unify(arena, t1, obj_type),
+                1 => {
+                    let all_obj_elems = match &arena[obj_type].kind {
+                        TypeKind::Object(obj) => obj.props.to_owned(),
+                        _ => vec![],
+                    };
+
+                    let (obj_elems, rest_elems): (Vec<_>, Vec<_>) =
+                        object1.props.iter().cloned().partition(|e| {
+                            all_obj_elems.iter().any(|oe| match (oe, e) {
+                                // What to do about Call signatures?
+                                // (TObjElem::Call(_), TObjElem::Call(_)) => todo!(),
+                                (TObjElem::Prop(op), TObjElem::Prop(p)) => op.name == p.name,
+                                _ => false,
+                            })
+                        });
+
+                    let new_obj_type = new_object_type(arena, &obj_elems);
+                    unify(arena, new_obj_type, obj_type)?;
+
+                    let new_rest_type = new_object_type(arena, &rest_elems);
+                    unify(arena, new_rest_type, rest_types[0])?;
+
+                    Ok(())
+                }
+                _ => Err(Errors::InferenceError(
+                    "Inference is undecidable".to_string(),
+                )),
+            }
         }
         _ => Err(Errors::InferenceError(format!(
             "type mismatch: unify({}, {}) failed",
@@ -384,5 +450,94 @@ fn instantiate_func(arena: &mut Arena<Type>, func: &Function) -> Function {
         params: params.to_vec(),
         ret,
         type_params: None,
+    }
+}
+
+// TODO: make this recursive
+// TODO: handle optional properties correctly
+// Maybe we can have a function that will canonicalize objects by converting
+// `x: T | undefined` to `x?: T`
+pub fn simplify_intersection(arena: &mut Arena<Type>, in_types: &[Index]) -> Index {
+    let obj_types: Vec<_> = in_types
+        .iter()
+        .filter_map(|t| match &arena[*t].kind {
+            TypeKind::Object(elems) => Some(elems),
+            _ => None,
+        })
+        .collect();
+
+    // The use of HashSet<Type> here is to avoid duplicate types
+    let mut props_map: DefaultHashMap<String, BTreeSet<Index>> = defaulthashmap!();
+    for obj in obj_types {
+        for elem in &obj.props {
+            match elem {
+                // What do we do with Call and Index signatures
+                // TObjElem::Call(_) => todo!(),
+                // TObjElem::Constructor(_) => todo!(),
+                // TObjElem::Method(_) => todo!(),
+                // TObjElem::Getter(_) => todo!(),
+                // TObjElem::Setter(_) => todo!(),
+                TObjElem::Index(_) => todo!(),
+                TObjElem::Prop(prop) => {
+                    let key = match &prop.name {
+                        TPropKey::StringKey(key) => key.to_owned(),
+                        TPropKey::NumberKey(key) => key.to_owned(),
+                    };
+                    props_map[key].insert(prop.t);
+                }
+            }
+        }
+    }
+
+    let mut elems: Vec<TObjElem> = props_map
+        .iter()
+        .map(|(name, types)| {
+            let types: Vec<_> = types.iter().cloned().collect();
+            let t: Index = if types.len() == 1 {
+                types[0]
+            } else {
+                new_intersection_type(arena, &types)
+                // checker.from_type_kind(TypeKind::Intersection(types))
+            };
+            TObjElem::Prop(TProp {
+                name: TPropKey::StringKey(name.to_owned()),
+                // TODO: determine this field from all of the TProps with
+                // the same name.  This should only be optional if all of
+                // the TProps with the current name are optional.
+                optional: false,
+                mutable: false,
+                t,
+            })
+        })
+        .collect();
+    // How do we sort call and index signatures?
+    elems.sort_by_key(|elem| match elem {
+        // TObjElem::Call(_) => todo!(),
+        // TObjElem::Constructor(_) => todo!(),
+        // TObjElem::Method(_) => todo!(),
+        // TObjElem::Getter(_) => todo!(),
+        // TObjElem::Setter(_) => todo!(),
+        TObjElem::Index(_) => todo!(),
+        TObjElem::Prop(prop) => prop.name.clone(),
+    }); // ensure a stable order
+
+    let mut not_obj_types: Vec<_> = in_types
+        .iter()
+        .filter(|t| !matches!(&arena[**t].kind, TypeKind::Object(_)))
+        .cloned()
+        .collect();
+
+    let mut out_types = vec![];
+    out_types.append(&mut not_obj_types);
+    if !elems.is_empty() {
+        out_types.push(new_object_type(arena, &elems));
+    }
+    // TODO: figure out a consistent way to sort types
+    // out_types.sort_by_key(|t| t.id); // ensure a stable order
+
+    if out_types.len() == 1 {
+        out_types[0]
+    } else {
+        new_intersection_type(arena, &out_types)
     }
 }
