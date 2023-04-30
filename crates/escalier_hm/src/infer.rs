@@ -75,7 +75,9 @@ pub fn infer_expression<'a>(
             new_object_type(arena, &prop_types)
         }
         ExprKind::App(App {
-            lam: func, args, ..
+            lam: func,
+            args,
+            type_args,
         }) => {
             let func_type = infer_expression(arena, func, ctx)?;
 
@@ -87,7 +89,17 @@ pub fn infer_expression<'a>(
                 })
                 .collect::<Result<Vec<_>, _>>()?;
 
-            unify_call(arena, &arg_types, func_type)?
+            match type_args {
+                Some(type_args) => {
+                    let type_args = type_args
+                        .iter_mut()
+                        .map(|type_arg| infer_type_ann(arena, type_arg, ctx))
+                        .collect::<Result<Vec<_>, _>>()?;
+
+                    unify_call(arena, &arg_types, Some(&type_args), func_type)?
+                }
+                None => unify_call(arena, &arg_types, None, func_type)?,
+            }
         }
         // TODO: Add support for explicit type parameters
         ExprKind::Lambda(Lambda {
@@ -703,17 +715,5 @@ fn get_prop(arena: &mut Arena<Type>, obj_idx: Index, name: &str) -> Result<Index
         Err(Errors::InferenceError(
             "Can't access property on non-object type".to_string(),
         ))
-    }
-}
-
-fn is_object<'a>(arena: &'a Arena<Type>, t: Index) -> Result<bool, Errors> {
-    match arena.get(t) {
-        Some(t) => match t.kind {
-            TypeKind::Object(_) => Ok(true),
-            _ => Ok(false),
-        },
-        None => Err(Errors::InferenceError(
-            "Can't find index in arena".to_string(),
-        )),
     }
 }

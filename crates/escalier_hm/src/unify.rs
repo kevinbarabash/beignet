@@ -133,8 +133,8 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
         }
         (TypeKind::Function(func_a), TypeKind::Function(func_b)) => {
             // Is this the right place to instantiate the function types?
-            let func_a = instantiate_func(arena, func_a);
-            let func_b = instantiate_func(arena, func_b);
+            let func_a = instantiate_func(arena, func_a, None)?;
+            let func_b = instantiate_func(arena, func_b, None)?;
             if func_a.params.len() > func_b.params.len() {
                 return Err(Errors::InferenceError(format!(
                     "{} is not a subtype of {} since it requires more params",
@@ -298,6 +298,7 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
 pub fn unify_call(
     arena: &mut Arena<Type>,
     arg_types: &[Index],
+    type_args: Option<&[Index]>,
     t2: Index,
 ) -> Result<Index, Errors> {
     let ret_type = new_var_type(arena);
@@ -316,7 +317,7 @@ pub fn unify_call(
                 "@@union" => {
                     let mut ret_types = vec![];
                     for t in types.iter() {
-                        let ret_type = unify_call(arena, arg_types, *t)?;
+                        let ret_type = unify_call(arena, arg_types, type_args, *t)?;
                         ret_types.push(ret_type);
                     }
 
@@ -329,7 +330,7 @@ pub fn unify_call(
                     for t in types.iter() {
                         // TODO: if there are multiple overloads that unify, pick the
                         // best one.
-                        let result = unify_call(arena, arg_types, *t);
+                        let result = unify_call(arena, arg_types, type_args, *t);
                         match result {
                             Ok(ret_type) => return Ok(ret_type),
                             Err(_) => continue,
@@ -359,7 +360,7 @@ pub fn unify_call(
         }
         TypeKind::Function(func) => {
             let func = if func.type_params.is_some() {
-                instantiate_func(arena, &func)
+                instantiate_func(arena, &func, type_args)?
             } else {
                 func
             };
@@ -394,13 +395,32 @@ fn bind(arena: &mut Arena<Type>, a: Index, b: Index) -> Result<(), Errors> {
     Ok(())
 }
 
-fn instantiate_func(arena: &mut Arena<Type>, func: &Function) -> Function {
+fn instantiate_func(
+    arena: &mut Arena<Type>,
+    func: &Function,
+    type_args: Option<&[Index]>,
+) -> Result<Function, Errors> {
     // A mapping of TypeVariables to TypeVariables
     let mut mappings: HashMap<String, Index> = HashMap::default();
 
     if let Some(type_params) = &func.type_params {
-        for tp in type_params {
-            mappings.insert(tp.name.to_owned(), new_var_type(arena));
+        match type_args {
+            Some(type_args) => {
+                if type_args.len() != type_params.len() {
+                    return Err(Errors::InferenceError(
+                        "wrong number of type args".to_string(),
+                    ));
+                }
+
+                for (tp, ta) in type_params.iter().zip(type_args.iter()) {
+                    mappings.insert(tp.name.to_owned(), *ta);
+                }
+            }
+            None => {
+                for tp in type_params {
+                    mappings.insert(tp.name.to_owned(), new_var_type(arena));
+                }
+            }
         }
     }
 
@@ -489,11 +509,11 @@ fn instantiate_func(arena: &mut Arena<Type>, func: &Function) -> Function {
     let params = instrec_many(arena, &func.params, &mappings);
     let ret = instrec(arena, func.ret, &mappings);
 
-    Function {
+    Ok(Function {
         params: params.to_vec(),
         ret,
         type_params: None,
-    }
+    })
 }
 
 // TODO: make this recursive

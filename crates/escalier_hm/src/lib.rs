@@ -1535,4 +1535,66 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_explicit_type_params() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let identity = (x) => x;
+        let x = identity<number>(5);
+        let y = identity<string>("hello");
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("x").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"number"#);
+        let t = my_ctx.env.get("y").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"string"#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_explicit_type_params_type_error() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let identity = (x) => x;
+        identity<number>("hello");
+        "#;
+        let mut program = parse(src).unwrap();
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "type mismatch: unify(\"hello\", number) failed".to_string()
+            ))
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_explicit_type_params_too_many_type_args() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let identity = (x) => x;
+        identity<number, string>(5);
+        "#;
+        let mut program = parse(src).unwrap();
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "wrong number of type args".to_string()
+            ))
+        );
+
+        Ok(())
+    }
 }
