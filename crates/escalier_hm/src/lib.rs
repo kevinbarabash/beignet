@@ -1485,12 +1485,9 @@ mod tests {
     fn test_tuple_destructuring_assignment_with_rest() -> Result<(), Errors> {
         let (mut arena, mut my_ctx) = test_env();
 
-        // TODO: handle destructuring of arrays with rest as well
         let src = r#"
         declare let tuple: [number, string, boolean];
         let [a, ...tuple_rest] = tuple;
-        // declare let array: Array<string>;
-        // let [b, ...array_rest] = array;
         "#;
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
@@ -1507,7 +1504,6 @@ mod tests {
     fn test_array_destructuring_assignment_with_rest() -> Result<(), Errors> {
         let (mut arena, mut my_ctx) = test_env();
 
-        // TODO: handle destructuring of arrays with rest as well
         let src = r#"
         declare let array: Array<string>;
         let [a, ...array_rest] = array;

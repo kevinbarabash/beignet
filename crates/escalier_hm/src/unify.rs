@@ -95,7 +95,6 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
         (TypeKind::Constructor(array), TypeKind::Constructor(tuple))
             if array.name == "Array" && tuple.name == "@@tuple" =>
         {
-            // NOTE: everything in the tuple must be include | undefined
             let p = array.types[0];
             for q in &tuple.types {
                 let undefined = new_constructor(arena, "undefined", &[]);

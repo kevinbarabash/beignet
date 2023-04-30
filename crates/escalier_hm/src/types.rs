@@ -293,7 +293,6 @@ pub fn new_rest_type(arena: &mut Arena<Type>, t: Index) -> Index {
     arena.insert(Type {
         kind: TypeKind::Rest(Rest { arg: t }),
     })
-    // new_constructor(arena, "Array", &[t])
 }
 
 pub fn new_lit_type(arena: &mut Arena<Type>, lit: &Lit) -> Index {
