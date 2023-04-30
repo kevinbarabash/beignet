@@ -157,44 +157,21 @@ pub fn infer_expression<'a>(
             new_union_type(arena, &[consequent_type, alternate_type])
         }
         ExprKind::Member(Member { obj, prop }) => {
-            let obj_type = infer_expression(arena, obj, ctx)?;
-            // TODO: don't create a type for the property name
-            // let prop_type = match prop {
-            //     MemberProp::Ident(ident) => new_lit_type(
-            //         arena,
-            //         &Lit::Str(Str {
-            //             value: ident.name.to_owned(),
-            //         }),
-            //     ),
-            //     MemberProp::Computed(_) => todo!(),
-            // };
-
-            let obj_type = arena[obj_type].clone();
-            // let prop_type = arena[prop_type].clone();
+            let obj_idx = infer_expression(arena, obj, ctx)?;
+            let obj_type = arena[obj_idx].clone();
 
             match (&obj_type.kind, prop) {
-                (TypeKind::Object(object), MemberProp::Ident(Ident { name, .. })) => {
-                    for prop in &object.props {
-                        if let types::TObjElem::Prop(prop) = &prop {
-                            let key = match &prop.name {
-                                TPropKey::StringKey(key) => key,
-                                TPropKey::NumberKey(key) => key,
-                            };
-                            if key == name {
-                                let prop_t = match prop.optional {
-                                    true => {
-                                        let undefined = new_constructor(arena, "undefined", &[]);
-                                        new_union_type(arena, &[prop.t, undefined])
-                                    }
-                                    false => prop.t,
-                                };
-                                return Ok(prop_t);
-                            }
-                        }
+                (TypeKind::Object(_), MemberProp::Ident(Ident { name, .. })) => {
+                    get_prop(arena, obj_idx, name)?
+                }
+                (TypeKind::Constructor(union), MemberProp::Ident(Ident { name, .. }))
+                    if union.name == "@@union" =>
+                {
+                    let mut types = vec![];
+                    for idx in &union.types {
+                        types.push(get_prop(arena, *idx, name)?);
                     }
-                    return Err(Errors::InferenceError(format!(
-                        "Couldn't find property '{name}' on object",
-                    )));
+                    new_union_type(arena, &types)
                 }
                 (
                     TypeKind::Constructor(tuple),
@@ -571,83 +548,6 @@ pub fn infer_statement<'a>(
                     ))
                 }
             }
-
-            // match &pattern.kind {
-            //     PatternKind::Ident(BindingIdent {
-            //         name, mutable: _, ..
-            //     }) => {
-            //         match (declare, init, type_ann) {
-            //             (false, Some(init), type_ann) => {
-            //                 let init_idx = if *rec {
-            //                     let mut new_ctx = ctx.clone();
-            //                     let new_idx = new_var_type(arena);
-            //                     new_ctx.env.insert(name.clone(), new_idx);
-            //                     new_ctx.non_generic.insert(new_idx);
-
-            //                     let init_idx =
-            //                         infer_expression(arena, init.as_mut(), &mut new_ctx)?;
-            //                     unify(arena, new_idx, init_idx)?;
-
-            //                     init_idx
-            //                 } else {
-            //                     infer_expression(arena, init.as_mut(), ctx)?
-            //                 };
-
-            //                 let init_type = arena.get(init_idx).unwrap().clone();
-            //                 let init_idx = match &init_type.kind {
-            //                     TypeKind::Function(func) if top_level => {
-            //                         generalize_func(arena, func)
-            //                     }
-            //                     _ => init_idx,
-            //                 };
-
-            //                 let idx = match type_ann {
-            //                     Some(type_ann) => {
-            //                         let type_ann_idx = infer_type_ann(arena, type_ann, ctx)?;
-
-            //                         // `init_idx` must be a subtype of `type_ann_idx`
-            //                         unify(arena, init_idx, type_ann_idx)?;
-
-            //                         type_ann_idx
-            //                     }
-            //                     None => init_idx,
-            //                 };
-
-            //                 ctx.env.insert(name.clone(), idx);
-            //                 pattern.inferred_type = Some(idx);
-
-            //                 idx // TODO: Should this be unit?
-            //             }
-            //             (false, None, _) => return Err(Errors::InferenceError(
-            //                 "Variable declarations not using `declare` must have an initializer"
-            //                     .to_string(),
-            //             )),
-            //             (true, None, Some(type_ann)) => {
-            //                 let idx = infer_type_ann(arena, type_ann, ctx)?;
-            //                 ctx.env.insert(name.clone(), idx);
-            //                 idx
-            //             }
-            //             (true, Some(_), _) => {
-            //                 return Err(Errors::InferenceError(
-            //                     "Variable declarations using `declare` cannot have an initializer"
-            //                         .to_string(),
-            //                 ))
-            //             }
-            //             (true, None, None) => {
-            //                 return Err(Errors::InferenceError(
-            //                     "Variable declarations using `declare` must have a type annotation"
-            //                         .to_string(),
-            //                 ))
-            //             }
-            //         }
-            //     }
-            //     PatternKind::Rest(_) => todo!(),
-            //     PatternKind::Object(ObjectPat { props, optional: _ }) => {}
-            //     PatternKind::Tuple(_) => todo!(),
-            //     PatternKind::Lit(_) => todo!(),
-            //     PatternKind::Is(_) => todo!(),
-            //     PatternKind::Wildcard => todo!(),
-            // }
         }
         StmtKind::ExprStmt(expr) => infer_expression(arena, expr, ctx)?,
         StmtKind::ReturnStmt(ReturnStmt { arg: expr }) => {
@@ -772,4 +672,44 @@ pub fn generalize_func(arena: &'_ mut Arena<Type>, func: &Function) -> Index {
         .collect();
 
     new_func_type(arena, &params, ret, Some(type_params))
+}
+
+fn get_prop(arena: &mut Arena<Type>, obj_idx: Index, name: &str) -> Result<Index, Errors> {
+    let undefined = new_constructor(arena, "undefined", &[]);
+    if let TypeKind::Object(object) = &arena[obj_idx].kind {
+        for prop in &object.props {
+            if let types::TObjElem::Prop(prop) = &prop {
+                let key = match &prop.name {
+                    TPropKey::StringKey(key) => key,
+                    TPropKey::NumberKey(key) => key,
+                };
+                if key == name {
+                    let prop_t = match prop.optional {
+                        true => new_union_type(arena, &[prop.t, undefined]),
+                        false => prop.t,
+                    };
+                    return Ok(prop_t);
+                }
+            }
+        }
+        Err(Errors::InferenceError(format!(
+            "Couldn't find property '{name}' on object",
+        )))
+    } else {
+        Err(Errors::InferenceError(
+            "Can't access property on non-object type".to_string(),
+        ))
+    }
+}
+
+fn is_object<'a>(arena: &'a Arena<Type>, t: Index) -> Result<bool, Errors> {
+    match arena.get(t) {
+        Some(t) => match t.kind {
+            TypeKind::Object(_) => Ok(true),
+            _ => Ok(false),
+        },
+        None => Err(Errors::InferenceError(
+            "Can't find index in arena".to_string(),
+        )),
+    }
 }

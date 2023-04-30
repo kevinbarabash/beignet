@@ -1360,7 +1360,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn member_access_on_union() -> Result<(), Errors> {
         let (mut arena, mut my_ctx) = test_env();
 
@@ -1487,6 +1486,7 @@ mod tests {
     fn test_tuple_destrcuturing_assignment_with_rest() -> Result<(), Errors> {
         let (mut arena, mut my_ctx) = test_env();
 
+        // TODO: handle destructuring of arrays with rest as well
         let src = r#"
         declare let tuple: [number, string, boolean];
         let [a, ...rest] = tuple;
