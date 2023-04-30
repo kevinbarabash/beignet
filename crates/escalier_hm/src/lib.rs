@@ -1424,7 +1424,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_object_destructuring_assignment_with_rest() -> Result<(), Errors> {
         let (mut arena, mut my_ctx) = test_env();
 
@@ -1437,6 +1436,8 @@ mod tests {
 
         let t = my_ctx.env.get("a").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"number | undefined"#);
+        let t = my_ctx.env.get("rest").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"{b: string, c: boolean}"#);
 
         Ok(())
     }

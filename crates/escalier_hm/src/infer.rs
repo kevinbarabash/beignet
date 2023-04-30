@@ -478,7 +478,6 @@ pub fn infer_statement<'a>(
                     let init_idx = if *rec {
                         let mut new_ctx = ctx.clone();
 
-                        // let new_idx = new_var_type(arena);
                         for (name, binding) in &pat_bindings {
                             new_ctx.env.insert(name.clone(), binding.t);
                             new_ctx.non_generic.insert(binding.t);
