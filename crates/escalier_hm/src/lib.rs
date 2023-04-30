@@ -1500,10 +1500,25 @@ mod tests {
         let t = my_ctx.env.get("tuple_rest").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"[string, boolean]"#);
 
-        // let t = my_ctx.env.get("b").unwrap();
-        // assert_eq!(arena[*t].as_string(&arena), r#"string | undefined"#);
-        // let t = my_ctx.env.get("array_rest").unwrap();
-        // assert_eq!(arena[*t].as_string(&arena), r#"Array<string>"#);
+        Ok(())
+    }
+
+    #[test]
+    fn test_array_destructuring_assignment_with_rest() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        // TODO: handle destructuring of arrays with rest as well
+        let src = r#"
+        declare let array: Array<string>;
+        let [a, ...array_rest] = array;
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("a").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"string | undefined"#);
+        let t = my_ctx.env.get("array_rest").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"Array<string>"#);
 
         Ok(())
     }

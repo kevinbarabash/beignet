@@ -82,15 +82,28 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
         {
             let q = array.types[0];
             for p in &tuple.types {
-                let p_t = arena[*p].clone();
-                match p_t.kind {
+                match &arena[*p].kind {
                     TypeKind::Constructor(Constructor { name, types }) if name == "Array" => {
                         unify(arena, types[0], q)?;
                     }
-                    TypeKind::Rest(_) => {
-                        unify(arena, *p, b)?;
-                    }
+                    TypeKind::Rest(_) => unify(arena, *p, b)?,
                     _ => unify(arena, *p, q)?,
+                }
+            }
+            Ok(())
+        }
+        (TypeKind::Constructor(array), TypeKind::Constructor(tuple))
+            if array.name == "Array" && tuple.name == "@@tuple" =>
+        {
+            // NOTE: everything in the tuple must be include | undefined
+            let p = array.types[0];
+            for q in &tuple.types {
+                let undefined = new_constructor(arena, "undefined", &[]);
+                let p_or_undefined = new_union_type(arena, &[p, undefined]);
+
+                match &arena[*q].kind {
+                    TypeKind::Rest(_) => unify(arena, a, *q)?,
+                    _ => unify(arena, p_or_undefined, *q)?,
                 }
             }
             Ok(())
