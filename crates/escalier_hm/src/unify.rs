@@ -301,7 +301,7 @@ pub fn unify_call(
     type_args: Option<&[Index]>,
     t2: Index,
 ) -> Result<Index, Errors> {
-    let ret_type = new_var_type(arena);
+    let ret_type = new_var_type(arena, None);
     let call_type = new_func_type(arena, arg_types, ret_type, None);
 
     let b = prune(arena, t2);
@@ -387,10 +387,21 @@ pub fn unify_call(
 fn bind(arena: &mut Arena<Type>, a: Index, b: Index) -> Result<(), Errors> {
     if a != b {
         if occurs_in_type(arena, a, b) {
-            // raise InferenceError("recursive unification")
             return Err(Errors::InferenceError("recursive unification".to_string()));
         }
-        arena.get_mut(a).unwrap().set_instance(b);
+        let t = &arena[a];
+
+        match &t.kind {
+            TypeKind::Variable(avar) => {
+                if let Some(constraint) = avar.constraint {
+                    unify(arena, b, constraint)?;
+                }
+
+                let t = &mut arena[a];
+                t.set_instance(b);
+            }
+            _ => unimplemented!(),
+        }
     }
     Ok(())
 }
@@ -418,7 +429,7 @@ fn instantiate_func(
             }
             None => {
                 for tp in type_params {
-                    mappings.insert(tp.name.to_owned(), new_var_type(arena));
+                    mappings.insert(tp.name.to_owned(), new_var_type(arena, tp.constraint));
                 }
             }
         }

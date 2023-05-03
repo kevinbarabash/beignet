@@ -1,5 +1,5 @@
 use generational_arena::{Arena, Index};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 
 use crate::ast::{self as syntax, *};
 use crate::context::*;
@@ -106,14 +106,24 @@ pub fn infer_expression<'a>(
             params,
             body,
             is_async,
-            ..
+            type_params,
+            return_type: _, // TODO
         }) => {
             let mut param_types = vec![];
             let mut new_ctx = ctx.clone();
             new_ctx.is_async = *is_async;
 
-            for EFnParam { pat: pattern, .. } in params.iter_mut() {
-                let param_type = new_var_type(arena);
+            for EFnParam {
+                pat: pattern,
+                type_ann,
+                optional: _,
+            } in params.iter_mut()
+            {
+                let param_type = match type_ann {
+                    Some(type_ann) => infer_type_ann(arena, type_ann, ctx)?,
+                    None => new_var_type(arena, None),
+                };
+
                 if let PatternKind::Ident(BindingIdent {
                     name, mutable: _, ..
                 }) = &pattern.kind
@@ -153,7 +163,34 @@ pub fn infer_expression<'a>(
                 body_t = new_constructor(arena, "Promise", &[body_t]);
             }
 
-            new_func_type(arena, &param_types, body_t, None)
+            let mut type_param_names: HashSet<String> = HashSet::new();
+            let type_params = match type_params {
+                Some(type_params) => Some(
+                    type_params
+                        .iter_mut()
+                        .map(|tp| {
+                            if !type_param_names.insert(tp.name.name.to_owned()) {
+                                return Err(Errors::InferenceError(
+                                    "type param identifiers must be unique".to_string(),
+                                ));
+                            }
+                            Ok(types::TypeParam {
+                                name: tp.name.name.to_owned(),
+                                constraint: match &mut tp.constraint {
+                                    Some(constraint) => {
+                                        Some(infer_type_ann(arena, constraint, ctx)?)
+                                    }
+                                    None => None,
+                                },
+                                default: None,
+                            })
+                        })
+                        .collect::<Result<Vec<_>, _>>()?,
+                ),
+                None => None,
+            };
+
+            new_func_type(arena, &param_types, body_t, type_params)
         }
         ExprKind::IfElse(IfElse {
             cond,
@@ -259,7 +296,7 @@ pub fn infer_expression<'a>(
             }
 
             let expr_t = infer_expression(arena, expr, ctx)?;
-            let inner_t = new_var_type(arena);
+            let inner_t = new_var_type(arena, None);
             // TODO: Merge Constructor and TypeRef
             // NOTE: This isn't quite right because we can await non-promise values.
             // That being said, we should avoid doing so.
@@ -353,14 +390,31 @@ pub fn infer_type_ann(
 
             let ret_idx = infer_type_ann(arena, ret.as_mut(), _ctx)?;
 
-            let type_params = type_params.as_mut().map(|type_params| {
-                type_params
-                    .iter_mut()
-                    .map(|param| types::TypeParam {
-                        name: param.name.name.clone(),
-                    })
-                    .collect()
-            });
+            let type_params = match type_params {
+                Some(type_params) => {
+                    let type_params = type_params
+                        .iter_mut()
+                        .map(|param| {
+                            Ok(types::TypeParam {
+                                name: param.name.name.clone(),
+                                constraint: match &mut param.constraint {
+                                    Some(constraint) => {
+                                        Some(infer_type_ann(arena, constraint, _ctx)?)
+                                    }
+                                    None => None,
+                                },
+                                default: match &mut param.default {
+                                    Some(default) => Some(infer_type_ann(arena, default, _ctx)?),
+                                    None => None,
+                                },
+                            })
+                        })
+                        .collect::<Result<Vec<_>, _>>()?;
+
+                    Some(type_params)
+                }
+                None => None,
+            };
 
             new_func_type(arena, &params, ret_idx, type_params)
         }
@@ -482,7 +536,6 @@ pub fn infer_statement<'a>(
                         TypeKind::Function(func) if top_level => generalize_func(arena, func),
                         _ => init_idx,
                     };
-                    eprintln!("init_idx = {}", arena[init_idx].as_string(arena));
 
                     let idx = match type_ann {
                         Some(type_ann) => {
@@ -515,10 +568,6 @@ pub fn infer_statement<'a>(
                     };
 
                     for (name, binding) in &pat_bindings {
-                        eprintln!(
-                            "inserting binding for {name}, {}",
-                            arena[binding.t].as_string(arena)
-                        );
                         ctx.env.insert(name.clone(), binding.t);
                     }
 
@@ -538,10 +587,6 @@ pub fn infer_statement<'a>(
                     unify(arena, idx, pat_type)?;
 
                     for (name, binding) in &pat_bindings {
-                        eprintln!(
-                            "inserting binding for {name}, {}",
-                            arena[binding.t].as_string(arena)
-                        );
                         ctx.env.insert(name.clone(), binding.t);
                     }
 
@@ -598,12 +643,6 @@ pub fn infer_program<'a>(
     Ok(())
 }
 
-// TODO:
-// - find all type variables in the type
-// - create type params for them
-// - replace the type variables with the corresponding type params
-// - return the new function type with the newly created type params
-
 pub fn generalize_func(arena: &'_ mut Arena<Type>, func: &Function) -> Index {
     // A mapping of TypeVariables to TypeVariables
     let mut mappings = BTreeMap::default();
@@ -624,6 +663,8 @@ pub fn generalize_func(arena: &'_ mut Arena<Type>, func: &Function) -> Index {
                 let name = match mappings.get(&p) {
                     Some(tref) => tref.name.clone(),
                     None => {
+                        // TODO: create a name generator that can avoid duplicating
+                        // names of explicitly provided type params.
                         let name = ((mappings.len() as u8) + 65) as char;
                         let name = format!("{}", name);
                         // let name = format!("'{}", mappings.len());
@@ -680,14 +721,26 @@ pub fn generalize_func(arena: &'_ mut Arena<Type>, func: &Function) -> Index {
 
     let params = generalize_rec_many(arena, &func.params, &mut mappings);
     let ret = generalize_rec(arena, func.ret, &mut mappings);
-    let type_params: Vec<types::TypeParam> = mappings
-        .iter()
-        .map(|(_, v)| types::TypeParam {
-            name: v.name.clone(),
-        })
-        .collect();
 
-    new_func_type(arena, &params, ret, Some(type_params))
+    let mut type_params: Vec<types::TypeParam> = vec![];
+
+    if let Some(explicit_type_params) = &func.type_params {
+        type_params.extend(explicit_type_params.to_owned());
+    }
+
+    for (_, v) in mappings {
+        type_params.push(types::TypeParam {
+            name: v.name.clone(),
+            constraint: None,
+            default: None,
+        });
+    }
+
+    if type_params.is_empty() {
+        new_func_type(arena, &params, ret, None)
+    } else {
+        new_func_type(arena, &params, ret, Some(type_params))
+    }
 }
 
 fn get_prop(arena: &mut Arena<Type>, obj_idx: Index, name: &str) -> Result<Index, Errors> {

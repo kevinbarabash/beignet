@@ -27,7 +27,7 @@ pub fn infer_pattern(
     ) -> Result<Index, Errors> {
         let t = match &mut pattern.kind {
             PatternKind::Ident(BindingIdent { name, mutable, .. }) => {
-                let t = new_var_type(arena);
+                let t = new_var_type(arena, None);
                 if assump
                     .insert(
                         name.to_owned(),
@@ -75,7 +75,7 @@ pub fn infer_pattern(
                             // default values.
                             // TODO: handle default values
 
-                            let t = new_var_type(arena);
+                            let t = new_var_type(arena, None);
                             if assump
                                 .insert(ident.name.to_owned(), Binding { mutable: false, t })
                                 .is_some()
@@ -144,7 +144,7 @@ pub fn infer_pattern(
 
                 t
             }
-            PatternKind::Wildcard => new_var_type(arena),
+            PatternKind::Wildcard => new_var_type(arena, None),
         };
 
         Ok(t)
