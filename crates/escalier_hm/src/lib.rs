@@ -1638,4 +1638,47 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_type_ann_func_with_type_constraint() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let identity: <T extends number | string>(x: T) => T = (x) => x;
+        let x = identity<number>(5);
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("identity").unwrap();
+        assert_eq!(
+            arena[*t].as_string(&arena),
+            r#"<T:number | string>(T) => T"#
+        );
+        let t = my_ctx.env.get("x").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"number"#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_type_ann_func_with_type_constraint_error() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let id1 = <T extends number | string>(x: T): T => x;
+        let id2: <T extends boolean>(x: T) => T = id1;
+        "#;
+        let mut program = parse(src).unwrap();
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "type mismatch: unify(boolean, number | string) failed".to_string()
+            ))
+        );
+
+        Ok(())
+    }
 }
