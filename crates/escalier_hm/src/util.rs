@@ -12,30 +12,30 @@ use crate::types::*;
 ///
 /// Returns:
 ///     True if v occurs in type2, otherwise False
-pub fn occurs_in_type(a: &mut Arena<Type>, v: Index, type2: Index) -> bool {
-    let pruned_type2 = prune(a, type2);
+pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
+    let pruned_type2 = prune(arena, type2);
     if pruned_type2 == v {
         return true;
     }
     // We clone here because we can't move out of a shared reference.
     // TODO: Consider using Rc<RefCell<Type>> to avoid unnecessary cloning.
-    match a.get(pruned_type2).unwrap().clone().kind {
+    match arena.get(pruned_type2).unwrap().clone().kind {
         TypeKind::Variable(_) => false, // leaf node
         TypeKind::Literal(_) => false,  // leaf node
         TypeKind::Object(Object { props }) => props.iter().any(|prop| match prop {
-            TObjElem::Index(index) => occurs_in_type(a, v, index.t),
-            TObjElem::Prop(prop) => occurs_in_type(a, v, prop.t),
+            TObjElem::Index(index) => occurs_in_type(arena, v, index.t),
+            TObjElem::Prop(prop) => occurs_in_type(arena, v, prop.t),
         }),
-        TypeKind::Rest(Rest { arg }) => occurs_in_type(a, v, arg),
+        TypeKind::Rest(Rest { arg }) => occurs_in_type(arena, v, arg),
         TypeKind::Function(Function {
             params,
             ret,
             type_params: _,
         }) => {
             // TODO: check type_params as well
-            occurs_in(a, v, &params) || occurs_in_type(a, v, ret)
+            occurs_in(arena, v, &params) || occurs_in_type(arena, v, ret)
         }
-        TypeKind::Constructor(Constructor { types, .. }) => occurs_in(a, v, &types),
+        TypeKind::Constructor(Constructor { types, .. }) => occurs_in(arena, v, &types),
     }
 }
 

@@ -1597,4 +1597,45 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_type_param_with_constraint() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let identity = <T extends number | string>(x: T): T => x;
+        let x = identity(5);
+        let y = identity("hello");
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("x").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"5"#);
+        let t = my_ctx.env.get("y").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#""hello""#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_type_param_with_violated_constraint() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let identity = <T extends number | string>(x: T): T => x;
+        identity(true);
+        "#;
+        let mut program = parse(src).unwrap();
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "type mismatch: unify(true, number | string) failed".to_string()
+            ))
+        );
+
+        Ok(())
+    }
 }

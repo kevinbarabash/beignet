@@ -63,7 +63,7 @@ pub fn fresh(arena: &mut Arena<Type>, t: Index, ctx: &Context) -> Index {
                 if is_generic(arena, p, ctx) {
                     mappings
                         .entry(p)
-                        .or_insert_with(|| new_var_type(arena))
+                        .or_insert_with(|| new_var_type(arena, None))
                         .to_owned()
                 } else {
                     p

@@ -7,6 +7,7 @@ use crate::ast::Lit;
 pub struct Variable {
     pub id: usize,
     pub instance: Option<Index>,
+    pub constraint: Option<Index>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -31,6 +32,8 @@ pub struct Function {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TypeParam {
     pub name: String,
+    pub constraint: Option<Index>,
+    pub default: Option<Index>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -129,11 +132,8 @@ pub struct Type {
 impl Type {
     pub fn set_instance(&mut self, instance: Index) {
         match &mut self.kind {
-            TypeKind::Variable(Variable {
-                instance: ref mut inst,
-                ..
-            }) => {
-                *inst = Some(instance);
+            TypeKind::Variable(var) => {
+                var.instance = Some(instance);
             }
             _ => {
                 unimplemented!()
@@ -147,9 +147,10 @@ impl Type {
                 instance: Some(inst),
                 ..
             }) => arena[*inst].as_string(arena),
-            TypeKind::Variable(Variable { id, .. }) => {
-                format!("t{id}")
-            }
+            TypeKind::Variable(Variable { id, constraint, .. }) => match constraint {
+                Some(constraint) => format!("t{id}:{}", arena[*constraint].as_string(arena)),
+                None => format!("t{id}"),
+            },
             TypeKind::Constructor(Constructor { name, types }) => match name.as_str() {
                 "@@tuple" => format!("[{}]", types_to_strings(arena, types).join(", ")),
                 "@@union" => types_to_strings(arena, types).join(" | "),
@@ -209,7 +210,14 @@ impl Type {
                     Some(type_params) if !type_params.is_empty() => {
                         let type_params = type_params
                             .iter()
-                            .map(|tp| tp.name.clone())
+                            .map(|tp| match &tp.constraint {
+                                Some(constraint) => format!(
+                                    "{}:{}",
+                                    tp.name.clone(),
+                                    arena[*constraint].as_string(arena)
+                                ),
+                                None => tp.name.clone(),
+                            })
                             .collect::<Vec<_>>();
                         format!("<{}>", type_params.join(", "))
                     }
@@ -244,7 +252,7 @@ pub fn new_func_type(
         kind: TypeKind::Function(Function {
             params: params.to_vec(),
             ret,
-            type_params: type_params.map(|x| x.to_vec()),
+            type_params,
         }),
     })
 }
@@ -270,11 +278,12 @@ pub fn new_object_type(arena: &mut Arena<Type>, elems: &[TObjElem]) -> Index {
 }
 
 /// A binary type constructor which builds function types
-pub fn new_var_type(arena: &mut Arena<Type>) -> Index {
+pub fn new_var_type(arena: &mut Arena<Type>, constraint: Option<Index>) -> Index {
     arena.insert(Type {
         kind: TypeKind::Variable(Variable {
+            id: arena.len(), // use for debugging purposes only
             instance: None,
-            id: arena.len(),
+            constraint,
         }),
     })
 }
