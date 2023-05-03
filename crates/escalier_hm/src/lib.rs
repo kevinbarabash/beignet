@@ -1619,6 +1619,45 @@ mod tests {
     }
 
     #[test]
+    fn test_mix_explicit_implicit_type_params() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let fst = <B>(a, b: B) => a;
+        let snd = <B>(a, b: B): B => b;
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("fst").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"<B, A>(A, B) => A"#);
+        let t = my_ctx.env.get("snd").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"<B, A>(A, B) => B"#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_duplicate_type_param_names_error() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let fst = <T, T>(a: T, b: T): T => a;
+        "#;
+        let mut program = parse(src).unwrap();
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "type param identifiers must be unique".to_string()
+            ))
+        );
+
+        Ok(())
+    }
+
+    #[test]
     fn test_type_param_with_violated_constraint() -> Result<(), Errors> {
         let (mut arena, mut my_ctx) = test_env();
 
@@ -1676,6 +1715,46 @@ mod tests {
             result,
             Err(Errors::InferenceError(
                 "type mismatch: unify(boolean, number | string) failed".to_string()
+            ))
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_callback_with_type_param_subtyping() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        declare let foo: (callback: <T extends number>(x: T) => T) => boolean;
+        let identity = <T extends number | string>(x: T): T => x;
+        let result = foo(identity);
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("result").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"boolean"#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_callback_with_type_param_subtyping_error() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        declare let foo: (callback: <T extends number | string>(x: T) => T) => boolean;
+        let identity = <T extends number>(x: T): T => x;
+        let result = foo(identity);
+        "#;
+        let mut program = parse(src).unwrap();
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "type mismatch: string != number".to_string()
             ))
         );
 
