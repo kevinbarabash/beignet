@@ -514,7 +514,6 @@ pub fn infer_statement<'a>(
 ) -> Result<Index, Errors> {
     let t = match &mut statement.kind {
         StmtKind::VarDecl(VarDecl {
-            rec,
             pattern,
             init,
             type_ann,
@@ -525,18 +524,7 @@ pub fn infer_statement<'a>(
 
             match (declare, init, type_ann) {
                 (false, Some(init), type_ann) => {
-                    let init_idx = if *rec {
-                        let mut new_ctx = ctx.clone();
-
-                        for (name, binding) in &pat_bindings {
-                            new_ctx.env.insert(name.clone(), binding.t);
-                            new_ctx.non_generic.insert(binding.t);
-                        }
-
-                        infer_expression(arena, init.as_mut(), &mut new_ctx)?
-                    } else {
-                        infer_expression(arena, init.as_mut(), ctx)?
-                    };
+                    let init_idx = infer_expression(arena, init.as_mut(), ctx)?;
 
                     let init_type = arena.get(init_idx).unwrap().clone();
                     let init_idx = match &init_type.kind {

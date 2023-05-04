@@ -230,7 +230,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let x = (a, b) => a + b;"));
         insta::assert_debug_snapshot!(parse("let foo = do {let x = 5; x};"));
         // recursive
-        insta::assert_debug_snapshot!(parse("let rec f = () => f();"));
+        insta::assert_debug_snapshot!(parse("let f = () => f();"));
         // mutable
         insta::assert_debug_snapshot!(parse(r#"let mut msg: string = "hello, world";"#));
         insta::assert_debug_snapshot!(parse(

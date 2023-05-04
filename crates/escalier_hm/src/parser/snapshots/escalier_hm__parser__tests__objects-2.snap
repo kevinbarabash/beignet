@@ -110,7 +110,6 @@ Ok(
                             },
                         ),
                         declare: false,
-                        rec: false,
                     },
                 ),
                 inferred_type: None,
