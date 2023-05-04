@@ -107,7 +107,7 @@ pub fn infer_expression<'a>(
             body,
             is_async,
             type_params,
-            return_type: _, // TODO
+            return_type,
         }) => {
             let mut param_types = vec![];
             let mut new_ctx = ctx.clone();
@@ -190,7 +190,14 @@ pub fn infer_expression<'a>(
                 None => None,
             };
 
-            new_func_type(arena, &param_types, body_t, type_params)
+            match return_type {
+                Some(return_type) => {
+                    let ret_t = infer_type_ann(arena, return_type, ctx)?;
+                    unify(arena, body_t, ret_t)?;
+                    new_func_type(arena, &param_types, ret_t, type_params)
+                }
+                None => new_func_type(arena, &param_types, body_t, type_params),
+            }
         }
         ExprKind::IfElse(IfElse {
             cond,
