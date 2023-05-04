@@ -1760,4 +1760,43 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_return_type_checking() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let foo = (): string => "hello";
+        let result = foo();
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("foo").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"() => string"#);
+        let t = my_ctx.env.get("result").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"string"#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_return_value_is_not_subtype_of_return_type() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let foo = (): number => "hello";
+        "#;
+        let mut program = parse(src).unwrap();
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "type mismatch: unify(\"hello\", number) failed".to_string()
+            ))
+        );
+
+        Ok(())
+    }
 }
