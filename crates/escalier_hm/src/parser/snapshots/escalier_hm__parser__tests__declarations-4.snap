@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_hm/src/parser/mod.rs
-expression: "parse(\"let rec f = () => f();\")"
+expression: "parse(\"let f = () => f();\")"
 ---
 Ok(
     Program {
@@ -13,37 +13,37 @@ Ok(
                     },
                     end: Position {
                         line: 0,
-                        column: 22,
+                        column: 18,
                     },
                 },
-                span: 0..22,
+                span: 0..18,
                 kind: VarDecl(
                     VarDecl {
                         pattern: Pattern {
                             loc: SourceLocation {
                                 start: Position {
                                     line: 0,
-                                    column: 8,
+                                    column: 4,
                                 },
                                 end: Position {
                                     line: 0,
-                                    column: 9,
+                                    column: 5,
                                 },
                             },
-                            span: 8..9,
+                            span: 4..5,
                             kind: Ident(
                                 BindingIdent {
                                     name: "f",
                                     mutable: false,
-                                    span: 8..9,
+                                    span: 4..5,
                                     loc: SourceLocation {
                                         start: Position {
                                             line: 0,
-                                            column: 8,
+                                            column: 4,
                                         },
                                         end: Position {
                                             line: 0,
-                                            column: 9,
+                                            column: 5,
                                         },
                                     },
                                 },
@@ -56,14 +56,14 @@ Ok(
                                 loc: SourceLocation {
                                     start: Position {
                                         line: 0,
-                                        column: 12,
+                                        column: 8,
                                     },
                                     end: Position {
                                         line: 0,
-                                        column: 21,
+                                        column: 17,
                                     },
                                 },
-                                span: 12..21,
+                                span: 8..17,
                                 kind: Lambda(
                                     Lambda {
                                         params: [],
@@ -72,41 +72,41 @@ Ok(
                                                 loc: SourceLocation {
                                                     start: Position {
                                                         line: 0,
-                                                        column: 18,
+                                                        column: 14,
                                                     },
                                                     end: Position {
                                                         line: 0,
-                                                        column: 21,
+                                                        column: 17,
                                                     },
                                                 },
-                                                span: 18..21,
+                                                span: 14..17,
                                                 kind: App(
                                                     App {
                                                         lam: Expr {
                                                             loc: SourceLocation {
                                                                 start: Position {
                                                                     line: 0,
-                                                                    column: 18,
+                                                                    column: 14,
                                                                 },
                                                                 end: Position {
                                                                     line: 0,
-                                                                    column: 19,
+                                                                    column: 15,
                                                                 },
                                                             },
-                                                            span: 18..19,
+                                                            span: 14..15,
                                                             kind: Ident(
                                                                 Ident {
                                                                     loc: SourceLocation {
                                                                         start: Position {
                                                                             line: 0,
-                                                                            column: 18,
+                                                                            column: 14,
                                                                         },
                                                                         end: Position {
                                                                             line: 0,
-                                                                            column: 19,
+                                                                            column: 15,
                                                                         },
                                                                     },
-                                                                    span: 18..19,
+                                                                    span: 14..15,
                                                                     name: "f",
                                                                 },
                                                             ),
@@ -128,7 +128,6 @@ Ok(
                             },
                         ),
                         declare: false,
-                        rec: true,
                     },
                 ),
                 inferred_type: None,

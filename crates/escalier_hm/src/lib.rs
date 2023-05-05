@@ -70,7 +70,7 @@ mod tests {
 
         // factorial
         let src = r#"
-        let rec fact = (n) => {
+        let fact = (n) => {
             return if (n == 0) {
                 1
             } else {
@@ -83,61 +83,87 @@ mod tests {
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
         let t = my_ctx.env.get("fact").unwrap();
 
-        assert_eq!(arena[*t].as_string(&arena), r#"(number) => number"#);
+        assert_eq!(arena[*t].as_string(&arena), r#"(number) => 1 | number"#);
         Ok(())
     }
 
-    // #[test]
-    // fn test_mutual_recursion() -> Result<(), Errors> {
-    //     let (mut arena, mut my_ctx) = test_env();
+    #[test]
+    fn test_mutual_recursion() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
 
-    //     // NOTE: The definitions of "even" and "odd" are correct from a types
-    //     // perspective, but incorrect semantically.
-    //     let mut syntax = new_letrec(
-    //         &[
-    //             (
-    //                 "even".to_string(),
-    //                 new_lambda(
-    //                     &["x"], // (x) => times(1, odd(x - 1))
-    //                     &new_apply(
-    //                         // this casts odd(x - 1) to a number
-    //                         new_identifier("times"),
-    //                         &[
-    //                             new_number("1"),
-    //                             new_apply(
-    //                                 new_identifier("odd"),
-    //                                 &[new_apply(new_identifier("pred"), &[new_identifier("x")])],
-    //                             ),
-    //                         ],
-    //                     ),
-    //                 ),
-    //             ),
-    //             (
-    //                 "odd".to_string(),
-    //                 new_lambda(
-    //                     &["x"], // (x) => times(1, even(x - 1))
-    //                     &new_apply(
-    //                         // this casts even(x - 1) to a number
-    //                         new_identifier("times"),
-    //                         &[
-    //                             new_number("1"),
-    //                             new_apply(
-    //                                 new_identifier("even"),
-    //                                 &[new_apply(new_identifier("pred"), &[new_identifier("x")])],
-    //                             ),
-    //                         ],
-    //                     ),
-    //                 ),
-    //             ),
-    //         ],
-    //         new_identifier("odd"),
-    //     );
+        let src = r#"
+        let even = (x) => if (x == 0) {
+            true
+        } else {
+            !odd(x - 1)
+        };
 
-    //     let t = infer_expression(&mut arena, &mut syntax, &mut my_ctx)?;
-    //     assert_eq!(arena[t].as_string(&arena), r#"(number) => number"#);
+        let odd = (x) => if (x == 1) {
+            true
+        } else {
+            !even(x - 1)
+        };
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-    //     Ok(())
-    // }
+        let t = my_ctx.env.get("even").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"(number) => true | boolean"#);
+        let t = my_ctx.env.get("odd").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"(number) => true | boolean"#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_mutual_recursion_using_destructuring() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let {even, odd} = {
+            even: (x) => if (x == 0) {
+                true
+            } else {
+                !odd(x - 1)
+            },
+            odd: (x) => if (x == 1) {
+                true
+            } else {
+                !even(x - 1)
+            },
+        };
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("even").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"(number) => true | boolean"#);
+        let t = my_ctx.env.get("odd").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"(number) => true | boolean"#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_no_top_level_redeclaration() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let id = (x) => x;
+        let id = (y) => y;
+        "#;
+        let mut program = parse(src).unwrap();
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "id cannot be redeclared at the top-level".to_string()
+            ))
+        );
+
+        Ok(())
+    }
 
     #[should_panic]
     #[test]
@@ -1059,7 +1085,7 @@ mod tests {
         assert_eq!(
             result,
             Err(Errors::InferenceError(
-                "type mismatch: unify(5, Promise<t2>) failed".to_string()
+                "type mismatch: unify(5, Promise<t3>) failed".to_string()
             ))
         );
 

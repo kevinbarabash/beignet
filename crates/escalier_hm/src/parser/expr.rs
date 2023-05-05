@@ -112,6 +112,7 @@ pub fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, Par
             // choice("!", "~", "-", "+", "typeof", "void", "delete")
             let op = match operator.as_str() {
                 "-" => UnaryOp::Minus,
+                "!" => UnaryOp::Not,
                 _ => todo!("Unhandle operator: {operator}"),
             };
 

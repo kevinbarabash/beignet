@@ -115,6 +115,7 @@ pub struct UnaryExpr {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum UnaryOp {
     Minus,
+    Not,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

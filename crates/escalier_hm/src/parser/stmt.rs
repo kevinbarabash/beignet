@@ -118,7 +118,6 @@ fn parse_declaration(
     }
 
     let decl = node.child_by_field_name("decl").unwrap();
-    let rec = node.child_by_field_name("rec").is_some();
 
     let name = decl.child_by_field_name("name").unwrap();
     let pattern = parse_pattern(&name, src)?;
@@ -129,31 +128,18 @@ fn parse_declaration(
         None
     };
 
-    let kind = if rec {
-        let value = decl.child_by_field_name("value").unwrap();
-
-        StmtKind::VarDecl(VarDecl {
-            pattern,
-            type_ann,
-            init: Some(Box::from(parse_expression(&value, src)?)),
-            declare,
-            rec,
-        })
+    let init = if let Some(init) = decl.child_by_field_name("value") {
+        Some(Box::from(parse_expression(&init, src)?))
     } else {
-        let init = if let Some(init) = decl.child_by_field_name("value") {
-            Some(Box::from(parse_expression(&init, src)?))
-        } else {
-            None
-        };
-
-        StmtKind::VarDecl(VarDecl {
-            pattern,
-            type_ann,
-            init,
-            declare,
-            rec,
-        })
+        None
     };
+
+    let kind = StmtKind::VarDecl(VarDecl {
+        pattern,
+        type_ann,
+        init,
+        declare,
+    });
 
     Ok(Some(Statement {
         loc: SourceLocation::from(node),

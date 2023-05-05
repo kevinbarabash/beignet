@@ -288,11 +288,18 @@ pub fn infer_expression<'a>(
         }
         ExprKind::UnaryExpr(UnaryExpr { op, arg }) => {
             let number = new_constructor(arena, "number", &[]);
+            let boolean = new_constructor(arena, "boolean", &[]);
             let arg_type = infer_expression(arena, arg, ctx)?;
-            unify(arena, arg_type, number)?;
 
             match op {
-                UnaryOp::Minus => number,
+                UnaryOp::Minus => {
+                    unify(arena, arg_type, number)?;
+                    number
+                }
+                UnaryOp::Not => {
+                    unify(arena, arg_type, boolean)?;
+                    boolean
+                }
             }
         }
         ExprKind::Await(Await { expr, .. }) => {
@@ -514,7 +521,6 @@ pub fn infer_statement<'a>(
 ) -> Result<Index, Errors> {
     let t = match &mut statement.kind {
         StmtKind::VarDecl(VarDecl {
-            rec,
             pattern,
             init,
             type_ann,
@@ -525,18 +531,7 @@ pub fn infer_statement<'a>(
 
             match (declare, init, type_ann) {
                 (false, Some(init), type_ann) => {
-                    let init_idx = if *rec {
-                        let mut new_ctx = ctx.clone();
-
-                        for (name, binding) in &pat_bindings {
-                            new_ctx.env.insert(name.clone(), binding.t);
-                            new_ctx.non_generic.insert(binding.t);
-                        }
-
-                        infer_expression(arena, init.as_mut(), &mut new_ctx)?
-                    } else {
-                        infer_expression(arena, init.as_mut(), ctx)?
-                    };
+                    let init_idx = infer_expression(arena, init.as_mut(), ctx)?;
 
                     let init_type = arena.get(init_idx).unwrap().clone();
                     let init_idx = match &init_type.kind {
@@ -638,11 +633,30 @@ pub fn infer_statement<'a>(
     Ok(t)
 }
 
+// TODO: introduce `infer_script` which has the same semantics as those used
+// to infer the body of a function.
+// TODO: rename to `infer_module`
 pub fn infer_program<'a>(
     arena: &mut Arena<Type>,
     node: &'a mut Program,
     ctx: &mut Context,
 ) -> Result<(), Errors> {
+    for stmt in &mut node.statements {
+        if let StmtKind::VarDecl(VarDecl { pattern, .. }) = &mut stmt.kind {
+            let (bindings, _) = infer_pattern(arena, pattern, ctx)?;
+
+            for (name, binding) in bindings {
+                ctx.non_generic.insert(binding.t);
+                if ctx.env.insert(name.to_owned(), binding.t).is_some() {
+                    return Err(Errors::InferenceError(format!(
+                        "{name} cannot be redeclared at the top-level"
+                    )));
+                }
+            }
+        }
+    }
+
+    // TODO: figure out how to avoid parsing patterns twice
     for stmt in &mut node.statements.iter_mut() {
         infer_statement(arena, stmt, ctx, true)?;
     }

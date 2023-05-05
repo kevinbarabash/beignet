@@ -96,7 +96,6 @@ Ok(
                         ),
                         init: None,
                         declare: true,
-                        rec: false,
                     },
                 ),
                 inferred_type: None,
