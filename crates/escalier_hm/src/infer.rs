@@ -288,11 +288,18 @@ pub fn infer_expression<'a>(
         }
         ExprKind::UnaryExpr(UnaryExpr { op, arg }) => {
             let number = new_constructor(arena, "number", &[]);
+            let boolean = new_constructor(arena, "boolean", &[]);
             let arg_type = infer_expression(arena, arg, ctx)?;
-            unify(arena, arg_type, number)?;
 
             match op {
-                UnaryOp::Minus => number,
+                UnaryOp::Minus => {
+                    unify(arena, arg_type, number)?;
+                    number
+                }
+                UnaryOp::Not => {
+                    unify(arena, arg_type, boolean)?;
+                    boolean
+                }
             }
         }
         ExprKind::Await(Await { expr, .. }) => {
@@ -626,28 +633,30 @@ pub fn infer_statement<'a>(
     Ok(t)
 }
 
+// TODO: introduce `infer_script` which has the same semantics as those used
+// to infer the body of a function.
+// TODO: rename to `infer_module`
 pub fn infer_program<'a>(
     arena: &mut Arena<Type>,
     node: &'a mut Program,
     ctx: &mut Context,
 ) -> Result<(), Errors> {
-    // TODO:
-    // - iterate over all statements to find all identifiers
-    // - create type variables for the identifiers
-    // - insert the type variables into ctx.non_generic
-    // - add entries to ctx.env that map the identifiers to the type variables
-
     for stmt in &mut node.statements {
         if let StmtKind::VarDecl(VarDecl { pattern, .. }) = &mut stmt.kind {
             let (bindings, _) = infer_pattern(arena, pattern, ctx)?;
 
             for (name, binding) in bindings {
                 ctx.non_generic.insert(binding.t);
-                ctx.env.insert(name.to_owned(), binding.t);
+                if ctx.env.insert(name.to_owned(), binding.t).is_some() {
+                    return Err(Errors::InferenceError(format!(
+                        "{name} cannot be redeclared at the top-level"
+                    )));
+                }
             }
         }
     }
 
+    // TODO: figure out how to avoid parsing patterns twice
     for stmt in &mut node.statements.iter_mut() {
         infer_statement(arena, stmt, ctx, true)?;
     }

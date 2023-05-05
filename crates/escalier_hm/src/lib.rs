@@ -92,30 +92,75 @@ mod tests {
         let (mut arena, mut my_ctx) = test_env();
 
         let src = r#"
-        let even = (x): boolean => {
-            return if (x == 0) {
-                true
-            } else {
-                odd(x - 1)
-            };
+        let even = (x) => if (x == 0) {
+            true
+        } else {
+            !odd(x - 1)
         };
 
-        let odd = (x): boolean => {
-            return if (x == 1) {
-                true
-            } else {
-                even(x - 1)
-            };
+        let odd = (x) => if (x == 1) {
+            true
+        } else {
+            !even(x - 1)
         };
-
         "#;
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
         let t = my_ctx.env.get("even").unwrap();
-        assert_eq!(arena[*t].as_string(&arena), r#"(number) => boolean"#);
+        assert_eq!(arena[*t].as_string(&arena), r#"(number) => true | boolean"#);
         let t = my_ctx.env.get("odd").unwrap();
-        assert_eq!(arena[*t].as_string(&arena), r#"(number) => boolean"#);
+        assert_eq!(arena[*t].as_string(&arena), r#"(number) => true | boolean"#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_mutual_recursion_using_destructuring() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let {even, odd} = {
+            even: (x) => if (x == 0) {
+                true
+            } else {
+                !odd(x - 1)
+            },
+            odd: (x) => if (x == 1) {
+                true
+            } else {
+                !even(x - 1)
+            },
+        };
+        "#;
+        let mut program = parse(src).unwrap();
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("even").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"(number) => true | boolean"#);
+        let t = my_ctx.env.get("odd").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"(number) => true | boolean"#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_no_top_level_redeclaration() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        let id = (x) => x;
+        let id = (y) => y;
+        "#;
+        let mut program = parse(src).unwrap();
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "id cannot be redeclared at the top-level".to_string()
+            ))
+        );
 
         Ok(())
     }
