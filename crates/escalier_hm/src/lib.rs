@@ -65,6 +65,48 @@ mod tests {
     /// from each.
 
     #[test]
+    fn test_complex_logic() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        declare let a: number;
+        declare let b: number;
+        declare let c: number;
+        let result = a > b || b >= c || c != a && c != b;
+        "#;
+        let mut program = parse(src).unwrap();
+
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("result").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"boolean"#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_string_equality() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        declare let a: string;
+        declare let b: string;
+        let eq = a == b;
+        let neq = a != b;
+        "#;
+        let mut program = parse(src).unwrap();
+
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.env.get("eq").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"boolean"#);
+        let t = my_ctx.env.get("neq").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"boolean"#);
+
+        Ok(())
+    }
+
+    #[test]
     fn test_factorial() -> Result<(), Errors> {
         let (mut arena, mut my_ctx) = test_env();
 
