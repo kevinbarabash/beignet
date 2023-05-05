@@ -288,9 +288,10 @@ pub fn infer_expression<'a>(
                     boolean
                 }
                 BinOp::EqEq | BinOp::NotEq => {
-                    let var_t = new_var_type(arena, None);
-                    unify(arena, left_type, var_t)?;
-                    unify(arena, right_type, var_t)?;
+                    let var_a = new_var_type(arena, None);
+                    let var_b = new_var_type(arena, None);
+                    unify(arena, left_type, var_a)?;
+                    unify(arena, right_type, var_b)?;
                     boolean
                 }
             }
