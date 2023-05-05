@@ -270,20 +270,29 @@ pub fn infer_expression<'a>(
             let boolean = new_constructor(arena, "boolean", &[]);
             let left_type = infer_expression(arena, left, ctx)?;
             let right_type = infer_expression(arena, right, ctx)?;
-            unify(arena, left_type, number)?;
-            unify(arena, right_type, number)?;
 
             match op {
-                BinOp::Add => number,
-                BinOp::Sub => number,
-                BinOp::Mul => number,
-                BinOp::Div => number,
-                BinOp::EqEq => boolean,
-                BinOp::NotEq => boolean,
-                BinOp::Gt => boolean,
-                BinOp::GtEq => boolean,
-                BinOp::Lt => boolean,
-                BinOp::LtEq => boolean,
+                BinOp::Add | BinOp::Sub | BinOp::Mul | BinOp::Div => {
+                    unify(arena, left_type, number)?;
+                    unify(arena, right_type, number)?;
+                    number
+                }
+                BinOp::Gt | BinOp::GtEq | BinOp::Lt | BinOp::LtEq => {
+                    unify(arena, left_type, number)?;
+                    unify(arena, right_type, number)?;
+                    boolean
+                }
+                BinOp::And | BinOp::Or => {
+                    unify(arena, left_type, boolean)?;
+                    unify(arena, right_type, boolean)?;
+                    boolean
+                }
+                BinOp::EqEq | BinOp::NotEq => {
+                    let var_t = new_var_type(arena, None);
+                    unify(arena, left_type, var_t)?;
+                    unify(arena, right_type, var_t)?;
+                    boolean
+                }
             }
         }
         ExprKind::UnaryExpr(UnaryExpr { op, arg }) => {

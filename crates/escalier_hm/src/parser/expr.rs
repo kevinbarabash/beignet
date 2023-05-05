@@ -72,8 +72,8 @@ pub fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, Par
             let right = Box::from(parse_expression(&right, src)?);
 
             let op = match operator.as_str() {
-                "&&" => todo!(),
-                "||" => todo!(),
+                "&&" => BinOp::And,
+                "||" => BinOp::Or,
                 // TODO: decide what to do with bitwise operators
                 ">>" => todo!(),
                 ">>>" => todo!(),
