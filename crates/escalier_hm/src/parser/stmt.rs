@@ -284,7 +284,7 @@ pub fn parse_block_statement(node: &tree_sitter::Node, src: &str) -> Result<Bloc
 
     let mut stmts: Vec<Statement> = vec![];
 
-    for (i, child) in node.named_children(&mut cursor).into_iter().enumerate() {
+    for (i, child) in node.named_children(&mut cursor).enumerate() {
         let is_last = i == child_count - 1;
         if is_last {
             // This is the only place where a named `expression` node

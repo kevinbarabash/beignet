@@ -5,6 +5,7 @@ use std::collections::BTreeSet;
 use std::collections::HashMap;
 
 use crate::ast::{Bool, Lit, Num, Str};
+use crate::context::Context;
 use crate::errors::*;
 use crate::types::*;
 use crate::util::*;
@@ -22,20 +23,20 @@ use crate::util::*;
 ///
 /// Raises:
 ///     InferenceError: Raised if the types cannot be unified.
-pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors> {
+pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Result<(), Errors> {
     let a = prune(arena, t1);
     let b = prune(arena, t2);
     // Why do we clone here?
     let a_t = arena.get(a).unwrap().clone();
     let b_t = arena.get(b).unwrap().clone();
     match (&a_t.kind, &b_t.kind) {
-        (TypeKind::Variable(_), _) => bind(arena, a, b),
-        (_, TypeKind::Variable(_)) => bind(arena, b, a),
+        (TypeKind::Variable(_), _) => bind(arena, ctx, a, b),
+        (_, TypeKind::Variable(_)) => bind(arena, ctx, b, a),
 
         (TypeKind::Constructor(union), _) if union.name == "@@union" => {
             // All types in the union must be subtypes of t2
             for t in union.types.iter() {
-                unify(arena, *t, b)?;
+                unify(arena, ctx, *t, b)?;
             }
             Ok(())
         }
@@ -43,7 +44,7 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
             // If t1 is a subtype of any of the types in the union, then it is a
             // subtype of the union.
             for t2 in union.types.iter() {
-                if unify(arena, a, *t2).is_ok() {
+                if unify(arena, ctx, a, *t2).is_ok() {
                     return Ok(());
                 }
             }
@@ -70,9 +71,9 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
                 match q_t.kind {
                     TypeKind::Rest(_) => {
                         let rest_p = new_tuple_type(arena, &tuple1.types[i..]);
-                        unify(arena, rest_p, *q)?;
+                        unify(arena, ctx, rest_p, *q)?;
                     }
-                    _ => unify(arena, *p, *q)?,
+                    _ => unify(arena, ctx, *p, *q)?,
                 }
             }
             Ok(())
@@ -84,10 +85,10 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
             for p in &tuple.types {
                 match &arena[*p].kind {
                     TypeKind::Constructor(Constructor { name, types }) if name == "Array" => {
-                        unify(arena, types[0], q)?;
+                        unify(arena, ctx, types[0], q)?;
                     }
-                    TypeKind::Rest(_) => unify(arena, *p, b)?,
-                    _ => unify(arena, *p, q)?,
+                    TypeKind::Rest(_) => unify(arena, ctx, *p, b)?,
+                    _ => unify(arena, ctx, *p, q)?,
                 }
             }
             Ok(())
@@ -101,8 +102,8 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
                 let p_or_undefined = new_union_type(arena, &[p, undefined]);
 
                 match &arena[*q].kind {
-                    TypeKind::Rest(_) => unify(arena, a, *q)?,
-                    _ => unify(arena, p_or_undefined, *q)?,
+                    TypeKind::Rest(_) => unify(arena, ctx, a, *q)?,
+                    _ => unify(arena, ctx, p_or_undefined, *q)?,
                 }
             }
             Ok(())
@@ -110,12 +111,12 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
         (TypeKind::Rest(rest), TypeKind::Constructor(array))
             if (array.name == "Array" || array.name == "@@tuple") =>
         {
-            unify(arena, rest.arg, b)
+            unify(arena, ctx, rest.arg, b)
         }
         (TypeKind::Constructor(array), TypeKind::Rest(rest))
             if (array.name == "Array" || array.name == "@@tuple") =>
         {
-            unify(arena, a, rest.arg)
+            unify(arena, ctx, a, rest.arg)
         }
         (TypeKind::Constructor(con_a), TypeKind::Constructor(con_b)) => {
             // TODO: support type constructors with optional and default type params
@@ -127,7 +128,7 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
                 )));
             }
             for (p, q) in con_a.types.iter().zip(con_b.types.iter()) {
-                unify(arena, *p, *q)?;
+                unify(arena, ctx, *p, *q)?;
             }
             Ok(())
         }
@@ -147,9 +148,9 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
                 // NOTE: We reverse the order of the params here because func_a
                 // should be able to accept any params that func_b can accept,
                 // its params may be more lenient.  Thus q is a subtype of p.
-                unify(arena, *q, *p)?;
+                unify(arena, ctx, *q, *p)?;
             }
-            unify(arena, func_a.ret, func_b.ret)?;
+            unify(arena, ctx, func_a.ret, func_b.ret)?;
             Ok(())
         }
         (TypeKind::Literal(lit1), TypeKind::Literal(lit2)) => {
@@ -211,7 +212,7 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
                                 }
                                 false => prop2.t,
                             };
-                            unify(arena, p1_t, p2_t)?;
+                            unify(arena, ctx, p1_t, p2_t)?;
                             continue 'outer;
                         }
                         _ => (),
@@ -256,7 +257,7 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
             let obj_type = simplify_intersection(arena, &obj_types);
 
             match rest_types.len() {
-                0 => unify(arena, t1, obj_type),
+                0 => unify(arena, ctx, t1, obj_type),
                 1 => {
                     let all_obj_elems = match &arena[obj_type].kind {
                         TypeKind::Object(obj) => obj.props.to_owned(),
@@ -274,16 +275,63 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
                         });
 
                     let new_obj_type = new_object_type(arena, &obj_elems);
-                    unify(arena, new_obj_type, obj_type)?;
+                    unify(arena, ctx, new_obj_type, obj_type)?;
 
                     let new_rest_type = new_object_type(arena, &rest_elems);
-                    unify(arena, new_rest_type, rest_types[0])?;
+                    unify(arena, ctx, new_rest_type, rest_types[0])?;
 
                     Ok(())
                 }
                 _ => Err(Errors::InferenceError(
                     "Inference is undecidable".to_string(),
                 )),
+            }
+        }
+        (
+            _,
+            TypeKind::Constructor(Constructor {
+                name,
+                types: type_args,
+            }),
+        ) if !name.starts_with("@@")
+            && name != "number"
+            && name != "boolean"
+            && name != "string"
+            && name != "Promise"
+            && name != "Array" =>
+        {
+            match ctx.schemes.get(name) {
+                Some(scheme) => match &scheme.type_params {
+                    Some(type_params) => {
+                        if type_params.len() != type_args.len() {
+                            Err(Errors::InferenceError(format!(
+                                "{name} expects {} type args, but was passed {}",
+                                type_params.len(),
+                                type_args.len()
+                            )))
+                        } else {
+                            // TODO:
+                            // - build a mapping between type param names and type args
+                            // - create a copy of the type with type param names replaced
+                            let t = scheme.t;
+                            eprintln!("{name} = {}", arena[t].as_string(arena));
+
+                            unify(arena, ctx, t1, t)
+                        }
+                    }
+                    None => {
+                        if type_args.is_empty() {
+                            unify(arena, ctx, t1, scheme.t)
+                        } else {
+                            Err(Errors::InferenceError(format!(
+                                "{name} doesn't require any type args"
+                            )))
+                        }
+                    }
+                },
+                None => Err(Errors::InferenceError(format!(
+                    "Can't find type alias for {name}"
+                ))),
             }
         }
         _ => Err(Errors::InferenceError(format!(
@@ -297,6 +345,7 @@ pub fn unify(arena: &mut Arena<Type>, t1: Index, t2: Index) -> Result<(), Errors
 // This function unifies and infers the return type of a function call.
 pub fn unify_call(
     arena: &mut Arena<Type>,
+    ctx: &Context,
     arg_types: &[Index],
     type_args: Option<&[Index]>,
     t2: Index,
@@ -308,7 +357,7 @@ pub fn unify_call(
     let b_t = arena.get(b).unwrap().clone();
 
     match b_t.kind {
-        TypeKind::Variable(_) => bind(arena, b, call_type)?,
+        TypeKind::Variable(_) => bind(arena, ctx, b, call_type)?,
         TypeKind::Constructor(Constructor { name, types }) => {
             match name.as_str() {
                 "@@tuple" => {
@@ -317,7 +366,7 @@ pub fn unify_call(
                 "@@union" => {
                     let mut ret_types = vec![];
                     for t in types.iter() {
-                        let ret_type = unify_call(arena, arg_types, type_args, *t)?;
+                        let ret_type = unify_call(arena, ctx, arg_types, type_args, *t)?;
                         ret_types.push(ret_type);
                     }
 
@@ -330,7 +379,7 @@ pub fn unify_call(
                     for t in types.iter() {
                         // TODO: if there are multiple overloads that unify, pick the
                         // best one.
-                        let result = unify_call(arena, arg_types, type_args, *t);
+                        let result = unify_call(arena, ctx, arg_types, type_args, *t);
                         match result {
                             Ok(ret_type) => return Ok(ret_type),
                             Err(_) => continue,
@@ -374,9 +423,9 @@ pub fn unify_call(
             }
 
             for (p, q) in arg_types.iter().zip(func.params.iter()) {
-                unify(arena, *p, *q)?;
+                unify(arena, ctx, *p, *q)?;
             }
-            unify(arena, ret_type, func.ret)?;
+            unify(arena, ctx, ret_type, func.ret)?;
         }
     }
 
@@ -384,7 +433,7 @@ pub fn unify_call(
     Ok(prune(arena, ret_type))
 }
 
-fn bind(arena: &mut Arena<Type>, a: Index, b: Index) -> Result<(), Errors> {
+fn bind(arena: &mut Arena<Type>, ctx: &Context, a: Index, b: Index) -> Result<(), Errors> {
     if a != b {
         if occurs_in_type(arena, a, b) {
             return Err(Errors::InferenceError("recursive unification".to_string()));
@@ -394,7 +443,7 @@ fn bind(arena: &mut Arena<Type>, a: Index, b: Index) -> Result<(), Errors> {
         match &t.kind {
             TypeKind::Variable(avar) => {
                 if let Some(constraint) = avar.constraint {
-                    unify(arena, b, constraint)?;
+                    unify(arena, ctx, b, constraint)?;
                 }
 
                 let t = &mut arena[a];

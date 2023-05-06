@@ -10,9 +10,11 @@ pub struct Variable {
     pub constraint: Option<Index>,
 }
 
+// TODO: rename this TypeRef
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Constructor {
     pub name: String,
+    // TODO: rename this to type_args
     pub types: Vec<Index>,
 }
 
@@ -122,6 +124,12 @@ pub enum TypeKind {
 pub struct Type {
     // pub id: Index,
     pub kind: TypeKind,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Scheme {
+    pub t: Index,
+    pub type_params: Option<Vec<TypeParam>>,
 }
 
 /// A type variable standing for an arbitrary type.

@@ -30,9 +30,9 @@ use crate::util::*;
 ///     InferenceError: The type of the expression could not be inferred, for example
 ///         if it is not possible to unify two types such as Integer and Bool
 ///     ParseError: The abstract syntax tree rooted at node could not be parsed
-pub fn infer_expression<'a>(
+pub fn infer_expression(
     arena: &mut Arena<Type>,
-    node: &'a mut Expr,
+    node: &mut Expr,
     ctx: &mut Context,
 ) -> Result<Index, Errors> {
     let t: Index = match &mut node.kind {
@@ -96,9 +96,9 @@ pub fn infer_expression<'a>(
                         .map(|type_arg| infer_type_ann(arena, type_arg, ctx))
                         .collect::<Result<Vec<_>, _>>()?;
 
-                    unify_call(arena, &arg_types, Some(&type_args), func_type)?
+                    unify_call(arena, ctx, &arg_types, Some(&type_args), func_type)?
                 }
-                None => unify_call(arena, &arg_types, None, func_type)?,
+                None => unify_call(arena, ctx, &arg_types, None, func_type)?,
             }
         }
         // TODO: Add support for explicit type parameters
@@ -129,7 +129,7 @@ pub fn infer_expression<'a>(
                 }) = &pattern.kind
                 {
                     pattern.inferred_type = Some(param_type);
-                    new_ctx.env.insert(name.to_owned(), param_type);
+                    new_ctx.values.insert(name.to_owned(), param_type);
                     new_ctx.non_generic.insert(param_type);
                     param_types.push(param_type);
                 } else {
@@ -193,7 +193,7 @@ pub fn infer_expression<'a>(
             match return_type {
                 Some(return_type) => {
                     let ret_t = infer_type_ann(arena, return_type, ctx)?;
-                    unify(arena, body_t, ret_t)?;
+                    unify(arena, ctx, body_t, ret_t)?;
                     new_func_type(arena, &param_types, ret_t, type_params)
                 }
                 None => new_func_type(arena, &param_types, body_t, type_params),
@@ -206,7 +206,7 @@ pub fn infer_expression<'a>(
         }) => {
             let cond_type = infer_expression(arena, cond, ctx)?;
             let bool_type = new_constructor(arena, "boolean", &[]);
-            unify(arena, cond_type, bool_type)?;
+            unify(arena, ctx, cond_type, bool_type)?;
             let consequent_type = infer_block(arena, consequent, ctx)?;
             // TODO: handle the case where there is no alternate
             let alternate_type = infer_block(arena, &mut alternate.clone().unwrap(), ctx)?;
@@ -273,25 +273,25 @@ pub fn infer_expression<'a>(
 
             match op {
                 BinOp::Add | BinOp::Sub | BinOp::Mul | BinOp::Div => {
-                    unify(arena, left_type, number)?;
-                    unify(arena, right_type, number)?;
+                    unify(arena, ctx, left_type, number)?;
+                    unify(arena, ctx, right_type, number)?;
                     number
                 }
                 BinOp::Gt | BinOp::GtEq | BinOp::Lt | BinOp::LtEq => {
-                    unify(arena, left_type, number)?;
-                    unify(arena, right_type, number)?;
+                    unify(arena, ctx, left_type, number)?;
+                    unify(arena, ctx, right_type, number)?;
                     boolean
                 }
                 BinOp::And | BinOp::Or => {
-                    unify(arena, left_type, boolean)?;
-                    unify(arena, right_type, boolean)?;
+                    unify(arena, ctx, left_type, boolean)?;
+                    unify(arena, ctx, right_type, boolean)?;
                     boolean
                 }
                 BinOp::EqEq | BinOp::NotEq => {
                     let var_a = new_var_type(arena, None);
                     let var_b = new_var_type(arena, None);
-                    unify(arena, left_type, var_a)?;
-                    unify(arena, right_type, var_b)?;
+                    unify(arena, ctx, left_type, var_a)?;
+                    unify(arena, ctx, right_type, var_b)?;
                     boolean
                 }
             }
@@ -303,11 +303,11 @@ pub fn infer_expression<'a>(
 
             match op {
                 UnaryOp::Minus => {
-                    unify(arena, arg_type, number)?;
+                    unify(arena, ctx, arg_type, number)?;
                     number
                 }
                 UnaryOp::Not => {
-                    unify(arena, arg_type, boolean)?;
+                    unify(arena, ctx, arg_type, boolean)?;
                     boolean
                 }
             }
@@ -325,7 +325,7 @@ pub fn infer_expression<'a>(
             // NOTE: This isn't quite right because we can await non-promise values.
             // That being said, we should avoid doing so.
             let promise_t = new_constructor(arena, "Promise", &[inner_t]);
-            unify(arena, expr_t, promise_t)?;
+            unify(arena, ctx, expr_t, promise_t)?;
 
             inner_t
         }
@@ -340,13 +340,13 @@ pub fn infer_expression<'a>(
                 let (pat_bindings, pat_idx) = infer_pattern(arena, &mut arm.pattern, ctx)?;
 
                 // Checks that the pattern is a sub-type of expr
-                unify(arena, pat_idx, expr_idx)?;
+                unify(arena, ctx, pat_idx, expr_idx)?;
 
                 let mut new_ctx = ctx.clone();
                 for (name, binding) in pat_bindings {
                     // TODO: Update .env to store bindings so that we can handle
                     // mutability correctly
-                    new_ctx.env.insert(name, binding.t);
+                    new_ctx.values.insert(name, binding.t);
                 }
 
                 body_types.push(infer_block(arena, &mut arm.body, &mut new_ctx)?);
@@ -472,16 +472,20 @@ pub fn infer_type_ann(
             }
             new_object_type(arena, &props)
         }
-        TypeAnnKind::TypeRef(TypeRef { name, type_args }) => match type_args {
-            Some(type_args) => {
-                let mut type_args_idxs = Vec::new();
-                for type_arg in type_args.iter_mut() {
-                    type_args_idxs.push(infer_type_ann(arena, type_arg, _ctx)?);
+        TypeAnnKind::TypeRef(TypeRef { name, type_args }) => {
+            match type_args {
+                Some(type_args) => {
+                    let mut type_args_idxs = Vec::new();
+                    for type_arg in type_args.iter_mut() {
+                        type_args_idxs.push(infer_type_ann(arena, type_arg, _ctx)?);
+                    }
+                    // TODO: check that the type args conform to any constraints
+                    // present in the type params.
+                    new_constructor(arena, name, &type_args_idxs)
                 }
-                new_constructor(arena, name, &type_args_idxs)
+                None => new_constructor(arena, name, &[]),
             }
-            None => new_constructor(arena, name, &[]),
-        },
+        }
         TypeAnnKind::Union(UnionType { types }) => {
             let mut idxs = Vec::new();
             for type_ann in types.iter_mut() {
@@ -523,8 +527,8 @@ pub fn infer_type_ann(
     Ok(idx)
 }
 
-pub fn infer_statement<'a>(
-    arena: &'a mut Arena<Type>,
+pub fn infer_statement(
+    arena: &mut Arena<Type>,
     statement: &mut Statement,
     ctx: &mut Context,
     top_level: bool,
@@ -555,14 +559,14 @@ pub fn infer_statement<'a>(
 
                             // The initializer must conform to the type annotation's
                             // inferred type.
-                            unify(arena, init_idx, type_ann_idx)?;
+                            unify(arena, ctx, init_idx, type_ann_idx)?;
                             // Results in bindings introduced by the LHS pattern
                             // having their types inferred.
                             // It's okay for pat_type to be the super type here
                             // because all initializers it introduces are type
                             // variables.  It also prevents patterns from including
                             // variables that don't exist in the type annotation.
-                            unify(arena, type_ann_idx, pat_type)?;
+                            unify(arena, ctx, type_ann_idx, pat_type)?;
 
                             type_ann_idx
                         }
@@ -573,14 +577,14 @@ pub fn infer_statement<'a>(
                             // because all initializers it introduces are type
                             // variables.  It also prevents patterns from including
                             // variables that don't exist in the initializer.
-                            unify(arena, init_idx, pat_type)?;
+                            unify(arena, ctx, init_idx, pat_type)?;
 
                             init_idx
                         }
                     };
 
                     for (name, binding) in &pat_bindings {
-                        ctx.env.insert(name.clone(), binding.t);
+                        ctx.values.insert(name.clone(), binding.t);
                     }
 
                     pattern.inferred_type = Some(idx);
@@ -596,10 +600,10 @@ pub fn infer_statement<'a>(
                 (true, None, Some(type_ann)) => {
                     let idx = infer_type_ann(arena, type_ann, ctx)?;
 
-                    unify(arena, idx, pat_type)?;
+                    unify(arena, ctx, idx, pat_type)?;
 
                     for (name, binding) in &pat_bindings {
-                        ctx.env.insert(name.clone(), binding.t);
+                        ctx.values.insert(name.clone(), binding.t);
                     }
 
                     idx
@@ -631,9 +635,35 @@ pub fn infer_statement<'a>(
             }
         }
         StmtKind::ClassDecl(_) => todo!(),
-        StmtKind::TypeDecl(_) => {
-            // TODO: add support for type declarations
-            todo!()
+        StmtKind::TypeDecl(TypeDecl {
+            declare: _,
+            id,
+            type_ann,
+            type_params,
+        }) => {
+            let t = infer_type_ann(arena, type_ann, ctx)?;
+
+            let type_params = match type_params {
+                Some(type_params) => Some(
+                    type_params
+                        .iter()
+                        .map(|param| {
+                            Ok(types::TypeParam {
+                                name: param.name.name.to_owned(),
+                                constraint: None,
+                                default: None,
+                            })
+                        })
+                        .collect::<Result<Vec<types::TypeParam>, Errors>>()?,
+                ),
+                None => None,
+            };
+            // TODO: generalize type `t` into a scheme
+            let scheme = Scheme { t, type_params };
+
+            ctx.schemes.insert(id.name.to_owned(), scheme);
+
+            t
         }
         StmtKind::ForStmt(_) => todo!(),
     };
@@ -646,9 +676,9 @@ pub fn infer_statement<'a>(
 // TODO: introduce `infer_script` which has the same semantics as those used
 // to infer the body of a function.
 // TODO: rename to `infer_module`
-pub fn infer_program<'a>(
+pub fn infer_program(
     arena: &mut Arena<Type>,
-    node: &'a mut Program,
+    node: &mut Program,
     ctx: &mut Context,
 ) -> Result<(), Errors> {
     for stmt in &mut node.statements {
@@ -657,7 +687,7 @@ pub fn infer_program<'a>(
 
             for (name, binding) in bindings {
                 ctx.non_generic.insert(binding.t);
-                if ctx.env.insert(name.to_owned(), binding.t).is_some() {
+                if ctx.values.insert(name.to_owned(), binding.t).is_some() {
                     return Err(Errors::InferenceError(format!(
                         "{name} cannot be redeclared at the top-level"
                     )));

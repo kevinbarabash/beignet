@@ -78,7 +78,7 @@ mod tests {
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("result").unwrap();
+        let t = my_ctx.values.get("result").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"boolean"#);
 
         Ok(())
@@ -98,9 +98,9 @@ mod tests {
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("eq").unwrap();
+        let t = my_ctx.values.get("eq").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"boolean"#);
-        let t = my_ctx.env.get("neq").unwrap();
+        let t = my_ctx.values.get("neq").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"boolean"#);
 
         Ok(())
@@ -123,7 +123,7 @@ mod tests {
         let mut program = parse(src).unwrap();
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
-        let t = my_ctx.env.get("fact").unwrap();
+        let t = my_ctx.values.get("fact").unwrap();
 
         assert_eq!(arena[*t].as_string(&arena), r#"(number) => 1 | number"#);
         Ok(())
@@ -149,9 +149,9 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("even").unwrap();
+        let t = my_ctx.values.get("even").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"(number) => true | boolean"#);
-        let t = my_ctx.env.get("odd").unwrap();
+        let t = my_ctx.values.get("odd").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"(number) => true | boolean"#);
 
         Ok(())
@@ -178,9 +178,9 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("even").unwrap();
+        let t = my_ctx.values.get("even").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"(number) => true | boolean"#);
-        let t = my_ctx.env.get("odd").unwrap();
+        let t = my_ctx.values.get("odd").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"(number) => true | boolean"#);
 
         Ok(())
@@ -241,7 +241,7 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("result").unwrap();
+        let t = my_ctx.values.get("result").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"[4, true]"#);
         Ok(())
     }
@@ -269,7 +269,7 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("result").unwrap();
+        let t = my_ctx.values.get("result").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"5"#);
         Ok(())
     }
@@ -288,7 +288,7 @@ mod tests {
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("result").unwrap();
+        let t = my_ctx.values.get("result").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"<A>(A) => [A, A]"#);
         Ok(())
     }
@@ -302,7 +302,7 @@ mod tests {
         let mut program = parse(src).unwrap();
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
-        let t = my_ctx.env.get("result").unwrap();
+        let t = my_ctx.values.get("result").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"<A>(A) => A"#);
 
         Ok(())
@@ -318,7 +318,7 @@ mod tests {
         let mut program = parse(src).unwrap();
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
-        let t = my_ctx.env.get("result").unwrap();
+        let t = my_ctx.values.get("result").unwrap();
         assert_eq!(
             arena[*t].as_string(&arena),
             r#"<A, B, C>((A) => B) => ((B) => C) => (A) => C"#
@@ -339,14 +339,14 @@ mod tests {
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("S").unwrap();
+        let t = my_ctx.values.get("S").unwrap();
         assert_eq!(
             arena[*t].as_string(&arena),
             r#"<A, B, C>((A) => (B) => C) => ((A) => B) => (A) => C"#
         );
-        let t = my_ctx.env.get("K").unwrap();
+        let t = my_ctx.values.get("K").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"<A, B>(A) => (B) => A"#);
-        let t = my_ctx.env.get("I").unwrap();
+        let t = my_ctx.values.get("I").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"<A>(A) => A"#);
 
         Ok(())
@@ -369,7 +369,7 @@ mod tests {
         let mut program = parse(src).unwrap();
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
-        let t = my_ctx.env.get("result").unwrap();
+        let t = my_ctx.values.get("result").unwrap();
         assert_eq!(
             arena[*t].as_string(&arena),
             r#"<A, B, C>((A) => B) => ((B) => C) => (A) => C"#
@@ -388,7 +388,7 @@ mod tests {
         let mut program = parse(src).unwrap();
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
-        let t = my_ctx.env.get("result").unwrap();
+        let t = my_ctx.values.get("result").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"number"#);
         Ok(())
     }
@@ -403,7 +403,7 @@ mod tests {
 
         // foo: ((number, string) => boolean) => boolean
         let cb = new_func_type(&mut arena, &[num, str], bool, None);
-        my_ctx.env.insert(
+        my_ctx.values.insert(
             "foo".to_string(),
             new_func_type(&mut arena, &[cb], bool, None),
         );
@@ -416,7 +416,7 @@ mod tests {
         // expected return type since it still conforms to the expected type.
         let num_or_str = new_union_type(&mut arena, &[num, str]);
         let true_type = new_bool_lit_type(&mut arena, true);
-        my_ctx.env.insert(
+        my_ctx.values.insert(
             "bar".to_string(),
             new_func_type(&mut arena, &[num_or_str], true_type, None),
         );
@@ -425,7 +425,7 @@ mod tests {
         let mut program = parse(src).unwrap();
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
-        let t = my_ctx.env.get("result").unwrap();
+        let t = my_ctx.values.get("result").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"boolean"#);
         Ok(())
     }
@@ -440,13 +440,13 @@ mod tests {
 
         // foo: ((number) => boolean) => boolean
         let cb = new_func_type(&mut arena, &[num], bool, None);
-        my_ctx.env.insert(
+        my_ctx.values.insert(
             "foo".to_string(),
             new_func_type(&mut arena, &[cb], bool, None),
         );
 
         // bar: (number, string) => true
-        my_ctx.env.insert(
+        my_ctx.values.insert(
             "bar".to_string(),
             new_func_type(&mut arena, &[num, str], bool, None),
         );
@@ -469,7 +469,7 @@ mod tests {
         let lit1 = new_num_lit_type(&mut arena, "5");
         let lit2 = new_num_lit_type(&mut arena, "10");
         my_ctx
-            .env
+            .values
             .insert("foo".to_string(), new_union_type(&mut arena, &[lit1, lit2]));
 
         let src = r#"
@@ -479,7 +479,7 @@ mod tests {
         let mut program = parse(src).unwrap();
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
-        let t = my_ctx.env.get("result").unwrap();
+        let t = my_ctx.values.get("result").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"number"#);
         Ok(())
     }
@@ -493,14 +493,14 @@ mod tests {
         let fn1 = new_func_type(&mut arena, &[], bool, None);
         let fn2 = new_func_type(&mut arena, &[], str, None);
         my_ctx
-            .env
+            .values
             .insert("foo".to_string(), new_union_type(&mut arena, &[fn1, fn2]));
 
         let src = r#"let result = foo();"#;
         let mut program = parse(src).unwrap();
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
-        let t = my_ctx.env.get("result").unwrap();
+        let t = my_ctx.values.get("result").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"boolean | string"#);
         Ok(())
     }
@@ -532,7 +532,7 @@ mod tests {
         let (mut arena, mut my_ctx) = test_env();
 
         let lit = new_num_lit_type(&mut arena, "5");
-        my_ctx.env.insert("foo".to_string(), lit);
+        my_ctx.values.insert("foo".to_string(), lit);
 
         let src = r#"let result = foo();"#;
         let mut program = parse(src).unwrap();
@@ -557,7 +557,7 @@ mod tests {
         let mut program = parse(src).unwrap();
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
-        let t = my_ctx.env.get("result").unwrap();
+        let t = my_ctx.values.get("result").unwrap();
         assert_eq!(arena[*t].as_string(&arena), "[5, \"hello\"]".to_string(),);
 
         Ok(())
@@ -574,7 +574,7 @@ mod tests {
         let mut program = parse(src).unwrap();
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
-        let t = my_ctx.env.get("result").unwrap();
+        let t = my_ctx.values.get("result").unwrap();
         assert_eq!(arena[*t].as_string(&arena), "\"hello\"".to_string(),);
 
         Ok(())
@@ -611,13 +611,13 @@ mod tests {
         let param_type = new_tuple_type(&mut arena, &[num, str]);
         let bool = new_constructor(&mut arena, "boolean", &[]);
         let func = new_func_type(&mut arena, &[param_type], bool, None);
-        my_ctx.env.insert("foo".to_string(), func);
+        my_ctx.values.insert("foo".to_string(), func);
 
         let src = r#"let result = foo([5, "hello", true]);"#;
         let mut program = parse(src).unwrap();
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
-        let t = my_ctx.env.get("result").unwrap();
+        let t = my_ctx.values.get("result").unwrap();
         assert_eq!(arena[*t].as_string(&arena), "boolean".to_string(),);
 
         Ok(())
@@ -632,7 +632,7 @@ mod tests {
         let param_type = new_tuple_type(&mut arena, &[num, str]);
         let bool = new_constructor(&mut arena, "boolean", &[]);
         let func = new_func_type(&mut arena, &[param_type], bool, None);
-        my_ctx.env.insert("foo".to_string(), func);
+        my_ctx.values.insert("foo".to_string(), func);
 
         let src = r#"let result = foo([5]);"#;
         let mut program = parse(src).unwrap();
@@ -657,7 +657,7 @@ mod tests {
         let mut program = parse(src).unwrap();
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
-        let t = my_ctx.env.get("result").unwrap();
+        let t = my_ctx.values.get("result").unwrap();
 
         assert_eq!(
             arena[*t].as_string(&arena),
@@ -678,7 +678,7 @@ mod tests {
         let mut program = parse(src).unwrap();
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
-        let t = my_ctx.env.get("result").unwrap();
+        let t = my_ctx.values.get("result").unwrap();
 
         assert_eq!(arena[*t].as_string(&arena), "5".to_string(),);
 
@@ -732,7 +732,7 @@ mod tests {
         );
         let bool = new_constructor(&mut arena, "boolean", &[]);
         let func = new_func_type(&mut arena, &[param_type], bool, None);
-        my_ctx.env.insert("foo".to_string(), func);
+        my_ctx.values.insert("foo".to_string(), func);
 
         // Each prop must be a subtype of the expected element type
         // It's okay to pass an object with extra props
@@ -740,7 +740,7 @@ mod tests {
         let mut program = parse(src).unwrap();
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
-        let t = my_ctx.env.get("result").unwrap();
+        let t = my_ctx.values.get("result").unwrap();
 
         assert_eq!(arena[*t].as_string(&arena), "boolean".to_string(),);
 
@@ -772,7 +772,7 @@ mod tests {
         );
         let bool = new_constructor(&mut arena, "boolean", &[]);
         let func = new_func_type(&mut arena, &[param_type], bool, None);
-        my_ctx.env.insert("foo".to_string(), func);
+        my_ctx.values.insert("foo".to_string(), func);
 
         let src = r#"let result = foo({b: "hello"});"#;
         let mut program = parse(src).unwrap();
@@ -818,7 +818,7 @@ mod tests {
         let lit1 = new_num_lit_type(&mut arena, "5");
         let lit2 = new_str_lit_type(&mut arena, "hello");
         my_ctx
-            .env
+            .values
             .insert("foo".to_string(), new_union_type(&mut arena, &[lit1, lit2]));
 
         let src = r#"
@@ -873,10 +873,10 @@ mod tests {
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("num").unwrap();
+        let t = my_ctx.values.get("num").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"5"#);
 
-        let t = my_ctx.env.get("str").unwrap();
+        let t = my_ctx.values.get("str").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#""hello""#);
 
         // TODO: implement std::fmt for Program et al
@@ -904,13 +904,13 @@ mod tests {
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("id").unwrap();
+        let t = my_ctx.values.get("id").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"<A>(A) => A"#);
 
-        let t = my_ctx.env.get("a").unwrap();
+        let t = my_ctx.values.get("a").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"5"#);
 
-        let t = my_ctx.env.get("b").unwrap();
+        let t = my_ctx.values.get("b").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#""hello""#);
 
         Ok(())
@@ -928,10 +928,10 @@ mod tests {
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("fst").unwrap();
+        let t = my_ctx.values.get("fst").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"<A, B>(A, B) => A"#);
 
-        let t = my_ctx.env.get("snd").unwrap();
+        let t = my_ctx.values.get("snd").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"<A, B>(A, B) => B"#);
 
         Ok(())
@@ -952,7 +952,7 @@ mod tests {
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("result").unwrap();
+        let t = my_ctx.values.get("result").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"() => number"#);
 
         if let StmtKind::VarDecl(VarDecl {
@@ -1025,7 +1025,7 @@ mod tests {
         let mut program = parse(src).unwrap();
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
-        let t = my_ctx.env.get("neg").unwrap();
+        let t = my_ctx.values.get("neg").unwrap();
 
         assert_eq!(arena[*t].as_string(&arena), r#"(number) => number"#);
         Ok(())
@@ -1041,7 +1041,7 @@ mod tests {
         let mut program = parse(src).unwrap();
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
-        let t = my_ctx.env.get("foo").unwrap();
+        let t = my_ctx.values.get("foo").unwrap();
 
         assert_eq!(arena[*t].as_string(&arena), r#"() => Promise<5>"#);
         Ok(())
@@ -1059,7 +1059,7 @@ mod tests {
         let mut program = parse(src).unwrap();
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
-        let t = my_ctx.env.get("foo").unwrap();
+        let t = my_ctx.values.get("foo").unwrap();
 
         assert_eq!(arena[*t].as_string(&arena), r#"() => Promise<undefined>"#);
         Ok(())
@@ -1081,10 +1081,10 @@ mod tests {
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("bar").unwrap();
+        let t = my_ctx.values.get("bar").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"() => Promise<5>"#);
 
-        let t = my_ctx.env.get("baz").unwrap();
+        let t = my_ctx.values.get("baz").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"() => Promise<5>"#);
 
         Ok(())
@@ -1154,7 +1154,7 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("sum").unwrap();
+        let t = my_ctx.values.get("sum").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"["hello", number]"#);
 
         Ok(())
@@ -1170,7 +1170,7 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("sum").unwrap();
+        let t = my_ctx.values.get("sum").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"undefined"#);
 
         Ok(())
@@ -1198,7 +1198,7 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("x").unwrap();
+        let t = my_ctx.values.get("x").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"number"#);
 
         Ok(())
@@ -1216,10 +1216,10 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("sum").unwrap();
+        let t = my_ctx.values.get("sum").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"number"#);
 
-        let t = my_ctx.env.get("msg").unwrap();
+        let t = my_ctx.values.get("msg").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"string"#);
 
         Ok(())
@@ -1321,7 +1321,7 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("name").unwrap();
+        let t = my_ctx.values.get("name").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"number | "bar""#);
 
         Ok(())
@@ -1395,7 +1395,7 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("result").unwrap();
+        let t = my_ctx.values.get("result").unwrap();
         assert_eq!(
             arena[*t].as_string(&arena),
             // TODO: update unions to merge elements whenever possible
@@ -1421,7 +1421,7 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("key").unwrap();
+        let t = my_ctx.values.get("key").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"string | string"#);
 
         Ok(())
@@ -1440,7 +1440,7 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("b").unwrap();
+        let t = my_ctx.values.get("b").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"string | boolean"#);
 
         Ok(())
@@ -1458,9 +1458,9 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("a").unwrap();
+        let t = my_ctx.values.get("a").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"number | undefined"#);
-        let t = my_ctx.env.get("b").unwrap();
+        let t = my_ctx.values.get("b").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"string"#);
 
         Ok(())
@@ -1478,13 +1478,13 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("a").unwrap();
+        let t = my_ctx.values.get("a").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"number | undefined"#);
 
-        let t = my_ctx.env.get("b").unwrap();
+        let t = my_ctx.values.get("b").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"string"#);
 
-        let t = my_ctx.env.get("c").unwrap();
+        let t = my_ctx.values.get("c").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"boolean"#);
 
         Ok(())
@@ -1501,9 +1501,9 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("a").unwrap();
+        let t = my_ctx.values.get("a").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"number | undefined"#);
-        let t = my_ctx.env.get("rest").unwrap();
+        let t = my_ctx.values.get("rest").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"{b: string, c: boolean}"#);
 
         Ok(())
@@ -1520,11 +1520,11 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("c").unwrap();
+        let t = my_ctx.values.get("c").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"string"#);
 
-        assert_eq!(my_ctx.env.get("a"), None);
-        assert_eq!(my_ctx.env.get("b"), None);
+        assert_eq!(my_ctx.values.get("a"), None);
+        assert_eq!(my_ctx.values.get("b"), None);
 
         Ok(())
     }
@@ -1540,10 +1540,10 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("a").unwrap();
+        let t = my_ctx.values.get("a").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"number"#);
 
-        let t = my_ctx.env.get("b").unwrap();
+        let t = my_ctx.values.get("b").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"string"#);
 
         Ok(())
@@ -1560,9 +1560,9 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("a").unwrap();
+        let t = my_ctx.values.get("a").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"number"#);
-        let t = my_ctx.env.get("tuple_rest").unwrap();
+        let t = my_ctx.values.get("tuple_rest").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"[string, boolean]"#);
 
         Ok(())
@@ -1579,9 +1579,9 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("a").unwrap();
+        let t = my_ctx.values.get("a").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"string | undefined"#);
-        let t = my_ctx.env.get("array_rest").unwrap();
+        let t = my_ctx.values.get("array_rest").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"Array<string>"#);
 
         Ok(())
@@ -1598,7 +1598,7 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("c").unwrap();
+        let t = my_ctx.values.get("c").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"boolean"#);
 
         Ok(())
@@ -1616,9 +1616,9 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("x").unwrap();
+        let t = my_ctx.values.get("x").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"number"#);
-        let t = my_ctx.env.get("y").unwrap();
+        let t = my_ctx.values.get("y").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"string"#);
 
         Ok(())
@@ -1678,9 +1678,9 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("x").unwrap();
+        let t = my_ctx.values.get("x").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"5"#);
-        let t = my_ctx.env.get("y").unwrap();
+        let t = my_ctx.values.get("y").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#""hello""#);
 
         Ok(())
@@ -1697,9 +1697,9 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("fst").unwrap();
+        let t = my_ctx.values.get("fst").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"<B, A>(A, B) => A"#);
-        let t = my_ctx.env.get("snd").unwrap();
+        let t = my_ctx.values.get("snd").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"<B, A>(A, B) => B"#);
 
         Ok(())
@@ -1757,12 +1757,12 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("identity").unwrap();
+        let t = my_ctx.values.get("identity").unwrap();
         assert_eq!(
             arena[*t].as_string(&arena),
             r#"<T:number | string>(T) => T"#
         );
-        let t = my_ctx.env.get("x").unwrap();
+        let t = my_ctx.values.get("x").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"number"#);
 
         Ok(())
@@ -1801,7 +1801,7 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("result").unwrap();
+        let t = my_ctx.values.get("result").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"boolean"#);
 
         Ok(())
@@ -1840,9 +1840,9 @@ mod tests {
         let mut program = parse(src).unwrap();
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-        let t = my_ctx.env.get("foo").unwrap();
+        let t = my_ctx.values.get("foo").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"() => string"#);
-        let t = my_ctx.env.get("result").unwrap();
+        let t = my_ctx.values.get("result").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"string"#);
 
         Ok(())
@@ -1865,6 +1865,39 @@ mod tests {
             ))
         );
 
+        Ok(())
+    }
+
+    #[test]
+    fn type_alias() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        type Point = {x: number, y: number};
+        let p: Point = {x: 5, y: 10};
+        "#;
+        let mut program = parse(src).unwrap();
+
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+        let t = my_ctx.values.get("p").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"Point"#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn type_alias_with_params() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        type Node<T> = {value: T};
+        let node: Node<string> = {value: "hello"};
+        "#;
+        let mut program = parse(src).unwrap();
+
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+        let t = my_ctx.values.get("p").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"{x: number, y: number}"#);
         Ok(())
     }
 }

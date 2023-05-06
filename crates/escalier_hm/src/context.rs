@@ -8,8 +8,11 @@ use crate::util::*;
 
 #[derive(Clone, Debug, Default)]
 pub struct Context {
-    // The type environment mapping from identifier names to types
-    pub env: HashMap<String, Index>,
+    // Maps variables to their types.
+    pub values: HashMap<String, Index>,
+    // Maps type aliases to type types definitions.
+    // TODO: figure out how we want to track types and schemes
+    pub schemes: HashMap<String, Scheme>,
     // A set of non-generic TypeVariables.
     // NOTE: The same type variable can be both generic and non-generic in
     // different contexts.
@@ -28,7 +31,7 @@ pub struct Context {
 ///     ParseError: Raised if name is an undefined symbol in the type
 ///         environment.
 pub fn get_type(arena: &mut Arena<Type>, name: &str, ctx: &Context) -> Result<Index, Errors> {
-    if let Some(value) = ctx.env.get(name) {
+    if let Some(value) = ctx.values.get(name) {
         Ok(fresh(arena, *value, ctx))
     } else {
         Err(Errors::InferenceError(format!(

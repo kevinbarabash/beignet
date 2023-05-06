@@ -181,7 +181,6 @@ pub fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, Par
                     Some(
                         type_args
                             .named_children(&mut cursor)
-                            .into_iter()
                             .map(|arg| parse_type_ann(&arg, src))
                             .collect::<Result<Vec<_>, ParseError>>()?,
                     )
@@ -233,7 +232,6 @@ pub fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, Par
                     Some(
                         type_args
                             .named_children(&mut cursor)
-                            .into_iter()
                             .map(|arg| parse_type_ann(&arg, src))
                             .collect::<Result<Vec<_>, ParseError>>()?,
                     )
@@ -263,7 +261,6 @@ pub fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, Par
             let mut cursor = node.walk();
             let props = node
                 .named_children(&mut cursor)
-                .into_iter()
                 .map(|child| match child.kind() {
                     "pair" => {
                         // NOTE: _property_name is defined as:
