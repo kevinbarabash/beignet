@@ -1892,12 +1892,16 @@ mod tests {
         let src = r#"
         type Node<T> = {value: T};
         let node: Node<string> = {value: "hello"};
+        // let value = node.value;
+        // let {value} = node;
         "#;
         let mut program = parse(src).unwrap();
 
         infer_program(&mut arena, &mut program, &mut my_ctx)?;
-        let t = my_ctx.values.get("p").unwrap();
-        assert_eq!(arena[*t].as_string(&arena), r#"{x: number, y: number}"#);
+
+        let t = my_ctx.values.get("node").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"Node<string>"#);
+
         Ok(())
     }
 }

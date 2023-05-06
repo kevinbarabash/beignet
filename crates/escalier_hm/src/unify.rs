@@ -5,7 +5,7 @@ use std::collections::BTreeSet;
 use std::collections::HashMap;
 
 use crate::ast::{Bool, Lit, Num, Str};
-use crate::context::Context;
+use crate::context::*;
 use crate::errors::*;
 use crate::types::*;
 use crate::util::*;
@@ -314,7 +314,16 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                             // - build a mapping between type param names and type args
                             // - create a copy of the type with type param names replaced
                             let t = scheme.t;
+
+                            let mut mapping: HashMap<String, Index> = HashMap::new();
+                            for (param, arg) in type_params.iter().zip(type_args.iter()) {
+                                mapping.insert(param.name.clone(), arg.to_owned());
+                            }
+
                             eprintln!("{name} = {}", arena[t].as_string(arena));
+                            eprintln!("mapping = {mapping:#?}");
+
+                            let t = instantiate_scheme(arena, scheme.t, &mapping, ctx);
 
                             unify(arena, ctx, t1, t)
                         }
