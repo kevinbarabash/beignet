@@ -601,9 +601,6 @@ fn expand_alias(
                     mapping.insert(param.name.clone(), arg.to_owned());
                 }
 
-                eprintln!("{name} = {}", arena[t].as_string(arena));
-                eprintln!("mapping = {mapping:#?}");
-
                 let t = instantiate_scheme(arena, scheme.t, &mapping, ctx);
 
                 Ok(t)

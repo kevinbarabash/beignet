@@ -1886,14 +1886,13 @@ mod tests {
     }
 
     #[test]
-    fn type_alias_with_params() -> Result<(), Errors> {
+    fn type_alias_with_params_with_destructuring() -> Result<(), Errors> {
         let (mut arena, mut my_ctx) = test_env();
 
         let src = r#"
         type Node<T> = {value: T};
         let node: Node<string> = {value: "hello"};
-        let {value: v1} = node;
-        // let v2 = node.value;
+        let {value} = node;
         "#;
         let mut program = parse(src).unwrap();
 
@@ -1901,7 +1900,28 @@ mod tests {
 
         let t = my_ctx.values.get("node").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"Node<string>"#);
-        let t = my_ctx.values.get("v1").unwrap();
+        let t = my_ctx.values.get("value").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"string"#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn type_alias_with_params_with_member_access() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        type Node<T> = {value: T};
+        let node: Node<string> = {value: "hello"};
+        let value = node.value;
+        "#;
+        let mut program = parse(src).unwrap();
+
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.values.get("node").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"Node<string>"#);
+        let t = my_ctx.values.get("value").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"string"#);
 
         Ok(())
