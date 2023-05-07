@@ -214,9 +214,14 @@ pub fn infer_expression(
         }
         ExprKind::Member(Member { obj, prop }) => {
             let obj_idx = infer_expression(arena, obj, ctx)?;
-            let obj_type = arena[obj_idx].clone();
-
-            get_member(arena, ctx, obj_idx, &obj_type, prop)?
+            match prop {
+                MemberProp::Ident(Ident { name, .. }) => {
+                    get_ident_member(arena, ctx, obj_idx, name)?
+                }
+                MemberProp::Computed(ComputedPropName { expr, .. }) => {
+                    get_computed_member(arena, ctx, obj_idx, expr)?
+                }
+            }
         }
         ExprKind::New(_) => todo!(),
         ExprKind::JSXElement(_) => todo!(),
@@ -762,6 +767,95 @@ pub fn generalize_func(arena: &'_ mut Arena<Type>, func: &Function) -> Index {
     }
 }
 
+fn get_ident_member(
+    arena: &mut Arena<Type>,
+    ctx: &mut Context,
+    obj_idx: Index,
+    prop_name: &str,
+) -> Result<Index, Errors> {
+    // NOTE: cloning is fine here because we aren't mutating `obj_type`
+    let obj_type = arena[obj_idx].clone();
+
+    match &obj_type.kind {
+        TypeKind::Object(_) => get_prop(arena, obj_idx, prop_name),
+        // declare let obj: {x: number} | {x: string}
+        // obj.x; // number | string
+        TypeKind::Constructor(union) if union.name == "@@union" => {
+            let mut types = vec![];
+            for idx in &union.types {
+                types.push(get_prop(arena, *idx, prop_name)?);
+            }
+            Ok(new_union_type(arena, &types))
+        }
+        TypeKind::Constructor(types::Constructor {
+            name: alias_name,
+            types,
+            ..
+        }) if !alias_name.starts_with("@@")
+            && alias_name != "number"
+            && alias_name != "boolean"
+            && alias_name != "string"
+            && alias_name != "Promise"
+            && alias_name != "Array" =>
+        {
+            match ctx.schemes.get(alias_name) {
+                Some(scheme) => {
+                    let obj_idx = expand_alias(arena, ctx, alias_name, scheme, types)?;
+                    get_ident_member(arena, ctx, obj_idx, prop_name)
+                    // unify(arena, ctx, t1, t)
+                }
+                None => Err(Errors::InferenceError(format!(
+                    "Can't find type alias for {alias_name}"
+                ))),
+            }
+        }
+        _ => Err(Errors::InferenceError(
+            "Can only access properties on objects/tuples".to_string(),
+        )),
+    }
+}
+
+fn get_computed_member(
+    arena: &mut Arena<Type>,
+    ctx: &mut Context,
+    obj_idx: Index,
+    expr: &mut Expr,
+) -> Result<Index, Errors> {
+    // NOTE: cloning is fine here because we aren't mutating `obj_type`
+    let obj_type = arena[obj_idx].clone();
+
+    match &obj_type.kind {
+        // let tuple = [5, "hello", true]
+        // tuple[1]; // "hello"
+        TypeKind::Constructor(tuple) if tuple.name == "@@tuple" => {
+            let prop_type = infer_expression(arena, expr, ctx)?;
+            match &arena[prop_type].kind {
+                TypeKind::Literal(Lit::Num(Num { value, .. })) => {
+                    let index: usize = value.parse().unwrap();
+                    if index < tuple.types.len() {
+                        // TODO: update AST with the inferred type
+                        return Ok(tuple.types[index]);
+                    }
+                    Err(Errors::InferenceError(format!(
+                        "{index} was outside the bounds 0..{} of the tuple",
+                        tuple.types.len()
+                    )))
+                }
+                TypeKind::Literal(Lit::Str(Str { value, .. })) => {
+                    todo!();
+                }
+                _ => Err(Errors::InferenceError(
+                    "Can only access tuple properties with a number".to_string(),
+                )),
+            }
+        }
+        // TODO: handle a union of tuples
+        _ => Err(Errors::InferenceError(
+            "Can only access properties on objects/tuples".to_string(),
+        )),
+    }
+}
+
 fn get_prop(arena: &mut Arena<Type>, obj_idx: Index, name: &str) -> Result<Index, Errors> {
     let undefined = new_constructor(arena, "undefined", &[]);
     if let TypeKind::Object(object) = &arena[obj_idx].kind {
@@ -787,82 +881,5 @@ fn get_prop(arena: &mut Arena<Type>, obj_idx: Index, name: &str) -> Result<Index
         Err(Errors::InferenceError(
             "Can't access property on non-object type".to_string(),
         ))
-    }
-}
-
-fn get_member(
-    arena: &mut Arena<Type>,
-    ctx: &mut Context,
-    obj_idx: Index,
-    obj_type: &Type,
-    prop: &mut MemberProp,
-) -> Result<Index, Errors> {
-    // TODO:
-    // - extract this into a helper function
-    // - expand type aliases and call the helper recursively
-    match (&obj_type.kind, &mut prop.clone()) {
-        (TypeKind::Object(_), MemberProp::Ident(Ident { name, .. })) => {
-            get_prop(arena, obj_idx, name)
-        }
-        // declare let obj: {x: number} | {x: string}
-        // obj.x; // number | string
-        (TypeKind::Constructor(union), MemberProp::Ident(Ident { name, .. }))
-            if union.name == "@@union" =>
-        {
-            let mut types = vec![];
-            for idx in &union.types {
-                types.push(get_prop(arena, *idx, name)?);
-            }
-            Ok(new_union_type(arena, &types))
-        }
-        // let tuple = [5, "hello", true]
-        // tuple[1]; // "hello"
-        (TypeKind::Constructor(tuple), MemberProp::Computed(ComputedPropName { expr, .. }))
-            if tuple.name == "@@tuple" =>
-        {
-            let prop_type = infer_expression(arena, expr.as_mut(), ctx)?;
-            match &arena[prop_type].kind {
-                TypeKind::Literal(Lit::Num(Num { value, .. })) => {
-                    let index: usize = value.parse().unwrap();
-                    if index < tuple.types.len() {
-                        // TODO: update AST with the inferred type
-                        return Ok(tuple.types[index]);
-                    }
-                    Err(Errors::InferenceError(format!(
-                        "{index} was outside the bounds 0..{} of the tuple",
-                        tuple.types.len()
-                    )))
-                }
-                _ => Err(Errors::InferenceError(
-                    "Can only access tuple properties with a number".to_string(),
-                )),
-            }
-        }
-        (TypeKind::Constructor(types::Constructor { name, types, .. }), _)
-            if !name.starts_with("@@")
-                && name != "number"
-                && name != "boolean"
-                && name != "string"
-                && name != "Promise"
-                && name != "Array" =>
-        {
-            match ctx.schemes.get(name) {
-                Some(scheme) => {
-                    let obj_idx = expand_alias(arena, ctx, name, scheme, types)?;
-                    let obj_type = arena[obj_idx].clone();
-                    get_member(arena, ctx, obj_idx, &obj_type, prop)
-                    // unify(arena, ctx, t1, t)
-                }
-                None => Err(Errors::InferenceError(format!(
-                    "Can't find type alias for {name}"
-                ))),
-            }
-
-            // expand_alias(arena, ctx, name, scheme, &types);
-            // todo!()
-        }
-        _ => Err(Errors::InferenceError(
-            "Can only access properties on objects/tuples".to_string(),
-        )),
     }
 }
