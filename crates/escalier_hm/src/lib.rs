@@ -1950,6 +1950,50 @@ mod tests {
     }
 
     #[test]
+    fn instantiate_type_alias_with_too_many_type_args() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        type Node<T> = {value: T};
+        let node: Node<string, number> = {value: "hello"};
+        "#;
+        let mut program = parse(src).unwrap();
+
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "Node expects 1 type args, but was passed 2".to_string()
+            ))
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn instantiate_type_alias_with_args_when_it_has_no_type_params() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        type Point = {x: number, y: number};
+        let p: Point<number> = {x: 5, y: 10};
+        "#;
+        let mut program = parse(src).unwrap();
+
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "Point doesn't require any type args".to_string()
+            ))
+        );
+
+        Ok(())
+    }
+
+    #[test]
     fn property_accesses_on_unions() -> Result<(), Errors> {
         let (mut arena, mut my_ctx) = test_env();
 

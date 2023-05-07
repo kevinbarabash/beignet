@@ -293,46 +293,30 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 name,
                 types: type_args,
             }),
-        ) if !name.starts_with("@@")
-            && name != "number"
-            && name != "boolean"
-            && name != "string"
-            && name != "Promise"
-            && name != "Array" =>
-        {
-            match ctx.schemes.get(name) {
-                Some(scheme) => {
-                    let t = expand_alias(arena, ctx, name, scheme, type_args)?;
-                    unify(arena, ctx, t1, t)
-                }
-                None => Err(Errors::InferenceError(format!(
-                    "Can't find type alias for {name}"
-                ))),
+        ) if !name.starts_with("@@") => match ctx.schemes.get(name) {
+            Some(scheme) => {
+                let t = expand_alias(arena, ctx, name, scheme, type_args)?;
+                unify(arena, ctx, t1, t)
             }
-        }
+            None => Err(Errors::InferenceError(format!(
+                "Can't find type alias for {name}"
+            ))),
+        },
         (
             TypeKind::Constructor(Constructor {
                 name,
                 types: type_args,
             }),
             TypeKind::Object(_),
-        ) if !name.starts_with("@@")
-            && name != "number"
-            && name != "boolean"
-            && name != "string"
-            && name != "Promise"
-            && name != "Array" =>
-        {
-            match ctx.schemes.get(name) {
-                Some(scheme) => {
-                    let t = expand_alias(arena, ctx, name, scheme, type_args)?;
-                    unify(arena, ctx, t, t2)
-                }
-                None => Err(Errors::InferenceError(format!(
-                    "Can't find type alias for {name}"
-                ))),
+        ) if !name.starts_with("@@") => match ctx.schemes.get(name) {
+            Some(scheme) => {
+                let t = expand_alias(arena, ctx, name, scheme, type_args)?;
+                unify(arena, ctx, t, t2)
             }
-        }
+            None => Err(Errors::InferenceError(format!(
+                "Can't find type alias for {name}"
+            ))),
+        },
         _ => Err(Errors::InferenceError(format!(
             "type mismatch: unify({}, {}) failed",
             a_t.as_string(arena),
