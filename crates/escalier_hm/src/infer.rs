@@ -802,7 +802,6 @@ fn get_ident_member(
                 Some(scheme) => {
                     let obj_idx = expand_alias(arena, ctx, alias_name, scheme, types)?;
                     get_ident_member(arena, ctx, obj_idx, prop_name)
-                    // unify(arena, ctx, t1, t)
                 }
                 None => Err(Errors::InferenceError(format!(
                     "Can't find type alias for {alias_name}"
@@ -823,12 +822,12 @@ fn get_computed_member(
 ) -> Result<Index, Errors> {
     // NOTE: cloning is fine here because we aren't mutating `obj_type`
     let obj_type = arena[obj_idx].clone();
+    let prop_type = infer_expression(arena, expr, ctx)?;
 
     match &obj_type.kind {
         // let tuple = [5, "hello", true]
         // tuple[1]; // "hello"
         TypeKind::Constructor(tuple) if tuple.name == "@@tuple" => {
-            let prop_type = infer_expression(arena, expr, ctx)?;
             match &arena[prop_type].kind {
                 TypeKind::Literal(Lit::Num(Num { value, .. })) => {
                     let index: usize = value.parse().unwrap();
@@ -842,11 +841,43 @@ fn get_computed_member(
                     )))
                 }
                 TypeKind::Literal(Lit::Str(Str { value, .. })) => {
-                    todo!();
+                    get_prop(arena, obj_idx, &value.clone())
                 }
                 _ => Err(Errors::InferenceError(
                     "Can only access tuple properties with a number".to_string(),
                 )),
+            }
+        }
+        TypeKind::Object(_) => match &arena[prop_type].kind {
+            TypeKind::Literal(Lit::Num(Num { value, .. })) => {
+                get_prop(arena, obj_idx, &value.clone())
+            }
+            TypeKind::Literal(Lit::Str(Str { value, .. })) => {
+                get_prop(arena, obj_idx, &value.clone())
+            }
+            _ => Err(Errors::InferenceError(
+                "Can only access tuple properties with a number".to_string(),
+            )),
+        },
+        TypeKind::Constructor(types::Constructor {
+            name: alias_name,
+            types,
+            ..
+        }) if !alias_name.starts_with("@@")
+            && alias_name != "number"
+            && alias_name != "boolean"
+            && alias_name != "string"
+            && alias_name != "Promise"
+            && alias_name != "Array" =>
+        {
+            match ctx.schemes.get(alias_name) {
+                Some(scheme) => {
+                    let obj_idx = expand_alias(arena, ctx, alias_name, scheme, types)?;
+                    get_computed_member(arena, ctx, obj_idx, expr)
+                }
+                None => Err(Errors::InferenceError(format!(
+                    "Can't find type alias for {alias_name}"
+                ))),
             }
         }
         // TODO: handle a union of tuples

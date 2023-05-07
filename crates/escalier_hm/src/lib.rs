@@ -1926,4 +1926,26 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn type_alias_with_params_with_computed_member_access() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        type Node<T> = {value: T};
+        let node: Node<string> = {value: "hello"};
+        let key = "value";
+        let value = node[key];
+        "#;
+        let mut program = parse(src).unwrap();
+
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.values.get("node").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"Node<string>"#);
+        let t = my_ctx.values.get("value").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"string"#);
+
+        Ok(())
+    }
 }
