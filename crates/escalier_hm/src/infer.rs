@@ -219,7 +219,8 @@ pub fn infer_expression(
                     get_ident_member(arena, ctx, obj_idx, name)?
                 }
                 MemberProp::Computed(ComputedPropName { expr, .. }) => {
-                    get_computed_member(arena, ctx, obj_idx, expr)?
+                    let prop_type = infer_expression(arena, expr, ctx)?;
+                    get_computed_member(arena, ctx, obj_idx, prop_type)?
                 }
             }
         }
@@ -781,33 +782,43 @@ fn get_ident_member(
         // declare let obj: {x: number} | {x: string}
         // obj.x; // number | string
         TypeKind::Constructor(union) if union.name == "@@union" => {
-            let mut types = vec![];
+            let mut result_types = vec![];
+            let mut undefined_count = 0;
             for idx in &union.types {
-                types.push(get_prop(arena, *idx, prop_name)?);
+                match get_prop(arena, *idx, prop_name) {
+                    Ok(t) => result_types.push(t),
+                    Err(_) => {
+                        // TODO: check what the error is, we may want to propagate
+                        // certain errors
+                        if undefined_count == 0 {
+                            let undefined = new_constructor(arena, "undefined", &[]);
+                            result_types.push(undefined);
+                        }
+                        undefined_count += 1;
+                    }
+                }
             }
-            Ok(new_union_type(arena, &types))
+            if undefined_count == union.types.len() {
+                Err(Errors::InferenceError(format!(
+                    "Couldn't find property {prop_name} on object"
+                )))
+            } else {
+                Ok(new_union_type(arena, &result_types))
+            }
         }
         TypeKind::Constructor(types::Constructor {
             name: alias_name,
             types,
             ..
-        }) if !alias_name.starts_with("@@")
-            && alias_name != "number"
-            && alias_name != "boolean"
-            && alias_name != "string"
-            && alias_name != "Promise"
-            && alias_name != "Array" =>
-        {
-            match ctx.schemes.get(alias_name) {
-                Some(scheme) => {
-                    let obj_idx = expand_alias(arena, ctx, alias_name, scheme, types)?;
-                    get_ident_member(arena, ctx, obj_idx, prop_name)
-                }
-                None => Err(Errors::InferenceError(format!(
-                    "Can't find type alias for {alias_name}"
-                ))),
+        }) if !alias_name.starts_with("@@") => match ctx.schemes.get(alias_name) {
+            Some(scheme) => {
+                let obj_idx = expand_alias(arena, ctx, alias_name, scheme, types)?;
+                get_ident_member(arena, ctx, obj_idx, prop_name)
             }
-        }
+            None => Err(Errors::InferenceError(format!(
+                "Can't find type alias for {alias_name}"
+            ))),
+        },
         _ => Err(Errors::InferenceError(
             "Can only access properties on objects/tuples".to_string(),
         )),
@@ -818,11 +829,11 @@ fn get_computed_member(
     arena: &mut Arena<Type>,
     ctx: &mut Context,
     obj_idx: Index,
-    expr: &mut Expr,
+    prop_type: Index,
+    // expr: &mut Expr,
 ) -> Result<Index, Errors> {
     // NOTE: cloning is fine here because we aren't mutating `obj_type`
     let obj_type = arena[obj_idx].clone();
-    let prop_type = infer_expression(arena, expr, ctx)?;
 
     match &obj_type.kind {
         // let tuple = [5, "hello", true]
@@ -848,6 +859,35 @@ fn get_computed_member(
                 )),
             }
         }
+        // declare let tuple: [number, number] | [string, string]
+        // tuple[1]; // number | string
+        TypeKind::Constructor(union) if union.name == "@@union" => {
+            let mut result_types = vec![];
+            let mut undefined_count = 0;
+            for idx in &union.types {
+                match get_computed_member(arena, ctx, *idx, prop_type) {
+                    Ok(t) => result_types.push(t),
+                    Err(_) => {
+                        // TODO: check what the error is, we may want to propagate
+                        // certain errors
+                        if undefined_count == 0 {
+                            let undefined = new_constructor(arena, "undefined", &[]);
+                            result_types.push(undefined);
+                        }
+                        undefined_count += 1;
+                    }
+                }
+            }
+            if undefined_count == union.types.len() {
+                // TODO: include name of property in error message
+                Err(Errors::InferenceError(
+                    "Couldn't find property on object".to_string(),
+                ))
+            } else {
+                Ok(new_union_type(arena, &result_types))
+            }
+        }
+        // TODO: handle a union of tuples
         TypeKind::Object(_) => match &arena[prop_type].kind {
             TypeKind::Literal(Lit::Num(Num { value, .. })) => {
                 get_prop(arena, obj_idx, &value.clone())
@@ -863,24 +903,15 @@ fn get_computed_member(
             name: alias_name,
             types,
             ..
-        }) if !alias_name.starts_with("@@")
-            && alias_name != "number"
-            && alias_name != "boolean"
-            && alias_name != "string"
-            && alias_name != "Promise"
-            && alias_name != "Array" =>
-        {
-            match ctx.schemes.get(alias_name) {
-                Some(scheme) => {
-                    let obj_idx = expand_alias(arena, ctx, alias_name, scheme, types)?;
-                    get_computed_member(arena, ctx, obj_idx, expr)
-                }
-                None => Err(Errors::InferenceError(format!(
-                    "Can't find type alias for {alias_name}"
-                ))),
+        }) if !alias_name.starts_with("@@") => match ctx.schemes.get(alias_name) {
+            Some(scheme) => {
+                let obj_idx = expand_alias(arena, ctx, alias_name, scheme, types)?;
+                get_computed_member(arena, ctx, obj_idx, prop_type)
             }
-        }
-        // TODO: handle a union of tuples
+            None => Err(Errors::InferenceError(format!(
+                "Can't find type alias for {alias_name}"
+            ))),
+        },
         _ => Err(Errors::InferenceError(
             "Can only access properties on objects/tuples".to_string(),
         )),

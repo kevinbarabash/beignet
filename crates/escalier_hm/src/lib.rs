@@ -1948,4 +1948,117 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn property_accesses_on_unions() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        declare let tuple_union: [number, number] | [string];
+        declare let object_union: {x: number, y: number} | {x: string};
+        let elem = tuple_union[0];
+        let x1 = object_union.x;
+        let key = "x";
+        let x2 = object_union[key];
+        "#;
+        let mut program = parse(src).unwrap();
+
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.values.get("elem").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"number | string"#);
+        let t = my_ctx.values.get("x1").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"number | string"#);
+        let t = my_ctx.values.get("x2").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"number | string"#);
+
+        Ok(())
+    }
+
+    #[test]
+    fn maybe_property_accesses_on_unions() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        declare let tuple_union: [number, number] | [string];
+        declare let object_union: {x: number, y: number} | {x: string};
+        let maybe_elem = tuple_union[1];
+        let maybe_y = object_union.y;
+        "#;
+        let mut program = parse(src).unwrap();
+
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        let t = my_ctx.values.get("maybe_elem").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"number | undefined"#);
+        let t = my_ctx.values.get("maybe_y").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"number | undefined"#);
+
+        Ok(())
+    }
+
+    #[test]
+    #[ignore]
+    fn destructuring_unions() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        declare let tuple_union: [number, number] | [string];
+        declare let object_union: {x: number, y: number} | {x: string};
+        let [fst, snd] = tuple_union;
+        let {x, y} = object_union;
+        "#;
+        let mut program = parse(src).unwrap();
+
+        infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+        // TODO: write assertions for this test once the desired
+        // behavior has been implemented.
+
+        Ok(())
+    }
+
+    #[test]
+    fn missing_property_accesses_on_union_of_tuples() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        declare let tuple_union: [number, number] | [string];
+        let elem = tuple_union[2];
+        "#;
+        let mut program = parse(src).unwrap();
+
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "Couldn't find property on object".to_string()
+            ))
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn missing_property_accesses_on_union_of_objects() -> Result<(), Errors> {
+        let (mut arena, mut my_ctx) = test_env();
+
+        let src = r#"
+        declare let object_union: {x: number, y: number} | {x: string};
+        let z = object_union.z;
+        "#;
+        let mut program = parse(src).unwrap();
+
+        let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+        assert_eq!(
+            result,
+            Err(Errors::InferenceError(
+                "Couldn't find property z on object".to_string()
+            ))
+        );
+
+        Ok(())
+    }
 }
