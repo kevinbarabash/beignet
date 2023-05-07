@@ -1,5 +1,8 @@
 use generational_arena::{Arena, Index};
+use std::collections::HashMap;
 
+use crate::context::*;
+use crate::errors::*;
 use crate::types::*;
 
 /// Checks whether a type variable occurs in a type expression.
@@ -99,4 +102,42 @@ pub fn prune(a: &mut Arena<Type>, t: Index) -> Index {
         }
     }
     value
+}
+
+pub fn expand_alias(
+    arena: &mut Arena<Type>,
+    ctx: &Context,
+    name: &str,
+    scheme: &Scheme,
+    type_args: &[Index],
+) -> Result<Index, Errors> {
+    match &scheme.type_params {
+        Some(type_params) => {
+            if type_params.len() != type_args.len() {
+                Err(Errors::InferenceError(format!(
+                    "{name} expects {} type args, but was passed {}",
+                    type_params.len(),
+                    type_args.len()
+                )))
+            } else {
+                let mut mapping: HashMap<String, Index> = HashMap::new();
+                for (param, arg) in type_params.iter().zip(type_args.iter()) {
+                    mapping.insert(param.name.clone(), arg.to_owned());
+                }
+
+                let t = instantiate_scheme(arena, scheme.t, &mapping, ctx);
+
+                Ok(t)
+            }
+        }
+        None => {
+            if type_args.is_empty() {
+                Ok(scheme.t)
+            } else {
+                Err(Errors::InferenceError(format!(
+                    "{name} doesn't require any type args"
+                )))
+            }
+        }
+    }
 }

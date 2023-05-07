@@ -8,8 +8,11 @@ use crate::util::*;
 
 #[derive(Clone, Debug, Default)]
 pub struct Context {
-    // The type environment mapping from identifier names to types
-    pub env: HashMap<String, Index>,
+    // Maps variables to their types.
+    pub values: HashMap<String, Index>,
+    // Maps type aliases to type types definitions.
+    // TODO: figure out how we want to track types and schemes
+    pub schemes: HashMap<String, Scheme>,
     // A set of non-generic TypeVariables.
     // NOTE: The same type variable can be both generic and non-generic in
     // different contexts.
@@ -28,7 +31,7 @@ pub struct Context {
 ///     ParseError: Raised if name is an undefined symbol in the type
 ///         environment.
 pub fn get_type(arena: &mut Arena<Type>, name: &str, ctx: &Context) -> Result<Index, Errors> {
-    if let Some(value) = ctx.env.get(name) {
+    if let Some(value) = ctx.values.get(name) {
         Ok(fresh(arena, *value, ctx))
     } else {
         Err(Errors::InferenceError(format!(
@@ -134,6 +137,99 @@ pub fn fresh(arena: &mut Arena<Type>, t: Index, ctx: &Context) -> Index {
     }
 
     freshrec(arena, t, &mut mappings, ctx)
+}
+
+pub fn instantiate_scheme(
+    arena: &mut Arena<Type>,
+    t: Index,
+    mapping: &std::collections::HashMap<String, Index>,
+    ctx: &Context,
+) -> Index {
+    // A mapping of TypeVariables to TypeVariables
+    // let mut mappings = HashMap::default();
+
+    // TODO: dedupe with instrec and generalize_rec
+    fn instantiate_scheme_rec(
+        arena: &mut Arena<Type>,
+        tp: Index,
+        mapping: &std::collections::HashMap<String, Index>,
+        ctx: &Context,
+    ) -> Index {
+        let p = prune(arena, tp);
+        match &arena.get(p).unwrap().clone().kind {
+            // NOTE: we should really try to avoid instantiate schemes with type variables in them
+            TypeKind::Variable(Variable {
+                id: _,
+                instance,
+                constraint,
+            }) => {
+                let instance = instance.map(|idx| instantiate_scheme_rec(arena, idx, mapping, ctx));
+                let constraint =
+                    constraint.map(|idx| instantiate_scheme_rec(arena, idx, mapping, ctx));
+                arena.insert(Type {
+                    kind: TypeKind::Variable(Variable {
+                        id: arena.len(), // use for debugging purposes only
+                        instance,
+                        constraint,
+                    }),
+                })
+            }
+            TypeKind::Literal(lit) => new_lit_type(arena, lit),
+            TypeKind::Object(object) => {
+                let props: Vec<_> = object
+                    .props
+                    .iter()
+                    .map(|prop| match prop {
+                        TObjElem::Index(index) => {
+                            let t = instantiate_scheme_rec(arena, index.t, mapping, ctx);
+                            TObjElem::Index(TIndex { t, ..index.clone() })
+                        }
+                        TObjElem::Prop(prop) => {
+                            let t = instantiate_scheme_rec(arena, prop.t, mapping, ctx);
+                            TObjElem::Prop(TProp { t, ..prop.clone() })
+                        }
+                    })
+                    .collect();
+                new_object_type(arena, &props)
+            }
+            TypeKind::Rest(rest) => {
+                let arg = instantiate_scheme_rec(arena, rest.arg, mapping, ctx);
+                new_rest_type(arena, arg)
+            }
+            TypeKind::Function(func) => {
+                let params = instantiate_scheme_rec_many(arena, &func.params, mapping, ctx);
+                let ret = instantiate_scheme_rec(arena, func.ret, mapping, ctx);
+                let type_params = func.type_params.clone();
+                new_func_type(arena, &params, ret, type_params)
+            }
+            TypeKind::Constructor(con) => {
+                let types = instantiate_scheme_rec_many(arena, &con.types, mapping, ctx);
+
+                match mapping.get(&con.name) {
+                    Some(idx) => {
+                        // What does it mean to replace the constructor name
+                        // when it has type args?
+                        idx.to_owned()
+                    }
+                    None => new_constructor(arena, &con.name, &types),
+                }
+            }
+        }
+    }
+
+    pub fn instantiate_scheme_rec_many(
+        a: &mut Arena<Type>,
+        types: &[Index],
+        mapping: &std::collections::HashMap<String, Index>,
+        ctx: &Context,
+    ) -> Vec<Index> {
+        types
+            .iter()
+            .map(|x| instantiate_scheme_rec(a, *x, mapping, ctx))
+            .collect()
+    }
+
+    instantiate_scheme_rec(arena, t, mapping, ctx)
 }
 
 /// Checks whether a given variable occurs in a list of non-generic variables

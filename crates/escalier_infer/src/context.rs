@@ -7,7 +7,7 @@ use crate::substitutable::Subst;
 use crate::type_error::TypeError;
 
 pub trait Context {
-    fn apply<'a>(&mut self, s: &Subst, checker: &'a mut Checker);
+    fn apply(&mut self, s: &Subst, checker: &mut Checker);
 
     fn insert_binding(&mut self, name: String, b: Binding);
     fn insert_value(&mut self, name: String, t: Type);

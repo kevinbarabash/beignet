@@ -7,5 +7,10 @@
     "coverage.xml",
     "jacoco.xml",
     "coverage.cobertura.xml"
-  ]
+  ],
+  "[rust]": {
+    "editor.defaultFormatter": "rust-lang.rust-analyzer",
+    "editor.formatOnSave": true,
+    "editor.formatOnSaveMode": "file"
+  }
 }
