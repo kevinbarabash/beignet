@@ -575,49 +575,6 @@ fn instantiate_func(
     })
 }
 
-fn expand_alias(
-    arena: &mut Arena<Type>,
-    ctx: &Context,
-    name: &str,
-    scheme: &Scheme,
-    type_args: &[Index],
-) -> Result<Index, Errors> {
-    match &scheme.type_params {
-        Some(type_params) => {
-            if type_params.len() != type_args.len() {
-                Err(Errors::InferenceError(format!(
-                    "{name} expects {} type args, but was passed {}",
-                    type_params.len(),
-                    type_args.len()
-                )))
-            } else {
-                // TODO:
-                // - build a mapping between type param names and type args
-                // - create a copy of the type with type param names replaced
-                let t = scheme.t;
-
-                let mut mapping: HashMap<String, Index> = HashMap::new();
-                for (param, arg) in type_params.iter().zip(type_args.iter()) {
-                    mapping.insert(param.name.clone(), arg.to_owned());
-                }
-
-                let t = instantiate_scheme(arena, scheme.t, &mapping, ctx);
-
-                Ok(t)
-            }
-        }
-        None => {
-            if type_args.is_empty() {
-                Ok(scheme.t)
-            } else {
-                Err(Errors::InferenceError(format!(
-                    "{name} doesn't require any type args"
-                )))
-            }
-        }
-    }
-}
-
 // TODO: make this recursive
 // TODO: handle optional properties correctly
 // Maybe we can have a function that will canonicalize objects by converting
