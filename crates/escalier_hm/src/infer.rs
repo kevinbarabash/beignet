@@ -216,6 +216,9 @@ pub fn infer_expression(
             let obj_idx = infer_expression(arena, obj, ctx)?;
             let obj_type = arena[obj_idx].clone();
 
+            // TODO:
+            // - extract this into a helper function
+            // - expand type aliases and call the helper recursively
             match (&obj_type.kind, prop) {
                 (TypeKind::Object(_), MemberProp::Ident(Ident { name, .. })) => {
                     get_prop(arena, obj_idx, name)?

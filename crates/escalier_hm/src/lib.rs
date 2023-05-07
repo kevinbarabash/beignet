@@ -1892,8 +1892,8 @@ mod tests {
         let src = r#"
         type Node<T> = {value: T};
         let node: Node<string> = {value: "hello"};
-        // let value = node.value;
-        // let {value} = node;
+        let {value: v1} = node;
+        // let v2 = node.value;
         "#;
         let mut program = parse(src).unwrap();
 
@@ -1901,6 +1901,8 @@ mod tests {
 
         let t = my_ctx.values.get("node").unwrap();
         assert_eq!(arena[*t].as_string(&arena), r#"Node<string>"#);
+        let t = my_ctx.values.get("v1").unwrap();
+        assert_eq!(arena[*t].as_string(&arena), r#"string"#);
 
         Ok(())
     }

@@ -288,7 +288,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             }
         }
         (
-            _,
+            TypeKind::Object(_),
             TypeKind::Constructor(Constructor {
                 name,
                 types: type_args,
@@ -301,43 +301,33 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             && name != "Array" =>
         {
             match ctx.schemes.get(name) {
-                Some(scheme) => match &scheme.type_params {
-                    Some(type_params) => {
-                        if type_params.len() != type_args.len() {
-                            Err(Errors::InferenceError(format!(
-                                "{name} expects {} type args, but was passed {}",
-                                type_params.len(),
-                                type_args.len()
-                            )))
-                        } else {
-                            // TODO:
-                            // - build a mapping between type param names and type args
-                            // - create a copy of the type with type param names replaced
-                            let t = scheme.t;
-
-                            let mut mapping: HashMap<String, Index> = HashMap::new();
-                            for (param, arg) in type_params.iter().zip(type_args.iter()) {
-                                mapping.insert(param.name.clone(), arg.to_owned());
-                            }
-
-                            eprintln!("{name} = {}", arena[t].as_string(arena));
-                            eprintln!("mapping = {mapping:#?}");
-
-                            let t = instantiate_scheme(arena, scheme.t, &mapping, ctx);
-
-                            unify(arena, ctx, t1, t)
-                        }
-                    }
-                    None => {
-                        if type_args.is_empty() {
-                            unify(arena, ctx, t1, scheme.t)
-                        } else {
-                            Err(Errors::InferenceError(format!(
-                                "{name} doesn't require any type args"
-                            )))
-                        }
-                    }
-                },
+                Some(scheme) => {
+                    let t = expand_alias(arena, ctx, name, scheme, type_args)?;
+                    unify(arena, ctx, t1, t)
+                }
+                None => Err(Errors::InferenceError(format!(
+                    "Can't find type alias for {name}"
+                ))),
+            }
+        }
+        (
+            TypeKind::Constructor(Constructor {
+                name,
+                types: type_args,
+            }),
+            TypeKind::Object(_),
+        ) if !name.starts_with("@@")
+            && name != "number"
+            && name != "boolean"
+            && name != "string"
+            && name != "Promise"
+            && name != "Array" =>
+        {
+            match ctx.schemes.get(name) {
+                Some(scheme) => {
+                    let t = expand_alias(arena, ctx, name, scheme, type_args)?;
+                    unify(arena, ctx, t, t2)
+                }
                 None => Err(Errors::InferenceError(format!(
                     "Can't find type alias for {name}"
                 ))),
@@ -583,6 +573,52 @@ fn instantiate_func(
         ret,
         type_params: None,
     })
+}
+
+fn expand_alias(
+    arena: &mut Arena<Type>,
+    ctx: &Context,
+    name: &str,
+    scheme: &Scheme,
+    type_args: &[Index],
+) -> Result<Index, Errors> {
+    match &scheme.type_params {
+        Some(type_params) => {
+            if type_params.len() != type_args.len() {
+                Err(Errors::InferenceError(format!(
+                    "{name} expects {} type args, but was passed {}",
+                    type_params.len(),
+                    type_args.len()
+                )))
+            } else {
+                // TODO:
+                // - build a mapping between type param names and type args
+                // - create a copy of the type with type param names replaced
+                let t = scheme.t;
+
+                let mut mapping: HashMap<String, Index> = HashMap::new();
+                for (param, arg) in type_params.iter().zip(type_args.iter()) {
+                    mapping.insert(param.name.clone(), arg.to_owned());
+                }
+
+                eprintln!("{name} = {}", arena[t].as_string(arena));
+                eprintln!("mapping = {mapping:#?}");
+
+                let t = instantiate_scheme(arena, scheme.t, &mapping, ctx);
+
+                Ok(t)
+            }
+        }
+        None => {
+            if type_args.is_empty() {
+                Ok(scheme.t)
+            } else {
+                Err(Errors::InferenceError(format!(
+                    "{name} doesn't require any type args"
+                )))
+            }
+        }
+    }
 }
 
 // TODO: make this recursive
