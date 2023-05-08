@@ -13,13 +13,13 @@ use crate::scheme::Scheme;
 pub type Subst = HashMap<u32, Type>;
 
 pub trait Substitutable {
-    fn apply<'a>(&self, subs: &Subst, checker: &'a mut Checker) -> Self;
+    fn apply(&self, subs: &Subst, checker: &mut Checker) -> Self;
     // The vector return must not contain any `TVar`s with the same `id`.
     fn ftv(&self) -> Vec<TVar>;
 }
 
 impl Substitutable for Type {
-    fn apply<'a>(&self, sub: &Subst, checker: &'a mut Checker) -> Type {
+    fn apply(&self, sub: &Subst, checker: &mut Checker) -> Type {
         let kind: TypeKind = match &self.kind {
             kind @ TypeKind::Var(tv) => {
                 match sub.get(&tv.id) {
@@ -201,7 +201,7 @@ impl Substitutable for Type {
 }
 
 impl Substitutable for Scheme {
-    fn apply<'a>(&self, sub: &Subst, checker: &'a mut Checker) -> Self {
+    fn apply(&self, sub: &Subst, checker: &mut Checker) -> Self {
         Scheme {
             t: Box::from(self.t.apply(sub, checker)),
             type_params: self.type_params.apply(sub, checker),
@@ -215,7 +215,7 @@ impl Substitutable for Scheme {
 }
 
 impl Substitutable for TypeParam {
-    fn apply<'a>(&self, sub: &Subst, checker: &'a mut Checker) -> Self {
+    fn apply(&self, sub: &Subst, checker: &mut Checker) -> Self {
         TypeParam {
             constraint: self
                 .constraint
@@ -241,7 +241,7 @@ impl Substitutable for TypeParam {
 }
 
 impl Substitutable for TMethod {
-    fn apply<'a>(&self, sub: &Subst, checker: &'a mut Checker) -> Self {
+    fn apply(&self, sub: &Subst, checker: &mut Checker) -> Self {
         TMethod {
             params: self
                 .params
@@ -262,7 +262,7 @@ impl Substitutable for TMethod {
 }
 
 impl Substitutable for TGetter {
-    fn apply<'a>(&self, sub: &Subst, checker: &'a mut Checker) -> Self {
+    fn apply(&self, sub: &Subst, checker: &mut Checker) -> Self {
         TGetter {
             ret: Box::from(self.ret.apply(sub, checker)),
             ..self.to_owned()
@@ -274,7 +274,7 @@ impl Substitutable for TGetter {
 }
 
 impl Substitutable for TSetter {
-    fn apply<'a>(&self, sub: &Subst, checker: &'a mut Checker) -> Self {
+    fn apply(&self, sub: &Subst, checker: &mut Checker) -> Self {
         TSetter {
             param: self.param.apply(sub, checker),
             ..self.to_owned()
@@ -286,7 +286,7 @@ impl Substitutable for TSetter {
 }
 
 impl Substitutable for TObjElem {
-    fn apply<'a>(&self, sub: &Subst, checker: &'a mut Checker) -> Self {
+    fn apply(&self, sub: &Subst, checker: &mut Checker) -> Self {
         match self {
             TObjElem::Call(qlam) => TObjElem::Call(qlam.apply(sub, checker)),
             TObjElem::Constructor(qlam) => TObjElem::Constructor(qlam.apply(sub, checker)),
@@ -311,7 +311,7 @@ impl Substitutable for TObjElem {
 }
 
 impl Substitutable for TLam {
-    fn apply<'a>(&self, sub: &Subst, checker: &'a mut Checker) -> Self {
+    fn apply(&self, sub: &Subst, checker: &mut Checker) -> Self {
         TLam {
             type_params: self.type_params.apply(sub, checker),
             params: self.params.apply(sub, checker),
@@ -326,7 +326,7 @@ impl Substitutable for TLam {
 }
 
 impl Substitutable for TRef {
-    fn apply<'a>(&self, sub: &Subst, checker: &'a mut Checker) -> Self {
+    fn apply(&self, sub: &Subst, checker: &mut Checker) -> Self {
         TRef {
             type_args: self
                 .type_args
@@ -344,7 +344,7 @@ impl Substitutable for TRef {
 }
 
 impl Substitutable for TCallable {
-    fn apply<'a>(&self, sub: &Subst, checker: &'a mut Checker) -> Self {
+    fn apply(&self, sub: &Subst, checker: &mut Checker) -> Self {
         TCallable {
             params: self
                 .params
@@ -364,7 +364,7 @@ impl Substitutable for TCallable {
 }
 
 impl Substitutable for TIndex {
-    fn apply<'a>(&self, sub: &Subst, checker: &'a mut Checker) -> Self {
+    fn apply(&self, sub: &Subst, checker: &mut Checker) -> Self {
         TIndex {
             t: self.t.apply(sub, checker),
             ..self.to_owned()
@@ -376,7 +376,7 @@ impl Substitutable for TIndex {
 }
 
 impl Substitutable for TProp {
-    fn apply<'a>(&self, sub: &Subst, checker: &'a mut Checker) -> Self {
+    fn apply(&self, sub: &Subst, checker: &mut Checker) -> Self {
         TProp {
             t: self.t.apply(sub, checker),
             ..self.to_owned()
@@ -388,7 +388,7 @@ impl Substitutable for TProp {
 }
 
 impl Substitutable for TFnParam {
-    fn apply<'a>(&self, sub: &Subst, checker: &'a mut Checker) -> Self {
+    fn apply(&self, sub: &Subst, checker: &mut Checker) -> Self {
         TFnParam {
             t: self.t.apply(sub, checker),
             ..self.to_owned()
@@ -403,7 +403,7 @@ impl<I> Substitutable for HashMap<String, I>
 where
     I: Substitutable + Clone,
 {
-    fn apply<'a>(&self, sub: &Subst, checker: &'a mut Checker) -> Self {
+    fn apply(&self, sub: &Subst, checker: &mut Checker) -> Self {
         self.iter()
             .map(|(k, v)| (k.to_owned(), v.apply(sub, checker)))
             .collect()
@@ -418,7 +418,7 @@ impl<I> Substitutable for Vec<I>
 where
     I: Substitutable,
 {
-    fn apply<'a>(&self, sub: &Subst, checker: &'a mut Checker) -> Self {
+    fn apply(&self, sub: &Subst, checker: &mut Checker) -> Self {
         self.iter().map(|elem| elem.apply(sub, checker)).collect()
     }
     fn ftv(&self) -> Vec<TVar> {
@@ -430,7 +430,7 @@ impl<I> Substitutable for Option<I>
 where
     I: Substitutable,
 {
-    fn apply<'a>(&self, sub: &Subst, checker: &'a mut Checker) -> Self {
+    fn apply(&self, sub: &Subst, checker: &mut Checker) -> Self {
         self.as_ref().map(|val| val.apply(sub, checker))
     }
     fn ftv(&self) -> Vec<TVar> {
@@ -441,7 +441,7 @@ where
 }
 
 impl Substitutable for Binding {
-    fn apply<'a>(&self, sub: &Subst, checker: &'a mut Checker) -> Self {
+    fn apply(&self, sub: &Subst, checker: &mut Checker) -> Self {
         Binding {
             t: self.t.apply(sub, checker),
             ..self.to_owned()

@@ -3,11 +3,7 @@ use std::collections::BTreeMap;
 use escalier_ast::types::{TObjElem, TObject, TPropKey, TypeKind};
 use escalier_infer::{Checker, Scheme};
 
-pub fn merge_schemes<'a>(
-    old_scheme: &Scheme,
-    new_scheme: &Scheme,
-    checker: &'a mut Checker,
-) -> Scheme {
+pub fn merge_schemes(old_scheme: &Scheme, new_scheme: &Scheme, checker: &mut Checker) -> Scheme {
     let type_params_1 = &old_scheme.type_params;
     let type_params_2 = &new_scheme.type_params;
 

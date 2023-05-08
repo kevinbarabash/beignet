@@ -17,7 +17,6 @@ pub fn parse_literal(node: &tree_sitter::Node, src: &str) -> Result<Lit, ParseEr
             let mut cursor = node.walk();
             let raw = join(
                 node.named_children(&mut cursor)
-                    .into_iter()
                     .map(|fragment_or_escape| text_for_node(&fragment_or_escape, src))
                     .collect::<Result<Vec<_>, ParseError>>()?,
                 "",

@@ -55,7 +55,7 @@ impl Context for Scope {
         Err(vec![TypeError::CantFindIdent(name.to_owned())])
     }
 
-    fn apply<'a>(&mut self, s: &Subst, checker: &'a mut Checker) {
+    fn apply(&mut self, s: &Subst, checker: &mut Checker) {
         // QUESTION: Do we need to update self.types as well?
         self.values = self.values.apply(s, checker);
     }

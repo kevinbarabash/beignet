@@ -114,7 +114,7 @@ impl LanguageServer {
                 });
                 let resp = Response {
                     id,
-                    result: Some(serde_json::to_value(&result).unwrap()),
+                    result: Some(serde_json::to_value(result).unwrap()),
                     error: None,
                 };
                 connection.sender.send(Message::Response(resp))?;
@@ -208,7 +208,7 @@ impl LanguageServer {
             data: get_semantic_tokens(&mut prog),
         });
 
-        let value = match serde_json::to_value(&result) {
+        let value = match serde_json::to_value(result) {
             Ok(value) => value,
             Err(_) => {
                 return Response {

@@ -26,7 +26,6 @@ pub fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, Par
             let mut cursor = node.walk();
             let props = node
                 .named_children(&mut cursor)
-                .into_iter()
                 .map(|child| match child.kind() {
                     "pair_pattern" => {
                         let key_node = child.child_by_field_name("key").unwrap();
@@ -136,7 +135,6 @@ pub fn parse_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pattern, Par
             // NOTE: named_children() does not include gaps in the array
             let elems = node
                 .named_children(&mut cursor)
-                .into_iter()
                 .map(|child| match child.kind() {
                     "assignment_pattern" => {
                         let left = child.child_by_field_name("left").ok_or_else(|| {
@@ -217,7 +215,6 @@ pub fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pa
             let mut cursor = child.walk();
             let elems = child
                 .named_children(&mut cursor)
-                .into_iter()
                 // TODO: make elems in ArrayPat non-optional
                 .map(|elem| {
                     Ok(Some(TuplePatElem {
@@ -236,7 +233,6 @@ pub fn parse_refutable_pattern(node: &tree_sitter::Node, src: &str) -> Result<Pa
             let mut cursor = child.walk();
             let props = child
                 .named_children(&mut cursor)
-                .into_iter()
                 .map(|prop| match prop.kind() {
                     "refutable_pair_pattern" => {
                         let key_node = prop.child_by_field_name("key").unwrap();

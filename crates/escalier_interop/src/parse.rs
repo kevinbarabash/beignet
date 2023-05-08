@@ -502,8 +502,8 @@ fn get_type_params(
     }
 }
 
-fn infer_callable<'a>(
-    checker: &'a mut Checker,
+fn infer_callable(
+    checker: &mut Checker,
     params: &[TsFnParam],
     type_ann: &TsType,
     type_params: &Option<Box<TsTypeParamDecl>>,

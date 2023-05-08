@@ -20,7 +20,6 @@ pub fn parse_type_params_for_node(
             let mut cursor = type_params.walk();
             let type_params = type_params
                 .named_children(&mut cursor)
-                .into_iter()
                 .map(|type_param| {
                     let name_node = type_param.child_by_field_name("name").unwrap();
                     let name = Ident {
@@ -66,7 +65,6 @@ pub fn parse_formal_parameters(
 
     let mut cursor = node.walk();
     node.named_children(&mut cursor)
-        .into_iter()
         .map(|param| {
             let optional = match param.kind() {
                 "required_parameter" => false,
