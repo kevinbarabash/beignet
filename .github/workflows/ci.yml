@@ -155,7 +155,7 @@ jobs:
         run: mkdir -p target/coverage
 
       - name: Generate lcov
-        run: grcov . --binary-path ./target/debug/deps/ -s . -t lcov --branch --ignore-not-existing --ignore '../*' --ignore "/*" --ignore "target/**" -o target/coverage/tests.lcov --keep-only 'src/**'
+        run: grcov . --binary-path ./target/debug/deps/ -s . -t lcov --branch --ignore-not-existing --ignore '../*' --ignore "/*" --ignore "target/**" --ignore "*_test.rs" -o target/coverage/tests.lcov
 
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v3
