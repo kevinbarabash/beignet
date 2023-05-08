@@ -155,7 +155,6 @@ pub fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, Par
             }
 
             let args = args
-                .into_iter()
                 .map(|arg| {
                     if arg.kind() == "spread_element" {
                         let spread = arg.child(0).unwrap();
@@ -317,7 +316,6 @@ pub fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, Par
             let mut cursor = node.walk();
             let elems = node
                 .named_children(&mut cursor)
-                .into_iter()
                 .map(|elem| match elem.kind() {
                     "spread_element" => {
                         let expr = elem.named_child(0).unwrap();
@@ -405,7 +403,6 @@ pub fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, Par
             let mut cursor = arms.walk();
             let arms = arms
                 .named_children(&mut cursor)
-                .into_iter()
                 .map(|arm| parse_arm(&arm, src))
                 .collect::<Result<Vec<Arm>, ParseError>>()?;
 
@@ -668,7 +665,6 @@ fn parse_jsx_element(node: &tree_sitter::Node, src: &str) -> Result<JSXElement, 
             let mut cursor = node.walk();
             let children = node
                 .named_children(&mut cursor)
-                .into_iter()
                 .filter(|child| {
                     child.kind() != "jsx_opening_element" && child.kind() != "jsx_closing_element"
                 })

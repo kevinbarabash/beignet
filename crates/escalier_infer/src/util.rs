@@ -28,7 +28,7 @@ fn get_mapping(t: &Type, checker: &'_ mut Checker) -> HashMap<u32, Type> {
     mapping
 }
 
-pub fn close_over<'a>(s: &Subst, t: &Type, checker: &'a mut Checker) -> Type {
+pub fn close_over(s: &Subst, t: &Type, checker: &mut Checker) -> Type {
     let t = t.apply(s, checker);
 
     let tvs = t.ftv();
@@ -210,7 +210,7 @@ pub fn flatten_types(t: &Type) -> Vec<Type> {
     }
 }
 
-pub fn union_types<'a>(t1: &Type, t2: &Type, checker: &'a mut Checker) -> Type {
+pub fn union_types(t1: &Type, t2: &Type, checker: &mut Checker) -> Type {
     union_many_types(&[t1.to_owned(), t2.to_owned()], checker)
 }
 
@@ -267,7 +267,7 @@ pub fn union_many_types(ts: &[Type], checker: &'_ mut Checker) -> Type {
     }
 }
 
-pub fn compose_subs<'a>(s2: &Subst, s1: &Subst, checker: &'a mut Checker) -> Subst {
+pub fn compose_subs(s2: &Subst, s1: &Subst, checker: &mut Checker) -> Subst {
     let mut result: Subst = s1
         .iter()
         .map(|(tv, t)| {
@@ -291,7 +291,7 @@ pub fn compose_many_subs(subs: &[Subst], checker: &'_ mut Checker) -> Subst {
 
 // If are multiple entries for the same type variable, this function merges
 // them into a union type (simplifying the type if possible).
-fn compose_subs_with_context<'a>(s1: &Subst, s2: &Subst, checker: &'a mut Checker) -> Subst {
+fn compose_subs_with_context(s1: &Subst, s2: &Subst, checker: &mut Checker) -> Subst {
     let mut result: Subst = s2
         .iter()
         .map(|(tv, t)| {

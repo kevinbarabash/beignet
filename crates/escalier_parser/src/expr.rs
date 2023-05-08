@@ -180,7 +180,6 @@ pub fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, Par
                     Some(
                         type_args
                             .named_children(&mut cursor)
-                            .into_iter()
                             .map(|arg| parse_type_ann(&arg, src))
                             .collect::<Result<Vec<_>, ParseError>>()?,
                     )
@@ -232,7 +231,6 @@ pub fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, Par
                     Some(
                         type_args
                             .named_children(&mut cursor)
-                            .into_iter()
                             .map(|arg| parse_type_ann(&arg, src))
                             .collect::<Result<Vec<_>, ParseError>>()?,
                     )
@@ -262,7 +260,6 @@ pub fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, Par
             let mut cursor = node.walk();
             let props = node
                 .named_children(&mut cursor)
-                .into_iter()
                 .map(|child| match child.kind() {
                     "pair" => {
                         // NOTE: _property_name is defined as:
@@ -319,7 +316,6 @@ pub fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, Par
             let mut cursor = node.walk();
             let elems = node
                 .named_children(&mut cursor)
-                .into_iter()
                 .map(|elem| match elem.kind() {
                     "spread_element" => {
                         let expr = elem.named_child(0).unwrap();
@@ -407,7 +403,6 @@ pub fn parse_expression(node: &tree_sitter::Node, src: &str) -> Result<Expr, Par
             let mut cursor = arms.walk();
             let arms = arms
                 .named_children(&mut cursor)
-                .into_iter()
                 .map(|arm| parse_arm(&arm, src))
                 .collect::<Result<Vec<Arm>, ParseError>>()?;
 
@@ -668,7 +663,6 @@ fn parse_jsx_element(node: &tree_sitter::Node, src: &str) -> Result<JSXElement, 
             let mut cursor = node.walk();
             let children = node
                 .named_children(&mut cursor)
-                .into_iter()
                 .filter(|child| {
                     child.kind() != "jsx_opening_element" && child.kind() != "jsx_closing_element"
                 })

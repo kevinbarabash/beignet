@@ -60,7 +60,6 @@ pub fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, Pa
             let mut cursor = type_arguments.walk();
             let type_params = type_arguments
                 .named_children(&mut cursor)
-                .into_iter()
                 .map(|arg| parse_type_ann(&arg, src))
                 .collect::<Result<Vec<_>, ParseError>>()?;
 
@@ -164,7 +163,6 @@ pub fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, Pa
 
             let elems: Vec<TObjElem> = node
                 .named_children(&mut cursor)
-                .into_iter()
                 .map(|prop| {
                     match prop.kind() {
                         "export_statement" => todo!("remove export_statement from object_type"),
@@ -286,7 +284,6 @@ pub fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, Pa
             let mut cursor = node.walk();
             let types = node
                 .named_children(&mut cursor)
-                .into_iter()
                 .map(|elem| {
                     eprintln!("parsing elem: {elem:#?}");
                     parse_type_ann(&elem, src)
@@ -413,7 +410,6 @@ pub fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, Pa
             let mut cursor = params.walk();
             let params = params
                 .named_children(&mut cursor)
-                .into_iter()
                 .map(|param| {
                     let optional = match param.kind() {
                         "required_parameter" => false,
