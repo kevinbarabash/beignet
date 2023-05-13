@@ -705,6 +705,15 @@ pub fn generalize_func(arena: &'_ mut Arena<Type>, func: &Function) -> Index {
                     .props
                     .iter()
                     .map(|prop| match prop {
+                        types::TObjElem::Method(method) => {
+                            let params = generalize_rec_many(arena, &method.params, mappings);
+                            let ret = generalize_rec(arena, method.ret, mappings);
+                            types::TObjElem::Method(TMethod {
+                                params,
+                                ret,
+                                ..method.to_owned()
+                            })
+                        }
                         types::TObjElem::Index(index) => {
                             let t = generalize_rec(arena, index.t, mappings);
                             types::TObjElem::Index(types::TIndex { t, ..index.clone() })
@@ -812,7 +821,7 @@ fn get_ident_member(
             ..
         }) if !alias_name.starts_with("@@") => match ctx.schemes.get(alias_name) {
             Some(scheme) => {
-                let obj_idx = expand_alias(arena, ctx, alias_name, scheme, types)?;
+                let obj_idx = expand_alias(arena, alias_name, scheme, types)?;
                 get_ident_member(arena, ctx, obj_idx, prop_name)
             }
             None => Err(Errors::InferenceError(format!(
@@ -905,7 +914,8 @@ fn get_computed_member(
             ..
         }) if !alias_name.starts_with("@@") => match ctx.schemes.get(alias_name) {
             Some(scheme) => {
-                let obj_idx = expand_alias(arena, ctx, alias_name, scheme, types)?;
+                let obj_idx = expand_alias(arena, alias_name, scheme, types)?;
+                eprintln!("{alias_name} = {}", arena[obj_idx].as_string(arena));
                 get_computed_member(arena, ctx, obj_idx, prop_type)
             }
             None => Err(Errors::InferenceError(format!(
@@ -921,18 +931,37 @@ fn get_computed_member(
 fn get_prop(arena: &mut Arena<Type>, obj_idx: Index, name: &str) -> Result<Index, Errors> {
     let undefined = new_constructor(arena, "undefined", &[]);
     if let TypeKind::Object(object) = &arena[obj_idx].kind {
+        // eprintln!("get_prop({object:#?}, {name})");
         for prop in &object.props {
-            if let types::TObjElem::Prop(prop) = &prop {
-                let key = match &prop.name {
-                    TPropKey::StringKey(key) => key,
-                    TPropKey::NumberKey(key) => key,
-                };
-                if key == name {
-                    let prop_t = match prop.optional {
-                        true => new_union_type(arena, &[prop.t, undefined]),
-                        false => prop.t,
+            match prop {
+                types::TObjElem::Method(method) => {
+                    let key = match &method.name {
+                        TPropKey::StringKey(key) => key,
+                        TPropKey::NumberKey(key) => key,
                     };
-                    return Ok(prop_t);
+                    if key == name {
+                        return Ok(arena.insert(Type {
+                            kind: TypeKind::Function(Function {
+                                params: method.params.clone(),
+                                ret: method.ret,
+                                type_params: method.type_params.clone(),
+                            }),
+                        }));
+                    }
+                }
+                types::TObjElem::Index(_) => todo!(),
+                types::TObjElem::Prop(prop) => {
+                    let key = match &prop.name {
+                        TPropKey::StringKey(key) => key,
+                        TPropKey::NumberKey(key) => key,
+                    };
+                    if key == name {
+                        let prop_t = match prop.optional {
+                            true => new_union_type(arena, &[prop.t, undefined]),
+                            false => prop.t,
+                        };
+                        return Ok(prop_t);
+                    }
                 }
             }
         }

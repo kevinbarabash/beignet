@@ -26,12 +26,12 @@ pub struct Ref {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Function {
-    pub params: Vec<Index>,
+    pub params: Vec<Index>, // TODO: require param names
     pub ret: Index,
     pub type_params: Option<Vec<TypeParam>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct TypeParam {
     pub name: String,
     pub constraint: Option<Index>,
@@ -57,6 +57,15 @@ pub struct Intersection {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Tuple {
     pub types: Vec<Index>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TMethod {
+    pub name: TPropKey,
+    pub params: Vec<Index>, // TODO: require param names
+    pub ret: Index,
+    pub type_params: Option<Vec<TypeParam>>,
+    pub is_mutating: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -90,7 +99,7 @@ pub struct TProp {
 pub enum TObjElem {
     // Call(TCallable),
     // Constructor(TCallable),
-    // Method(TMethod),
+    Method(TMethod),
     // Getter(TGetter),
     // Setter(TSetter),
     Index(TIndex),
@@ -112,8 +121,8 @@ pub struct Rest {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TypeKind {
-    Variable(Variable),
-    Constructor(Constructor),
+    Variable(Variable),       // TODO: rename to TypeVar
+    Constructor(Constructor), // TODO: rename to TypeRef
     Literal(Lit),
     Function(Function),
     Object(Object),
@@ -181,6 +190,41 @@ impl Type {
                 let mut fields = vec![];
                 for prop in &object.props {
                     match prop {
+                        TObjElem::Method(TMethod {
+                            name,
+                            params,
+                            ret,
+                            type_params,
+                            is_mutating: _, // TODO
+                        }) => {
+                            let name = match name {
+                                TPropKey::StringKey(s) => s,
+                                TPropKey::NumberKey(n) => n,
+                            };
+                            let mut result = name.to_string();
+                            match type_params {
+                                Some(type_params) if !type_params.is_empty() => {
+                                    let type_params = type_params
+                                        .iter()
+                                        .map(|tp| match &tp.constraint {
+                                            Some(constraint) => format!(
+                                                "{}:{}",
+                                                tp.name.clone(),
+                                                arena[*constraint].as_string(arena)
+                                            ),
+                                            None => tp.name.clone(),
+                                        })
+                                        .collect::<Vec<_>>();
+                                    result.push_str(&format!("<{}>", type_params.join(", ")))
+                                }
+                                _ => (),
+                            };
+                            result.push_str(&format!(
+                                "({}): {}",
+                                types_to_strings(arena, params).join(", "),
+                                arena[*ret].as_string(arena)
+                            ));
+                        }
                         TObjElem::Index(TIndex { key, mutable, t }) => {
                             let t = arena[*t].as_string(arena);
                             if *mutable {
@@ -259,7 +303,7 @@ pub fn new_func_type(
     arena.insert(Type {
         kind: TypeKind::Function(Function {
             params: params.to_vec(),
-            ret,
+            ret: ret.to_owned(),
             type_params,
         }),
     })

@@ -40,7 +40,43 @@ fn new_str_lit_type(arena: &mut Arena<Type>, value: &str) -> Index {
 }
 
 fn test_env() -> (Arena<Type>, Context) {
-    (Arena::new(), Context::default())
+    let mut arena = Arena::new();
+    let mut context = Context::default();
+
+    let number = new_constructor(&mut arena, "number", &[]);
+    let type_param_t = new_constructor(&mut arena, "T", &[]);
+
+    let array_interface = new_object_type(
+        &mut arena,
+        // .push(item: T): number;
+        &[
+            types::TObjElem::Method(types::TMethod {
+                name: types::TPropKey::StringKey("push".to_string()),
+                params: vec![type_param_t],
+                ret: number,
+                type_params: None,
+                is_mutating: true,
+            }),
+            types::TObjElem::Prop(types::TProp {
+                name: types::TPropKey::StringKey("length".to_string()),
+                optional: false,
+                mutable: false,
+                t: number,
+            }),
+        ],
+    );
+    let array_scheme = Scheme {
+        type_params: Some(vec![types::TypeParam {
+            name: "T".to_string(),
+            constraint: None,
+            default: None,
+        }]),
+        t: array_interface,
+    };
+
+    context.schemes.insert("Array".to_string(), array_scheme);
+
+    (arena, context)
 }
 
 /// Sets up some predefined types using the type constructors TypeVariable,
@@ -1111,7 +1147,7 @@ fn test_await_non_promise() -> Result<(), Errors> {
     assert_eq!(
         result,
         Err(Errors::InferenceError(
-            "type mismatch: unify(5, Promise<t3>) failed".to_string()
+            "type mismatch: unify(5, Promise<t6>) failed".to_string()
         ))
     );
 
@@ -2086,6 +2122,27 @@ fn missing_property_accesses_on_union_of_objects() -> Result<(), Errors> {
             "Couldn't find property z on object".to_string()
         ))
     );
+
+    Ok(())
+}
+
+#[test]
+fn methods_on_arrays() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let num_array: Array<number> = [];
+    num_array.push(5);
+    let str_array: Array<string> = [];
+    str_array.push("hello");
+
+    let len = str_array.length;
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    let t = my_ctx.values.get("len").unwrap();
+    assert_eq!(arena[*t].as_string(&arena), r#"number"#);
 
     Ok(())
 }

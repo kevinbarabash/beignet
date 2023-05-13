@@ -26,6 +26,10 @@ pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
         TypeKind::Variable(_) => false, // leaf node
         TypeKind::Literal(_) => false,  // leaf node
         TypeKind::Object(Object { props }) => props.iter().any(|prop| match prop {
+            TObjElem::Method(method) => {
+                // TODO: check constraints and default on type_params
+                occurs_in(arena, v, &method.params) || occurs_in_type(arena, v, method.ret)
+            }
             TObjElem::Index(index) => occurs_in_type(arena, v, index.t),
             TObjElem::Prop(prop) => occurs_in_type(arena, v, prop.t),
         }),
@@ -35,7 +39,7 @@ pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
             ret,
             type_params: _,
         }) => {
-            // TODO: check type_params as well
+            // TODO: check constraints and default on type_params
             occurs_in(arena, v, &params) || occurs_in_type(arena, v, ret)
         }
         TypeKind::Constructor(Constructor { types, .. }) => occurs_in(arena, v, &types),
@@ -106,7 +110,6 @@ pub fn prune(a: &mut Arena<Type>, t: Index) -> Index {
 
 pub fn expand_alias(
     arena: &mut Arena<Type>,
-    ctx: &Context,
     name: &str,
     scheme: &Scheme,
     type_args: &[Index],
@@ -125,7 +128,7 @@ pub fn expand_alias(
                     mapping.insert(param.name.clone(), arg.to_owned());
                 }
 
-                let t = instantiate_scheme(arena, scheme.t, &mapping, ctx);
+                let t = instantiate_scheme(arena, scheme.t, &mapping);
 
                 Ok(t)
             }
