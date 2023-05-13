@@ -2146,3 +2146,25 @@ fn methods_on_arrays() -> Result<(), Errors> {
 
     Ok(())
 }
+
+#[test]
+fn methods_on_arrays_incorrect_type() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let num_array: Array<number> = [];
+    num_array.push("hello");
+    "#;
+    let mut program = parse(src).unwrap();
+
+    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "type mismatch: unify(\"hello\", number) failed".to_string()
+        ))
+    );
+
+    Ok(())
+}
