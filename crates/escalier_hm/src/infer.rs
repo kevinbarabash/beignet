@@ -8,6 +8,7 @@ use crate::infer_pattern::*;
 use crate::types::{self, *};
 use crate::unify::*;
 use crate::util::*;
+use crate::visitor::{KeyValueStore, Visitor};
 
 /// Computes the type of the expression given by node.
 ///
@@ -668,93 +669,55 @@ pub fn infer_program(
     Ok(())
 }
 
+struct Generalize<'a> {
+    arena: &'a mut Arena<Type>,
+    mapping: &'a mut BTreeMap<Index, String>,
+}
+
+impl<'a> KeyValueStore<Index, Type> for Generalize<'a> {
+    // NOTE: The reason we return both an Index and a Type is that
+    // this method calls `prune` which maybe return a different Index
+    // from the one passed to it. We need to ensure this method returns
+    // an Index that corresponds to the returned Type.
+    fn get_type(&mut self, idx: &Index) -> (Index, Type) {
+        let idx = prune(self.arena, *idx);
+        let t = self.arena[idx].clone();
+        (idx, t)
+    }
+    fn put_type(&mut self, t: Type) -> Index {
+        self.arena.insert(t)
+    }
+}
+
+impl<'a> Visitor for Generalize<'a> {
+    fn visit_type_var(&mut self, _: &Variable, idx: &Index) -> Index {
+        // Replace with a type reference/constructor
+        let name = match self.mapping.get(idx) {
+            Some(name) => name.clone(),
+            None => {
+                // TODO: create a name generator that can avoid duplicating
+                // names of explicitly provided type params.
+                let name = ((self.mapping.len() as u8) + 65) as char;
+                let name = format!("{}", name);
+                // let name = format!("'{}", mappings.len());
+                self.mapping.insert(*idx, name.clone());
+                name
+            }
+        };
+        new_constructor(self.arena, &name, &[])
+    }
+}
+
 pub fn generalize_func(arena: &'_ mut Arena<Type>, func: &Function) -> Index {
     // A mapping of TypeVariables to TypeVariables
-    let mut mappings = BTreeMap::default();
+    let mut mapping = BTreeMap::default();
+    let mut generalize = Generalize {
+        arena,
+        mapping: &mut mapping,
+    };
 
-    // TODO: dedupe with freshrec and instrec
-    fn generalize_rec(
-        arena: &mut Arena<Type>,
-        tp: Index,
-        mappings: &mut BTreeMap<Index, Ref>,
-    ) -> Index {
-        let p = prune(arena, tp);
-        // We clone here because we can't move out of a shared reference.
-        // TODO: Consider using Rc<RefCell<Type>> to avoid unnecessary cloning.
-        let a_t = arena.get(p).unwrap().clone();
-        match &a_t.kind {
-            TypeKind::Variable(_) => {
-                // Replace with a type reference/constructor
-                let name = match mappings.get(&p) {
-                    Some(tref) => tref.name.clone(),
-                    None => {
-                        // TODO: create a name generator that can avoid duplicating
-                        // names of explicitly provided type params.
-                        let name = ((mappings.len() as u8) + 65) as char;
-                        let name = format!("{}", name);
-                        // let name = format!("'{}", mappings.len());
-                        mappings.insert(p, Ref { name: name.clone() });
-                        name
-                    }
-                };
-                new_constructor(arena, &name, &[])
-            }
-            TypeKind::Literal(lit) => new_lit_type(arena, lit),
-            TypeKind::Object(object) => {
-                let fields: Vec<_> = object
-                    .props
-                    .iter()
-                    .map(|prop| match prop {
-                        types::TObjElem::Method(method) => {
-                            let params = generalize_rec_many(arena, &method.params, mappings);
-                            let ret = generalize_rec(arena, method.ret, mappings);
-                            types::TObjElem::Method(TMethod {
-                                params,
-                                ret,
-                                ..method.to_owned()
-                            })
-                        }
-                        types::TObjElem::Index(index) => {
-                            let t = generalize_rec(arena, index.t, mappings);
-                            types::TObjElem::Index(types::TIndex { t, ..index.clone() })
-                        }
-                        types::TObjElem::Prop(prop) => {
-                            let t = generalize_rec(arena, prop.t, mappings);
-                            types::TObjElem::Prop(types::TProp { t, ..prop.clone() })
-                        }
-                    })
-                    .collect();
-                new_object_type(arena, &fields)
-            }
-            TypeKind::Rest(rest) => {
-                let arg = generalize_rec(arena, rest.arg, mappings);
-                new_rest_type(arena, arg)
-            }
-            TypeKind::Function(func) => {
-                let params = generalize_rec_many(arena, &func.params, mappings);
-                let ret = generalize_rec(arena, func.ret, mappings);
-                new_func_type(arena, &params, ret, None)
-            }
-            TypeKind::Constructor(con) => {
-                let types = generalize_rec_many(arena, &con.types, mappings);
-                new_constructor(arena, &con.name, &types)
-            }
-        }
-    }
-
-    pub fn generalize_rec_many(
-        a: &mut Arena<Type>,
-        types: &[Index],
-        mappings: &mut BTreeMap<Index, Ref>,
-    ) -> Vec<Index> {
-        types
-            .iter()
-            .map(|x| generalize_rec(a, *x, mappings))
-            .collect()
-    }
-
-    let params = generalize_rec_many(arena, &func.params, &mut mappings);
-    let ret = generalize_rec(arena, func.ret, &mut mappings);
+    let params = generalize.visit_indexes(&func.params);
+    let ret = generalize.visit_index(&func.ret);
 
     let mut type_params: Vec<types::TypeParam> = vec![];
 
@@ -762,9 +725,9 @@ pub fn generalize_func(arena: &'_ mut Arena<Type>, func: &Function) -> Index {
         type_params.extend(explicit_type_params.to_owned());
     }
 
-    for (_, v) in mappings {
+    for (_, name) in mapping {
         type_params.push(types::TypeParam {
-            name: v.name.clone(),
+            name: name.clone(),
             constraint: None,
             default: None,
         });

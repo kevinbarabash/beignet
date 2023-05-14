@@ -11,11 +11,14 @@ pub trait KeyValueStore<K, V> {
 pub trait Visitor: KeyValueStore<Index, Type> {
     fn visit_type_var(&mut self, _: &Variable, idx: &Index) -> Index;
 
-    fn visit_type_ref(&mut self, tref: &Constructor) -> Constructor {
-        Constructor {
-            types: self.visit_indexes(&tref.types),
-            ..tref.to_owned()
-        }
+    fn visit_type_ref(&mut self, tref: &Constructor, _: &Index) -> Index {
+        let t = Type {
+            kind: TypeKind::Constructor(Constructor {
+                types: self.visit_indexes(&tref.types),
+                ..tref.to_owned()
+            }),
+        };
+        self.put_type(t)
     }
 
     fn visit_literal(&self, lit: &Lit) -> Lit {
@@ -64,7 +67,7 @@ pub trait Visitor: KeyValueStore<Index, Type> {
         let (idx, t) = self.get_type(idx);
         let kind = match &t.kind {
             TypeKind::Variable(tvar) => return self.visit_type_var(tvar, &idx),
-            TypeKind::Constructor(tref) => TypeKind::Constructor(self.visit_type_ref(tref)),
+            TypeKind::Constructor(tref) => return self.visit_type_ref(tref, &idx),
             TypeKind::Literal(lit) => TypeKind::Literal(self.visit_literal(lit)),
             TypeKind::Function(func) => TypeKind::Function(self.visit_function(func)),
             TypeKind::Object(obj) => TypeKind::Object(self.visit_object(obj)),
