@@ -5,6 +5,7 @@ use im::hashset::HashSet;
 use crate::errors::*;
 use crate::types::*;
 use crate::util::*;
+use crate::visitor::{KeyValueStore, Visitor};
 
 #[derive(Clone, Debug, Default)]
 pub struct Context {
@@ -41,6 +42,41 @@ pub fn get_type(arena: &mut Arena<Type>, name: &str, ctx: &Context) -> Result<In
     }
 }
 
+struct Fresh<'a> {
+    arena: &'a mut Arena<Type>,
+    ctx: &'a Context,
+
+    mappings: HashMap<Index, Index>,
+}
+
+impl<'a> KeyValueStore<Index, Type> for Fresh<'a> {
+    // NOTE: The reason we return both an Index and a Type is that
+    // this method calls `prune` which maybe return a different Index
+    // from the one passed to it. We need to ensure this method returns
+    // an Index that corresponds to the returned Type.
+    fn get_type(&mut self, idx: &Index) -> (Index, Type) {
+        let idx = prune(self.arena, *idx);
+        let t = self.arena[idx].clone();
+        (idx, t)
+    }
+    fn put_type(&mut self, t: Type) -> Index {
+        self.arena.insert(t)
+    }
+}
+
+impl<'a> Visitor for Fresh<'a> {
+    fn visit_type_var(&mut self, _: &Variable, idx: &Index) -> Index {
+        if is_generic(self.arena, *idx, self.ctx) {
+            self.mappings
+                .entry(*idx)
+                .or_insert_with(|| new_var_type(self.arena, None))
+                .to_owned()
+        } else {
+            *idx
+        }
+    }
+}
+
 /// Makes a copy of a type expression.
 ///
 /// The type t is copied. The the generic variables are duplicated and the
@@ -50,101 +86,13 @@ pub fn get_type(arena: &mut Arena<Type>, name: &str, ctx: &Context) -> Result<In
 ///     t: A type to be copied.
 ///     non_generic: A set of non-generic TypeVariables
 pub fn fresh(arena: &mut Arena<Type>, t: Index, ctx: &Context) -> Index {
-    // A mapping of TypeVariables to TypeVariables
-    let mut mappings = HashMap::default();
+    let mut fresh = Fresh {
+        arena,
+        ctx,
+        mappings: HashMap::default(),
+    };
 
-    // TODO: dedupe with instrec and generalize_rec
-    fn freshrec(
-        arena: &mut Arena<Type>,
-        tp: Index,
-        mappings: &mut HashMap<Index, Index>,
-        ctx: &Context,
-    ) -> Index {
-        let p = prune(arena, tp);
-        match &arena.get(p).unwrap().clone().kind {
-            TypeKind::Variable(_) => {
-                if is_generic(arena, p, ctx) {
-                    mappings
-                        .entry(p)
-                        .or_insert_with(|| new_var_type(arena, None))
-                        .to_owned()
-                } else {
-                    p
-                }
-            }
-            TypeKind::Literal(lit) => new_lit_type(arena, lit),
-            TypeKind::Object(object) => {
-                let props: Vec<_> = object
-                    .props
-                    .iter()
-                    .map(|prop| match prop {
-                        TObjElem::Method(method) => {
-                            let params = freshrec_many(arena, &method.params, mappings, ctx);
-                            let ret = freshrec(arena, method.ret, mappings, ctx);
-                            TObjElem::Method(TMethod {
-                                params,
-                                ret,
-                                ..method.to_owned()
-                            })
-                        }
-                        TObjElem::Index(index) => {
-                            let t = freshrec(arena, index.t, mappings, ctx);
-                            TObjElem::Index(TIndex { t, ..index.clone() })
-                        }
-                        TObjElem::Prop(prop) => {
-                            let t = freshrec(arena, prop.t, mappings, ctx);
-                            TObjElem::Prop(TProp { t, ..prop.clone() })
-                        }
-                    })
-                    .collect();
-                if props != object.props {
-                    new_object_type(arena, &props)
-                } else {
-                    p
-                }
-            }
-            TypeKind::Rest(rest) => {
-                let arg = freshrec(arena, rest.arg, mappings, ctx);
-                if arg != rest.arg {
-                    new_rest_type(arena, arg)
-                } else {
-                    p
-                }
-            }
-            TypeKind::Function(func) => {
-                let params = freshrec_many(arena, &func.params, mappings, ctx);
-                let ret = freshrec(arena, func.ret, mappings, ctx);
-                let type_params = func.type_params.clone();
-                if params != func.params || ret != func.ret {
-                    new_func_type(arena, &params, ret, type_params)
-                } else {
-                    p
-                }
-            }
-            TypeKind::Constructor(con) => {
-                let types = freshrec_many(arena, &con.types, mappings, ctx);
-                if types != con.types {
-                    new_constructor(arena, &con.name, &types)
-                } else {
-                    p
-                }
-            }
-        }
-    }
-
-    pub fn freshrec_many(
-        a: &mut Arena<Type>,
-        types: &[Index],
-        mappings: &mut HashMap<Index, Index>,
-        ctx: &Context,
-    ) -> Vec<Index> {
-        types
-            .iter()
-            .map(|x| freshrec(a, *x, mappings, ctx))
-            .collect()
-    }
-
-    freshrec(arena, t, &mut mappings, ctx)
+    fresh.visit_index(&t)
 }
 
 pub fn instantiate_scheme(
@@ -260,6 +208,6 @@ pub fn instantiate_scheme(
 ///
 /// Returns:
 ///     True if v is a generic variable, otherwise False
-pub fn is_generic(a: &mut Arena<Type>, t: Index, ctx: &Context) -> bool {
-    !occurs_in(a, t, &ctx.non_generic)
+pub fn is_generic(arena: &mut Arena<Type>, t: Index, ctx: &Context) -> bool {
+    !occurs_in(arena, t, &ctx.non_generic)
 }
