@@ -48,8 +48,8 @@ fn test_env() -> (Arena<Type>, Context) {
 
     let array_interface = new_object_type(
         &mut arena,
-        // .push(item: T): number;
         &[
+            // .push(item: T): number;
             types::TObjElem::Method(types::TMethod {
                 name: types::TPropKey::StringKey("push".to_string()),
                 params: vec![type_param_t],
@@ -57,11 +57,21 @@ fn test_env() -> (Arena<Type>, Context) {
                 type_params: None,
                 is_mutating: true,
             }),
+            // .length: number;
             types::TObjElem::Prop(types::TProp {
                 name: types::TPropKey::StringKey("length".to_string()),
                 optional: false,
                 mutable: false,
                 t: number,
+            }),
+            // [n: number]: T;
+            types::TObjElem::Index(types::TIndex {
+                key: types::TIndexKey {
+                    name: "n".to_string(),
+                    t: number,
+                },
+                mutable: true, // we should have some sets to set properties on an array
+                t: type_param_t,
             }),
         ],
     );
@@ -589,13 +599,46 @@ fn tuple_member() -> Result<(), Errors> {
 
     let src = r#"
     let tuple = [5, "hello"];
-    let result = tuple[1];
+    let second = tuple[1];
+    declare let index: number;
+    let any = tuple[index];
     "#;
     let mut program = parse(src).unwrap();
 
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
-    let t = my_ctx.values.get("result").unwrap();
-    assert_eq!(arena[*t].as_string(&arena), "\"hello\"".to_string(),);
+
+    let t = my_ctx.values.get("second").unwrap();
+    assert_eq!(arena[*t].as_string(&arena), r#""hello""#.to_string(),);
+    let t = my_ctx.values.get("any").unwrap();
+    assert_eq!(arena[*t].as_string(&arena), r#"5 | "hello""#.to_string(),);
+
+    Ok(())
+}
+
+#[test]
+fn array_member() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let array: Array<number>;
+    let first = array[0];
+    declare let index: number;
+    let any = array[0];
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let t = my_ctx.values.get("first").unwrap();
+    assert_eq!(
+        arena[*t].as_string(&arena),
+        "number | undefined".to_string(),
+    );
+    let t = my_ctx.values.get("any").unwrap();
+    assert_eq!(
+        arena[*t].as_string(&arena),
+        "number | undefined".to_string(),
+    );
 
     Ok(())
 }
@@ -2141,6 +2184,61 @@ fn methods_on_arrays() -> Result<(), Errors> {
     let mut program = parse(src).unwrap();
 
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    let t = my_ctx.values.get("len").unwrap();
+    assert_eq!(arena[*t].as_string(&arena), r#"number"#);
+
+    Ok(())
+}
+
+#[test]
+fn properties_on_tuple() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let tuple: [number, string] = [5, "hello"];
+    let len = tuple.length;
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let t = my_ctx.values.get("len").unwrap();
+    assert_eq!(arena[*t].as_string(&arena), r#"number"#);
+
+    Ok(())
+}
+
+#[test]
+#[ignore]
+fn set_array_element() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let array: Array<number>;
+    array[0] = 5;
+    array[1] = 10;
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    Ok(())
+}
+
+#[test]
+#[ignore]
+fn set_tuple_element() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let tuple: [number, number];
+    tuple[0] = 5;
+    tuple[1] = 10;
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
     let t = my_ctx.values.get("len").unwrap();
     assert_eq!(arena[*t].as_string(&arena), r#"number"#);
 
