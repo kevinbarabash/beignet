@@ -8,6 +8,7 @@ pub mod parser;
 pub mod types;
 mod unify;
 mod util;
+mod visitor;
 
 pub use infer::{infer_expression, infer_program};
 pub use parser::parse;

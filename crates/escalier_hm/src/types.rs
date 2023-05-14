@@ -19,12 +19,6 @@ pub struct Constructor {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Ref {
-    pub name: String,
-    // TODO: Add support for type args
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Function {
     pub params: Vec<Index>, // TODO: require param names
     pub ret: Index,
