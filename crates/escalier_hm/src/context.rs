@@ -78,6 +78,15 @@ pub fn fresh(arena: &mut Arena<Type>, t: Index, ctx: &Context) -> Index {
                     .props
                     .iter()
                     .map(|prop| match prop {
+                        TObjElem::Method(method) => {
+                            let params = freshrec_many(arena, &method.params, mappings, ctx);
+                            let ret = freshrec(arena, method.ret, mappings, ctx);
+                            TObjElem::Method(TMethod {
+                                params,
+                                ret,
+                                ..method.to_owned()
+                            })
+                        }
                         TObjElem::Index(index) => {
                             let t = freshrec(arena, index.t, mappings, ctx);
                             TObjElem::Index(TIndex { t, ..index.clone() })
@@ -106,7 +115,6 @@ pub fn fresh(arena: &mut Arena<Type>, t: Index, ctx: &Context) -> Index {
                 let params = freshrec_many(arena, &func.params, mappings, ctx);
                 let ret = freshrec(arena, func.ret, mappings, ctx);
                 let type_params = func.type_params.clone();
-                // TODO: copy the type params
                 if params != func.params || ret != func.ret {
                     new_func_type(arena, &params, ret, type_params)
                 } else {
@@ -143,7 +151,6 @@ pub fn instantiate_scheme(
     arena: &mut Arena<Type>,
     t: Index,
     mapping: &std::collections::HashMap<String, Index>,
-    ctx: &Context,
 ) -> Index {
     // A mapping of TypeVariables to TypeVariables
     // let mut mappings = HashMap::default();
@@ -153,7 +160,6 @@ pub fn instantiate_scheme(
         arena: &mut Arena<Type>,
         tp: Index,
         mapping: &std::collections::HashMap<String, Index>,
-        ctx: &Context,
     ) -> Index {
         let p = prune(arena, tp);
         match &arena.get(p).unwrap().clone().kind {
@@ -163,9 +169,8 @@ pub fn instantiate_scheme(
                 instance,
                 constraint,
             }) => {
-                let instance = instance.map(|idx| instantiate_scheme_rec(arena, idx, mapping, ctx));
-                let constraint =
-                    constraint.map(|idx| instantiate_scheme_rec(arena, idx, mapping, ctx));
+                let instance = instance.map(|idx| instantiate_scheme_rec(arena, idx, mapping));
+                let constraint = constraint.map(|idx| instantiate_scheme_rec(arena, idx, mapping));
                 arena.insert(Type {
                     kind: TypeKind::Variable(Variable {
                         id: arena.len(), // use for debugging purposes only
@@ -180,12 +185,22 @@ pub fn instantiate_scheme(
                     .props
                     .iter()
                     .map(|prop| match prop {
+                        TObjElem::Method(method) => {
+                            let params =
+                                instantiate_scheme_rec_many(arena, &method.params, mapping);
+                            let ret = instantiate_scheme_rec(arena, method.ret, mapping);
+                            TObjElem::Method(TMethod {
+                                params,
+                                ret,
+                                ..method.to_owned()
+                            })
+                        }
                         TObjElem::Index(index) => {
-                            let t = instantiate_scheme_rec(arena, index.t, mapping, ctx);
+                            let t = instantiate_scheme_rec(arena, index.t, mapping);
                             TObjElem::Index(TIndex { t, ..index.clone() })
                         }
                         TObjElem::Prop(prop) => {
-                            let t = instantiate_scheme_rec(arena, prop.t, mapping, ctx);
+                            let t = instantiate_scheme_rec(arena, prop.t, mapping);
                             TObjElem::Prop(TProp { t, ..prop.clone() })
                         }
                     })
@@ -193,17 +208,17 @@ pub fn instantiate_scheme(
                 new_object_type(arena, &props)
             }
             TypeKind::Rest(rest) => {
-                let arg = instantiate_scheme_rec(arena, rest.arg, mapping, ctx);
+                let arg = instantiate_scheme_rec(arena, rest.arg, mapping);
                 new_rest_type(arena, arg)
             }
             TypeKind::Function(func) => {
-                let params = instantiate_scheme_rec_many(arena, &func.params, mapping, ctx);
-                let ret = instantiate_scheme_rec(arena, func.ret, mapping, ctx);
+                let params = instantiate_scheme_rec_many(arena, &func.params, mapping);
+                let ret = instantiate_scheme_rec(arena, func.ret, mapping);
                 let type_params = func.type_params.clone();
                 new_func_type(arena, &params, ret, type_params)
             }
             TypeKind::Constructor(con) => {
-                let types = instantiate_scheme_rec_many(arena, &con.types, mapping, ctx);
+                let types = instantiate_scheme_rec_many(arena, &con.types, mapping);
 
                 match mapping.get(&con.name) {
                     Some(idx) => {
@@ -218,18 +233,17 @@ pub fn instantiate_scheme(
     }
 
     pub fn instantiate_scheme_rec_many(
-        a: &mut Arena<Type>,
+        arena: &mut Arena<Type>,
         types: &[Index],
         mapping: &std::collections::HashMap<String, Index>,
-        ctx: &Context,
     ) -> Vec<Index> {
         types
             .iter()
-            .map(|x| instantiate_scheme_rec(a, *x, mapping, ctx))
+            .map(|x| instantiate_scheme_rec(arena, *x, mapping))
             .collect()
     }
 
-    instantiate_scheme_rec(arena, t, mapping, ctx)
+    instantiate_scheme_rec(arena, t, mapping)
 }
 
 /// Checks whether a given variable occurs in a list of non-generic variables

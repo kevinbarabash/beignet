@@ -222,9 +222,19 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 // If we haven't found a matching property, then we report an
                 // appropriate type error.
                 match prop2 {
+                    TObjElem::Method(method) => {
+                        let name = match &method.name {
+                            TPropKey::NumberKey(name) => name.to_string(),
+                            TPropKey::StringKey(name) => name.to_string(),
+                        };
+                        return Err(Errors::InferenceError(format!(
+                            "'{name}' is missing in {}",
+                            a_t.as_string(arena),
+                        )));
+                    }
                     TObjElem::Index(_) => todo!(),
-                    TObjElem::Prop(TProp { name, .. }) => {
-                        let name = match name {
+                    TObjElem::Prop(prop) => {
+                        let name = match &prop.name {
                             TPropKey::NumberKey(name) => name.to_string(),
                             TPropKey::StringKey(name) => name.to_string(),
                         };
@@ -295,7 +305,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             }),
         ) if !name.starts_with("@@") => match ctx.schemes.get(name) {
             Some(scheme) => {
-                let t = expand_alias(arena, ctx, name, scheme, type_args)?;
+                let t = expand_alias(arena, name, scheme, type_args)?;
                 unify(arena, ctx, t1, t)
             }
             None => Err(Errors::InferenceError(format!(
@@ -310,7 +320,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             TypeKind::Object(_),
         ) if !name.starts_with("@@") => match ctx.schemes.get(name) {
             Some(scheme) => {
-                let t = expand_alias(arena, ctx, name, scheme, type_args)?;
+                let t = expand_alias(arena, name, scheme, type_args)?;
                 unify(arena, ctx, t, t2)
             }
             None => Err(Errors::InferenceError(format!(
@@ -438,6 +448,7 @@ fn bind(arena: &mut Arena<Type>, ctx: &Context, a: Index, b: Index) -> Result<()
     Ok(())
 }
 
+// Is it possible to dedupe this with instantiate_scheme somehow?
 fn instantiate_func(
     arena: &mut Arena<Type>,
     func: &Function,
@@ -489,6 +500,15 @@ fn instantiate_func(
                     .props
                     .iter()
                     .map(|prop| match prop {
+                        TObjElem::Method(method) => {
+                            let params = instrec_many(arena, &method.params, mappings);
+                            let ret = instrec(arena, method.ret, mappings);
+                            TObjElem::Method(TMethod {
+                                params,
+                                ret,
+                                ..method.to_owned()
+                            })
+                        }
                         TObjElem::Index(index) => {
                             let t = instrec(arena, index.t, mappings);
                             TObjElem::Index(TIndex { t, ..index.clone() })
@@ -517,7 +537,6 @@ fn instantiate_func(
                 let params = instrec_many(arena, &func.params, mappings);
                 let ret = instrec(arena, func.ret, mappings);
                 let type_params = func.type_params.clone();
-                // TODO: copy the type params
                 if params != func.params || ret != func.ret {
                     new_func_type(arena, &params, ret, type_params)
                 } else {
@@ -580,7 +599,7 @@ pub fn simplify_intersection(arena: &mut Arena<Type>, in_types: &[Index]) -> Ind
                 // What do we do with Call and Index signatures
                 // TObjElem::Call(_) => todo!(),
                 // TObjElem::Constructor(_) => todo!(),
-                // TObjElem::Method(_) => todo!(),
+                TObjElem::Method(_) => todo!(),
                 // TObjElem::Getter(_) => todo!(),
                 // TObjElem::Setter(_) => todo!(),
                 TObjElem::Index(_) => todo!(),
@@ -620,7 +639,7 @@ pub fn simplify_intersection(arena: &mut Arena<Type>, in_types: &[Index]) -> Ind
     elems.sort_by_key(|elem| match elem {
         // TObjElem::Call(_) => todo!(),
         // TObjElem::Constructor(_) => todo!(),
-        // TObjElem::Method(_) => todo!(),
+        TObjElem::Method(_) => todo!(),
         // TObjElem::Getter(_) => todo!(),
         // TObjElem::Setter(_) => todo!(),
         TObjElem::Index(_) => todo!(),
