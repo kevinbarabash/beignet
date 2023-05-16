@@ -302,12 +302,6 @@ pub fn infer_expression(
                 body_types.push(infer_block(arena, &mut arm.body, &mut new_ctx)?);
             }
 
-            let t0 = prune(arena, body_types[0]);
-            eprintln!("t0 = {}", arena[t0].as_string(arena));
-
-            let t1 = prune(arena, body_types[1]);
-            eprintln!("t1 = {}", arena[t1].as_string(arena));
-
             new_union_type(arena, &body_types)
         }
         ExprKind::Class(_) => todo!(),
@@ -953,7 +947,6 @@ fn infer_type_params(
                 None => None,
             };
             let t = new_var_type(arena, constraint);
-            eprintln!("T = {}", arena[t].as_string(arena));
             let scheme = Scheme {
                 t,
                 type_params: None,

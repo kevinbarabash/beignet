@@ -29,18 +29,6 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
     let a_t = arena.get(a).unwrap().clone();
     let b_t = arena.get(b).unwrap().clone();
 
-    // TODO: Add type variables to ctx.schemes when inferring them.
-    eprintln!("unify({}, {})", a_t.as_string(arena), b_t.as_string(arena));
-    eprintln!("a_t = {a_t:#?}");
-    eprintln!("b_t = {b_t:#?}");
-
-    // if let TypeKind::Constructor(Constructor { name, .. }) = &a_t.kind {
-    //     if let Some(scheme) = ctx.schemes.get(name) {
-    //         eprintln!("scheme = {scheme:#?}");
-    //         // let a_t = expand_alias(arena, &name, scheme, type_args);
-    //     }
-    // }
-
     match (&a_t.kind, &b_t.kind) {
         (TypeKind::Variable(_), _) => bind(arena, ctx, a, b),
         (_, TypeKind::Variable(_)) => bind(arena, ctx, b, a),
