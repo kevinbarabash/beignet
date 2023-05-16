@@ -110,10 +110,16 @@ pub fn infer_expression(
             type_params,
             return_type,
         }) => {
-            let mut param_types = vec![];
-            let mut new_ctx = ctx.clone();
-            new_ctx.is_async = *is_async;
+            // NOTE: We clone `ctx` so that type params don't escape the signature
+            let mut sig_ctx = ctx.clone();
 
+            // TODO: add a test case like:
+            // let foo = <P: Point>({x: x1, y: y1}: P, {x: x2, y: y2}: P) => ...
+            // so we need them to be in ctx.schemes before processing each
+            // function param
+            let type_params = infer_type_params(arena, type_params, &mut sig_ctx)?;
+
+            let mut param_types = vec![];
             for EFnParam {
                 pat: pattern,
                 type_ann,
@@ -121,7 +127,7 @@ pub fn infer_expression(
             } in params.iter_mut()
             {
                 let param_type = match type_ann {
-                    Some(type_ann) => infer_type_ann(arena, type_ann, ctx)?,
+                    Some(type_ann) => infer_type_ann(arena, type_ann, &mut sig_ctx)?,
                     None => new_var_type(arena, None),
                 };
 
@@ -130,8 +136,8 @@ pub fn infer_expression(
                 }) = &pattern.kind
                 {
                     pattern.inferred_type = Some(param_type);
-                    new_ctx.values.insert(name.to_owned(), param_type);
-                    new_ctx.non_generic.insert(param_type);
+                    sig_ctx.values.insert(name.to_owned(), param_type);
+                    sig_ctx.non_generic.insert(param_type);
                     param_types.push(param_type);
                 } else {
                     return Err(Errors::InferenceError(
@@ -140,12 +146,15 @@ pub fn infer_expression(
                 }
             }
 
+            let mut body_ctx = sig_ctx.clone();
+            body_ctx.is_async = *is_async;
+
             let mut body_t = 'outer: {
                 match body {
                     BlockOrExpr::Block(Block { stmts, .. }) => {
                         for stmt in stmts.iter_mut() {
-                            new_ctx = new_ctx.clone();
-                            let t = infer_statement(arena, stmt, &mut new_ctx, false)?;
+                            body_ctx = body_ctx.clone();
+                            let t = infer_statement(arena, stmt, &mut body_ctx, false)?;
                             if let StmtKind::ReturnStmt(_) = stmt.kind {
                                 // TODO: warn about unreachable code.
                                 break 'outer t;
@@ -156,7 +165,7 @@ pub fn infer_expression(
                         // the return type is `undefined`.
                         new_constructor(arena, "undefined", &[])
                     }
-                    BlockOrExpr::Expr(expr) => infer_expression(arena, expr, &mut new_ctx)?,
+                    BlockOrExpr::Expr(expr) => infer_expression(arena, expr, &mut body_ctx)?,
                 }
             };
 
@@ -164,36 +173,12 @@ pub fn infer_expression(
                 body_t = new_constructor(arena, "Promise", &[body_t]);
             }
 
-            let mut type_param_names: HashSet<String> = HashSet::new();
-            let type_params = match type_params {
-                Some(type_params) => Some(
-                    type_params
-                        .iter_mut()
-                        .map(|tp| {
-                            if !type_param_names.insert(tp.name.name.to_owned()) {
-                                return Err(Errors::InferenceError(
-                                    "type param identifiers must be unique".to_string(),
-                                ));
-                            }
-                            Ok(types::TypeParam {
-                                name: tp.name.name.to_owned(),
-                                constraint: match &mut tp.constraint {
-                                    Some(constraint) => {
-                                        Some(infer_type_ann(arena, constraint, ctx)?)
-                                    }
-                                    None => None,
-                                },
-                                default: None,
-                            })
-                        })
-                        .collect::<Result<Vec<_>, _>>()?,
-                ),
-                None => None,
-            };
-
             match return_type {
                 Some(return_type) => {
-                    let ret_t = infer_type_ann(arena, return_type, ctx)?;
+                    // TODO: The return type context needs to have access to
+                    // type params but can't have access to anything from the
+                    // body.
+                    let ret_t = infer_type_ann(arena, return_type, &mut sig_ctx)?;
                     unify(arena, ctx, body_t, ret_t)?;
                     new_func_type(arena, &param_types, ret_t, type_params)
                 }
@@ -362,7 +347,7 @@ pub fn infer_block(
 pub fn infer_type_ann(
     arena: &mut Arena<Type>,
     type_ann: &mut TypeAnn,
-    _ctx: &mut Context,
+    ctx: &mut Context,
 ) -> Result<Index, Errors> {
     // TODO: handle type params
 
@@ -372,38 +357,17 @@ pub fn infer_type_ann(
             ret,
             type_params,
         }) => {
+            // NOTE: We clone `ctx` so that type params don't escape the signature
+            let mut sig_ctx = ctx.clone();
+
+            let type_params = infer_type_params(arena, type_params, &mut sig_ctx)?;
+
             let params = params
                 .iter_mut()
-                .map(|param| infer_type_ann(arena, &mut param.type_ann, _ctx))
+                .map(|param| infer_type_ann(arena, &mut param.type_ann, &mut sig_ctx))
                 .collect::<Result<Vec<_>, _>>()?;
 
-            let ret_idx = infer_type_ann(arena, ret.as_mut(), _ctx)?;
-
-            let type_params = match type_params {
-                Some(type_params) => {
-                    let type_params = type_params
-                        .iter_mut()
-                        .map(|param| {
-                            Ok(types::TypeParam {
-                                name: param.name.name.clone(),
-                                constraint: match &mut param.constraint {
-                                    Some(constraint) => {
-                                        Some(infer_type_ann(arena, constraint, _ctx)?)
-                                    }
-                                    None => None,
-                                },
-                                default: match &mut param.default {
-                                    Some(default) => Some(infer_type_ann(arena, default, _ctx)?),
-                                    None => None,
-                                },
-                            })
-                        })
-                        .collect::<Result<Vec<_>, _>>()?;
-
-                    Some(type_params)
-                }
-                None => None,
-            };
+            let ret_idx = infer_type_ann(arena, ret.as_mut(), &mut sig_ctx)?;
 
             new_func_type(arena, &params, ret_idx, type_params)
         }
@@ -428,7 +392,7 @@ pub fn infer_type_ann(
                     syntax::TObjElem::Prop(prop) => {
                         props.push(types::TObjElem::Prop(types::TProp {
                             name: TPropKey::StringKey(prop.name.to_owned()),
-                            t: infer_type_ann(arena, &mut prop.type_ann, _ctx)?,
+                            t: infer_type_ann(arena, &mut prop.type_ann, ctx)?,
                             mutable: prop.mutable,
                             optional: prop.optional,
                         }));
@@ -438,42 +402,57 @@ pub fn infer_type_ann(
             new_object_type(arena, &props)
         }
         TypeAnnKind::TypeRef(TypeRef { name, type_args }) => {
-            match type_args {
-                Some(type_args) => {
-                    let mut type_args_idxs = Vec::new();
-                    for type_arg in type_args.iter_mut() {
-                        type_args_idxs.push(infer_type_ann(arena, type_arg, _ctx)?);
+            match ctx.schemes.get(name) {
+                Some(scheme) => {
+                    // TODO: check if the number of type_args patch the number
+                    // type_params in the scheme and unify them as necessary.
+                    // scheme.t;
+
+                    match type_args {
+                        Some(type_args) => {
+                            let mut type_args_idxs = Vec::new();
+                            for type_arg in type_args.iter_mut() {
+                                type_args_idxs.push(infer_type_ann(arena, type_arg, ctx)?);
+                            }
+                            // TODO: check that the type args conform to any constraints
+                            // present in the type params.
+                            new_constructor(arena, name, &type_args_idxs)
+                        }
+                        None => new_constructor(arena, name, &[]),
                     }
-                    // TODO: check that the type args conform to any constraints
-                    // present in the type params.
-                    new_constructor(arena, name, &type_args_idxs)
                 }
-                None => new_constructor(arena, name, &[]),
+                None => {
+                    return Err(Errors::InferenceError(format!(
+                        "Couldn't find scheme named {name}"
+                    )));
+                }
             }
+
+            // TODO: lookup `name` in `ctx` to see if it exists or not
         }
         TypeAnnKind::Union(UnionType { types }) => {
             let mut idxs = Vec::new();
             for type_ann in types.iter_mut() {
-                idxs.push(infer_type_ann(arena, type_ann, _ctx)?);
+                idxs.push(infer_type_ann(arena, type_ann, ctx)?);
             }
             new_union_type(arena, &idxs)
         }
         TypeAnnKind::Intersection(IntersectionType { types }) => {
             let mut idxs = Vec::new();
             for type_ann in types.iter_mut() {
-                idxs.push(infer_type_ann(arena, type_ann, _ctx)?);
+                idxs.push(infer_type_ann(arena, type_ann, ctx)?);
             }
             new_intersection_type(arena, &idxs)
         }
         TypeAnnKind::Tuple(TupleType { types }) => {
             let mut idxs = Vec::new();
             for type_ann in types.iter_mut() {
-                idxs.push(infer_type_ann(arena, type_ann, _ctx)?);
+                idxs.push(infer_type_ann(arena, type_ann, ctx)?);
             }
             new_tuple_type(arena, &idxs)
         }
         TypeAnnKind::Array(ArrayType { elem_type }) => {
-            let idx = infer_type_ann(arena, elem_type, _ctx)?;
+            let idx = infer_type_ann(arena, elem_type, ctx)?;
             new_constructor(arena, "Array", &[idx])
         }
         TypeAnnKind::IndexedAccess(_) => todo!(),
@@ -606,23 +585,12 @@ pub fn infer_statement(
             type_ann,
             type_params,
         }) => {
-            let t = infer_type_ann(arena, type_ann, ctx)?;
+            // NOTE: We clone `ctx` so that type params don't escape the signature
+            let mut sig_ctx = ctx.clone();
 
-            let type_params = match type_params {
-                Some(type_params) => Some(
-                    type_params
-                        .iter()
-                        .map(|param| {
-                            Ok(types::TypeParam {
-                                name: param.name.name.to_owned(),
-                                constraint: None,
-                                default: None,
-                            })
-                        })
-                        .collect::<Result<Vec<types::TypeParam>, Errors>>()?,
-                ),
-                None => None,
-            };
+            let type_params = infer_type_params(arena, type_params, &mut sig_ctx)?;
+            let t = infer_type_ann(arena, type_ann, &mut sig_ctx)?;
+
             // TODO: generalize type `t` into a scheme
             let scheme = Scheme { t, type_params };
 
@@ -971,4 +939,58 @@ fn get_prop(arena: &mut Arena<Type>, obj_idx: Index, name: &str) -> Result<Index
             "Can't access property on non-object type".to_string(),
         ))
     }
+}
+
+fn infer_type_params(
+    arena: &mut Arena<Type>,
+    type_params: &mut Option<Vec<syntax::TypeParam>>,
+    sig_ctx: &mut Context,
+) -> Result<Option<Vec<types::TypeParam>>, Errors> {
+    if let Some(type_params) = type_params {
+        for tp in type_params.iter_mut() {
+            let constraint = match &mut tp.constraint {
+                Some(constraint) => Some(infer_type_ann(arena, constraint.as_mut(), sig_ctx)?),
+                None => None,
+            };
+            let t = new_var_type(arena, constraint);
+            eprintln!("T = {}", arena[t].as_string(arena));
+            let scheme = Scheme {
+                t,
+                type_params: None,
+            };
+            sig_ctx.schemes.insert(tp.name.name.to_owned(), scheme);
+        }
+    }
+
+    // TODO: move this up and do this at the same time we do the other
+    // processing of `type_params`.
+    let mut type_param_names: HashSet<String> = HashSet::new();
+    let type_params = match type_params {
+        Some(type_params) => Some(
+            type_params
+                .iter_mut()
+                .map(|tp| {
+                    if !type_param_names.insert(tp.name.name.to_owned()) {
+                        return Err(Errors::InferenceError(
+                            "type param identifiers must be unique".to_string(),
+                        ));
+                    }
+                    Ok(types::TypeParam {
+                        name: tp.name.name.to_owned(),
+                        constraint: match &mut tp.constraint {
+                            Some(constraint) => Some(infer_type_ann(arena, constraint, sig_ctx)?),
+                            None => None,
+                        },
+                        default: match &mut tp.default {
+                            Some(default) => Some(infer_type_ann(arena, default, sig_ctx)?),
+                            None => None,
+                        },
+                    })
+                })
+                .collect::<Result<Vec<_>, _>>()?,
+        ),
+        None => None,
+    };
+
+    Ok(type_params)
 }

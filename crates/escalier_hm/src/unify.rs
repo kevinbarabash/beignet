@@ -28,6 +28,19 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
     // Why do we clone here?
     let a_t = arena.get(a).unwrap().clone();
     let b_t = arena.get(b).unwrap().clone();
+
+    // TODO: Add type variables to ctx.schemes when inferring them.
+    eprintln!("unify({}, {})", a_t.as_string(arena), b_t.as_string(arena));
+    eprintln!("a_t = {a_t:#?}");
+    eprintln!("b_t = {b_t:#?}");
+
+    // if let TypeKind::Constructor(Constructor { name, .. }) = &a_t.kind {
+    //     if let Some(scheme) = ctx.schemes.get(name) {
+    //         eprintln!("scheme = {scheme:#?}");
+    //         // let a_t = expand_alias(arena, &name, scheme, type_args);
+    //     }
+    // }
+
     match (&a_t.kind, &b_t.kind) {
         (TypeKind::Variable(_), _) => bind(arena, ctx, a, b),
         (_, TypeKind::Variable(_)) => bind(arena, ctx, b, a),
@@ -119,7 +132,19 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
         }
         (TypeKind::Constructor(con_a), TypeKind::Constructor(con_b)) => {
             // TODO: support type constructors with optional and default type params
+
+            // If the names are the same, maybe one is an alias
             if con_a.name != con_b.name || con_a.types.len() != con_b.types.len() {
+                if let Some(scheme_a) = ctx.schemes.get(&con_a.name) {
+                    let t1 = expand_alias(arena, &con_a.name, scheme_a, &con_a.types)?;
+                    return unify(arena, ctx, t1, t2);
+                }
+
+                if let Some(scheme_b) = ctx.schemes.get(&con_b.name) {
+                    let t2 = expand_alias(arena, &con_b.name, scheme_b, &con_b.types)?;
+                    return unify(arena, ctx, t1, t2);
+                }
+
                 return Err(Errors::InferenceError(format!(
                     "type mismatch: {} != {}",
                     a_t.as_string(arena),

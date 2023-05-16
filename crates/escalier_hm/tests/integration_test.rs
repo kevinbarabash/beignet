@@ -1197,9 +1197,6 @@ fn test_await_non_promise() -> Result<(), Errors> {
     Ok(())
 }
 
-// TODO: write a test to ensure that Promise<5> is a subtype of Promise<number>
-// In general, generic types should be covariant across their type parameters.
-
 #[test]
 fn test_do_expr() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
@@ -1887,6 +1884,49 @@ fn test_callback_with_type_param_subtyping_error() -> Result<(), Errors> {
         Err(Errors::InferenceError(
             "type mismatch: string != number".to_string()
         ))
+    );
+
+    Ok(())
+}
+
+// TODO: write a test to ensure that Promise<5> is a subtype of Promise<number>
+// In general, generic types should be covariant across their type parameters.
+#[test]
+fn generic_subtyping_return() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let foo = async (): Promise<number> => {
+        return 5;
+    };
+    "#;
+    let mut program = parse(src).unwrap();
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let t = my_ctx.values.get("foo").unwrap();
+    assert_eq!(arena[*t].as_string(&arena), r#"() => Promise<number>"#);
+
+    Ok(())
+}
+
+#[test]
+fn generic_type_param_subtyping() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let add = <T: number>(a: T, b: T) => {
+        return a + b;
+    };
+    "#;
+    let mut program = parse(src).unwrap();
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let t = my_ctx.values.get("add").unwrap();
+    assert_eq!(
+        arena[*t].as_string(&arena),
+        // This isn't quite right, we want the parameters to still have
+        // `T` as their type.
+        r#"<T:number>(T, T) => number"#
     );
 
     Ok(())
