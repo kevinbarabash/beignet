@@ -2097,7 +2097,7 @@ fn instantiate_type_alias_with_args_when_it_has_no_type_params() -> Result<(), E
     assert_eq!(
         result,
         Err(Errors::InferenceError(
-            "Point doesn't require any type args".to_string()
+            "Point received unexpected type args".to_string()
         ))
     );
 

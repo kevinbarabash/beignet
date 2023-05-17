@@ -397,22 +397,46 @@ pub fn infer_type_ann(
         }
         TypeAnnKind::TypeRef(TypeRef { name, type_args }) => {
             match ctx.schemes.get(name) {
-                Some(scheme) => {
-                    // TODO: check if the number of type_args patch the number
-                    // type_params in the scheme and unify them as necessary.
-                    // scheme.t;
-
-                    match type_args {
-                        Some(type_args) => {
-                            let mut type_args_idxs = Vec::new();
-                            for type_arg in type_args.iter_mut() {
-                                type_args_idxs.push(infer_type_ann(arena, type_arg, ctx)?);
+                Some(Scheme { type_params, t: _ }) => {
+                    match (type_args, type_params) {
+                        (Some(type_args), Some(type_params)) => {
+                            if type_args.len() != type_params.len() {
+                                return Err(Errors::InferenceError(format!(
+                                    "{name} expects {} type args, but was passed {}",
+                                    type_params.len(),
+                                    type_args.len()
+                                )));
                             }
-                            // TODO: check that the type args conform to any constraints
-                            // present in the type params.
+
+                            // NOTE: We clone here to avoid the borrow checker
+                            // complaining about *ctx being borrowed incorrectly.
+                            let type_params = type_params.clone();
+
+                            let mut type_args_idxs = Vec::new();
+                            for (type_arg, type_param) in
+                                type_args.iter_mut().zip(type_params.iter())
+                            {
+                                let type_arg_idx = infer_type_ann(arena, type_arg, ctx)?;
+                                type_args_idxs.push(type_arg_idx);
+
+                                if let Some(constraint) = type_param.constraint {
+                                    unify(arena, ctx, type_arg_idx, constraint)?;
+                                }
+                            }
+
                             new_constructor(arena, name, &type_args_idxs)
                         }
-                        None => new_constructor(arena, name, &[]),
+                        (Some(_), None) => {
+                            return Err(Errors::InferenceError(format!(
+                                "{name} received unexpected type args"
+                            )))
+                        }
+                        (None, Some(_)) => {
+                            return Err(Errors::InferenceError(format!(
+                                "{name} requires type args but wasn't passed any"
+                            )))
+                        }
+                        (None, None) => new_constructor(arena, name, &[]),
                     }
                 }
                 None => {
