@@ -38,6 +38,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 "boolean",
                 "number",
                 "undefined",
+                "unknown",
                 "Promise",
                 "Array",
             ]
@@ -65,6 +66,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 "boolean",
                 "number",
                 "undefined",
+                "unknown",
                 "Promise",
                 "Array",
             ]
@@ -85,6 +87,11 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
     match (&a_t.kind, &b_t.kind) {
         (TypeKind::Variable(_), _) => bind(arena, ctx, a, b),
         (_, TypeKind::Variable(_)) => bind(arena, ctx, b, a),
+
+        (_, TypeKind::Constructor(unknown)) if unknown.name == "unknown" => {
+            // All types are assignable to `unknown`
+            Ok(())
+        }
 
         (TypeKind::Constructor(union), _) if union.name == "@@union" => {
             // All types in the union must be subtypes of t2
@@ -450,11 +457,6 @@ pub fn unify_call(
 }
 
 fn bind(arena: &mut Arena<Type>, ctx: &Context, a: Index, b: Index) -> Result<(), Errors> {
-    eprintln!(
-        "bind({}, {})",
-        arena[a].as_string(arena),
-        arena[b].as_string(arena)
-    );
     if a != b {
         if occurs_in_type(arena, a, b) {
             return Err(Errors::InferenceError("recursive unification".to_string()));

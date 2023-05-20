@@ -374,6 +374,7 @@ pub fn infer_type_ann(
             Keyword::Symbol => new_constructor(arena, "symbol", &[]),
             Keyword::Undefined => new_constructor(arena, "undefined", &[]),
             Keyword::Never => new_constructor(arena, "never", &[]),
+            Keyword::Unkwnown => new_constructor(arena, "unknown", &[]),
         },
         TypeAnnKind::Object(obj) => {
             let mut props: Vec<types::TObjElem> = Vec::new();
