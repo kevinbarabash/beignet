@@ -1943,7 +1943,7 @@ fn type_alias() -> Result<(), Errors> {
 
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
     let t = my_ctx.values.get("p").unwrap();
-    assert_eq!(arena[*t].as_string(&arena), r#"Point"#);
+    assert_eq!(arena[*t].as_string(&arena), r#"{x: number, y: number}"#);
 
     Ok(())
 }
@@ -1962,7 +1962,7 @@ fn type_alias_with_params_with_destructuring() -> Result<(), Errors> {
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
     let t = my_ctx.values.get("node").unwrap();
-    assert_eq!(arena[*t].as_string(&arena), r#"Node<string>"#);
+    assert_eq!(arena[*t].as_string(&arena), r#"{value: string}"#);
     let t = my_ctx.values.get("value").unwrap();
     assert_eq!(arena[*t].as_string(&arena), r#"string"#);
 
@@ -1983,7 +1983,7 @@ fn type_alias_with_params_with_member_access() -> Result<(), Errors> {
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
     let t = my_ctx.values.get("node").unwrap();
-    assert_eq!(arena[*t].as_string(&arena), r#"Node<string>"#);
+    assert_eq!(arena[*t].as_string(&arena), r#"{value: string}"#);
     let t = my_ctx.values.get("value").unwrap();
     assert_eq!(arena[*t].as_string(&arena), r#"string"#);
 
@@ -2005,7 +2005,7 @@ fn type_alias_with_params_with_computed_member_access() -> Result<(), Errors> {
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
     let t = my_ctx.values.get("node").unwrap();
-    assert_eq!(arena[*t].as_string(&arena), r#"Node<string>"#);
+    assert_eq!(arena[*t].as_string(&arena), r#"{value: string}"#);
     let t = my_ctx.values.get("value").unwrap();
     assert_eq!(arena[*t].as_string(&arena), r#"string"#);
 
