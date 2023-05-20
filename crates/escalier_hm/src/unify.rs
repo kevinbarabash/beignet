@@ -25,9 +25,63 @@ use crate::util::*;
 pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Result<(), Errors> {
     let a = prune(arena, t1);
     let b = prune(arena, t2);
-    // Why do we clone here?
-    let a_t = arena.get(a).unwrap().clone();
-    let b_t = arena.get(b).unwrap().clone();
+    let a_t = arena[a].clone();
+    let b_t = arena[b].clone();
+
+    let (a_t, a) = match &a_t.kind {
+        TypeKind::Constructor(Constructor {
+            name,
+            types: type_args,
+        }) if !name.starts_with("@@")
+            && ![
+                "string",
+                "boolean",
+                "number",
+                "undefined",
+                "Promise",
+                "Array",
+            ]
+            .contains(&name.as_str()) =>
+        {
+            match ctx.schemes.get(name) {
+                Some(scheme) => {
+                    let idx = expand_alias(arena, name, scheme, type_args)?;
+                    let t = arena.get(idx).unwrap().clone();
+                    Ok((t, idx))
+                }
+                None => Err(Errors::InferenceError(format!("Unbound type name: {name}"))),
+            }
+        }
+        _ => Ok((a_t, a)),
+    }?;
+
+    let (b_t, b) = match &b_t.kind {
+        TypeKind::Constructor(Constructor {
+            name,
+            types: type_args,
+        }) if !name.starts_with("@@")
+            && ![
+                "string",
+                "boolean",
+                "number",
+                "undefined",
+                "Promise",
+                "Array",
+            ]
+            .contains(&name.as_str()) =>
+        {
+            match ctx.schemes.get(name) {
+                Some(scheme) => {
+                    let idx = expand_alias(arena, name, scheme, type_args)?;
+                    let t = arena.get(idx).unwrap().clone();
+                    Ok((t, idx))
+                }
+                None => Err(Errors::InferenceError(format!("Unbound type name: {name}"))),
+            }
+        }
+        _ => Ok((b_t, b)),
+    }?;
+
     match (&a_t.kind, &b_t.kind) {
         (TypeKind::Variable(_), _) => bind(arena, ctx, a, b),
         (_, TypeKind::Variable(_)) => bind(arena, ctx, b, a),
@@ -296,36 +350,6 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 )),
             }
         }
-        (
-            TypeKind::Object(_),
-            TypeKind::Constructor(Constructor {
-                name,
-                types: type_args,
-            }),
-        ) if !name.starts_with("@@") => match ctx.schemes.get(name) {
-            Some(scheme) => {
-                let t = expand_alias(arena, name, scheme, type_args)?;
-                unify(arena, ctx, t1, t)
-            }
-            None => Err(Errors::InferenceError(format!(
-                "Can't find type alias for {name}"
-            ))),
-        },
-        (
-            TypeKind::Constructor(Constructor {
-                name,
-                types: type_args,
-            }),
-            TypeKind::Object(_),
-        ) if !name.starts_with("@@") => match ctx.schemes.get(name) {
-            Some(scheme) => {
-                let t = expand_alias(arena, name, scheme, type_args)?;
-                unify(arena, ctx, t, t2)
-            }
-            None => Err(Errors::InferenceError(format!(
-                "Can't find type alias for {name}"
-            ))),
-        },
         _ => Err(Errors::InferenceError(format!(
             "type mismatch: unify({}, {}) failed",
             a_t.as_string(arena),
@@ -426,6 +450,11 @@ pub fn unify_call(
 }
 
 fn bind(arena: &mut Arena<Type>, ctx: &Context, a: Index, b: Index) -> Result<(), Errors> {
+    eprintln!(
+        "bind({}, {})",
+        arena[a].as_string(arena),
+        arena[b].as_string(arena)
+    );
     if a != b {
         if occurs_in_type(arena, a, b) {
             return Err(Errors::InferenceError("recursive unification".to_string()));
@@ -441,7 +470,9 @@ fn bind(arena: &mut Arena<Type>, ctx: &Context, a: Index, b: Index) -> Result<()
                 let t = &mut arena[a];
                 t.set_instance(b);
             }
-            _ => unimplemented!(),
+            _ => {
+                unimplemented!("bind not implemented for {:#?}", t.kind);
+            }
         }
     }
     Ok(())
