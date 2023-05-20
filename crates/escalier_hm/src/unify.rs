@@ -29,9 +29,17 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
     let a_t = arena.get(a).unwrap().clone();
     let b_t = arena.get(b).unwrap().clone();
 
+    eprintln!("unify({}, {})", a_t.as_string(arena), b_t.as_string(arena));
+    // eprintln!("unify({a_t:#?}, {b_t:#?})");
+
     match (&a_t.kind, &b_t.kind) {
         (TypeKind::Variable(_), _) => bind(arena, ctx, a, b),
         (_, TypeKind::Variable(_)) => bind(arena, ctx, b, a),
+
+        (_, TypeKind::Constructor(unknown)) if unknown.name == "unknown" => {
+            // All types are subtypes of unknown
+            Ok(())
+        }
 
         (TypeKind::Constructor(union), _) if union.name == "@@union" => {
             // All types in the union must be subtypes of t2
@@ -127,12 +135,22 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                     let t1 = expand_alias(arena, &con_a.name, scheme_a, &con_a.types)?;
                     return unify(arena, ctx, t1, t2);
                 }
+                eprintln!("con_b.name = {}", con_b.name);
+                eprintln!(
+                    "ctx.schemes.get(&con_b.name) = {:?}",
+                    ctx.schemes.get(&con_b.name)
+                );
 
                 if let Some(scheme_b) = ctx.schemes.get(&con_b.name) {
                     let t2 = expand_alias(arena, &con_b.name, scheme_b, &con_b.types)?;
                     return unify(arena, ctx, t1, t2);
                 }
 
+                // panic!(
+                //     "type mismatch: {} != {}",
+                //     a_t.as_string(arena),
+                //     b_t.as_string(arena)
+                // );
                 return Err(Errors::InferenceError(format!(
                     "type mismatch: {} != {}",
                     a_t.as_string(arena),
@@ -310,7 +328,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             }
         }
         (
-            TypeKind::Object(_),
+            _,
             TypeKind::Constructor(Constructor {
                 name,
                 types: type_args,
@@ -320,9 +338,12 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 let t = expand_alias(arena, name, scheme, type_args)?;
                 unify(arena, ctx, t1, t)
             }
-            None => Err(Errors::InferenceError(format!(
-                "Can't find type alias for {name}"
-            ))),
+            None => {
+                eprintln!("Can't find type alias for {name}");
+                Err(Errors::InferenceError(format!(
+                    "Can't find type alias for {name}"
+                )))
+            }
         },
         (
             TypeKind::Constructor(Constructor {
@@ -339,11 +360,18 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 "Can't find type alias for {name}"
             ))),
         },
-        _ => Err(Errors::InferenceError(format!(
-            "type mismatch: unify({}, {}) failed",
-            a_t.as_string(arena),
-            b_t.as_string(arena)
-        ))),
+        _ => {
+            panic!(
+                "type mismatch: unify({}, {}) failed",
+                a_t.as_string(arena),
+                b_t.as_string(arena)
+            );
+            // Err(Errors::InferenceError(format!(
+            //     "type mismatch: unify({}, {}) failed",
+            //     a_t.as_string(arena),
+            //     b_t.as_string(arena)
+            // )))
+        }
     }
 }
 
@@ -448,6 +476,7 @@ fn bind(arena: &mut Arena<Type>, ctx: &Context, a: Index, b: Index) -> Result<()
         match &t.kind {
             TypeKind::Variable(avar) => {
                 if let Some(constraint) = avar.constraint {
+                    // QUESTION: Why isn't `b` after `constraint`?
                     unify(arena, ctx, b, constraint)?;
                 }
 

@@ -1,5 +1,5 @@
 use generational_arena::{Arena, Index};
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use crate::ast::{self as syntax, *};
 use crate::context::*;
@@ -119,6 +119,7 @@ pub fn infer_expression(
             // function param
             let type_params = infer_type_params(arena, type_params, &mut sig_ctx)?;
 
+            let mut param_types_map: HashMap<String, Index> = HashMap::new();
             let mut param_types = vec![];
             for EFnParam {
                 pat: pattern,
@@ -126,11 +127,14 @@ pub fn infer_expression(
                 optional: _,
             } in params.iter_mut()
             {
+                // TODO: if param_type is a type param, we should use its constraint
+                // and if it doesn't have a constraint then we should use unknown
                 let param_type = match type_ann {
                     Some(type_ann) => infer_type_ann(arena, type_ann, &mut sig_ctx)?,
                     None => new_var_type(arena, None),
                 };
 
+                eprintln!("param_type: {:#?}", arena[param_type]);
                 if let PatternKind::Ident(BindingIdent {
                     name, mutable: _, ..
                 }) = &pattern.kind
@@ -139,6 +143,7 @@ pub fn infer_expression(
                     sig_ctx.values.insert(name.to_owned(), param_type);
                     sig_ctx.non_generic.insert(param_type);
                     param_types.push(param_type);
+                    param_types_map.insert(name.to_owned(), param_type);
                 } else {
                     return Err(Errors::InferenceError(
                         "Other patterns are not yet supported as function params".to_owned(),
@@ -146,7 +151,43 @@ pub fn infer_expression(
                 }
             }
 
+            // TODO: for any params whose types include type params, we need to
+            // replace those type params with their constraints
+            // - create a mapping from type param name to their definition
+            // - replace any type references in the params' types with the constraints
+            //   from the type params in the mapping
             let mut body_ctx = sig_ctx.clone();
+            eprintln!("param_types_map = {param_types_map:#?}");
+            for (param_name, t) in param_types_map.iter() {
+                // let unknown = new_constructor(arena, "unknown", &[]);
+                // match (&arena[*t].kind, &type_params) {
+                if let (
+                    types::TypeKind::Constructor(types::Constructor { name, types: _ }),
+                    Some(type_params),
+                ) = (&arena[*t].kind, &type_params)
+                {
+                    if let Some(type_param) = type_params.iter().find(|tp| &tp.name == name) {
+                        eprintln!("type_param = {:#?}", type_param);
+                        let constraint = match type_param.constraint {
+                            Some(constraint) => constraint,
+                            None => new_constructor(arena, "unknown", &[]),
+                        };
+                        body_ctx.values.insert(param_name.to_owned(), constraint);
+                    }
+                }
+            }
+            // let a_t = &arena[body_ctx.values["a"]];
+            // let b_t = &arena[body_ctx.values["b"]];
+            // eprintln!("a_t = {:#?}", a_t);
+            // eprintln!("b_t = {:#?}", b_t);
+            // eprintln!("type_params = {:#?}", type_params);
+            // body_ctx
+            //     .values
+            //     .insert("a".to_string(), new_constructor(arena, "unknown", &[]));
+            // body_ctx
+            //     .values
+            //     .insert("b".to_string(), new_constructor(arena, "unknown", &[]));
+
             body_ctx.is_async = *is_async;
 
             let mut body_t = 'outer: {
@@ -179,7 +220,28 @@ pub fn infer_expression(
                     // type params but can't have access to anything from the
                     // body.
                     let ret_t = infer_type_ann(arena, return_type, &mut sig_ctx)?;
-                    unify(arena, ctx, body_t, ret_t)?;
+                    eprintln!("ret_t = {:#?}", arena[ret_t]);
+                    let maybe_scheme_and_name_and_types =
+                        if let TypeKind::Constructor(types::Constructor { name, types }) =
+                            &arena[ret_t].kind
+                        {
+                            sig_ctx
+                                .schemes
+                                .get(name)
+                                .map(|scheme| (name.clone(), scheme.clone(), types.clone()))
+                        } else {
+                            None
+                        };
+                    if let Some((name, scheme, types_args)) = maybe_scheme_and_name_and_types {
+                        let expanded_alias = expand_alias(arena, &name, &scheme, &types_args)?;
+                        eprintln!(
+                            "expanded_alias = {}",
+                            arena[expanded_alias].as_string(arena)
+                        );
+                        unify(arena, &sig_ctx, body_t, expanded_alias)?;
+                    } else {
+                        unify(arena, &sig_ctx, body_t, ret_t)?;
+                    }
                     new_func_type(arena, &param_types, ret_t, type_params)
                 }
                 None => new_func_type(arena, &param_types, body_t, type_params),
@@ -374,6 +436,7 @@ pub fn infer_type_ann(
             Keyword::Self_ => todo!(),
             Keyword::Symbol => new_constructor(arena, "symbol", &[]),
             Keyword::Undefined => new_constructor(arena, "undefined", &[]),
+            Keyword::Unknown => new_constructor(arena, "unknown", &[]),
             Keyword::Never => new_constructor(arena, "never", &[]),
         },
         TypeAnnKind::Object(obj) => {
@@ -419,9 +482,11 @@ pub fn infer_type_ann(
                                 let type_arg_idx = infer_type_ann(arena, type_arg, ctx)?;
                                 type_args_idxs.push(type_arg_idx);
 
-                                if let Some(constraint) = type_param.constraint {
-                                    unify(arena, ctx, type_arg_idx, constraint)?;
-                                }
+                                let constraint = match type_param.constraint {
+                                    Some(constraint) => constraint,
+                                    None => new_constructor(arena, "unknown", &[]),
+                                };
+                                unify(arena, ctx, type_arg_idx, constraint)?;
                             }
 
                             new_constructor(arena, name, &type_args_idxs)

@@ -9,7 +9,8 @@ pub enum Keyword {
     Self_, // self is a replacement for this
     Symbol,
     Undefined,
-    Never,
+    Unknown, // top type
+    Never,   // bottom type
 }
 
 impl fmt::Display for Keyword {
@@ -22,6 +23,7 @@ impl fmt::Display for Keyword {
             Keyword::Self_ => write!(f, "self"),
             Keyword::Symbol => write!(f, "symbol"),
             Keyword::Undefined => write!(f, "undefined"),
+            Keyword::Unknown => write!(f, "unknown"),
             Keyword::Never => write!(f, "never"),
         }
     }

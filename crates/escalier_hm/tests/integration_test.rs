@@ -437,6 +437,40 @@ fn test_subtype() -> Result<(), Errors> {
 }
 
 #[test]
+fn test_unknown() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let a: unknown = 5;
+    let b: unknown = "hello";
+    let c: unknown = true;
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    let t = my_ctx.values.get("a").unwrap();
+    assert_eq!(arena[*t].as_string(&arena), r#"unknown"#);
+    Ok(())
+}
+
+#[test]
+fn test_using_unknown_with_add() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let a: unknown;
+    declare let b: unknown;
+    let sum = a + b;
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    let t = my_ctx.values.get("a").unwrap();
+    assert_eq!(arena[*t].as_string(&arena), r#"unknown"#);
+    Ok(())
+}
+
+#[test]
 fn test_callback_subtyping() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
@@ -1930,12 +1964,31 @@ fn generic_type_param_subtyping() -> Result<(), Errors> {
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
     let t = my_ctx.values.get("add").unwrap();
-    assert_eq!(
-        arena[*t].as_string(&arena),
-        // This isn't quite right, we want the parameters to still have
-        // `T` as their type.
-        r#"<T:number>(T, T) => number"#
-    );
+    assert_eq!(arena[*t].as_string(&arena), r#"<T:number>(T, T) => number"#);
+
+    Ok(())
+}
+
+// TODO: Fix this test case.
+// let add = <T>(a: T, b: T) => {
+//     return a + b;
+// };
+// This shouldn't be allowed since `T` is not constrainted
+#[test]
+#[ignore]
+fn generic_type_param_with_no_constraints() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let add = <T>(a: T, b: T) => {
+        return a + b;
+    };
+    "#;
+    let mut program = parse(src).unwrap();
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let t = my_ctx.values.get("add").unwrap();
+    assert_eq!(arena[*t].as_string(&arena), r#"<T>(T, T) => number"#);
 
     Ok(())
 }
