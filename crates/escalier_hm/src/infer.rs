@@ -931,9 +931,14 @@ fn infer_type_params(
                 Some(constraint) => Some(infer_type_ann(arena, constraint.as_mut(), sig_ctx)?),
                 None => None,
             };
-            let t = new_var_type(arena, constraint);
+
+            // Adds the param to the context and set its type to the constraint
+            // or `unknown` if there is no constraint.
             let scheme = Scheme {
-                t,
+                t: match constraint {
+                    Some(constraint) => constraint,
+                    None => new_constructor(arena, "unknown", &[]),
+                },
                 type_params: None,
             };
             sig_ctx.schemes.insert(tp.name.name.to_owned(), scheme);

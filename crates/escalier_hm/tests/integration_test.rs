@@ -2312,10 +2312,8 @@ fn test_unknown_assignment_error() -> Result<(), Errors> {
     Ok(())
 }
 
-// TODO: this test should pass, but it doesn't
 #[test]
-#[ignore]
-fn test_unknown_with_generics() -> Result<(), Errors> {
+fn test_type_param_explicit_unknown_constraint() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2325,7 +2323,37 @@ fn test_unknown_with_generics() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "type mismatch: unknown != number".to_string()
+        ))
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_type_param_implicit_unknown_constraint() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let add = <T>(a: T, b: T): T => {
+        return a + b;
+    };
+    "#;
+    let mut program = parse(src).unwrap();
+
+    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "type mismatch: unknown != number".to_string()
+        ))
+    );
 
     Ok(())
 }
