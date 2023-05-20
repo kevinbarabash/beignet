@@ -2266,3 +2266,66 @@ fn methods_on_arrays_incorrect_type() -> Result<(), Errors> {
 
     Ok(())
 }
+
+#[test]
+fn test_unknown() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let a: unknown = 5;
+    let b: unknown = "hello";
+    let c: unknown = true;
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let t = my_ctx.values.get("a").unwrap();
+    assert_eq!(arena[*t].as_string(&arena), r#"unknown"#);
+    let t = my_ctx.values.get("b").unwrap();
+    assert_eq!(arena[*t].as_string(&arena), r#"unknown"#);
+    let t = my_ctx.values.get("c").unwrap();
+    assert_eq!(arena[*t].as_string(&arena), r#"unknown"#);
+
+    Ok(())
+}
+
+#[test]
+fn test_unknown_assignment_error() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let a: unknown = 5;
+    let b: number = a;
+    "#;
+    let mut program = parse(src).unwrap();
+
+    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "type mismatch: unknown != number".to_string()
+        ))
+    );
+
+    Ok(())
+}
+
+// TODO: this test should pass, but it doesn't
+#[test]
+#[ignore]
+fn test_unknown_with_generics() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let add = <T extends unknown>(a: T, b: T): T => {
+        return a + b;
+    };
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    Ok(())
+}

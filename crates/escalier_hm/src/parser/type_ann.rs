@@ -42,7 +42,9 @@ pub fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, Pa
             }),
             "symbol" => todo!(),
             "void" => todo!(),
-            "unknown" => todo!(),
+            "unknown" => TypeAnnKind::Keyword(KeywordType {
+                keyword: Keyword::Unkwnown,
+            }),
             "never" => TypeAnnKind::Keyword(KeywordType {
                 keyword: Keyword::Never,
             }),

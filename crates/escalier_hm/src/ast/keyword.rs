@@ -10,6 +10,7 @@ pub enum Keyword {
     Symbol,
     Undefined,
     Never,
+    Unkwnown,
 }
 
 impl fmt::Display for Keyword {
@@ -23,6 +24,7 @@ impl fmt::Display for Keyword {
             Keyword::Symbol => write!(f, "symbol"),
             Keyword::Undefined => write!(f, "undefined"),
             Keyword::Never => write!(f, "never"),
+            Keyword::Unkwnown => write!(f, "unknown"),
         }
     }
 }
