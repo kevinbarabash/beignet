@@ -118,7 +118,7 @@ pub fn infer_expression(
             for EFnParam {
                 pat: pattern,
                 type_ann,
-                optional: _,
+                optional,
             } in params.iter_mut()
             {
                 let param_type = match type_ann {
@@ -136,7 +136,7 @@ pub fn infer_expression(
                     func_params.push(FuncParam {
                         name: name.to_owned(),
                         t: param_type,
-                        optional: false, // TODO
+                        optional: *optional,
                     });
                 } else {
                     return Err(Errors::InferenceError(
@@ -368,7 +368,7 @@ pub fn infer_type_ann(
                     Ok(FuncParam {
                         name: param.pat.get_name(&i),
                         t,
-                        optional: false, // TODO
+                        optional: param.optional,
                     })
                 })
                 .collect::<Result<Vec<_>, _>>()?;

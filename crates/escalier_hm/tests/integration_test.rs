@@ -2480,3 +2480,25 @@ fn test_type_param_implicit_unknown_constraint() -> Result<(), Errors> {
 
     Ok(())
 }
+
+#[test]
+fn test_optional_function_params() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let foo = (a: number, b?: number): number => {
+        return a;
+    };
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let t = my_ctx.values.get("foo").unwrap();
+    assert_eq!(
+        arena[*t].as_string(&arena),
+        r#"(a: number, b?: number) => number"#
+    );
+
+    Ok(())
+}
