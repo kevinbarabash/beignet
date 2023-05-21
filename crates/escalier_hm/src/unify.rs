@@ -208,7 +208,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 // NOTE: We reverse the order of the params here because func_a
                 // should be able to accept any params that func_b can accept,
                 // its params may be more lenient.  Thus q is a subtype of p.
-                unify(arena, ctx, *q, *p)?;
+                unify(arena, ctx, q.t, p.t)?;
             }
             unify(arena, ctx, func_a.ret, func_b.ret)?;
             Ok(())
@@ -446,7 +446,7 @@ pub fn unify_call(
             }
 
             for (p, q) in arg_types.iter().zip(func.params.iter()) {
-                unify(arena, ctx, *p, *q)?;
+                unify(arena, ctx, *p, q.t)?;
             }
             unify(arena, ctx, ret_type, func.ret)?;
         }

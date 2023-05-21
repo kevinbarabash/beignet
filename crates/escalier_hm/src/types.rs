@@ -20,9 +20,16 @@ pub struct Constructor {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Function {
-    pub params: Vec<Index>, // TODO: require param names
+    pub params: Vec<FuncParam>,
     pub ret: Index,
     pub type_params: Option<Vec<TypeParam>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct FuncParam {
+    pub name: String,
+    pub t: Index,
+    pub optional: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -56,7 +63,7 @@ pub struct Tuple {
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TMethod {
     pub name: TPropKey,
-    pub params: Vec<Index>, // TODO: require param names
+    pub params: Vec<FuncParam>,
     pub ret: Index,
     pub type_params: Option<Vec<TypeParam>>,
     pub is_mutating: bool,
@@ -215,7 +222,7 @@ impl Type {
                             };
                             result.push_str(&format!(
                                 "({}): {}",
-                                types_to_strings(arena, params).join(", "),
+                                params_to_strings(arena, params).join(", "),
                                 arena[*ret].as_string(arena)
                             ));
                         }
@@ -271,7 +278,7 @@ impl Type {
                 };
                 format!(
                     "{type_params}({}) => {}",
-                    types_to_strings(arena, &func.params).join(", "),
+                    params_to_strings(arena, &func.params).join(", "),
                     arena[func.ret].as_string(arena),
                 )
             }
@@ -287,10 +294,21 @@ fn types_to_strings(a: &Arena<Type>, types: &[Index]) -> Vec<String> {
     strings
 }
 
+fn params_to_strings(arena: &Arena<Type>, params: &[FuncParam]) -> Vec<String> {
+    let mut strings = vec![];
+    for FuncParam { name, t, optional } in params {
+        strings.push(match optional {
+            true => format!("{name}?: {}", arena[*t].as_string(arena)),
+            false => format!("{name}: {}", arena[*t].as_string(arena)),
+        })
+    }
+    strings
+}
+
 /// A binary type constructor which builds function types
 pub fn new_func_type(
     arena: &mut Arena<Type>,
-    params: &[Index],
+    params: &[FuncParam],
     ret: Index,
     type_params: Option<Vec<TypeParam>>,
 ) -> Index {

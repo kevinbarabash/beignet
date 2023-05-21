@@ -30,11 +30,21 @@ pub trait Visitor: KeyValueStore<Index, Type> {
             .props
             .iter()
             .map(|prop| match prop {
-                TObjElem::Method(method) => TObjElem::Method(TMethod {
-                    params: self.visit_indexes(&method.params),
-                    ret: self.visit_index(&method.ret),
-                    ..method.to_owned()
-                }),
+                TObjElem::Method(method) => {
+                    let params = method
+                        .params
+                        .iter()
+                        .map(|param| FuncParam {
+                            t: self.visit_index(&param.t),
+                            ..param.to_owned()
+                        })
+                        .collect::<Vec<_>>();
+                    TObjElem::Method(TMethod {
+                        params,
+                        ret: self.visit_index(&method.ret),
+                        ..method.to_owned()
+                    })
+                }
                 TObjElem::Index(index) => TObjElem::Index(TIndex {
                     t: self.visit_index(&index.t),
                     ..index.clone()
@@ -50,8 +60,16 @@ pub trait Visitor: KeyValueStore<Index, Type> {
     }
 
     fn visit_function(&mut self, func: &Function) -> Function {
+        let params = func
+            .params
+            .iter()
+            .map(|param| FuncParam {
+                t: self.visit_index(&param.t),
+                ..param.to_owned()
+            })
+            .collect::<Vec<_>>();
         Function {
-            params: self.visit_indexes(&func.params),
+            params,
             ret: self.visit_index(&func.ret),
             ..func.clone()
         }
