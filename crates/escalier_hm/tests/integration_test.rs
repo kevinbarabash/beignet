@@ -2352,3 +2352,47 @@ fn test_func_param_patterns() -> Result<(), Errors> {
 
     Ok(())
 }
+
+#[test]
+fn test_func_param_object_rest_patterns() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let foo = ({ a, ...rest }: { a: number, b: string }) => {
+        return rest.b;
+    };
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let t = my_ctx.values.get("foo").unwrap();
+    assert_eq!(
+        arena[*t].as_string(&arena),
+        r#"({a, ...rest}: {a: number, b: string}) => string"#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_func_param_tuple_rest_patterns() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let bar = ([a, ...rest]: [number, string, boolean]) => {
+        return rest[1];
+    };
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let t = my_ctx.values.get("bar").unwrap();
+    assert_eq!(
+        arena[*t].as_string(&arena),
+        r#"([a, ...rest]: [number, string, boolean]) => boolean"#
+    );
+
+    Ok(())
+}

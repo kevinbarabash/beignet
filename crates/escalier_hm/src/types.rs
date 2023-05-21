@@ -356,18 +356,18 @@ fn params_to_strings(arena: &Arena<Type>, params: &[FuncParam]) -> Vec<String> {
     strings
 }
 
-fn tpat_to_string(arena: &Arena<Type>, pattern: &TPat) -> String {
+fn tpat_to_string(_arena: &Arena<Type>, pattern: &TPat) -> String {
     match pattern {
         TPat::Ident(BindingIdent {
             name, mutable: _, ..
         }) => name.to_owned(),
-        TPat::Rest(RestPat { arg }) => format!("...{}", tpat_to_string(arena, arg.as_ref())),
+        TPat::Rest(RestPat { arg }) => format!("...{}", tpat_to_string(_arena, arg.as_ref())),
         TPat::Tuple(TuplePat { elems }) => format!(
             "[{}]",
             elems
                 .iter()
                 .map(|elem| match elem {
-                    Some(elem) => tpat_to_string(arena, elem),
+                    Some(elem) => tpat_to_string(_arena, elem),
                     None => " ".to_string(),
                 })
                 .collect::<Vec<_>>()
@@ -380,7 +380,7 @@ fn tpat_to_string(arena: &Arena<Type>, pattern: &TPat) -> String {
                     TObjectPatProp::KeyValue(TObjectKeyValuePatProp { key, value }) => {
                         match value {
                             TPat::Ident(_) => key.to_string(),
-                            _ => format!("{}: {}", key, tpat_to_string(arena, value)),
+                            _ => format!("{}: {}", key, tpat_to_string(_arena, value)),
                         }
                     }
                     // TODO: handle assignments in object patterns
@@ -388,7 +388,7 @@ fn tpat_to_string(arena: &Arena<Type>, pattern: &TPat) -> String {
                         key.to_string()
                     }
                     TObjectPatProp::Rest(RestPat { arg }) => {
-                        format!("...{}", tpat_to_string(arena, arg.as_ref()))
+                        format!("...{}", tpat_to_string(_arena, arg.as_ref()))
                     }
                 })
                 .collect();
