@@ -208,7 +208,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 // NOTE: We reverse the order of the params here because func_a
                 // should be able to accept any params that func_b can accept,
                 // its params may be more lenient.  Thus q is a subtype of p.
-                unify(arena, ctx, *q, *p)?;
+                unify(arena, ctx, q.t, p.t)?;
             }
             unify(arena, ctx, func_a.ret, func_b.ret)?;
             Ok(())
@@ -374,13 +374,24 @@ pub fn unify_call(
     t2: Index,
 ) -> Result<Index, Errors> {
     let ret_type = new_var_type(arena, None);
-    let call_type = new_func_type(arena, arg_types, ret_type, None);
 
     let b = prune(arena, t2);
     let b_t = arena.get(b).unwrap().clone();
 
     match b_t.kind {
-        TypeKind::Variable(_) => bind(arena, ctx, b, call_type)?,
+        TypeKind::Variable(_) => {
+            let arg_types: Vec<FuncParam> = arg_types
+                .iter()
+                .enumerate()
+                .map(|(i, t)| FuncParam {
+                    name: format!("arg{i}"),
+                    t: *t,
+                    optional: false,
+                })
+                .collect();
+            let call_type = new_func_type(arena, &arg_types, ret_type, None);
+            bind(arena, ctx, b, call_type)?
+        }
         TypeKind::Constructor(Constructor { name, types }) => {
             match name.as_str() {
                 "@@tuple" => {
@@ -446,7 +457,7 @@ pub fn unify_call(
             }
 
             for (p, q) in arg_types.iter().zip(func.params.iter()) {
-                unify(arena, ctx, *p, *q)?;
+                unify(arena, ctx, *p, q.t)?;
             }
             unify(arena, ctx, ret_type, func.ret)?;
         }

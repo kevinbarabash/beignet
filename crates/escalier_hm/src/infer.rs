@@ -110,7 +110,7 @@ pub fn infer_expression(
             type_params,
             return_type,
         }) => {
-            let mut param_types = vec![];
+            let mut func_params: Vec<FuncParam> = vec![];
             let mut sig_ctx = ctx.clone();
 
             let type_params = infer_type_params(arena, type_params, &mut sig_ctx)?;
@@ -118,7 +118,7 @@ pub fn infer_expression(
             for EFnParam {
                 pat: pattern,
                 type_ann,
-                optional: _,
+                optional,
             } in params.iter_mut()
             {
                 let param_type = match type_ann {
@@ -133,7 +133,11 @@ pub fn infer_expression(
                     pattern.inferred_type = Some(param_type);
                     sig_ctx.values.insert(name.to_owned(), param_type);
                     sig_ctx.non_generic.insert(param_type);
-                    param_types.push(param_type);
+                    func_params.push(FuncParam {
+                        name: name.to_owned(),
+                        t: param_type,
+                        optional: *optional,
+                    });
                 } else {
                     return Err(Errors::InferenceError(
                         "Other patterns are not yet supported as function params".to_owned(),
@@ -175,9 +179,9 @@ pub fn infer_expression(
                     // the type params added to sig_ctx.schemes so that they can
                     // be looked up.
                     unify(arena, &sig_ctx, body_t, ret_t)?;
-                    new_func_type(arena, &param_types, ret_t, type_params)
+                    new_func_type(arena, &func_params, ret_t, type_params)
                 }
-                None => new_func_type(arena, &param_types, body_t, type_params),
+                None => new_func_type(arena, &func_params, body_t, type_params),
             }
         }
         ExprKind::IfElse(IfElse {
@@ -355,14 +359,23 @@ pub fn infer_type_ann(
 
             let type_params = infer_type_params(arena, type_params, &mut sig_ctx)?;
 
-            let params = params
+            let func_params = params
                 .iter_mut()
-                .map(|param| infer_type_ann(arena, &mut param.type_ann, &mut sig_ctx))
+                .enumerate()
+                .map(|(i, param)| {
+                    let t = infer_type_ann(arena, &mut param.type_ann, &mut sig_ctx)?;
+
+                    Ok(FuncParam {
+                        name: param.pat.get_name(&i),
+                        t,
+                        optional: param.optional,
+                    })
+                })
                 .collect::<Result<Vec<_>, _>>()?;
 
             let ret_idx = infer_type_ann(arena, ret.as_mut(), &mut sig_ctx)?;
 
-            new_func_type(arena, &params, ret_idx, type_params)
+            new_func_type(arena, &func_params, ret_idx, type_params)
         }
         TypeAnnKind::Lit(lit) => new_lit_type(arena, lit),
         TypeAnnKind::Keyword(KeywordType { keyword }) => match keyword {
@@ -663,7 +676,14 @@ pub fn generalize_func(arena: &'_ mut Arena<Type>, func: &Function) -> Index {
         mapping: &mut mapping,
     };
 
-    let params = generalize.visit_indexes(&func.params);
+    let params = func
+        .params
+        .iter()
+        .map(|param| FuncParam {
+            t: generalize.visit_index(&param.t),
+            ..param.to_owned()
+        })
+        .collect::<Vec<_>>();
     let ret = generalize.visit_index(&func.ret);
 
     let mut type_params: Vec<types::TypeParam> = vec![];

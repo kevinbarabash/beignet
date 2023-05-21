@@ -52,7 +52,11 @@ fn test_env() -> (Arena<Type>, Context) {
             // .push(item: T): number;
             types::TObjElem::Method(types::TMethod {
                 name: types::TPropKey::StringKey("push".to_string()),
-                params: vec![type_param_t],
+                params: vec![FuncParam {
+                    name: "item".to_string(),
+                    t: type_param_t,
+                    optional: false,
+                }],
                 ret: number,
                 type_params: None,
                 is_mutating: true,
@@ -155,7 +159,7 @@ fn test_factorial() -> Result<(), Errors> {
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
     let t = my_ctx.values.get("fact").unwrap();
 
-    assert_eq!(arena[*t].as_string(&arena), r#"(number) => 1 | number"#);
+    assert_eq!(arena[*t].as_string(&arena), r#"(n: number) => 1 | number"#);
     Ok(())
 }
 
@@ -180,9 +184,15 @@ fn test_mutual_recursion() -> Result<(), Errors> {
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
     let t = my_ctx.values.get("even").unwrap();
-    assert_eq!(arena[*t].as_string(&arena), r#"(number) => true | boolean"#);
+    assert_eq!(
+        arena[*t].as_string(&arena),
+        r#"(x: number) => true | boolean"#
+    );
     let t = my_ctx.values.get("odd").unwrap();
-    assert_eq!(arena[*t].as_string(&arena), r#"(number) => true | boolean"#);
+    assert_eq!(
+        arena[*t].as_string(&arena),
+        r#"(x: number) => true | boolean"#
+    );
 
     Ok(())
 }
@@ -209,9 +219,15 @@ fn test_mutual_recursion_using_destructuring() -> Result<(), Errors> {
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
     let t = my_ctx.values.get("even").unwrap();
-    assert_eq!(arena[*t].as_string(&arena), r#"(number) => true | boolean"#);
+    assert_eq!(
+        arena[*t].as_string(&arena),
+        r#"(x: number) => true | boolean"#
+    );
     let t = my_ctx.values.get("odd").unwrap();
-    assert_eq!(arena[*t].as_string(&arena), r#"(number) => true | boolean"#);
+    assert_eq!(
+        arena[*t].as_string(&arena),
+        r#"(x: number) => true | boolean"#
+    );
 
     Ok(())
 }
@@ -319,7 +335,7 @@ fn test_generic_nongeneric() -> Result<(), Errors> {
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
     let t = my_ctx.values.get("result").unwrap();
-    assert_eq!(arena[*t].as_string(&arena), r#"<A>(A) => [A, A]"#);
+    assert_eq!(arena[*t].as_string(&arena), r#"<A>(g: A) => [A, A]"#);
     Ok(())
 }
 
@@ -333,7 +349,7 @@ fn test_basic_generics() -> Result<(), Errors> {
 
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
     let t = my_ctx.values.get("result").unwrap();
-    assert_eq!(arena[*t].as_string(&arena), r#"<A>(A) => A"#);
+    assert_eq!(arena[*t].as_string(&arena), r#"<A>(x: A) => A"#);
 
     Ok(())
 }
@@ -351,7 +367,7 @@ fn test_composition() -> Result<(), Errors> {
     let t = my_ctx.values.get("result").unwrap();
     assert_eq!(
         arena[*t].as_string(&arena),
-        r#"<A, B, C>((A) => B) => ((B) => C) => (A) => C"#
+        r#"<A, B, C>(f: (arg0: A) => B) => (g: (arg0: B) => C) => (arg: A) => C"#
     );
     Ok(())
 }
@@ -372,12 +388,15 @@ fn test_skk() -> Result<(), Errors> {
     let t = my_ctx.values.get("S").unwrap();
     assert_eq!(
         arena[*t].as_string(&arena),
-        r#"<A, B, C>((A) => (B) => C) => ((A) => B) => (A) => C"#
+        r#"<A, B, C>(f: (arg0: A) => (arg0: B) => C) => (g: (arg0: A) => B) => (x: A) => C"#
     );
     let t = my_ctx.values.get("K").unwrap();
-    assert_eq!(arena[*t].as_string(&arena), r#"<A, B>(A) => (B) => A"#);
+    assert_eq!(
+        arena[*t].as_string(&arena),
+        r#"<A, B>(x: A) => (y: B) => A"#
+    );
     let t = my_ctx.values.get("I").unwrap();
-    assert_eq!(arena[*t].as_string(&arena), r#"<A>(A) => A"#);
+    assert_eq!(arena[*t].as_string(&arena), r#"<A>(x: A) => A"#);
 
     Ok(())
 }
@@ -402,7 +421,7 @@ fn test_composition_with_statements() -> Result<(), Errors> {
     let t = my_ctx.values.get("result").unwrap();
     assert_eq!(
         arena[*t].as_string(&arena),
-        r#"<A, B, C>((A) => B) => ((B) => C) => (A) => C"#
+        r#"<A, B, C>(f: (arg0: A) => B) => (g: (arg0: B) => C) => (arg: A) => C"#
     );
     Ok(())
 }
@@ -432,10 +451,35 @@ fn test_callback_subtyping() -> Result<(), Errors> {
     let str = new_constructor(&mut arena, "string", &[]);
 
     // foo: ((number, string) => boolean) => boolean
-    let cb = new_func_type(&mut arena, &[num, str], bool, None);
+    let cb = new_func_type(
+        &mut arena,
+        &[
+            FuncParam {
+                name: "a".to_string(),
+                t: num,
+                optional: false,
+            },
+            FuncParam {
+                name: "b".to_string(),
+                t: str,
+                optional: false,
+            },
+        ],
+        bool,
+        None,
+    );
     my_ctx.values.insert(
         "foo".to_string(),
-        new_func_type(&mut arena, &[cb], bool, None),
+        new_func_type(
+            &mut arena,
+            &[FuncParam {
+                name: "cb".to_string(),
+                t: cb,
+                optional: false,
+            }],
+            bool,
+            None,
+        ),
     );
 
     // bar: (number | string) => true
@@ -448,7 +492,16 @@ fn test_callback_subtyping() -> Result<(), Errors> {
     let true_type = new_bool_lit_type(&mut arena, true);
     my_ctx.values.insert(
         "bar".to_string(),
-        new_func_type(&mut arena, &[num_or_str], true_type, None),
+        new_func_type(
+            &mut arena,
+            &[FuncParam {
+                name: "x".to_string(),
+                t: num_or_str,
+                optional: false,
+            }],
+            true_type,
+            None,
+        ),
     );
 
     let src = r#"let result = foo(bar);"#;
@@ -469,16 +522,50 @@ fn test_callback_error_too_many_params() -> Result<(), Errors> {
     let str = new_constructor(&mut arena, "string", &[]);
 
     // foo: ((number) => boolean) => boolean
-    let cb = new_func_type(&mut arena, &[num], bool, None);
+    let cb = new_func_type(
+        &mut arena,
+        &[FuncParam {
+            name: "x".to_string(),
+            t: num,
+            optional: false,
+        }],
+        bool,
+        None,
+    );
     my_ctx.values.insert(
         "foo".to_string(),
-        new_func_type(&mut arena, &[cb], bool, None),
+        new_func_type(
+            &mut arena,
+            &[FuncParam {
+                name: "cb".to_string(),
+                t: cb,
+                optional: false,
+            }],
+            bool,
+            None,
+        ),
     );
 
     // bar: (number, string) => true
     my_ctx.values.insert(
         "bar".to_string(),
-        new_func_type(&mut arena, &[num, str], bool, None),
+        new_func_type(
+            &mut arena,
+            &[
+                FuncParam {
+                    name: "a".to_string(),
+                    t: num,
+                    optional: false,
+                },
+                FuncParam {
+                    name: "b".to_string(),
+                    t: str,
+                    optional: false,
+                },
+            ],
+            bool,
+            None,
+        ),
     );
 
     let src = r#"let result = foo(bar);"#;
@@ -487,7 +574,7 @@ fn test_callback_error_too_many_params() -> Result<(), Errors> {
     let result = infer_program(&mut arena, &mut program, &mut my_ctx);
     assert_eq!(
         result,
-        Err(Errors::InferenceError("(number, string) => boolean is not a subtype of (number) => boolean since it requires more params".to_string())),
+        Err(Errors::InferenceError("(a: number, b: string) => boolean is not a subtype of (x: number) => boolean since it requires more params".to_string())),
     );
     Ok(())
 }
@@ -673,7 +760,16 @@ fn tuple_subtyping() -> Result<(), Errors> {
     let str = new_constructor(&mut arena, "string", &[]);
     let param_type = new_tuple_type(&mut arena, &[num, str]);
     let bool = new_constructor(&mut arena, "boolean", &[]);
-    let func = new_func_type(&mut arena, &[param_type], bool, None);
+    let func = new_func_type(
+        &mut arena,
+        &[FuncParam {
+            name: "x".to_string(),
+            t: param_type,
+            optional: false,
+        }],
+        bool,
+        None,
+    );
     my_ctx.values.insert("foo".to_string(), func);
 
     let src = r#"let result = foo([5, "hello", true]);"#;
@@ -694,7 +790,16 @@ fn tuple_subtyping_not_enough_elements() -> Result<(), Errors> {
     let str = new_constructor(&mut arena, "string", &[]);
     let param_type = new_tuple_type(&mut arena, &[num, str]);
     let bool = new_constructor(&mut arena, "boolean", &[]);
-    let func = new_func_type(&mut arena, &[param_type], bool, None);
+    let func = new_func_type(
+        &mut arena,
+        &[FuncParam {
+            name: "x".to_string(),
+            t: param_type,
+            optional: false,
+        }],
+        bool,
+        None,
+    );
     my_ctx.values.insert("foo".to_string(), func);
 
     let src = r#"let result = foo([5]);"#;
@@ -794,7 +899,16 @@ fn object_subtyping() -> Result<(), Errors> {
         ],
     );
     let bool = new_constructor(&mut arena, "boolean", &[]);
-    let func = new_func_type(&mut arena, &[param_type], bool, None);
+    let func = new_func_type(
+        &mut arena,
+        &[FuncParam {
+            name: "x".to_string(),
+            t: param_type,
+            optional: false,
+        }],
+        bool,
+        None,
+    );
     my_ctx.values.insert("foo".to_string(), func);
 
     // Each prop must be a subtype of the expected element type
@@ -834,7 +948,16 @@ fn object_subtyping_missing_prop() -> Result<(), Errors> {
         ],
     );
     let bool = new_constructor(&mut arena, "boolean", &[]);
-    let func = new_func_type(&mut arena, &[param_type], bool, None);
+    let func = new_func_type(
+        &mut arena,
+        &[FuncParam {
+            name: "x".to_string(),
+            t: param_type,
+            optional: false,
+        }],
+        bool,
+        None,
+    );
     my_ctx.values.insert("foo".to_string(), func);
 
     let src = r#"let result = foo({b: "hello"});"#;
@@ -968,7 +1091,7 @@ fn test_program_with_generic_func() -> Result<(), Errors> {
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
     let t = my_ctx.values.get("id").unwrap();
-    assert_eq!(arena[*t].as_string(&arena), r#"<A>(A) => A"#);
+    assert_eq!(arena[*t].as_string(&arena), r#"<A>(x: A) => A"#);
 
     let t = my_ctx.values.get("a").unwrap();
     assert_eq!(arena[*t].as_string(&arena), r#"5"#);
@@ -992,10 +1115,10 @@ fn test_program_with_generic_func_multiple_type_params() -> Result<(), Errors> {
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
     let t = my_ctx.values.get("fst").unwrap();
-    assert_eq!(arena[*t].as_string(&arena), r#"<A, B>(A, B) => A"#);
+    assert_eq!(arena[*t].as_string(&arena), r#"<A, B>(x: A, y: B) => A"#);
 
     let t = my_ctx.values.get("snd").unwrap();
-    assert_eq!(arena[*t].as_string(&arena), r#"<A, B>(A, B) => B"#);
+    assert_eq!(arena[*t].as_string(&arena), r#"<A, B>(x: A, y: B) => B"#);
 
     Ok(())
 }
@@ -1090,7 +1213,7 @@ fn test_unary_op() -> Result<(), Errors> {
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
     let t = my_ctx.values.get("neg").unwrap();
 
-    assert_eq!(arena[*t].as_string(&arena), r#"(number) => number"#);
+    assert_eq!(arena[*t].as_string(&arena), r#"(x: number) => number"#);
     Ok(())
 }
 
@@ -1761,9 +1884,9 @@ fn test_mix_explicit_implicit_type_params() -> Result<(), Errors> {
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
     let t = my_ctx.values.get("fst").unwrap();
-    assert_eq!(arena[*t].as_string(&arena), r#"<B, A>(A, B) => A"#);
+    assert_eq!(arena[*t].as_string(&arena), r#"<B, A>(a: A, b: B) => A"#);
     let t = my_ctx.values.get("snd").unwrap();
-    assert_eq!(arena[*t].as_string(&arena), r#"<B, A>(A, B) => B"#);
+    assert_eq!(arena[*t].as_string(&arena), r#"<B, A>(a: A, b: B) => B"#);
 
     Ok(())
 }
@@ -1823,7 +1946,7 @@ fn test_type_ann_func_with_type_constraint() -> Result<(), Errors> {
     let t = my_ctx.values.get("identity").unwrap();
     assert_eq!(
         arena[*t].as_string(&arena),
-        r#"<T:number | string>(T) => T"#
+        r#"<T:number | string>(x: T) => T"#
     );
     let t = my_ctx.values.get("x").unwrap();
     assert_eq!(arena[*t].as_string(&arena), r#"number"#);
@@ -2353,6 +2476,28 @@ fn test_type_param_implicit_unknown_constraint() -> Result<(), Errors> {
         Err(Errors::InferenceError(
             "type mismatch: unknown != number".to_string()
         ))
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_optional_function_params() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let foo = (a: number, b?: number): number => {
+        return a;
+    };
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let t = my_ctx.values.get("foo").unwrap();
+    assert_eq!(
+        arena[*t].as_string(&arena),
+        r#"(a: number, b?: number) => number"#
     );
 
     Ok(())

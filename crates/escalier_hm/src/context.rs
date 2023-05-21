@@ -185,7 +185,15 @@ pub fn instantiate_func(
         mapping: &mut mapping,
     };
 
-    let params = instantiate.visit_indexes(&func.params);
+    let params = func
+        .params
+        .iter()
+        .map(|param| FuncParam {
+            t: instantiate.visit_index(&param.t),
+            ..param.to_owned()
+        })
+        .collect::<Vec<_>>();
+
     let ret = instantiate.visit_index(&func.ret);
 
     Ok(Function {
