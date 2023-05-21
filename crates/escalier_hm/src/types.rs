@@ -1,7 +1,9 @@
 // Types and type constructors
 use generational_arena::{Arena, Index};
 
-use crate::ast::Lit;
+// TODO: create type versions of these so that we don't have to bother
+// with source locations when doing type-level stuff.
+use crate::ast::{BindingIdent, Lit};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Variable {
@@ -27,9 +29,52 @@ pub struct Function {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct FuncParam {
-    pub name: String,
+    pub pattern: TPat,
     pub t: Index,
     pub optional: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum TPat {
+    Ident(BindingIdent),
+    Rest(RestPat),
+    Tuple(TuplePat),
+    Object(TObjectPat),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct RestPat {
+    pub arg: Box<TPat>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct TuplePat {
+    pub elems: Vec<Option<TPat>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct TObjectPat {
+    pub props: Vec<TObjectPatProp>,
+}
+
+// TODO: update this to match AST changes to ObjectPatProp
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum TObjectPatProp {
+    KeyValue(TObjectKeyValuePatProp),
+    Assign(TObjectAssignPatProp),
+    Rest(RestPat),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct TObjectKeyValuePatProp {
+    pub key: String,
+    pub value: TPat,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct TObjectAssignPatProp {
+    pub key: String,
+    pub value: Option<Index>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -296,13 +341,60 @@ fn types_to_strings(a: &Arena<Type>, types: &[Index]) -> Vec<String> {
 
 fn params_to_strings(arena: &Arena<Type>, params: &[FuncParam]) -> Vec<String> {
     let mut strings = vec![];
-    for FuncParam { name, t, optional } in params {
+    for FuncParam {
+        pattern,
+        t,
+        optional,
+    } in params
+    {
+        let name = tpat_to_string(arena, pattern);
         strings.push(match optional {
             true => format!("{name}?: {}", arena[*t].as_string(arena)),
             false => format!("{name}: {}", arena[*t].as_string(arena)),
-        })
+        });
     }
     strings
+}
+
+fn tpat_to_string(_arena: &Arena<Type>, pattern: &TPat) -> String {
+    match pattern {
+        TPat::Ident(BindingIdent {
+            name, mutable: _, ..
+        }) => name.to_owned(),
+        TPat::Rest(RestPat { arg }) => format!("...{}", tpat_to_string(_arena, arg.as_ref())),
+        TPat::Tuple(TuplePat { elems }) => format!(
+            "[{}]",
+            elems
+                .iter()
+                .map(|elem| match elem {
+                    Some(elem) => tpat_to_string(_arena, elem),
+                    None => " ".to_string(),
+                })
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        TPat::Object(TObjectPat { props }) => {
+            let props: Vec<String> = props
+                .iter()
+                .map(|prop| match prop {
+                    TObjectPatProp::KeyValue(TObjectKeyValuePatProp { key, value }) => {
+                        match value {
+                            TPat::Ident(_) => key.to_string(),
+                            _ => format!("{}: {}", key, tpat_to_string(_arena, value)),
+                        }
+                    }
+                    // TODO: handle assignments in object patterns
+                    TObjectPatProp::Assign(TObjectAssignPatProp { key, value: _ }) => {
+                        key.to_string()
+                    }
+                    TObjectPatProp::Rest(RestPat { arg }) => {
+                        format!("...{}", tpat_to_string(_arena, arg.as_ref()))
+                    }
+                })
+                .collect();
+            format!("{{{}}}", props.join(", "))
+        }
+    }
 }
 
 /// A binary type constructor which builds function types

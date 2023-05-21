@@ -121,28 +121,25 @@ pub fn infer_expression(
                 optional,
             } in params.iter_mut()
             {
-                let param_type = match type_ann {
+                let type_ann_t = match type_ann {
                     Some(type_ann) => infer_type_ann(arena, type_ann, ctx)?,
                     None => new_var_type(arena, None),
                 };
+                pattern.inferred_type = Some(type_ann_t);
 
-                if let PatternKind::Ident(BindingIdent {
-                    name, mutable: _, ..
-                }) = &pattern.kind
-                {
-                    pattern.inferred_type = Some(param_type);
-                    sig_ctx.values.insert(name.to_owned(), param_type);
-                    sig_ctx.non_generic.insert(param_type);
-                    func_params.push(FuncParam {
-                        name: name.to_owned(),
-                        t: param_type,
-                        optional: *optional,
-                    });
-                } else {
-                    return Err(Errors::InferenceError(
-                        "Other patterns are not yet supported as function params".to_owned(),
-                    ));
+                let (assumps, param_t) = infer_pattern(arena, pattern, &sig_ctx)?;
+                unify(arena, &sig_ctx, param_t, type_ann_t)?;
+
+                for (name, binding) in assumps {
+                    sig_ctx.values.insert(name.to_owned(), binding.t);
+                    sig_ctx.non_generic.insert(binding.t);
                 }
+
+                func_params.push(FuncParam {
+                    pattern: pattern_to_tpat(pattern),
+                    t: type_ann_t,
+                    optional: *optional,
+                });
             }
 
             let mut body_ctx = sig_ctx.clone();
@@ -366,7 +363,12 @@ pub fn infer_type_ann(
                     let t = infer_type_ann(arena, &mut param.type_ann, &mut sig_ctx)?;
 
                     Ok(FuncParam {
-                        name: param.pat.get_name(&i),
+                        pattern: TPat::Ident(BindingIdent {
+                            name: param.pat.get_name(&i),
+                            mutable: false,
+                            span: 0..0,
+                            loc: DUMMY_LOC,
+                        }),
                         t,
                         optional: param.optional,
                     })

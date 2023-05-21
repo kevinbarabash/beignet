@@ -9,16 +9,6 @@ use escalier_hm::errors::*;
 use escalier_hm::infer::*;
 use escalier_hm::types::{self, *};
 
-fn new_bool_lit_type(arena: &mut Arena<Type>, value: bool) -> Index {
-    arena.insert(Type {
-        kind: TypeKind::Literal(Lit::Bool(Bool {
-            value,
-            loc: DUMMY_LOC,
-            span: Span::default(),
-        })),
-    })
-}
-
 fn new_num_lit_type(arena: &mut Arena<Type>, value: &str) -> Index {
     arena.insert(Type {
         kind: TypeKind::Literal(Lit::Num(Num {
@@ -53,7 +43,12 @@ fn test_env() -> (Arena<Type>, Context) {
             types::TObjElem::Method(types::TMethod {
                 name: types::TPropKey::StringKey("push".to_string()),
                 params: vec![FuncParam {
-                    name: "item".to_string(),
+                    pattern: TPat::Ident(BindingIdent {
+                        name: "item".to_string(),
+                        mutable: false,
+                        span: 0..0,
+                        loc: DUMMY_LOC,
+                    }),
                     t: type_param_t,
                     optional: false,
                 }],
@@ -446,65 +441,16 @@ fn test_subtype() -> Result<(), Errors> {
 fn test_callback_subtyping() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
-    let num = new_constructor(&mut arena, "number", &[]);
-    let bool = new_constructor(&mut arena, "boolean", &[]);
-    let str = new_constructor(&mut arena, "string", &[]);
-
-    // foo: ((number, string) => boolean) => boolean
-    let cb = new_func_type(
-        &mut arena,
-        &[
-            FuncParam {
-                name: "a".to_string(),
-                t: num,
-                optional: false,
-            },
-            FuncParam {
-                name: "b".to_string(),
-                t: str,
-                optional: false,
-            },
-        ],
-        bool,
-        None,
-    );
-    my_ctx.values.insert(
-        "foo".to_string(),
-        new_func_type(
-            &mut arena,
-            &[FuncParam {
-                name: "cb".to_string(),
-                t: cb,
-                optional: false,
-            }],
-            bool,
-            None,
-        ),
-    );
-
-    // bar: (number | string) => true
     // It's okay for the callback arg to take fewer params since extra params
     // are ignored.  It's also okay for its params to be supertypes of the
     // expected params since the callback will only be called with the expected
     // types.  Lastly, it's okay for the return type to be a subtype of the
     // expected return type since it still conforms to the expected type.
-    let num_or_str = new_union_type(&mut arena, &[num, str]);
-    let true_type = new_bool_lit_type(&mut arena, true);
-    my_ctx.values.insert(
-        "bar".to_string(),
-        new_func_type(
-            &mut arena,
-            &[FuncParam {
-                name: "x".to_string(),
-                t: num_or_str,
-                optional: false,
-            }],
-            true_type,
-            None,
-        ),
-    );
-
-    let src = r#"let result = foo(bar);"#;
+    let src = r#"
+    declare let foo: (cb: (a: number, b: string) => boolean) => boolean;
+    declare let bar: (x: number | string) => boolean;
+    let result = foo(bar);
+    "#;
     let mut program = parse(src).unwrap();
 
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
@@ -517,58 +463,11 @@ fn test_callback_subtyping() -> Result<(), Errors> {
 fn test_callback_error_too_many_params() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
-    let num = new_constructor(&mut arena, "number", &[]);
-    let bool = new_constructor(&mut arena, "boolean", &[]);
-    let str = new_constructor(&mut arena, "string", &[]);
-
-    // foo: ((number) => boolean) => boolean
-    let cb = new_func_type(
-        &mut arena,
-        &[FuncParam {
-            name: "x".to_string(),
-            t: num,
-            optional: false,
-        }],
-        bool,
-        None,
-    );
-    my_ctx.values.insert(
-        "foo".to_string(),
-        new_func_type(
-            &mut arena,
-            &[FuncParam {
-                name: "cb".to_string(),
-                t: cb,
-                optional: false,
-            }],
-            bool,
-            None,
-        ),
-    );
-
-    // bar: (number, string) => true
-    my_ctx.values.insert(
-        "bar".to_string(),
-        new_func_type(
-            &mut arena,
-            &[
-                FuncParam {
-                    name: "a".to_string(),
-                    t: num,
-                    optional: false,
-                },
-                FuncParam {
-                    name: "b".to_string(),
-                    t: str,
-                    optional: false,
-                },
-            ],
-            bool,
-            None,
-        ),
-    );
-
-    let src = r#"let result = foo(bar);"#;
+    let src = r#"
+    declare let foo: (cb: (x: number) => boolean) => boolean;
+    declare let bar: (a: number, b: string) => boolean;
+    let result = foo(bar);
+    "#;
     let mut program = parse(src).unwrap();
 
     let result = infer_program(&mut arena, &mut program, &mut my_ctx);
@@ -756,23 +655,10 @@ fn tuple_member_error_out_of_bounds() -> Result<(), Errors> {
 fn tuple_subtyping() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
-    let num = new_constructor(&mut arena, "number", &[]);
-    let str = new_constructor(&mut arena, "string", &[]);
-    let param_type = new_tuple_type(&mut arena, &[num, str]);
-    let bool = new_constructor(&mut arena, "boolean", &[]);
-    let func = new_func_type(
-        &mut arena,
-        &[FuncParam {
-            name: "x".to_string(),
-            t: param_type,
-            optional: false,
-        }],
-        bool,
-        None,
-    );
-    my_ctx.values.insert("foo".to_string(), func);
-
-    let src = r#"let result = foo([5, "hello", true]);"#;
+    let src = r#"
+    declare let foo: (x: [number, string]) => boolean;
+    let result = foo([5, "hello", true]);
+    "#;
     let mut program = parse(src).unwrap();
 
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
@@ -786,23 +672,10 @@ fn tuple_subtyping() -> Result<(), Errors> {
 fn tuple_subtyping_not_enough_elements() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
-    let num = new_constructor(&mut arena, "number", &[]);
-    let str = new_constructor(&mut arena, "string", &[]);
-    let param_type = new_tuple_type(&mut arena, &[num, str]);
-    let bool = new_constructor(&mut arena, "boolean", &[]);
-    let func = new_func_type(
-        &mut arena,
-        &[FuncParam {
-            name: "x".to_string(),
-            t: param_type,
-            optional: false,
-        }],
-        bool,
-        None,
-    );
-    my_ctx.values.insert("foo".to_string(), func);
-
-    let src = r#"let result = foo([5]);"#;
+    let src = r#"
+    declare let foo: (x: [number, string]) => boolean;
+    let result = foo([5]);
+    "#;
     let mut program = parse(src).unwrap();
 
     let result = infer_program(&mut arena, &mut program, &mut my_ctx);
@@ -879,41 +752,12 @@ fn object_member_missing_prop() -> Result<(), Errors> {
 fn object_subtyping() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
-    let num = new_constructor(&mut arena, "number", &[]);
-    let str = new_constructor(&mut arena, "string", &[]);
-    let param_type = new_object_type(
-        &mut arena,
-        &[
-            types::TObjElem::Prop(types::TProp {
-                name: types::TPropKey::StringKey("a".to_string()),
-                t: num,
-                optional: false,
-                mutable: false,
-            }),
-            types::TObjElem::Prop(types::TProp {
-                name: types::TPropKey::StringKey("b".to_string()),
-                t: str,
-                optional: false,
-                mutable: false,
-            }),
-        ],
-    );
-    let bool = new_constructor(&mut arena, "boolean", &[]);
-    let func = new_func_type(
-        &mut arena,
-        &[FuncParam {
-            name: "x".to_string(),
-            t: param_type,
-            optional: false,
-        }],
-        bool,
-        None,
-    );
-    my_ctx.values.insert("foo".to_string(), func);
-
     // Each prop must be a subtype of the expected element type
     // It's okay to pass an object with extra props
-    let src = r#"let result = foo({a: 5, b: "hello", c: true});"#;
+    let src = r#"
+    declare let foo: (x: {a: number, b: string}) => boolean;
+    let result = foo({a: 5, b: "hello", c: true});
+    "#;
     let mut program = parse(src).unwrap();
 
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
@@ -928,39 +772,10 @@ fn object_subtyping() -> Result<(), Errors> {
 fn object_subtyping_missing_prop() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
-    let num = new_constructor(&mut arena, "number", &[]);
-    let str = new_constructor(&mut arena, "string", &[]);
-    let param_type = new_object_type(
-        &mut arena,
-        &[
-            types::TObjElem::Prop(types::TProp {
-                name: types::TPropKey::StringKey("a".to_string()),
-                t: num,
-                optional: false,
-                mutable: false,
-            }),
-            types::TObjElem::Prop(types::TProp {
-                name: types::TPropKey::StringKey("b".to_string()),
-                t: str,
-                optional: false,
-                mutable: false,
-            }),
-        ],
-    );
-    let bool = new_constructor(&mut arena, "boolean", &[]);
-    let func = new_func_type(
-        &mut arena,
-        &[FuncParam {
-            name: "x".to_string(),
-            t: param_type,
-            optional: false,
-        }],
-        bool,
-        None,
-    );
-    my_ctx.values.insert("foo".to_string(), func);
-
-    let src = r#"let result = foo({b: "hello"});"#;
+    let src = r#"
+    declare let foo: (x: {a: number, b: string}) => boolean;
+    let result = foo({b: "hello"});
+    "#;
     let mut program = parse(src).unwrap();
 
     let result = infer_program(&mut arena, &mut program, &mut my_ctx);
@@ -1864,6 +1679,11 @@ fn test_type_param_with_constraint() -> Result<(), Errors> {
     let mut program = parse(src).unwrap();
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
+    let t = my_ctx.values.get("identity").unwrap();
+    assert_eq!(
+        arena[*t].as_string(&arena),
+        r#"<T:number | string>(x: T) => T"#
+    );
     let t = my_ctx.values.get("x").unwrap();
     assert_eq!(arena[*t].as_string(&arena), r#"5"#);
     let t = my_ctx.values.get("y").unwrap();
@@ -2498,6 +2318,103 @@ fn test_optional_function_params() -> Result<(), Errors> {
     assert_eq!(
         arena[*t].as_string(&arena),
         r#"(a: number, b?: number) => number"#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_func_param_patterns() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let foo = ({ a: x, b }: { a: number, b: string }) => {
+        return x;
+    };
+    let bar = ([a, b]: [number, string]) => {
+        return b;
+    };
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let t = my_ctx.values.get("foo").unwrap();
+    assert_eq!(
+        arena[*t].as_string(&arena),
+        r#"({a, b}: {a: number, b: string}) => number"#
+    );
+    let t = my_ctx.values.get("bar").unwrap();
+    assert_eq!(
+        arena[*t].as_string(&arena),
+        r#"([a, b]: [number, string]) => string"#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_func_param_object_rest_patterns() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let foo = ({ a, ...rest }: { a: number, b: string }) => {
+        return rest.b;
+    };
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let t = my_ctx.values.get("foo").unwrap();
+    assert_eq!(
+        arena[*t].as_string(&arena),
+        r#"({a, ...rest}: {a: number, b: string}) => string"#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_func_param_object_multiple_rest_patterns() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let foo = ({ a, ...rest1, ...rest2 }: { a: number, b: string }) => {
+        return rest.b;
+    };
+    "#;
+    let mut program = parse(src).unwrap();
+
+    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "Maximum one rest pattern allowed in object patterns".to_string()
+        ))
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_func_param_tuple_rest_patterns() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let bar = ([a, ...rest]: [number, string, boolean]) => {
+        return rest[1];
+    };
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let t = my_ctx.values.get("bar").unwrap();
+    assert_eq!(
+        arena[*t].as_string(&arena),
+        r#"([a, ...rest]: [number, string, boolean]) => boolean"#
     );
 
     Ok(())

@@ -3,7 +3,7 @@ use generational_arena::{Arena, Index};
 use itertools::Itertools;
 use std::collections::BTreeSet;
 
-use crate::ast::{Bool, Lit, Num, Str};
+use crate::ast::{BindingIdent, Bool, Lit, Num, Str, DUMMY_LOC};
 use crate::context::*;
 use crate::errors::*;
 use crate::types::*;
@@ -118,22 +118,41 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
         (TypeKind::Constructor(tuple1), TypeKind::Constructor(tuple2))
             if tuple1.name == "@@tuple" && tuple2.name == "@@tuple" =>
         {
-            if tuple1.types.len() < tuple2.types.len() {
-                return Err(Errors::InferenceError(format!(
-                    "Expected tuple of length {}, got tuple of length {}",
-                    tuple2.types.len(),
-                    tuple1.types.len()
-                )));
+            'outer: {
+                if tuple1.types.len() < tuple2.types.len() {
+                    // If there's a rest pattern in tuple1, then it can unify
+                    // with the reamining elements of tuple2.
+                    if let Some(last) = tuple1.types.last() {
+                        if let TypeKind::Rest(_) = arena[*last].kind {
+                            break 'outer;
+                        }
+                    }
+
+                    return Err(Errors::InferenceError(format!(
+                        "Expected tuple of length {}, got tuple of length {}",
+                        tuple2.types.len(),
+                        tuple1.types.len()
+                    )));
+                }
             }
 
             for (i, (p, q)) in tuple1.types.iter().zip(tuple2.types.iter()).enumerate() {
-                let q_t = arena[*q].clone();
-                match q_t.kind {
-                    TypeKind::Rest(_) => {
+                // let q_t = arena[*q];
+                match (&arena[*p].kind, &arena[*q].kind) {
+                    (TypeKind::Rest(_), TypeKind::Rest(_)) => {
+                        return Err(Errors::InferenceError(
+                            "Can't unify two rest elements".to_string(),
+                        ))
+                    }
+                    (TypeKind::Rest(_), _) => {
+                        let rest_q = new_tuple_type(arena, &tuple2.types[i..]);
+                        unify(arena, ctx, *p, rest_q)?;
+                    }
+                    (_, TypeKind::Rest(_)) => {
                         let rest_p = new_tuple_type(arena, &tuple1.types[i..]);
                         unify(arena, ctx, rest_p, *q)?;
                     }
-                    _ => unify(arena, ctx, *p, *q)?,
+                    (_, _) => unify(arena, ctx, *p, *q)?,
                 }
             }
             Ok(())
@@ -313,13 +332,13 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             let obj_types: Vec<_> = intersection
                 .types
                 .iter()
-                .filter(|t| matches!(&arena[**t].kind, TypeKind::Object(_)))
+                .filter(|t| matches!(arena[**t].kind, TypeKind::Object(_)))
                 .cloned()
                 .collect();
             let rest_types: Vec<_> = intersection
                 .types
                 .iter()
-                .filter(|t| matches!(&&arena[**t].kind, TypeKind::Variable(_)))
+                .filter(|t| matches!(arena[**t].kind, TypeKind::Variable(_)))
                 .cloned()
                 .collect();
             // TODO: check for other variants, if there are we should error
@@ -357,6 +376,55 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 )),
             }
         }
+        (TypeKind::Constructor(intersection), TypeKind::Object(object2))
+            if intersection.name == "@@intersection" =>
+        {
+            let obj_types: Vec<_> = intersection
+                .types
+                .iter()
+                .filter(|t| matches!(arena[**t].kind, TypeKind::Object(_)))
+                .cloned()
+                .collect();
+            let rest_types: Vec<_> = intersection
+                .types
+                .iter()
+                .filter(|t| matches!(arena[**t].kind, TypeKind::Variable(_)))
+                .cloned()
+                .collect();
+
+            let obj_type = simplify_intersection(arena, &obj_types);
+
+            match rest_types.len() {
+                0 => unify(arena, ctx, t1, obj_type),
+                1 => {
+                    let all_obj_elems = match &arena[obj_type].kind {
+                        TypeKind::Object(obj) => obj.props.to_owned(),
+                        _ => vec![],
+                    };
+
+                    let (obj_elems, rest_elems): (Vec<_>, Vec<_>) =
+                        object2.props.iter().cloned().partition(|e| {
+                            all_obj_elems.iter().any(|oe| match (oe, e) {
+                                // What to do about Call signatures?
+                                // (TObjElem::Call(_), TObjElem::Call(_)) => todo!(),
+                                (TObjElem::Prop(op), TObjElem::Prop(p)) => op.name == p.name,
+                                _ => false,
+                            })
+                        });
+
+                    let new_obj_type = new_object_type(arena, &obj_elems);
+                    unify(arena, ctx, obj_type, new_obj_type)?;
+
+                    let new_rest_type = new_object_type(arena, &rest_elems);
+                    unify(arena, ctx, rest_types[0], new_rest_type)?;
+
+                    Ok(())
+                }
+                _ => Err(Errors::InferenceError(
+                    "Inference is undecidable".to_string(),
+                )),
+            }
+        }
         _ => Err(Errors::InferenceError(format!(
             "type mismatch: unify({}, {}) failed",
             a_t.as_string(arena),
@@ -384,7 +452,13 @@ pub fn unify_call(
                 .iter()
                 .enumerate()
                 .map(|(i, t)| FuncParam {
-                    name: format!("arg{i}"),
+                    pattern: TPat::Ident(BindingIdent {
+                        name: format!("arg{i}"),
+                        mutable: false,
+                        loc: DUMMY_LOC,
+                        span: 0..0,
+                    }),
+                    // name: format!("arg{i}"),
                     t: *t,
                     optional: false,
                 })
