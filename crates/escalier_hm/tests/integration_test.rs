@@ -2376,6 +2376,29 @@ fn test_func_param_object_rest_patterns() -> Result<(), Errors> {
 }
 
 #[test]
+fn test_func_param_object_multiple_rest_patterns() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let foo = ({ a, ...rest1, ...rest2 }: { a: number, b: string }) => {
+        return rest.b;
+    };
+    "#;
+    let mut program = parse(src).unwrap();
+
+    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "Maximum one rest pattern allowed in object patterns".to_string()
+        ))
+    );
+
+    Ok(())
+}
+
+#[test]
 fn test_func_param_tuple_rest_patterns() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 

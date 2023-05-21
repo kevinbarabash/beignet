@@ -92,8 +92,10 @@ pub fn infer_pattern(
                         }
                         ObjectPatProp::Rest(rest) => {
                             if rest_opt_ty.is_some() {
-                                // TODO: return an Err() instead of panicking.
-                                panic!("Maximum one rest pattern allowed in object patterns")
+                                return Err(Errors::InferenceError(
+                                    "Maximum one rest pattern allowed in object patterns"
+                                        .to_string(),
+                                ));
                             }
                             // TypeScript doesn't support spreading/rest in types so instead we
                             // do the following conversion:

@@ -118,20 +118,16 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
         (TypeKind::Constructor(tuple1), TypeKind::Constructor(tuple2))
             if tuple1.name == "@@tuple" && tuple2.name == "@@tuple" =>
         {
-            // TODO: check if there's a rest type in the tuple
-            eprintln!("tuple1: {:?}", tuple1);
-            eprintln!("tuple2: {:?}", tuple2);
-
-            if tuple1.types.len() < tuple2.types.len() {
-                let mut tuple1_has_rest = false;
-
-                if let Some(last) = tuple1.types.last() {
-                    if let TypeKind::Rest(_) = arena[*last].kind {
-                        tuple1_has_rest = true;
+            'outer: {
+                if tuple1.types.len() < tuple2.types.len() {
+                    // If there's a rest pattern in tuple1, then it can unify
+                    // with the reamining elements of tuple2.
+                    if let Some(last) = tuple1.types.last() {
+                        if let TypeKind::Rest(_) = arena[*last].kind {
+                            break 'outer;
+                        }
                     }
-                }
 
-                if !tuple1_has_rest {
                     return Err(Errors::InferenceError(format!(
                         "Expected tuple of length {}, got tuple of length {}",
                         tuple2.types.len(),
