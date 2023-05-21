@@ -1,7 +1,7 @@
 use generational_arena::{Arena, Index};
 use std::collections::HashMap;
 
-use crate::ast::*;
+use crate::ast::{self, *};
 use crate::context::{get_type, Context};
 use crate::errors::*;
 use crate::types::{self, *};
@@ -44,7 +44,7 @@ pub fn infer_pattern(
                 }
                 t
             }
-            PatternKind::Rest(RestPat { arg }) => {
+            PatternKind::Rest(ast::RestPat { arg }) => {
                 let arg_type = infer_pattern_rec(arena, arg.as_mut(), assump, ctx)?;
                 new_rest_type(arena, arg_type)
             }
@@ -114,7 +114,7 @@ pub fn infer_pattern(
                     None => obj_type,
                 }
             }
-            PatternKind::Tuple(TuplePat { elems, optional: _ }) => {
+            PatternKind::Tuple(ast::TuplePat { elems, optional: _ }) => {
                 let mut elem_types = vec![];
                 for elem in elems.iter_mut() {
                     let t = match elem {

@@ -3,7 +3,7 @@ use generational_arena::{Arena, Index};
 use itertools::Itertools;
 use std::collections::BTreeSet;
 
-use crate::ast::{Bool, Lit, Num, Str};
+use crate::ast::{BindingIdent, Bool, Lit, Num, Str, DUMMY_LOC};
 use crate::context::*;
 use crate::errors::*;
 use crate::types::*;
@@ -384,7 +384,13 @@ pub fn unify_call(
                 .iter()
                 .enumerate()
                 .map(|(i, t)| FuncParam {
-                    name: format!("arg{i}"),
+                    pattern: TPat::Ident(BindingIdent {
+                        name: format!("arg{i}"),
+                        mutable: false,
+                        loc: DUMMY_LOC,
+                        span: 0..0,
+                    }),
+                    // name: format!("arg{i}"),
                     t: *t,
                     optional: false,
                 })

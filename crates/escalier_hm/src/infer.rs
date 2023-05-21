@@ -126,15 +126,13 @@ pub fn infer_expression(
                     None => new_var_type(arena, None),
                 };
 
-                if let PatternKind::Ident(BindingIdent {
-                    name, mutable: _, ..
-                }) = &pattern.kind
-                {
+                // TODO: handle more patterns
+                if let PatternKind::Ident(ident) = &pattern.kind {
                     pattern.inferred_type = Some(param_type);
-                    sig_ctx.values.insert(name.to_owned(), param_type);
+                    sig_ctx.values.insert(ident.name.to_owned(), param_type);
                     sig_ctx.non_generic.insert(param_type);
                     func_params.push(FuncParam {
-                        name: name.to_owned(),
+                        pattern: TPat::Ident(ident.to_owned()),
                         t: param_type,
                         optional: *optional,
                     });
@@ -366,7 +364,12 @@ pub fn infer_type_ann(
                     let t = infer_type_ann(arena, &mut param.type_ann, &mut sig_ctx)?;
 
                     Ok(FuncParam {
-                        name: param.pat.get_name(&i),
+                        pattern: TPat::Ident(BindingIdent {
+                            name: param.pat.get_name(&i),
+                            mutable: false,
+                            span: 0..0,
+                            loc: DUMMY_LOC,
+                        }),
                         t,
                         optional: param.optional,
                     })
