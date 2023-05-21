@@ -361,11 +361,12 @@ pub fn infer_type_ann(
 
             let func_params = params
                 .iter_mut()
-                .map(|param| {
+                .enumerate()
+                .map(|(i, param)| {
                     let t = infer_type_ann(arena, &mut param.type_ann, &mut sig_ctx)?;
 
                     Ok(FuncParam {
-                        name: "".to_string(), // TODO: require nams of params in types
+                        name: param.pat.get_name(&i),
                         t,
                         optional: false, // TODO
                     })

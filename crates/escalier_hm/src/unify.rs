@@ -374,13 +374,24 @@ pub fn unify_call(
     t2: Index,
 ) -> Result<Index, Errors> {
     let ret_type = new_var_type(arena, None);
-    let call_type = new_func_type(arena, arg_types, ret_type, None);
 
     let b = prune(arena, t2);
     let b_t = arena.get(b).unwrap().clone();
 
     match b_t.kind {
-        TypeKind::Variable(_) => bind(arena, ctx, b, call_type)?,
+        TypeKind::Variable(_) => {
+            let arg_types: Vec<FuncParam> = arg_types
+                .iter()
+                .enumerate()
+                .map(|(i, t)| FuncParam {
+                    name: format!("arg{i}"),
+                    t: *t,
+                    optional: false,
+                })
+                .collect();
+            let call_type = new_func_type(arena, &arg_types, ret_type, None);
+            bind(arena, ctx, b, call_type)?
+        }
         TypeKind::Constructor(Constructor { name, types }) => {
             match name.as_str() {
                 "@@tuple" => {

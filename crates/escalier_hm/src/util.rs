@@ -28,7 +28,8 @@ pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
         TypeKind::Object(Object { props }) => props.iter().any(|prop| match prop {
             TObjElem::Method(method) => {
                 // TODO: check constraints and default on type_params
-                occurs_in(arena, v, &method.params) || occurs_in_type(arena, v, method.ret)
+                let param_types: Vec<_> = method.params.iter().map(|param| param.t).collect();
+                occurs_in(arena, v, &param_types) || occurs_in_type(arena, v, method.ret)
             }
             TObjElem::Index(index) => occurs_in_type(arena, v, index.t),
             TObjElem::Prop(prop) => occurs_in_type(arena, v, prop.t),
@@ -40,7 +41,8 @@ pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
             type_params: _,
         }) => {
             // TODO: check constraints and default on type_params
-            occurs_in(arena, v, &params) || occurs_in_type(arena, v, ret)
+            let param_types: Vec<_> = params.iter().map(|param| param.t).collect();
+            occurs_in(arena, v, &param_types) || occurs_in_type(arena, v, ret)
         }
         TypeKind::Constructor(Constructor { types, .. }) => occurs_in(arena, v, &types),
     }
