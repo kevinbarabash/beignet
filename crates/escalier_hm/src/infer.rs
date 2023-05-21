@@ -449,7 +449,14 @@ pub fn infer_type_ann(
             let idx = infer_type_ann(arena, elem_type, ctx)?;
             new_constructor(arena, "Array", &[idx])
         }
-        TypeAnnKind::IndexedAccess(_) => todo!(),
+        TypeAnnKind::IndexedAccess(IndexedAccessType {
+            obj_type,
+            index_type,
+        }) => {
+            let obj_idx = infer_type_ann(arena, obj_type, ctx)?;
+            let index_idx = infer_type_ann(arena, index_type, ctx)?;
+            new_utility_type(arena, "@@index", &[obj_idx, index_idx])
+        }
         TypeAnnKind::Mutable(_) => todo!(),
         TypeAnnKind::Query(_) => todo!(),
 

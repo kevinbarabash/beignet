@@ -535,6 +535,11 @@ pub fn unify_call(
             }
             unify(arena, ctx, ret_type, func.ret)?;
         }
+        TypeKind::Utility(_) => {
+            return Err(Errors::InferenceError(
+                "Utility types are not callable".to_string(),
+            ))
+        }
     }
 
     // We need to prune the return type, because it might be a type variable.

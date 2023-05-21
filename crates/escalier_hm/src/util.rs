@@ -45,6 +45,7 @@ pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
             occurs_in(arena, v, &param_types) || occurs_in_type(arena, v, ret)
         }
         TypeKind::Constructor(Constructor { types, .. }) => occurs_in(arena, v, &types),
+        TypeKind::Utility(Utility { types, .. }) => occurs_in(arena, v, &types),
     }
 }
 
