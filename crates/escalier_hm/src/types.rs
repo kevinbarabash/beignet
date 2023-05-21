@@ -347,18 +347,54 @@ fn params_to_strings(arena: &Arena<Type>, params: &[FuncParam]) -> Vec<String> {
         optional,
     } in params
     {
-        let name = match pattern {
-            TPat::Ident(BindingIdent {
-                name, mutable: _, ..
-            }) => name,
-            _ => unimplemented!(),
-        };
+        let name = tpat_to_string(arena, pattern);
         strings.push(match optional {
             true => format!("{name}?: {}", arena[*t].as_string(arena)),
             false => format!("{name}: {}", arena[*t].as_string(arena)),
-        })
+        });
     }
     strings
+}
+
+fn tpat_to_string(arena: &Arena<Type>, pattern: &TPat) -> String {
+    match pattern {
+        TPat::Ident(BindingIdent {
+            name, mutable: _, ..
+        }) => name.to_owned(),
+        TPat::Rest(RestPat { arg }) => format!("...{}", tpat_to_string(arena, arg.as_ref())),
+        TPat::Tuple(TuplePat { elems }) => format!(
+            "[{}]",
+            elems
+                .iter()
+                .map(|elem| match elem {
+                    Some(elem) => tpat_to_string(arena, elem),
+                    None => " ".to_string(),
+                })
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        TPat::Object(TObjectPat { props }) => {
+            let props: Vec<String> = props
+                .iter()
+                .map(|prop| match prop {
+                    TObjectPatProp::KeyValue(TObjectKeyValuePatProp { key, value }) => {
+                        match value {
+                            TPat::Ident(_) => key.to_string(),
+                            _ => format!("{}: {}", key, tpat_to_string(arena, value)),
+                        }
+                    }
+                    // TODO: handle assignments in object patterns
+                    TObjectPatProp::Assign(TObjectAssignPatProp { key, value: _ }) => {
+                        key.to_string()
+                    }
+                    TObjectPatProp::Rest(RestPat { arg }) => {
+                        format!("...{}", tpat_to_string(arena, arg.as_ref()))
+                    }
+                })
+                .collect();
+            format!("{{{}}}", props.join(", "))
+        }
+    }
 }
 
 /// A binary type constructor which builds function types

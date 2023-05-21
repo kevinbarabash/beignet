@@ -1679,6 +1679,11 @@ fn test_type_param_with_constraint() -> Result<(), Errors> {
     let mut program = parse(src).unwrap();
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
+    let t = my_ctx.values.get("identity").unwrap();
+    assert_eq!(
+        arena[*t].as_string(&arena),
+        r#"<T:number | string>(x: T) => T"#
+    );
     let t = my_ctx.values.get("x").unwrap();
     assert_eq!(arena[*t].as_string(&arena), r#"5"#);
     let t = my_ctx.values.get("y").unwrap();
@@ -2313,6 +2318,36 @@ fn test_optional_function_params() -> Result<(), Errors> {
     assert_eq!(
         arena[*t].as_string(&arena),
         r#"(a: number, b?: number) => number"#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_func_param_patterns() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let foo = ({ a: x, b }: { a: number, b: string }) => {
+        return x;
+    };
+    let bar = ([a, b]: [number, string]) => {
+        return b;
+    };
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let t = my_ctx.values.get("foo").unwrap();
+    assert_eq!(
+        arena[*t].as_string(&arena),
+        r#"({a, b}: {a: number, b: string}) => number"#
+    );
+    let t = my_ctx.values.get("bar").unwrap();
+    assert_eq!(
+        arena[*t].as_string(&arena),
+        r#"([a, b]: [number, string]) => string"#
     );
 
     Ok(())

@@ -155,3 +155,59 @@ pub fn infer_pattern(
 
     Ok((assump, pat_type))
 }
+
+pub fn pattern_to_tpat(pattern: &Pattern) -> TPat {
+    match &pattern.kind {
+        PatternKind::Ident(binding_ident) => TPat::Ident(ast::BindingIdent {
+            name: binding_ident.name.to_owned(),
+            mutable: binding_ident.mutable.to_owned(),
+            loc: DUMMY_LOC,
+            span: 0..0,
+        }),
+        PatternKind::Rest(e_rest) => TPat::Rest(types::RestPat {
+            arg: Box::from(pattern_to_tpat(e_rest.arg.as_ref())),
+        }),
+        PatternKind::Object(e_obj) => {
+            // TODO: replace TProp with the type equivalent of EFnParamObjectPatProp
+            let props: Vec<types::TObjectPatProp> = e_obj
+                .props
+                .iter()
+                .map(|e_prop| {
+                    match e_prop {
+                        ObjectPatProp::KeyValue(kv) => {
+                            types::TObjectPatProp::KeyValue(types::TObjectKeyValuePatProp {
+                                key: kv.key.name.to_owned(),
+                                value: pattern_to_tpat(&kv.value),
+                            })
+                        }
+                        ObjectPatProp::Shorthand(ShorthandPatProp { ident, .. }) => {
+                            types::TObjectPatProp::Assign(types::TObjectAssignPatProp {
+                                key: ident.name.to_owned(),
+                                // TODO: figure when/how to set this to a non-None value
+                                value: None,
+                            })
+                        }
+                        ObjectPatProp::Rest(rest) => types::TObjectPatProp::Rest(types::RestPat {
+                            arg: Box::from(pattern_to_tpat(rest.arg.as_ref())),
+                        }),
+                    }
+                })
+                .collect();
+            TPat::Object(types::TObjectPat { props })
+        }
+        PatternKind::Tuple(e_array) => {
+            TPat::Tuple(types::TuplePat {
+                // TODO: fill in gaps in array patterns with types from the corresponding
+                // type annotation if one exists.
+                elems: e_array
+                    .elems
+                    .iter()
+                    .map(|elem| elem.as_ref().map(|elem| pattern_to_tpat(&elem.pattern)))
+                    .collect(),
+            })
+        }
+        PatternKind::Lit(_) => panic!("Literal patterns not allowed in function params"),
+        PatternKind::Is(_) => panic!("'is' patterns not allowed in function params"),
+        PatternKind::Wildcard => panic!("Wildcard patterns not allowed in function params"),
+    }
+}
