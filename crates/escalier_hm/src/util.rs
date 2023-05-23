@@ -1,6 +1,7 @@
 use generational_arena::{Arena, Index};
 use std::collections::HashMap;
 
+use crate::ast::{Lit, Str};
 use crate::context::*;
 use crate::errors::*;
 use crate::types::*;
@@ -145,5 +146,79 @@ pub fn expand_alias(
                 )))
             }
         }
+    }
+}
+
+pub fn expand_type(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<Index, Errors> {
+    let t = prune(arena, t);
+    // It's okay to clone here because we aren't mutating the type
+    match &arena[t].clone().kind {
+        TypeKind::Variable(_) => Ok(t),
+        TypeKind::Literal(_) => Ok(t),
+        TypeKind::Object(_) => Ok(t),
+        TypeKind::Rest(_) => Ok(t),
+        TypeKind::Function(_) => Ok(t),
+        TypeKind::Constructor(Constructor { name, types }) => match ctx.schemes.get(name) {
+            Some(scheme) => expand_alias(arena, name, scheme, types),
+            None => Err(Errors::InferenceError(format!(
+                "Can't find type alias for {name}"
+            ))),
+        },
+        TypeKind::Utility(Utility { name, types }) => match name.as_str() {
+            "@@index" => {
+                let obj = types[0];
+                let index = types[1];
+                expand_index_access(arena, ctx, obj, index)
+            }
+            _ => Err(Errors::InferenceError(format!(
+                "Can't find utility type for {name}"
+            ))),
+        },
+    }
+}
+
+pub fn expand_index_access(
+    arena: &mut Arena<Type>,
+    ctx: &Context,
+    obj: Index,
+    index: Index, // This has to be a string
+) -> Result<Index, Errors> {
+    let obj = expand_type(arena, ctx, obj)?;
+    let index = expand_type(arena, ctx, index)?;
+
+    match (&arena[obj], &arena[index]) {
+        (
+            Type {
+                kind: TypeKind::Object(Object { props }),
+                ..
+            },
+            Type {
+                kind: TypeKind::Literal(Lit::Str(Str { value, .. })),
+                ..
+            },
+        ) => {
+            for prop in props {
+                if let TObjElem::Prop(TProp { name, t, .. }) = prop {
+                    let name = match name {
+                        TPropKey::StringKey(value) => value,
+                        TPropKey::NumberKey(value) => value,
+                    };
+                    if name == value {
+                        return Ok(*t);
+                    }
+                }
+            }
+
+            Err(Errors::InferenceError(format!(
+                "Couldn't find property {} in object {}",
+                value,
+                arena[obj].as_string(arena)
+            )))
+        }
+        _ => Err(Errors::InferenceError(format!(
+            "{} isn't an object or {} isn't a valid key",
+            arena[obj].as_string(arena),
+            arena[index].as_string(arena),
+        ))),
     }
 }

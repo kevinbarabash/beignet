@@ -8,6 +8,7 @@ use escalier_hm::context::*;
 use escalier_hm::errors::*;
 use escalier_hm::infer::*;
 use escalier_hm::types::{self, *};
+use escalier_hm::util::expand_type;
 
 fn new_num_lit_type(arena: &mut Arena<Type>, value: &str) -> Index {
     arena.insert(Type {
@@ -2427,6 +2428,8 @@ fn test_index_access_type() -> Result<(), Errors> {
     let src = r#"   
     type Foo = {a: string, b: number, c: boolean};
     type A = Foo["a"];
+    type B = Foo["b"];
+    type C = Foo["c"];
     "#;
     let mut program = parse(src).unwrap();
 
@@ -2434,6 +2437,16 @@ fn test_index_access_type() -> Result<(), Errors> {
 
     let scheme = my_ctx.schemes.get("A").unwrap();
     assert_eq!(arena[scheme.t].as_string(&arena), r#"Foo["a"]"#);
+    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"string"#);
+
+    let scheme = my_ctx.schemes.get("B").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"number"#);
+
+    let scheme = my_ctx.schemes.get("C").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"boolean"#);
 
     Ok(())
 }
