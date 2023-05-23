@@ -1,7 +1,7 @@
 use generational_arena::{Arena, Index};
 use std::collections::HashMap;
 
-use crate::ast::{Lit, Str};
+use crate::ast::{Lit, SourceLocation, Str};
 use crate::context::*;
 use crate::errors::*;
 use crate::types::*;
@@ -165,11 +165,8 @@ pub fn expand_type(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<I
             ))),
         },
         TypeKind::Utility(Utility { name, types }) => match name.as_str() {
-            "@@index" => {
-                let obj = types[0];
-                let index = types[1];
-                expand_index_access(arena, ctx, obj, index)
-            }
+            "@@index" => expand_index_access(arena, ctx, types[0], types[1]),
+            "@@keyof" => expand_keyof(arena, ctx, types[0]),
             _ => Err(Errors::InferenceError(format!(
                 "Can't find utility type for {name}"
             ))),
@@ -181,22 +178,13 @@ pub fn expand_index_access(
     arena: &mut Arena<Type>,
     ctx: &Context,
     obj: Index,
-    index: Index, // This has to be a string
+    index: Index,
 ) -> Result<Index, Errors> {
     let obj = expand_type(arena, ctx, obj)?;
     let index = expand_type(arena, ctx, index)?;
 
-    match (&arena[obj], &arena[index]) {
-        (
-            Type {
-                kind: TypeKind::Object(Object { props }),
-                ..
-            },
-            Type {
-                kind: TypeKind::Literal(Lit::Str(Str { value, .. })),
-                ..
-            },
-        ) => {
+    match (&arena[obj].kind, &arena[index].kind) {
+        (TypeKind::Object(Object { props }), TypeKind::Literal(Lit::Str(Str { value, .. }))) => {
             for prop in props {
                 if let TObjElem::Prop(TProp { name, t, .. }) = prop {
                     let name = match name {
@@ -219,6 +207,39 @@ pub fn expand_index_access(
             "{} isn't an object or {} isn't a valid key",
             arena[obj].as_string(arena),
             arena[index].as_string(arena),
+        ))),
+    }
+}
+
+pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<Index, Errors> {
+    let obj = expand_type(arena, ctx, t)?;
+
+    match &arena[obj].kind.clone() {
+        TypeKind::Object(Object { props }) => {
+            let mut keys = Vec::new();
+            for prop in props {
+                // TODO: include indexers as well
+                if let TObjElem::Prop(TProp { name, .. }) = prop {
+                    let name = match name {
+                        TPropKey::StringKey(value) => value,
+                        TPropKey::NumberKey(value) => value,
+                    };
+                    keys.push(new_lit_type(
+                        arena,
+                        &Lit::Str(Str {
+                            value: name.to_owned(),
+                            loc: SourceLocation::default(),
+                            span: 0..0,
+                        }),
+                    ));
+                }
+            }
+
+            Ok(new_union_type(arena, &keys))
+        }
+        _ => Err(Errors::InferenceError(format!(
+            "{} isn't an object",
+            arena[t].as_string(arena),
         ))),
     }
 }
