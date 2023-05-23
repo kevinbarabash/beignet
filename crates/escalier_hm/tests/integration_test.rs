@@ -2456,7 +2456,7 @@ fn test_typeof() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"   
-    let foo = {a: "a", b: 1, c: true};
+    let foo = {a: "hello", b: 5, c: true};
     type Foo = typeof foo;
     "#;
     let mut program = parse(src).unwrap();
@@ -2465,7 +2465,7 @@ fn test_typeof() -> Result<(), Errors> {
 
     let scheme = my_ctx.schemes.get("Foo").unwrap();
     let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"{a: "a", b: 1, c: true}"#);
+    assert_eq!(arena[t].as_string(&arena), r#"{a: "hello", b: 5, c: true}"#);
 
     Ok(())
 }
@@ -2475,8 +2475,12 @@ fn test_keyof() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"   
-    let foo = {a: "a", b: 1, c: true};
+    let foo = {a: "hello", b: 5, c: true};
     type Foo = keyof typeof foo;
+    let bar = {a: "hello"};
+    type Bar = keyof typeof bar;
+    let baz = {};
+    type Baz = keyof typeof baz;
     "#;
     let mut program = parse(src).unwrap();
 
@@ -2485,6 +2489,14 @@ fn test_keyof() -> Result<(), Errors> {
     let scheme = my_ctx.schemes.get("Foo").unwrap();
     let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
     assert_eq!(arena[t].as_string(&arena), r#""a" | "b" | "c""#);
+
+    let scheme = my_ctx.schemes.get("Bar").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#""a""#);
+
+    let scheme = my_ctx.schemes.get("Baz").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"never"#);
 
     Ok(())
 }
