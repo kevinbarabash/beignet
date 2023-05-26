@@ -84,6 +84,24 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
         _ => Ok((b_t, b)),
     }?;
 
+    let (a_t, a) = match &a_t.kind {
+        TypeKind::Utility(_) => {
+            let idx = expand_type(arena, ctx, b)?;
+            let t = arena.get(idx).unwrap().clone();
+            Ok((t, idx))
+        }
+        _ => Ok((a_t, a)),
+    }?;
+
+    let (b_t, b) = match &b_t.kind {
+        TypeKind::Utility(_) => {
+            let idx = expand_type(arena, ctx, b)?;
+            let t = arena.get(idx).unwrap().clone();
+            Ok((t, idx))
+        }
+        _ => Ok((b_t, b)),
+    }?;
+
     match (&a_t.kind, &b_t.kind) {
         (TypeKind::Variable(_), _) => bind(arena, ctx, a, b),
         (_, TypeKind::Variable(_)) => bind(arena, ctx, b, a),

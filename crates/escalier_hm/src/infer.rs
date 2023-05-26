@@ -395,8 +395,16 @@ pub fn infer_type_ann(
             let mut props: Vec<types::TObjElem> = Vec::new();
             for elem in obj.elems.iter_mut() {
                 match elem {
-                    syntax::TObjElem::Index(_) => {
-                        todo!();
+                    syntax::TObjElem::Index(syntax::TIndex { key, type_ann, .. }) => {
+                        let key = types::TIndexKey {
+                            name: "".to_owned(),
+                            t: infer_type_ann(arena, &mut key.type_ann, ctx)?,
+                        };
+                        props.push(types::TObjElem::Index(types::TIndex {
+                            key,
+                            t: infer_type_ann(arena, type_ann, ctx)?,
+                            mutable: false,
+                        }));
                     }
                     syntax::TObjElem::Prop(prop) => {
                         props.push(types::TObjElem::Prop(types::TProp {

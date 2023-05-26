@@ -2426,7 +2426,7 @@ fn test_index_access_type() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"   
-    type Foo = {a: string, b: number, c: boolean};
+    type Foo = {a: string, b?: number, [key: string]: boolean};
     type A = Foo["a"];
     type B = Foo["b"];
     type C = Foo["c"];
@@ -2442,11 +2442,84 @@ fn test_index_access_type() -> Result<(), Errors> {
 
     let scheme = my_ctx.schemes.get("B").unwrap();
     let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"number"#);
+    assert_eq!(arena[t].as_string(&arena), r#"number | undefined"#);
 
     let scheme = my_ctx.schemes.get("C").unwrap();
     let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"boolean"#);
+    assert_eq!(arena[t].as_string(&arena), r#"boolean | undefined"#);
+
+    Ok(())
+}
+
+#[test]
+fn test_index_access_type_missing_property() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"   
+    type Foo = {a: string, b?: number};
+    type C = Foo["c"];
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let scheme = my_ctx.schemes.get("C").unwrap();
+    let result = expand_type(&mut arena, &my_ctx, scheme.t);
+
+    // TODO: check that the index access is valid where it's inferred
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "Couldn't find property c in object {a: string, b?: number}".to_string()
+        ))
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_index_access_type_missing_indexer() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"   
+    type Foo = {[key: number]: string};
+    type C = Foo["c"];
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let scheme = my_ctx.schemes.get("C").unwrap();
+    let result = expand_type(&mut arena, &my_ctx, scheme.t);
+
+    // TODO: check that the index access is valid where it's inferred
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            // TODO: include indexers when printing object types
+            "Couldn't find property c in object {: string}".to_string()
+        ))
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_index_access_type_number_indexer() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"   
+    type Foo = {[key: number]: string};
+    type T = Foo[1];
+    let t: T = "hello";
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let scheme = my_ctx.schemes.get("T").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"string | undefined"#);
 
     Ok(())
 }

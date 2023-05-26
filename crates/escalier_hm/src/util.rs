@@ -1,10 +1,11 @@
 use generational_arena::{Arena, Index};
 use std::collections::HashMap;
 
-use crate::ast::{Lit, SourceLocation, Str};
+use crate::ast::{Lit, Num, SourceLocation, Str};
 use crate::context::*;
 use crate::errors::*;
 use crate::types::*;
+use crate::unify::unify;
 
 /// Checks whether a type variable occurs in a type expression.
 ///
@@ -174,6 +175,7 @@ pub fn expand_type(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<I
     }
 }
 
+// TODO: check that the index access is valid where it's inferred
 pub fn expand_index_access(
     arena: &mut Arena<Type>,
     ctx: &Context,
@@ -183,25 +185,109 @@ pub fn expand_index_access(
     let obj = expand_type(arena, ctx, obj)?;
     let index = expand_type(arena, ctx, index)?;
 
-    match (&arena[obj].kind, &arena[index].kind) {
+    eprintln!("obj: {}", arena[obj].as_string(arena));
+    eprintln!("index: {}", arena[index].as_string(arena));
+
+    match (&arena[obj].kind.clone(), &arena[index].kind.clone()) {
         (TypeKind::Object(Object { props }), TypeKind::Literal(Lit::Str(Str { value, .. }))) => {
+            let mut indexer: Option<TIndex> = None;
             for prop in props {
-                if let TObjElem::Prop(TProp { name, t, .. }) = prop {
+                if let TObjElem::Prop(TProp {
+                    name,
+                    t,
+                    optional,
+                    mutable: _,
+                }) = prop
+                {
                     let name = match name {
                         TPropKey::StringKey(value) => value,
                         TPropKey::NumberKey(value) => value,
                     };
                     if name == value {
-                        return Ok(*t);
+                        return match optional {
+                            true => {
+                                let undefined = new_constructor(arena, "undefined", &[]);
+                                Ok(new_union_type(arena, &[*t, undefined]))
+                            }
+                            false => Ok(*t),
+                        };
                     }
+                }
+
+                if let TObjElem::Index(index) = prop {
+                    indexer = Some(index.clone());
                 }
             }
 
-            Err(Errors::InferenceError(format!(
-                "Couldn't find property {} in object {}",
-                value,
-                arena[obj].as_string(arena)
-            )))
+            if let Some(indexer) = indexer {
+                match unify(arena, ctx, index, indexer.key.t) {
+                    Ok(_) => {
+                        let undefined = new_constructor(arena, "undefined", &[]);
+                        Ok(new_union_type(arena, &[indexer.t, undefined]))
+                    }
+                    Err(_) => Err(Errors::InferenceError(format!(
+                        "Couldn't find property {} in object {}",
+                        value,
+                        arena[obj].as_string(arena)
+                    ))),
+                }
+            } else {
+                Err(Errors::InferenceError(format!(
+                    "Couldn't find property {} in object {}",
+                    value,
+                    arena[obj].as_string(arena)
+                )))
+            }
+        }
+        (TypeKind::Object(Object { props }), TypeKind::Literal(Lit::Num(Num { value, .. }))) => {
+            let mut indexer: Option<TIndex> = None;
+            for prop in props {
+                if let TObjElem::Prop(TProp {
+                    name,
+                    t,
+                    optional,
+                    mutable: _,
+                }) = prop
+                {
+                    let name = match name {
+                        TPropKey::StringKey(value) => value,
+                        TPropKey::NumberKey(value) => value,
+                    };
+                    if name == value {
+                        return match optional {
+                            true => {
+                                let undefined = new_constructor(arena, "undefined", &[]);
+                                Ok(new_union_type(arena, &[*t, undefined]))
+                            }
+                            false => Ok(*t),
+                        };
+                    }
+                }
+
+                if let TObjElem::Index(index) = prop {
+                    indexer = Some(index.clone());
+                }
+            }
+
+            if let Some(indexer) = indexer {
+                match unify(arena, ctx, index, indexer.key.t) {
+                    Ok(_) => {
+                        let undefined = new_constructor(arena, "undefined", &[]);
+                        Ok(new_union_type(arena, &[indexer.t, undefined]))
+                    }
+                    Err(_) => Err(Errors::InferenceError(format!(
+                        "Couldn't find property {} in object {}",
+                        value,
+                        arena[obj].as_string(arena)
+                    ))),
+                }
+            } else {
+                Err(Errors::InferenceError(format!(
+                    "Couldn't find property {} in object {}",
+                    value,
+                    arena[obj].as_string(arena)
+                )))
+            }
         }
         _ => Err(Errors::InferenceError(format!(
             "{} isn't an object or {} isn't a valid key",
