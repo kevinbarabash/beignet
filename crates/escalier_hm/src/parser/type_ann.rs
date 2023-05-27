@@ -238,26 +238,20 @@ pub fn parse_type_ann(node: &tree_sitter::Node, src: &str) -> Result<TypeAnn, Pa
                                 }
                             }
 
-                            let pat: Pattern = Pattern {
-                                loc: SourceLocation::from(&name_node),
-                                span: name_node.byte_range(),
-                                kind: PatternKind::Ident(BindingIdent {
+                            let key: TIndexKey = TIndexKey {
+                                name: Ident {
                                     loc: SourceLocation::from(&name_node),
                                     span: name_node.byte_range(),
                                     name,
-                                    mutable: false,
-                                }),
-                                inferred_type: None,
+                                },
+                                type_ann: Box::new(index_type_ann),
                             };
 
                             let elem = TObjElem::Index(TIndex {
                                 loc: SourceLocation::from(&prop),
                                 span: prop.byte_range(),
-                                key: Box::from(TypeAnnFnParam {
-                                    pat,
-                                    type_ann: index_type_ann,
-                                    optional,
-                                }),
+                                key,
+                                optional,
                                 mutable,
                                 type_ann: Box::from(type_ann),
                             });

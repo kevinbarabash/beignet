@@ -122,7 +122,7 @@ pub fn infer_expression(
             } in params.iter_mut()
             {
                 let type_ann_t = match type_ann {
-                    Some(type_ann) => infer_type_ann(arena, type_ann, ctx)?,
+                    Some(type_ann) => infer_type_ann(arena, type_ann, &mut sig_ctx)?,
                     None => new_var_type(arena, None),
                 };
                 pattern.inferred_type = Some(type_ann_t);
@@ -397,7 +397,7 @@ pub fn infer_type_ann(
                 match elem {
                     syntax::TObjElem::Index(syntax::TIndex { key, type_ann, .. }) => {
                         let key = types::TIndexKey {
-                            name: "".to_owned(),
+                            name: key.name.name.to_owned(),
                             t: infer_type_ann(arena, &mut key.type_ann, ctx)?,
                         };
                         props.push(types::TObjElem::Index(types::TIndex {
@@ -419,6 +419,10 @@ pub fn infer_type_ann(
             new_object_type(arena, &props)
         }
         TypeAnnKind::TypeRef(TypeRef { name, type_args }) => {
+            if ctx.schemes.get(name).is_none() {
+                return Err(Errors::InferenceError(format!("{} is not in scope", name)));
+            }
+
             match type_args {
                 Some(type_args) => {
                     let mut type_args_idxs = Vec::new();
@@ -626,6 +630,25 @@ pub fn infer_program(
     node: &mut Program,
     ctx: &mut Context,
 ) -> Result<(), Errors> {
+    for stmt in &node.statements {
+        if let StmtKind::TypeDecl(TypeDecl { id, .. }) = &stmt.kind {
+            let placeholder_scheme = Scheme {
+                t: new_constructor(arena, "unknown", &[]),
+                type_params: None,
+            };
+            let name = id.name.to_owned();
+            if ctx
+                .schemes
+                .insert(name.clone(), placeholder_scheme)
+                .is_some()
+            {
+                return Err(Errors::InferenceError(format!(
+                    "{name} cannot be redeclared at the top-level"
+                )));
+            }
+        }
+    }
+
     for stmt in &mut node.statements {
         if let StmtKind::VarDecl(VarDecl { pattern, .. }) = &mut stmt.kind {
             let (bindings, _) = infer_pattern(arena, pattern, ctx)?;
@@ -640,6 +663,8 @@ pub fn infer_program(
             }
         }
     }
+
+    // TODO: capture all type decls and do a second pass to valid them
 
     // TODO: figure out how to avoid parsing patterns twice
     for stmt in &mut node.statements.iter_mut() {

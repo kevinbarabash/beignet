@@ -51,8 +51,8 @@ Ok(
                                                     },
                                                 },
                                                 span: 17..33,
-                                                key: TypeAnnFnParam {
-                                                    pat: Pattern {
+                                                key: TIndexKey {
+                                                    name: Ident {
                                                         loc: SourceLocation {
                                                             start: Position {
                                                                 line: 0,
@@ -64,24 +64,7 @@ Ok(
                                                             },
                                                         },
                                                         span: 18..21,
-                                                        kind: Ident(
-                                                            BindingIdent {
-                                                                name: "key",
-                                                                mutable: false,
-                                                                span: 18..21,
-                                                                loc: SourceLocation {
-                                                                    start: Position {
-                                                                        line: 0,
-                                                                        column: 18,
-                                                                    },
-                                                                    end: Position {
-                                                                        line: 0,
-                                                                        column: 21,
-                                                                    },
-                                                                },
-                                                            },
-                                                        ),
-                                                        inferred_type: None,
+                                                        name: "key",
                                                     },
                                                     type_ann: TypeAnn {
                                                         kind: Keyword(
@@ -102,9 +85,9 @@ Ok(
                                                         span: 23..29,
                                                         inferred_type: None,
                                                     },
-                                                    optional: false,
                                                 },
                                                 mutable: false,
+                                                optional: false,
                                                 type_ann: TypeAnn {
                                                     kind: TypeRef(
                                                         TypeRef {

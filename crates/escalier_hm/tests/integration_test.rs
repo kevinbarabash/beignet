@@ -2496,8 +2496,7 @@ fn test_index_access_type_missing_indexer() -> Result<(), Errors> {
     assert_eq!(
         result,
         Err(Errors::InferenceError(
-            // TODO: include indexers when printing object types
-            "Couldn't find property c in object {: string}".to_string()
+            "Couldn't find property c in object {[key: number]: string}".to_string()
         ))
     );
 
@@ -2570,6 +2569,71 @@ fn test_keyof() -> Result<(), Errors> {
     let scheme = my_ctx.schemes.get("Baz").unwrap();
     let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
     assert_eq!(arena[t].as_string(&arena), r#"never"#);
+
+    Ok(())
+}
+
+#[test]
+fn test_mutually_recursive_type() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+    let src = r#"
+    type A = {
+        a: number,
+        b: B | null,
+    };
+    
+    type B = {
+        a: A | null,
+        b: string,
+    }
+    "#;
+
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    Ok(())
+}
+
+#[test]
+fn test_mutually_recursive_type_with_index_access_type() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+    let src = r#"
+    type Foo = {
+        a: number,
+        b: Bar["b"],
+    }
+    
+    type Bar = {
+        a: Foo["a"],
+        b: string,
+    }    
+
+    let foo: Foo = {a: 5, b: "hello"};
+    "#;
+
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    Ok(())
+}
+
+#[test]
+fn test_type_alias_with_undefined_def() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+    let src = r#"
+    type A = B;
+    "#;
+
+    let mut program = parse(src).unwrap();
+
+    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError("B is not in scope".to_string()))
+    );
 
     Ok(())
 }

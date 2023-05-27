@@ -62,7 +62,7 @@ pub struct TProp {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TIndexKey {
-    pub name: String,
+    pub name: Ident,
     pub type_ann: Box<TypeAnn>,
 }
 
@@ -70,9 +70,9 @@ pub struct TIndexKey {
 pub struct TIndex {
     pub loc: SourceLocation,
     pub span: Span,
-    // TODO: update this to only allow `<ident>: string` or `<ident>: number`
-    pub key: Box<TypeAnnFnParam>,
+    pub key: TIndexKey,
     pub mutable: bool,
+    pub optional: bool,
     pub type_ann: Box<TypeAnn>,
 }
 

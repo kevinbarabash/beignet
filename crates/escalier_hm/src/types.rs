@@ -280,10 +280,12 @@ impl Type {
                         }
                         TObjElem::Index(TIndex { key, mutable, t }) => {
                             let t = arena[*t].as_string(arena);
+                            let key_t = arena[key.t].as_string(arena);
+                            let name = &key.name;
                             if *mutable {
-                                fields.push(format!("{}: mut {}", key.name, t));
+                                fields.push(format!("[{name}: {key_t}]: mut {t}"));
                             } else {
-                                fields.push(format!("{}: {}", key.name, t));
+                                fields.push(format!("[{name}: {key_t}]: {t}"));
                             }
                         }
                         TObjElem::Prop(TProp {
