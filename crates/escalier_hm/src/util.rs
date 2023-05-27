@@ -161,9 +161,17 @@ pub fn expand_type(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<I
         TypeKind::Function(_) => Ok(t),
         TypeKind::Constructor(Constructor { name, types }) => match ctx.schemes.get(name) {
             Some(scheme) => expand_alias(arena, name, scheme, types),
-            None => Err(Errors::InferenceError(format!(
-                "Can't find type alias for {name}"
-            ))),
+            None => {
+                if ["number", "string", "boolean", "symbol", "null", "undefined"]
+                    .contains(&name.as_str())
+                {
+                    Ok(t)
+                } else {
+                    Err(Errors::InferenceError(format!(
+                        "Can't find type alias for {name}"
+                    )))
+                }
+            }
         },
         TypeKind::Utility(Utility { name, types }) => match name.as_str() {
             "@@index" => expand_index_access(arena, ctx, types[0], types[1]),
@@ -289,10 +297,34 @@ pub fn expand_index_access(
                 )))
             }
         }
+        (TypeKind::Constructor(tuple), TypeKind::Literal(Lit::Num(Num { value, .. })))
+            if tuple.name == "@@tuple" =>
+        {
+            let index: usize = str::parse(value)
+                .map_err(|_| Errors::InferenceError(format!("{} isn't a valid index", value)))?;
+
+            if index >= tuple.types.len() {
+                return Err(Errors::InferenceError(format!(
+                    "Index {} out of bounds for tuple {}",
+                    index,
+                    arena[obj].as_string(arena)
+                )));
+            }
+
+            Ok(tuple.types[index])
+        }
+        (TypeKind::Constructor(tuple), TypeKind::Constructor(number))
+            if tuple.name == "@@tuple" && number.name == "number" =>
+        {
+            let mut types = tuple.types.clone();
+            types.push(new_constructor(arena, "undefined", &[]));
+
+            Ok(new_union_type(arena, &types))
+        }
         _ => Err(Errors::InferenceError(format!(
-            "{} isn't an object or {} isn't a valid key",
-            arena[obj].as_string(arena),
+            "{} can't be used as a key on {}",
             arena[index].as_string(arena),
+            arena[obj].as_string(arena),
         ))),
     }
 }

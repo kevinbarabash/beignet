@@ -28,6 +28,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
     let a_t = arena[a].clone();
     let b_t = arena[b].clone();
 
+    // TODO: create helper functions for these
     let (a_t, a) = match &a_t.kind {
         TypeKind::Constructor(Constructor {
             name,
@@ -84,9 +85,10 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
         _ => Ok((b_t, b)),
     }?;
 
+    // TODO: create helper functions for these
     let (a_t, a) = match &a_t.kind {
         TypeKind::Utility(_) => {
-            let idx = expand_type(arena, ctx, b)?;
+            let idx = expand_type(arena, ctx, a)?;
             let t = arena.get(idx).unwrap().clone();
             Ok((t, idx))
         }
@@ -565,6 +567,11 @@ pub fn unify_call(
 }
 
 fn bind(arena: &mut Arena<Type>, ctx: &Context, a: Index, b: Index) -> Result<(), Errors> {
+    eprintln!(
+        "bind({:#?}, {:#?})",
+        arena[a].as_string(arena),
+        arena[b].as_string(arena)
+    );
     if a != b {
         if occurs_in_type(arena, a, b) {
             return Err(Errors::InferenceError("recursive unification".to_string()));

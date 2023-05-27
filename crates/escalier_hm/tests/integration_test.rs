@@ -2520,6 +2520,96 @@ fn test_index_access_type_number_indexer() -> Result<(), Errors> {
     let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
     assert_eq!(arena[t].as_string(&arena), r#"string | undefined"#);
 
+    let t = my_ctx.values.get("t").unwrap();
+    assert_eq!(arena[*t].as_string(&arena), r#"string | undefined"#);
+
+    Ok(())
+}
+
+#[test]
+fn test_index_access_type_on_tuple() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"   
+    type Foo = [number, string, boolean];
+    type T = Foo[1];
+    let t: T = "hello";
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let t = my_ctx.values.get("t").unwrap();
+    assert_eq!(arena[*t].as_string(&arena), r#"string"#);
+
+    Ok(())
+}
+
+#[test]
+fn test_index_access_type_on_tuple_with_number_key() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"   
+    type Foo = [number, string, boolean];
+    type T = Foo[number];
+    let t: T = "hello";
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let t = my_ctx.values.get("t").unwrap();
+    assert_eq!(
+        arena[*t].as_string(&arena),
+        r#"number | string | boolean | undefined"#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_index_access_out_of_bounds_on_tuple() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"   
+    type Foo = [number, string, boolean];
+    type T = Foo[3];
+    let t: T = "hello";
+    "#;
+    let mut program = parse(src).unwrap();
+
+    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "Index 3 out of bounds for tuple [number, string, boolean]".to_string()
+        ))
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_index_access_not_usize() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"   
+    type Foo = [number, string, boolean];
+    type T = Foo[1.5];
+    let t: T = "hello";
+    "#;
+    let mut program = parse(src).unwrap();
+
+    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "1.5 isn't a valid index".to_string()
+        ))
+    );
+
     Ok(())
 }
 
