@@ -313,6 +313,12 @@ pub fn expand_index_access(
 
             Ok(tuple.types[index])
         }
+        (TypeKind::Object(_), TypeKind::Constructor(number)) if number.name == "string" => {
+            todo!("number index access on objects where the 'string' type is the key")
+        }
+        (TypeKind::Object(_), TypeKind::Constructor(number)) if number.name == "number" => {
+            todo!("number index access on object where the 'number' type is the key")
+        }
         (TypeKind::Constructor(tuple), TypeKind::Constructor(number))
             if tuple.name == "@@tuple" && number.name == "number" =>
         {

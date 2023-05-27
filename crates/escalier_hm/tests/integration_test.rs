@@ -2451,6 +2451,51 @@ fn test_index_access_type() -> Result<(), Errors> {
     Ok(())
 }
 
+// TODO: make this test pass
+#[test]
+#[ignore]
+fn test_index_access_type_using_string_as_indexer() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"   
+    type Foo = {a: string, b: number, c: boolean};
+    type T = Foo[string];
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let scheme = my_ctx.schemes.get("T").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
+    assert_eq!(
+        arena[t].as_string(&arena),
+        r#"string | number | boolean | undefined"#
+    );
+
+    Ok(())
+}
+
+// TODO: make this test pass
+#[test]
+#[ignore]
+fn test_index_access_type_using_number_as_indexer() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"   
+    type Foo = {a: string, b: number, [key: number]: boolean]};
+    type T = Foo[number];
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let scheme = my_ctx.schemes.get("T").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"boolean | undefined"#);
+
+    Ok(())
+}
+
 #[test]
 fn test_index_access_type_missing_property() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
