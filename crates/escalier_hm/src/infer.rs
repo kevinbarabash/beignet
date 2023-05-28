@@ -477,13 +477,17 @@ pub fn infer_type_ann(
             let index_idx = infer_type_ann(arena, index_type, ctx)?;
             new_utility_type(arena, "@@index", &[obj_idx, index_idx])
         }
-        TypeAnnKind::Query(QueryType { expr }) => infer_expression(arena, expr, ctx)?,
+        TypeAnnKind::Query(QueryType { expr }) => {
+            // typeof <expr>
+            infer_expression(arena, expr, ctx)?
+        }
         TypeAnnKind::Mutable(_) => todo!(),
 
         // TODO: Create types for all of these
         TypeAnnKind::KeyOf(KeyOfType { type_ann }) => {
             let t = infer_type_ann(arena, type_ann, ctx)?;
-            new_utility_type(arena, "@@keyof", &[t])
+            let t = new_utility_type(arena, "@@keyof", &[t]);
+            expand_type(arena, ctx, t)?
         }
         TypeAnnKind::Mapped(_) => todo!(),
         TypeAnnKind::Conditional(_) => todo!(),

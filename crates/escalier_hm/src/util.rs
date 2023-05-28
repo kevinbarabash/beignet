@@ -154,25 +154,30 @@ pub fn expand_type(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<I
     let t = prune(arena, t);
     // It's okay to clone here because we aren't mutating the type
     match &arena[t].clone().kind {
-        TypeKind::Variable(_) => Ok(t),
-        TypeKind::Literal(_) => Ok(t),
-        TypeKind::Object(_) => Ok(t),
-        TypeKind::Rest(_) => Ok(t),
-        TypeKind::Function(_) => Ok(t),
-        TypeKind::Constructor(Constructor { name, types }) => match ctx.schemes.get(name) {
-            Some(scheme) => expand_alias(arena, name, scheme, types),
-            None => {
-                if ["number", "string", "boolean", "symbol", "null", "undefined"]
+        TypeKind::Constructor(Constructor { name, types }) if !name.starts_with("@@") => {
+            match ctx.schemes.get(name) {
+                Some(scheme) => expand_alias(arena, name, scheme, types),
+                None => {
+                    if [
+                        "number",
+                        "string",
+                        "boolean",
+                        "symbol",
+                        "null",
+                        "undefined",
+                        "never",
+                    ]
                     .contains(&name.as_str())
-                {
-                    Ok(t)
-                } else {
-                    Err(Errors::InferenceError(format!(
-                        "Can't find type alias for {name}"
-                    )))
+                    {
+                        Ok(t)
+                    } else {
+                        Err(Errors::InferenceError(format!(
+                            "Can't find type alias for {name}"
+                        )))
+                    }
                 }
             }
-        },
+        }
         TypeKind::Utility(Utility { name, types }) => match name.as_str() {
             "@@index" => get_computed_member(arena, ctx, types[0], types[1]),
             "@@keyof" => expand_keyof(arena, ctx, types[0]),
@@ -180,6 +185,7 @@ pub fn expand_type(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<I
                 "Can't find utility type for {name}"
             ))),
         },
+        _ => Ok(t),
     }
 }
 
@@ -307,9 +313,12 @@ pub fn get_computed_member(
                 "Can't find type alias for {alias_name}"
             ))),
         },
-        _ => Err(Errors::InferenceError(
-            "Can only access properties on objects/tuples".to_string(),
-        )),
+        _ => {
+            // TODO: provide a more specific error message for type variables
+            Err(Errors::InferenceError(
+                "Can only access properties on objects/tuples".to_string(),
+            ))
+        }
     }
 }
 

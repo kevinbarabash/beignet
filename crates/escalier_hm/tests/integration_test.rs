@@ -606,6 +606,28 @@ fn tuple_member() -> Result<(), Errors> {
 }
 
 #[test]
+fn tuple_member_invalid_index() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let tuple = [5, "hello"];
+    let second = tuple["foo"];
+    "#;
+    let mut program = parse(src).unwrap();
+
+    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "Can't access property on non-object type".to_string()
+        ))
+    );
+
+    Ok(())
+}
+
+#[test]
 fn array_member() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
@@ -726,6 +748,28 @@ fn object_member() -> Result<(), Errors> {
     let t = my_ctx.values.get("result").unwrap();
 
     assert_eq!(arena[*t].as_string(&arena), "5".to_string(),);
+
+    Ok(())
+}
+
+#[test]
+fn object_member_string_key() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let obj = {a: 5, b: "hello"};
+    declare let key: string;
+    let result = obj[key];
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    let t = my_ctx.values.get("result").unwrap();
+
+    assert_eq!(
+        arena[*t].as_string(&arena),
+        "5 | \"hello\" | undefined".to_string(),
+    );
 
     Ok(())
 }
@@ -1467,6 +1511,49 @@ fn member_access_optional_property() -> Result<(), Errors> {
     assert_eq!(arena[*t].as_string(&arena), r#"number | undefined"#);
     let t = my_ctx.values.get("b").unwrap();
     assert_eq!(arena[*t].as_string(&arena), r#"string"#);
+
+    Ok(())
+}
+
+#[test]
+fn member_access_on_unknown_type() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let obj: unknown;
+    let a = obj.a;
+    "#;
+    let mut program = parse(src).unwrap();
+
+    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "Can't find type alias for unknown".to_string()
+        ))
+    );
+
+    Ok(())
+}
+
+#[test]
+fn member_access_on_type_variable() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let get_a = (x) => x.a;
+    "#;
+    let mut program = parse(src).unwrap();
+
+    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "Can only access properties on objects/tuples".to_string()
+        ))
+    );
 
     Ok(())
 }
@@ -2454,7 +2541,6 @@ fn test_index_access_type() -> Result<(), Errors> {
     Ok(())
 }
 
-// TODO: make this test pass
 #[test]
 fn test_index_access_type_using_string_as_indexer() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
@@ -2704,6 +2790,27 @@ fn test_keyof() -> Result<(), Errors> {
     let scheme = my_ctx.schemes.get("Baz").unwrap();
     let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
     assert_eq!(arena[t].as_string(&arena), r#"never"#);
+
+    Ok(())
+}
+
+#[test]
+fn test_keyof_unknown() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type T = keyof unknown;
+    "#;
+    let mut program = parse(src).unwrap();
+
+    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "Can't find type alias for unknown".to_string()
+        ))
+    );
 
     Ok(())
 }
