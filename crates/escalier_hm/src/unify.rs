@@ -28,6 +28,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
     let a_t = arena[a].clone();
     let b_t = arena[b].clone();
 
+    // TODO: create helper functions for these
     let (a_t, a) = match &a_t.kind {
         TypeKind::Constructor(Constructor {
             name,
@@ -80,6 +81,25 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 }
                 None => Err(Errors::InferenceError(format!("Unbound type name: {name}"))),
             }
+        }
+        _ => Ok((b_t, b)),
+    }?;
+
+    // TODO: create helper functions for these
+    let (a_t, a) = match &a_t.kind {
+        TypeKind::Utility(_) => {
+            let idx = expand_type(arena, ctx, a)?;
+            let t = arena.get(idx).unwrap().clone();
+            Ok((t, idx))
+        }
+        _ => Ok((a_t, a)),
+    }?;
+
+    let (b_t, b) = match &b_t.kind {
+        TypeKind::Utility(_) => {
+            let idx = expand_type(arena, ctx, b)?;
+            let t = arena.get(idx).unwrap().clone();
+            Ok((t, idx))
         }
         _ => Ok((b_t, b)),
     }?;
@@ -535,6 +555,11 @@ pub fn unify_call(
             }
             unify(arena, ctx, ret_type, func.ret)?;
         }
+        TypeKind::Utility(_) => {
+            return Err(Errors::InferenceError(
+                "Utility types are not callable".to_string(),
+            ))
+        }
     }
 
     // We need to prune the return type, because it might be a type variable.
@@ -542,6 +567,11 @@ pub fn unify_call(
 }
 
 fn bind(arena: &mut Arena<Type>, ctx: &Context, a: Index, b: Index) -> Result<(), Errors> {
+    eprintln!(
+        "bind({:#?}, {:#?})",
+        arena[a].as_string(arena),
+        arena[b].as_string(arena)
+    );
     if a != b {
         if occurs_in_type(arena, a, b) {
             return Err(Errors::InferenceError("recursive unification".to_string()));

@@ -122,7 +122,7 @@ pub fn infer_expression(
             } in params.iter_mut()
             {
                 let type_ann_t = match type_ann {
-                    Some(type_ann) => infer_type_ann(arena, type_ann, ctx)?,
+                    Some(type_ann) => infer_type_ann(arena, type_ann, &mut sig_ctx)?,
                     None => new_var_type(arena, None),
                 };
                 pattern.inferred_type = Some(type_ann_t);
@@ -198,7 +198,15 @@ pub fn infer_expression(
             let obj_idx = infer_expression(arena, obj, ctx)?;
             match prop {
                 MemberProp::Ident(Ident { name, .. }) => {
-                    get_ident_member(arena, ctx, obj_idx, name)?
+                    let key_idx = new_lit_type(
+                        arena,
+                        &Lit::Str(Str {
+                            value: name.to_owned(),
+                            loc: DUMMY_LOC,
+                            span: 0..0,
+                        }),
+                    );
+                    get_ident_member(arena, ctx, obj_idx, key_idx)?
                 }
                 MemberProp::Computed(ComputedPropName { expr, .. }) => {
                     let prop_type = infer_expression(arena, expr, ctx)?;
@@ -395,8 +403,16 @@ pub fn infer_type_ann(
             let mut props: Vec<types::TObjElem> = Vec::new();
             for elem in obj.elems.iter_mut() {
                 match elem {
-                    syntax::TObjElem::Index(_) => {
-                        todo!();
+                    syntax::TObjElem::Index(syntax::TIndex { key, type_ann, .. }) => {
+                        let key = types::TIndexKey {
+                            name: key.name.name.to_owned(),
+                            t: infer_type_ann(arena, &mut key.type_ann, ctx)?,
+                        };
+                        props.push(types::TObjElem::Index(types::TIndex {
+                            key,
+                            t: infer_type_ann(arena, type_ann, ctx)?,
+                            mutable: false,
+                        }));
                     }
                     syntax::TObjElem::Prop(prop) => {
                         props.push(types::TObjElem::Prop(types::TProp {
@@ -411,6 +427,10 @@ pub fn infer_type_ann(
             new_object_type(arena, &props)
         }
         TypeAnnKind::TypeRef(TypeRef { name, type_args }) => {
+            if ctx.schemes.get(name).is_none() {
+                return Err(Errors::InferenceError(format!("{} is not in scope", name)));
+            }
+
             match type_args {
                 Some(type_args) => {
                     let mut type_args_idxs = Vec::new();
@@ -449,12 +469,26 @@ pub fn infer_type_ann(
             let idx = infer_type_ann(arena, elem_type, ctx)?;
             new_constructor(arena, "Array", &[idx])
         }
-        TypeAnnKind::IndexedAccess(_) => todo!(),
+        TypeAnnKind::IndexedAccess(IndexedAccessType {
+            obj_type,
+            index_type,
+        }) => {
+            let obj_idx = infer_type_ann(arena, obj_type, ctx)?;
+            let index_idx = infer_type_ann(arena, index_type, ctx)?;
+            new_utility_type(arena, "@@index", &[obj_idx, index_idx])
+        }
+        TypeAnnKind::Query(QueryType { expr }) => {
+            // typeof <expr>
+            infer_expression(arena, expr, ctx)?
+        }
         TypeAnnKind::Mutable(_) => todo!(),
-        TypeAnnKind::Query(_) => todo!(),
 
         // TODO: Create types for all of these
-        TypeAnnKind::KeyOf(_) => todo!(),
+        TypeAnnKind::KeyOf(KeyOfType { type_ann }) => {
+            let t = infer_type_ann(arena, type_ann, ctx)?;
+            let t = new_utility_type(arena, "@@keyof", &[t]);
+            expand_type(arena, ctx, t)?
+        }
         TypeAnnKind::Mapped(_) => todo!(),
         TypeAnnKind::Conditional(_) => todo!(),
         TypeAnnKind::Infer(_) => todo!(),
@@ -608,6 +642,25 @@ pub fn infer_program(
     node: &mut Program,
     ctx: &mut Context,
 ) -> Result<(), Errors> {
+    for stmt in &node.statements {
+        if let StmtKind::TypeDecl(TypeDecl { id, .. }) = &stmt.kind {
+            let placeholder_scheme = Scheme {
+                t: new_constructor(arena, "unknown", &[]),
+                type_params: None,
+            };
+            let name = id.name.to_owned();
+            if ctx
+                .schemes
+                .insert(name.clone(), placeholder_scheme)
+                .is_some()
+            {
+                return Err(Errors::InferenceError(format!(
+                    "{name} cannot be redeclared at the top-level"
+                )));
+            }
+        }
+    }
+
     for stmt in &mut node.statements {
         if let StmtKind::VarDecl(VarDecl { pattern, .. }) = &mut stmt.kind {
             let (bindings, _) = infer_pattern(arena, pattern, ctx)?;
@@ -622,6 +675,8 @@ pub fn infer_program(
             }
         }
     }
+
+    // TODO: capture all type decls and do a second pass to valid them
 
     // TODO: figure out how to avoid parsing patterns twice
     for stmt in &mut node.statements.iter_mut() {
@@ -713,20 +768,20 @@ fn get_ident_member(
     arena: &mut Arena<Type>,
     ctx: &mut Context,
     obj_idx: Index,
-    prop_name: &str,
+    key_idx: Index,
 ) -> Result<Index, Errors> {
     // NOTE: cloning is fine here because we aren't mutating `obj_type`
     let obj_type = arena[obj_idx].clone();
 
     match &obj_type.kind {
-        TypeKind::Object(_) => get_prop(arena, obj_idx, prop_name),
+        TypeKind::Object(_) => get_prop(arena, ctx, obj_idx, key_idx),
         // declare let obj: {x: number} | {x: string}
         // obj.x; // number | string
         TypeKind::Constructor(union) if union.name == "@@union" => {
             let mut result_types = vec![];
             let mut undefined_count = 0;
             for idx in &union.types {
-                match get_prop(arena, *idx, prop_name) {
+                match get_prop(arena, ctx, *idx, key_idx) {
                     Ok(t) => result_types.push(t),
                     Err(_) => {
                         // TODO: check what the error is, we may want to propagate
@@ -741,7 +796,8 @@ fn get_ident_member(
             }
             if undefined_count == union.types.len() {
                 Err(Errors::InferenceError(format!(
-                    "Couldn't find property {prop_name} on object"
+                    "Couldn't find property {} on object",
+                    arena[key_idx].as_string(arena)
                 )))
             } else {
                 Ok(new_union_type(arena, &result_types))
@@ -754,7 +810,7 @@ fn get_ident_member(
         }) if !alias_name.starts_with("@@") => match ctx.schemes.get(alias_name) {
             Some(scheme) => {
                 let obj_idx = expand_alias(arena, alias_name, scheme, types)?;
-                get_ident_member(arena, ctx, obj_idx, prop_name)
+                get_ident_member(arena, ctx, obj_idx, key_idx)
             }
             None => Err(Errors::InferenceError(format!(
                 "Can't find type alias for {alias_name}"
@@ -768,7 +824,7 @@ fn get_ident_member(
             Some(scheme) => {
                 let t = new_union_type(arena, types);
                 let obj_idx = expand_alias(arena, "Array", scheme, &[t])?;
-                get_ident_member(arena, ctx, obj_idx, prop_name)
+                get_ident_member(arena, ctx, obj_idx, key_idx)
             }
             None => Err(Errors::InferenceError(
                 "Can't find type alias for Array".to_string(),
@@ -777,168 +833,6 @@ fn get_ident_member(
         _ => Err(Errors::InferenceError(
             "Can only access properties on objects/tuples".to_string(),
         )),
-    }
-}
-
-fn get_computed_member(
-    arena: &mut Arena<Type>,
-    ctx: &mut Context,
-    obj_idx: Index,
-    prop_idx: Index,
-) -> Result<Index, Errors> {
-    // NOTE: cloning is fine here because we aren't mutating `obj_type` or
-    // `prop_type`.
-    let obj_type = arena[obj_idx].clone();
-    let prop_type = arena[prop_idx].clone();
-
-    match &obj_type.kind {
-        // let tuple = [5, "hello", true]
-        // tuple[1]; // "hello"
-        TypeKind::Constructor(tuple) if tuple.name == "@@tuple" => {
-            match &prop_type.kind {
-                TypeKind::Literal(Lit::Num(Num { value, .. })) => {
-                    let index: usize = value.parse().unwrap();
-                    if index < tuple.types.len() {
-                        // TODO: update AST with the inferred type
-                        return Ok(tuple.types[index]);
-                    }
-                    Err(Errors::InferenceError(format!(
-                        "{index} was outside the bounds 0..{} of the tuple",
-                        tuple.types.len()
-                    )))
-                }
-                TypeKind::Literal(Lit::Str(Str { value, .. })) => {
-                    // TODO: look up methods on the `Array` interface
-                    // we need to instantiate the scheme such that `T` is equal
-                    // to the union of all types in the tuple
-                    get_prop(arena, obj_idx, &value.clone())
-                }
-                TypeKind::Constructor(constructor) if constructor.name == "number" => {
-                    Ok(new_union_type(arena, &tuple.types))
-                }
-                _ => Err(Errors::InferenceError(
-                    "Can only access tuple properties with a number".to_string(),
-                )),
-            }
-        }
-        // declare let tuple: [number, number] | [string, string]
-        // tuple[1]; // number | string
-        TypeKind::Constructor(union) if union.name == "@@union" => {
-            let mut result_types = vec![];
-            let mut undefined_count = 0;
-            for idx in &union.types {
-                match get_computed_member(arena, ctx, *idx, prop_idx) {
-                    Ok(t) => result_types.push(t),
-                    Err(_) => {
-                        // TODO: check what the error is, we may want to propagate
-                        // certain errors
-                        if undefined_count == 0 {
-                            let undefined = new_constructor(arena, "undefined", &[]);
-                            result_types.push(undefined);
-                        }
-                        undefined_count += 1;
-                    }
-                }
-            }
-            if undefined_count == union.types.len() {
-                // TODO: include name of property in error message
-                Err(Errors::InferenceError(
-                    "Couldn't find property on object".to_string(),
-                ))
-            } else {
-                Ok(new_union_type(arena, &result_types))
-            }
-        }
-        TypeKind::Object(_) => match &prop_type.kind {
-            TypeKind::Literal(Lit::Num(Num { value, .. })) => {
-                // TODO: check if there's an indexer in the
-                get_prop(arena, obj_idx, &value.clone())
-            }
-            TypeKind::Literal(Lit::Str(Str { value, .. })) => {
-                get_prop(arena, obj_idx, &value.clone())
-            }
-            _ => Err(Errors::InferenceError(
-                "Can only access tuple properties with a number".to_string(),
-            )),
-        },
-        TypeKind::Constructor(types::Constructor {
-            name: alias_name,
-            types,
-            ..
-        }) if !alias_name.starts_with("@@") => match ctx.schemes.get(alias_name) {
-            Some(scheme) => {
-                let obj_idx = expand_alias(arena, alias_name, scheme, types)?;
-                get_computed_member(arena, ctx, obj_idx, prop_idx)
-            }
-            None => Err(Errors::InferenceError(format!(
-                "Can't find type alias for {alias_name}"
-            ))),
-        },
-        _ => Err(Errors::InferenceError(
-            "Can only access properties on objects/tuples".to_string(),
-        )),
-    }
-}
-
-fn get_prop(arena: &mut Arena<Type>, obj_idx: Index, name: &str) -> Result<Index, Errors> {
-    let undefined = new_constructor(arena, "undefined", &[]);
-    // It's fine to clone here because we aren't mutating
-    let obj_type = arena[obj_idx].clone();
-
-    if let TypeKind::Object(object) = &obj_type.kind {
-        let mut maybe_index: Option<&types::TIndex> = None;
-        for prop in &object.props {
-            match prop {
-                types::TObjElem::Method(method) => {
-                    let key = match &method.name {
-                        TPropKey::StringKey(key) => key,
-                        TPropKey::NumberKey(key) => key,
-                    };
-                    if key == name {
-                        return Ok(arena.insert(Type {
-                            kind: TypeKind::Function(Function {
-                                params: method.params.clone(),
-                                ret: method.ret,
-                                type_params: method.type_params.clone(),
-                            }),
-                        }));
-                    }
-                }
-                types::TObjElem::Index(index) => {
-                    if maybe_index.is_some() {
-                        return Err(Errors::InferenceError(
-                            "Object types can only have a single indexer".to_string(),
-                        ));
-                    }
-                    maybe_index = Some(index);
-                }
-                types::TObjElem::Prop(prop) => {
-                    let key = match &prop.name {
-                        TPropKey::StringKey(key) => key,
-                        TPropKey::NumberKey(key) => key,
-                    };
-                    if key == name {
-                        let prop_t = match prop.optional {
-                            true => new_union_type(arena, &[prop.t, undefined]),
-                            false => prop.t,
-                        };
-                        return Ok(prop_t);
-                    }
-                }
-            }
-        }
-
-        if let Some(index) = maybe_index {
-            return Ok(new_union_type(arena, &[index.t, undefined]));
-        }
-
-        Err(Errors::InferenceError(format!(
-            "Couldn't find property '{name}' on object",
-        )))
-    } else {
-        Err(Errors::InferenceError(
-            "Can't access property on non-object type".to_string(),
-        ))
     }
 }
 

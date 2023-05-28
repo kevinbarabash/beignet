@@ -166,6 +166,12 @@ pub struct Rest {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Utility {
+    pub name: String, // @@keyof, @@index, @@cond
+    pub types: Vec<Index>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TypeKind {
     Variable(Variable),       // TODO: rename to TypeVar
     Constructor(Constructor), // TODO: rename to TypeRef
@@ -173,6 +179,7 @@ pub enum TypeKind {
     Function(Function),
     Object(Object),
     Rest(Rest),
+    Utility(Utility),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -273,10 +280,12 @@ impl Type {
                         }
                         TObjElem::Index(TIndex { key, mutable, t }) => {
                             let t = arena[*t].as_string(arena);
+                            let key_t = arena[key.t].as_string(arena);
+                            let name = &key.name;
                             if *mutable {
-                                fields.push(format!("{}: mut {}", key.name, t));
+                                fields.push(format!("[{name}: {key_t}]: mut {t}"));
                             } else {
-                                fields.push(format!("{}: {}", key.name, t));
+                                fields.push(format!("[{name}: {key_t}]: {t}"));
                             }
                         }
                         TObjElem::Prop(TProp {
@@ -327,6 +336,22 @@ impl Type {
                     arena[func.ret].as_string(arena),
                 )
             }
+            TypeKind::Utility(Utility { name, types }) => match name.as_str() {
+                "@@keyof" => format!("keyof {}", arena[types[0]].as_string(arena)),
+                "@@index" => format!(
+                    "{}[{}]",
+                    arena[types[0]].as_string(arena),
+                    arena[types[1]].as_string(arena)
+                ),
+                "@@cond" => format!(
+                    "{} extends {} ? {} : {}",
+                    arena[types[0]].as_string(arena),
+                    arena[types[1]].as_string(arena),
+                    arena[types[2]].as_string(arena),
+                    arena[types[3]].as_string(arena),
+                ),
+                _ => unimplemented!(),
+            },
         }
     }
 }
@@ -463,6 +488,15 @@ pub fn new_rest_type(arena: &mut Arena<Type>, t: Index) -> Index {
 pub fn new_lit_type(arena: &mut Arena<Type>, lit: &Lit) -> Index {
     arena.insert(Type {
         kind: TypeKind::Literal(lit.clone()),
+    })
+}
+
+pub fn new_utility_type(arena: &mut Arena<Type>, name: &str, types: &[Index]) -> Index {
+    arena.insert(Type {
+        kind: TypeKind::Utility(Utility {
+            name: name.to_string(),
+            types: types.to_vec(),
+        }),
     })
 }
 
