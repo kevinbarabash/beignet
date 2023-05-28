@@ -5,7 +5,7 @@ use crate::ast::{Lit, Num, SourceLocation, Str};
 use crate::context::*;
 use crate::errors::*;
 use crate::types::*;
-use crate::unify::unify;
+use crate::unify::*;
 
 /// Checks whether a type variable occurs in a type expression.
 ///
@@ -174,164 +174,12 @@ pub fn expand_type(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<I
             }
         },
         TypeKind::Utility(Utility { name, types }) => match name.as_str() {
-            "@@index" => expand_index_access(arena, ctx, types[0], types[1]),
+            "@@index" => get_computed_member(arena, ctx, types[0], types[1]),
             "@@keyof" => expand_keyof(arena, ctx, types[0]),
             _ => Err(Errors::InferenceError(format!(
                 "Can't find utility type for {name}"
             ))),
         },
-    }
-}
-
-// TODO: check that the index access is valid where it's inferred
-pub fn expand_index_access(
-    arena: &mut Arena<Type>,
-    ctx: &Context,
-    obj: Index,
-    index: Index,
-) -> Result<Index, Errors> {
-    let obj = expand_type(arena, ctx, obj)?;
-    let index = expand_type(arena, ctx, index)?;
-
-    eprintln!("obj: {}", arena[obj].as_string(arena));
-    eprintln!("index: {}", arena[index].as_string(arena));
-
-    match (&arena[obj].kind.clone(), &arena[index].kind.clone()) {
-        (TypeKind::Object(Object { props }), TypeKind::Literal(Lit::Str(Str { value, .. }))) => {
-            let mut indexer: Option<TIndex> = None;
-            for prop in props {
-                if let TObjElem::Prop(TProp {
-                    name,
-                    t,
-                    optional,
-                    mutable: _,
-                }) = prop
-                {
-                    let name = match name {
-                        TPropKey::StringKey(value) => value,
-                        TPropKey::NumberKey(value) => value,
-                    };
-                    if name == value {
-                        return match optional {
-                            true => {
-                                let undefined = new_constructor(arena, "undefined", &[]);
-                                Ok(new_union_type(arena, &[*t, undefined]))
-                            }
-                            false => Ok(*t),
-                        };
-                    }
-                }
-
-                if let TObjElem::Index(index) = prop {
-                    indexer = Some(index.clone());
-                }
-            }
-
-            if let Some(indexer) = indexer {
-                match unify(arena, ctx, index, indexer.key.t) {
-                    Ok(_) => {
-                        let undefined = new_constructor(arena, "undefined", &[]);
-                        Ok(new_union_type(arena, &[indexer.t, undefined]))
-                    }
-                    Err(_) => Err(Errors::InferenceError(format!(
-                        "Couldn't find property {} in object {}",
-                        value,
-                        arena[obj].as_string(arena)
-                    ))),
-                }
-            } else {
-                Err(Errors::InferenceError(format!(
-                    "Couldn't find property {} in object {}",
-                    value,
-                    arena[obj].as_string(arena)
-                )))
-            }
-        }
-        (TypeKind::Object(Object { props }), TypeKind::Literal(Lit::Num(Num { value, .. }))) => {
-            let mut indexer: Option<TIndex> = None;
-            for prop in props {
-                if let TObjElem::Prop(TProp {
-                    name,
-                    t,
-                    optional,
-                    mutable: _,
-                }) = prop
-                {
-                    let name = match name {
-                        TPropKey::StringKey(value) => value,
-                        TPropKey::NumberKey(value) => value,
-                    };
-                    if name == value {
-                        return match optional {
-                            true => {
-                                let undefined = new_constructor(arena, "undefined", &[]);
-                                Ok(new_union_type(arena, &[*t, undefined]))
-                            }
-                            false => Ok(*t),
-                        };
-                    }
-                }
-
-                if let TObjElem::Index(index) = prop {
-                    indexer = Some(index.clone());
-                }
-            }
-
-            if let Some(indexer) = indexer {
-                match unify(arena, ctx, index, indexer.key.t) {
-                    Ok(_) => {
-                        let undefined = new_constructor(arena, "undefined", &[]);
-                        Ok(new_union_type(arena, &[indexer.t, undefined]))
-                    }
-                    Err(_) => Err(Errors::InferenceError(format!(
-                        "Couldn't find property {} in object {}",
-                        value,
-                        arena[obj].as_string(arena)
-                    ))),
-                }
-            } else {
-                Err(Errors::InferenceError(format!(
-                    "Couldn't find property {} in object {}",
-                    value,
-                    arena[obj].as_string(arena)
-                )))
-            }
-        }
-        (TypeKind::Constructor(tuple), TypeKind::Literal(Lit::Num(Num { value, .. })))
-            if tuple.name == "@@tuple" =>
-        {
-            let index: usize = str::parse(value)
-                .map_err(|_| Errors::InferenceError(format!("{} isn't a valid index", value)))?;
-
-            if index >= tuple.types.len() {
-                return Err(Errors::InferenceError(format!(
-                    "Index {} out of bounds for tuple {}",
-                    index,
-                    arena[obj].as_string(arena)
-                )));
-            }
-
-            Ok(tuple.types[index])
-        }
-        (TypeKind::Object(_), TypeKind::Constructor(number)) if number.name == "string" => {
-            todo!("number index access on objects where the 'string' type is the key")
-        }
-        (TypeKind::Object(_), TypeKind::Constructor(number)) if number.name == "number" => {
-            todo!("number index access on object where the 'number' type is the key")
-        }
-        (TypeKind::Constructor(tuple), TypeKind::Constructor(number))
-            if tuple.name == "@@tuple" && number.name == "number" =>
-        {
-            let mut types = tuple.types.clone();
-            types.push(new_constructor(arena, "undefined", &[]));
-
-            Ok(new_union_type(arena, &types))
-        }
-        _ => Err(Errors::InferenceError(format!(
-            "{} can't be used as a key on {}",
-            arena[index].as_string(arena),
-            arena[obj].as_string(arena),
-        ))),
     }
 }
 
@@ -369,5 +217,291 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
             "{} isn't an object",
             arena[t].as_string(arena),
         ))),
+    }
+}
+
+pub fn get_computed_member(
+    arena: &mut Arena<Type>,
+    ctx: &Context,
+    obj_idx: Index,
+    key_idx: Index,
+) -> Result<Index, Errors> {
+    // NOTE: cloning is fine here because we aren't mutating `obj_type` or
+    // `prop_type`.
+    let obj_type = arena[obj_idx].clone();
+    let key_type = arena[key_idx].clone();
+
+    match &obj_type.kind {
+        TypeKind::Object(_) => get_prop(arena, ctx, obj_idx, key_idx),
+        // let tuple = [5, "hello", true]
+        // tuple[1]; // "hello"
+        TypeKind::Constructor(tuple) if tuple.name == "@@tuple" => {
+            match &key_type.kind {
+                TypeKind::Literal(Lit::Num(Num { value, .. })) => {
+                    let index: usize = str::parse(value).map_err(|_| {
+                        Errors::InferenceError(format!("{} isn't a valid index", value))
+                    })?;
+                    if index < tuple.types.len() {
+                        // TODO: update AST with the inferred type
+                        return Ok(tuple.types[index]);
+                    }
+                    Err(Errors::InferenceError(format!(
+                        "{index} was outside the bounds 0..{} of the tuple",
+                        tuple.types.len()
+                    )))
+                }
+                TypeKind::Literal(Lit::Str(_)) => {
+                    // TODO: look up methods on the `Array` interface
+                    // we need to instantiate the scheme such that `T` is equal
+                    // to the union of all types in the tuple
+                    get_prop(arena, ctx, obj_idx, key_idx)
+                }
+                TypeKind::Constructor(constructor) if constructor.name == "number" => {
+                    let mut types = tuple.types.clone();
+                    types.push(new_constructor(arena, "undefined", &[]));
+                    Ok(new_union_type(arena, &types))
+                }
+                _ => Err(Errors::InferenceError(
+                    "Can only access tuple properties with a number".to_string(),
+                )),
+            }
+        }
+        // declare let tuple: [number, number] | [string, string]
+        // tuple[1]; // number | string
+        TypeKind::Constructor(union) if union.name == "@@union" => {
+            let mut result_types = vec![];
+            let mut undefined_count = 0;
+            for idx in &union.types {
+                match get_computed_member(arena, ctx, *idx, key_idx) {
+                    Ok(t) => result_types.push(t),
+                    Err(_) => {
+                        // TODO: check what the error is, we may want to propagate
+                        // certain errors
+                        if undefined_count == 0 {
+                            let undefined = new_constructor(arena, "undefined", &[]);
+                            result_types.push(undefined);
+                        }
+                        undefined_count += 1;
+                    }
+                }
+            }
+            if undefined_count == union.types.len() {
+                // TODO: include name of property in error message
+                Err(Errors::InferenceError(
+                    "Couldn't find property on object".to_string(),
+                ))
+            } else {
+                Ok(new_union_type(arena, &result_types))
+            }
+        }
+        TypeKind::Constructor(Constructor {
+            name: alias_name,
+            types,
+            ..
+        }) if !alias_name.starts_with("@@") => match ctx.schemes.get(alias_name) {
+            Some(scheme) => {
+                let obj_idx = expand_alias(arena, alias_name, scheme, types)?;
+                get_computed_member(arena, ctx, obj_idx, key_idx)
+            }
+            None => Err(Errors::InferenceError(format!(
+                "Can't find type alias for {alias_name}"
+            ))),
+        },
+        _ => Err(Errors::InferenceError(
+            "Can only access properties on objects/tuples".to_string(),
+        )),
+    }
+}
+
+pub fn get_prop(
+    arena: &mut Arena<Type>,
+    ctx: &Context,
+    obj_idx: Index,
+    key_idx: Index,
+) -> Result<Index, Errors> {
+    let undefined = new_constructor(arena, "undefined", &[]);
+    // It's fine to clone here because we aren't mutating
+    let obj_type = arena[obj_idx].clone();
+    let key_type = arena[key_idx].clone();
+
+    if let TypeKind::Object(object) = &obj_type.kind {
+        match &key_type.kind {
+            TypeKind::Constructor(constructor)
+                if constructor.name == "number"
+                    || constructor.name == "string"
+                    || constructor.name == "symbol" =>
+            {
+                let mut maybe_index: Option<&TIndex> = None;
+                let mut values: Vec<Index> = vec![];
+
+                for prop in &object.props {
+                    match prop {
+                        TObjElem::Method(method) => {
+                            match &method.name {
+                                TPropKey::StringKey(_) if constructor.name == "string" => (),
+                                TPropKey::NumberKey(_) if constructor.name == "number" => (),
+                                _ => continue,
+                            };
+
+                            values.push(arena.insert(Type {
+                                kind: TypeKind::Function(Function {
+                                    params: method.params.clone(),
+                                    ret: method.ret,
+                                    type_params: method.type_params.clone(),
+                                }),
+                            }));
+                        }
+                        TObjElem::Index(index) => {
+                            if maybe_index.is_some() {
+                                return Err(Errors::InferenceError(
+                                    "Object types can only have a single indexer".to_string(),
+                                ));
+                            }
+                            maybe_index = Some(index);
+                        }
+                        TObjElem::Prop(prop) => {
+                            match &prop.name {
+                                TPropKey::StringKey(_) if constructor.name == "string" => (),
+                                TPropKey::NumberKey(_) if constructor.name == "number" => (),
+                                _ => continue,
+                            };
+
+                            let prop_t = match prop.optional {
+                                true => new_union_type(arena, &[prop.t, undefined]),
+                                false => prop.t,
+                            };
+                            values.push(prop_t);
+                        }
+                    }
+                }
+
+                // TODO: handle combinations of indexers and non-indexer elements
+                if let Some(indexer) = maybe_index {
+                    match unify(arena, ctx, key_idx, indexer.key.t) {
+                        Ok(_) => {
+                            let undefined = new_constructor(arena, "undefined", &[]);
+                            Ok(new_union_type(arena, &[indexer.t, undefined]))
+                        }
+                        Err(_) => Err(Errors::InferenceError(format!(
+                            "{} is not a valid indexer for {}",
+                            key_type.as_string(arena),
+                            obj_type.as_string(arena)
+                        ))),
+                    }
+                } else if !values.is_empty() {
+                    values.push(undefined);
+                    Ok(new_union_type(arena, &values))
+                } else {
+                    Err(Errors::InferenceError(format!(
+                        "{} has no indexer",
+                        obj_type.as_string(arena)
+                    )))
+                }
+            }
+            TypeKind::Literal(Lit::Str(Str { value: name, .. })) => {
+                let mut maybe_index: Option<&TIndex> = None;
+                for prop in &object.props {
+                    match prop {
+                        TObjElem::Method(method) => {
+                            let key = match &method.name {
+                                TPropKey::StringKey(key) => key,
+                                TPropKey::NumberKey(key) => key,
+                            };
+                            if key == name {
+                                return Ok(arena.insert(Type {
+                                    kind: TypeKind::Function(Function {
+                                        params: method.params.clone(),
+                                        ret: method.ret,
+                                        type_params: method.type_params.clone(),
+                                    }),
+                                }));
+                            }
+                        }
+                        TObjElem::Index(index) => {
+                            if maybe_index.is_some() {
+                                return Err(Errors::InferenceError(
+                                    "Object types can only have a single indexer".to_string(),
+                                ));
+                            }
+                            maybe_index = Some(index);
+                        }
+                        TObjElem::Prop(prop) => {
+                            let key = match &prop.name {
+                                TPropKey::StringKey(key) => key,
+                                TPropKey::NumberKey(key) => key,
+                            };
+                            if key == name {
+                                let prop_t = match prop.optional {
+                                    true => new_union_type(arena, &[prop.t, undefined]),
+                                    false => prop.t,
+                                };
+                                return Ok(prop_t);
+                            }
+                        }
+                    }
+                }
+
+                if let Some(indexer) = maybe_index {
+                    match unify(arena, ctx, key_idx, indexer.key.t) {
+                        Ok(_) => {
+                            let undefined = new_constructor(arena, "undefined", &[]);
+                            Ok(new_union_type(arena, &[indexer.t, undefined]))
+                        }
+                        Err(_) => Err(Errors::InferenceError(format!(
+                            "Couldn't find property {} in object",
+                            name,
+                        ))),
+                    }
+                } else {
+                    Err(Errors::InferenceError(format!(
+                        "Couldn't find property '{name}' on object",
+                    )))
+                }
+            }
+            TypeKind::Literal(Lit::Num(Num { value: name, .. })) => {
+                let mut maybe_index: Option<&TIndex> = None;
+                for prop in &object.props {
+                    if let TObjElem::Index(index) = prop {
+                        if maybe_index.is_some() {
+                            return Err(Errors::InferenceError(
+                                "Object types can only have a single indexer".to_string(),
+                            ));
+                        }
+                        maybe_index = Some(index);
+                    }
+                    // QUESTION: Do we care about allowing numbers as keys for
+                    // methods and props?
+                }
+
+                if let Some(indexer) = maybe_index {
+                    match unify(arena, ctx, key_idx, indexer.key.t) {
+                        Ok(_) => {
+                            let undefined = new_constructor(arena, "undefined", &[]);
+                            Ok(new_union_type(arena, &[indexer.t, undefined]))
+                        }
+                        Err(_) => Err(Errors::InferenceError(format!(
+                            "Couldn't find property {} in object",
+                            name,
+                        ))),
+                    }
+                } else {
+                    Err(Errors::InferenceError(format!(
+                        "Couldn't find property '{name}' on object",
+                    )))
+                }
+            }
+            TypeKind::Utility(_) => {
+                // expand the utilty type and then check again
+                todo!()
+            }
+            _ => Err(Errors::InferenceError(format!(
+                "{} is not a valid key",
+                arena[key_idx].as_string(arena)
+            ))),
+        }
+    } else {
+        Err(Errors::InferenceError(
+            "Can't access property on non-object type".to_string(),
+        ))
     }
 }

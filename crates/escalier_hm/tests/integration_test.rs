@@ -597,7 +597,10 @@ fn tuple_member() -> Result<(), Errors> {
     let t = my_ctx.values.get("second").unwrap();
     assert_eq!(arena[*t].as_string(&arena), r#""hello""#.to_string(),);
     let t = my_ctx.values.get("any").unwrap();
-    assert_eq!(arena[*t].as_string(&arena), r#"5 | "hello""#.to_string(),);
+    assert_eq!(
+        arena[*t].as_string(&arena),
+        r#"5 | "hello" | undefined"#.to_string(),
+    );
 
     Ok(())
 }
@@ -2106,7 +2109,7 @@ fn missing_property_accesses_on_union_of_objects() -> Result<(), Errors> {
     assert_eq!(
         result,
         Err(Errors::InferenceError(
-            "Couldn't find property z on object".to_string()
+            "Couldn't find property \"z\" on object".to_string()
         ))
     );
 
@@ -2453,7 +2456,6 @@ fn test_index_access_type() -> Result<(), Errors> {
 
 // TODO: make this test pass
 #[test]
-#[ignore]
 fn test_index_access_type_using_string_as_indexer() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
@@ -2475,14 +2477,12 @@ fn test_index_access_type_using_string_as_indexer() -> Result<(), Errors> {
     Ok(())
 }
 
-// TODO: make this test pass
 #[test]
-#[ignore]
 fn test_index_access_type_using_number_as_indexer() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"   
-    type Foo = {a: string, b: number, [key: number]: boolean]};
+    type Foo = {a: string, b: number, [key: number]: boolean};
     type T = Foo[number];
     "#;
     let mut program = parse(src).unwrap();
@@ -2515,7 +2515,7 @@ fn test_index_access_type_missing_property() -> Result<(), Errors> {
     assert_eq!(
         result,
         Err(Errors::InferenceError(
-            "Couldn't find property c in object {a: string, b?: number}".to_string()
+            "Couldn't find property 'c' on object".to_string()
         ))
     );
 
@@ -2541,7 +2541,7 @@ fn test_index_access_type_missing_indexer() -> Result<(), Errors> {
     assert_eq!(
         result,
         Err(Errors::InferenceError(
-            "Couldn't find property c in object {[key: number]: string}".to_string()
+            "Couldn't find property c in object".to_string()
         ))
     );
 
@@ -2628,7 +2628,7 @@ fn test_index_access_out_of_bounds_on_tuple() -> Result<(), Errors> {
     assert_eq!(
         result,
         Err(Errors::InferenceError(
-            "Index 3 out of bounds for tuple [number, string, boolean]".to_string()
+            "3 was outside the bounds 0..3 of the tuple".to_string()
         ))
     );
 
