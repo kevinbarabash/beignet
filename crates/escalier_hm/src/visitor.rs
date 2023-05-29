@@ -81,6 +81,16 @@ pub trait Visitor: KeyValueStore<Index, Type> {
         }
     }
 
+    fn visit_utility(&mut self, utility: &Utility) -> Index {
+        let t = Type {
+            kind: TypeKind::Utility(Utility {
+                types: self.visit_indexes(&utility.types),
+                ..utility.to_owned()
+            }),
+        };
+        self.put_type(t)
+    }
+
     fn visit_index(&mut self, idx: &Index) -> Index {
         let (idx, t) = self.get_type(idx);
         let kind = match &t.kind {
@@ -90,6 +100,7 @@ pub trait Visitor: KeyValueStore<Index, Type> {
             TypeKind::Function(func) => TypeKind::Function(self.visit_function(func)),
             TypeKind::Object(obj) => TypeKind::Object(self.visit_object(obj)),
             TypeKind::Rest(rest) => TypeKind::Rest(self.visit_rest(rest)),
+            TypeKind::Utility(utility) => return self.visit_utility(utility),
         };
         let new_t = Type { kind };
         self.put_type(new_t)
