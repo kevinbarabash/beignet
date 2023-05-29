@@ -1,0 +1,211 @@
+---
+source: crates/escalier_old_parser/src/lib.rs
+expression: "parse(\"type Foo<T> = {mut [P in keyof T]?: T[P]};\")"
+---
+Ok(
+    Program {
+        body: [
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 42,
+                    },
+                },
+                span: 0..42,
+                kind: TypeDecl(
+                    TypeDecl {
+                        declare: false,
+                        id: Ident {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 5,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 8,
+                                },
+                            },
+                            span: 5..8,
+                            name: "Foo",
+                        },
+                        type_ann: TypeAnn {
+                            kind: Mapped(
+                                MappedType {
+                                    type_param: TypeParam {
+                                        span: 20..32,
+                                        name: Ident {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 20,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 21,
+                                                },
+                                            },
+                                            span: 20..21,
+                                            name: "P",
+                                        },
+                                        constraint: Some(
+                                            TypeAnn {
+                                                kind: KeyOf(
+                                                    KeyOfType {
+                                                        type_ann: TypeAnn {
+                                                            kind: TypeRef(
+                                                                TypeRef {
+                                                                    name: "T",
+                                                                    type_args: None,
+                                                                },
+                                                            ),
+                                                            loc: SourceLocation {
+                                                                start: Position {
+                                                                    line: 0,
+                                                                    column: 31,
+                                                                },
+                                                                end: Position {
+                                                                    line: 0,
+                                                                    column: 32,
+                                                                },
+                                                            },
+                                                            span: 31..32,
+                                                            inferred_type: None,
+                                                        },
+                                                    },
+                                                ),
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 25,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 32,
+                                                    },
+                                                },
+                                                span: 25..32,
+                                                inferred_type: None,
+                                            },
+                                        ),
+                                        default: None,
+                                    },
+                                    optional: Some(
+                                        TMappedTypeChange {
+                                            span: 33..34,
+                                            change: Plus,
+                                        },
+                                    ),
+                                    mutable: Some(
+                                        TMappedTypeChange {
+                                            span: 15..18,
+                                            change: Plus,
+                                        },
+                                    ),
+                                    type_ann: TypeAnn {
+                                        kind: IndexedAccess(
+                                            IndexedAccessType {
+                                                obj_type: TypeAnn {
+                                                    kind: TypeRef(
+                                                        TypeRef {
+                                                            name: "T",
+                                                            type_args: None,
+                                                        },
+                                                    ),
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 0,
+                                                            column: 36,
+                                                        },
+                                                        end: Position {
+                                                            line: 0,
+                                                            column: 37,
+                                                        },
+                                                    },
+                                                    span: 36..37,
+                                                    inferred_type: None,
+                                                },
+                                                index_type: TypeAnn {
+                                                    kind: TypeRef(
+                                                        TypeRef {
+                                                            name: "P",
+                                                            type_args: None,
+                                                        },
+                                                    ),
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 0,
+                                                            column: 38,
+                                                        },
+                                                        end: Position {
+                                                            line: 0,
+                                                            column: 39,
+                                                        },
+                                                    },
+                                                    span: 38..39,
+                                                    inferred_type: None,
+                                                },
+                                            },
+                                        ),
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 36,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 40,
+                                            },
+                                        },
+                                        span: 36..40,
+                                        inferred_type: None,
+                                    },
+                                },
+                            ),
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 14,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 41,
+                                },
+                            },
+                            span: 14..41,
+                            inferred_type: None,
+                        },
+                        type_params: Some(
+                            [
+                                TypeParam {
+                                    span: 9..10,
+                                    name: Ident {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 9,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 10,
+                                            },
+                                        },
+                                        span: 9..10,
+                                        name: "T",
+                                    },
+                                    constraint: None,
+                                    default: None,
+                                },
+                            ],
+                        ),
+                    },
+                ),
+            },
+        ],
+    },
+)

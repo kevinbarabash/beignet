@@ -1,0 +1,143 @@
+---
+source: crates/escalier_old_parser/src/lib.rs
+expression: "parse(\"type Foo<T extends string> = {bar: T};\")"
+---
+Ok(
+    Program {
+        body: [
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 38,
+                    },
+                },
+                span: 0..38,
+                kind: TypeDecl(
+                    TypeDecl {
+                        declare: false,
+                        id: Ident {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 5,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 8,
+                                },
+                            },
+                            span: 5..8,
+                            name: "Foo",
+                        },
+                        type_ann: TypeAnn {
+                            kind: Object(
+                                ObjectType {
+                                    elems: [
+                                        Prop(
+                                            TProp {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 30,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 36,
+                                                    },
+                                                },
+                                                span: 30..36,
+                                                name: "bar",
+                                                optional: false,
+                                                mutable: false,
+                                                type_ann: TypeAnn {
+                                                    kind: TypeRef(
+                                                        TypeRef {
+                                                            name: "T",
+                                                            type_args: None,
+                                                        },
+                                                    ),
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 0,
+                                                            column: 35,
+                                                        },
+                                                        end: Position {
+                                                            line: 0,
+                                                            column: 36,
+                                                        },
+                                                    },
+                                                    span: 35..36,
+                                                    inferred_type: None,
+                                                },
+                                            },
+                                        ),
+                                    ],
+                                },
+                            ),
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 29,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 37,
+                                },
+                            },
+                            span: 29..37,
+                            inferred_type: None,
+                        },
+                        type_params: Some(
+                            [
+                                TypeParam {
+                                    span: 9..25,
+                                    name: Ident {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 9,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 10,
+                                            },
+                                        },
+                                        span: 9..10,
+                                        name: "T",
+                                    },
+                                    constraint: Some(
+                                        TypeAnn {
+                                            kind: Keyword(
+                                                KeywordType {
+                                                    keyword: String,
+                                                },
+                                            ),
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 19,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 25,
+                                                },
+                                            },
+                                            span: 19..25,
+                                            inferred_type: None,
+                                        },
+                                    ),
+                                    default: None,
+                                },
+                            ],
+                        ),
+                    },
+                ),
+            },
+        ],
+    },
+)

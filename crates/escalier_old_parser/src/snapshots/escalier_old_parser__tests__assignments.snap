@@ -1,0 +1,106 @@
+---
+source: crates/escalier_old_parser/src/lib.rs
+expression: "parse(\"x = 5;\")"
+---
+Ok(
+    Program {
+        body: [
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 6,
+                    },
+                },
+                span: 0..6,
+                kind: ExprStmt(
+                    Expr {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 5,
+                            },
+                        },
+                        span: 0..5,
+                        kind: Assign(
+                            Assign {
+                                left: Expr {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 1,
+                                        },
+                                    },
+                                    span: 0..1,
+                                    kind: Ident(
+                                        Ident {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 0,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 1,
+                                                },
+                                            },
+                                            span: 0..1,
+                                            name: "x",
+                                        },
+                                    ),
+                                    inferred_type: None,
+                                },
+                                right: Expr {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 0,
+                                            column: 4,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 5,
+                                        },
+                                    },
+                                    span: 4..5,
+                                    kind: Lit(
+                                        Num(
+                                            Num {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 4,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 5,
+                                                    },
+                                                },
+                                                span: 4..5,
+                                                value: "5",
+                                            },
+                                        ),
+                                    ),
+                                    inferred_type: None,
+                                },
+                                op: Eq,
+                            },
+                        ),
+                        inferred_type: None,
+                    },
+                ),
+            },
+        ],
+    },
+)

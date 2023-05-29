@@ -1,0 +1,57 @@
+---
+source: crates/escalier_old_parser/src/lib.rs
+expression: "parse(\"<Foo></Foo>\")"
+---
+Ok(
+    Program {
+        body: [
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 11,
+                    },
+                },
+                span: 0..11,
+                kind: ExprStmt(
+                    Expr {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 11,
+                            },
+                        },
+                        span: 0..11,
+                        kind: JSXElement(
+                            JSXElement {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 0,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 11,
+                                    },
+                                },
+                                span: 0..11,
+                                name: "Foo",
+                                attrs: [],
+                                children: [],
+                            },
+                        ),
+                        inferred_type: None,
+                    },
+                ),
+            },
+        ],
+    },
+)

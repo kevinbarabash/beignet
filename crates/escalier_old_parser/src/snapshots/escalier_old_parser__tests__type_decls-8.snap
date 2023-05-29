@@ -1,0 +1,91 @@
+---
+source: crates/escalier_old_parser/src/lib.rs
+expression: "parse(\"type Foo = typeof foo;\")"
+---
+Ok(
+    Program {
+        body: [
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 22,
+                    },
+                },
+                span: 0..22,
+                kind: TypeDecl(
+                    TypeDecl {
+                        declare: false,
+                        id: Ident {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 5,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 8,
+                                },
+                            },
+                            span: 5..8,
+                            name: "Foo",
+                        },
+                        type_ann: TypeAnn {
+                            kind: Query(
+                                QueryType {
+                                    expr: Expr {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 18,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 21,
+                                            },
+                                        },
+                                        span: 18..21,
+                                        kind: Ident(
+                                            Ident {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 18,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 21,
+                                                    },
+                                                },
+                                                span: 18..21,
+                                                name: "foo",
+                                            },
+                                        ),
+                                        inferred_type: None,
+                                    },
+                                },
+                            ),
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 11,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 21,
+                                },
+                            },
+                            span: 11..21,
+                            inferred_type: None,
+                        },
+                        type_params: None,
+                    },
+                ),
+            },
+        ],
+    },
+)
