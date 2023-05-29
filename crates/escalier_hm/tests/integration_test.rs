@@ -2419,3 +2419,5 @@ fn test_func_param_tuple_rest_patterns() -> Result<(), Errors> {
 
     Ok(())
 }
+
+// This is a test
