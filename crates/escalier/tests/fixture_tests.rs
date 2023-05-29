@@ -114,7 +114,7 @@ pub fn all_reports_to_string(src: &str, checker: &Checker) -> String {
 }
 
 fn compile(input: &str, lib: &str) -> (String, String, String, String) {
-    let mut program = match escalier_parser::parse(input) {
+    let mut program = match escalier_old_parser::parse(input) {
         Ok(program) => program,
         Err(error) => {
             return (

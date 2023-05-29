@@ -1,0 +1,155 @@
+---
+source: crates/escalier_old_parser/src/lib.rs
+expression: "parse(\"type MutPoint = mut {x: number, y: number};\")"
+---
+Ok(
+    Program {
+        body: [
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 43,
+                    },
+                },
+                span: 0..43,
+                kind: TypeDecl(
+                    TypeDecl {
+                        declare: false,
+                        id: Ident {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 5,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 13,
+                                },
+                            },
+                            span: 5..13,
+                            name: "MutPoint",
+                        },
+                        type_ann: TypeAnn {
+                            kind: Mutable(
+                                MutableType {
+                                    type_ann: TypeAnn {
+                                        kind: Object(
+                                            ObjectType {
+                                                elems: [
+                                                    Prop(
+                                                        TProp {
+                                                            loc: SourceLocation {
+                                                                start: Position {
+                                                                    line: 0,
+                                                                    column: 21,
+                                                                },
+                                                                end: Position {
+                                                                    line: 0,
+                                                                    column: 30,
+                                                                },
+                                                            },
+                                                            span: 21..30,
+                                                            name: "x",
+                                                            optional: false,
+                                                            mutable: false,
+                                                            type_ann: TypeAnn {
+                                                                kind: Keyword(
+                                                                    KeywordType {
+                                                                        keyword: Number,
+                                                                    },
+                                                                ),
+                                                                loc: SourceLocation {
+                                                                    start: Position {
+                                                                        line: 0,
+                                                                        column: 24,
+                                                                    },
+                                                                    end: Position {
+                                                                        line: 0,
+                                                                        column: 30,
+                                                                    },
+                                                                },
+                                                                span: 24..30,
+                                                                inferred_type: None,
+                                                            },
+                                                        },
+                                                    ),
+                                                    Prop(
+                                                        TProp {
+                                                            loc: SourceLocation {
+                                                                start: Position {
+                                                                    line: 0,
+                                                                    column: 32,
+                                                                },
+                                                                end: Position {
+                                                                    line: 0,
+                                                                    column: 41,
+                                                                },
+                                                            },
+                                                            span: 32..41,
+                                                            name: "y",
+                                                            optional: false,
+                                                            mutable: false,
+                                                            type_ann: TypeAnn {
+                                                                kind: Keyword(
+                                                                    KeywordType {
+                                                                        keyword: Number,
+                                                                    },
+                                                                ),
+                                                                loc: SourceLocation {
+                                                                    start: Position {
+                                                                        line: 0,
+                                                                        column: 35,
+                                                                    },
+                                                                    end: Position {
+                                                                        line: 0,
+                                                                        column: 41,
+                                                                    },
+                                                                },
+                                                                span: 35..41,
+                                                                inferred_type: None,
+                                                            },
+                                                        },
+                                                    ),
+                                                ],
+                                            },
+                                        ),
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 0,
+                                                column: 20,
+                                            },
+                                            end: Position {
+                                                line: 0,
+                                                column: 42,
+                                            },
+                                        },
+                                        span: 20..42,
+                                        inferred_type: None,
+                                    },
+                                },
+                            ),
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 16,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 42,
+                                },
+                            },
+                            span: 16..42,
+                            inferred_type: None,
+                        },
+                        type_params: None,
+                    },
+                ),
+            },
+        ],
+    },
+)

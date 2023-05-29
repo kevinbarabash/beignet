@@ -1,0 +1,113 @@
+---
+source: crates/escalier_old_parser/src/lib.rs
+expression: "parse(\"class Foo { foo(): string {} }\")"
+---
+Ok(
+    Program {
+        body: [
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 30,
+                    },
+                },
+                span: 0..30,
+                kind: ClassDecl(
+                    ClassDecl {
+                        ident: Ident {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 6,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 9,
+                                },
+                            },
+                            span: 6..9,
+                            name: "Foo",
+                        },
+                        class: Class {
+                            ident: Ident {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 6,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 9,
+                                    },
+                                },
+                                span: 6..9,
+                                name: "Foo",
+                            },
+                            body: [
+                                Method(
+                                    ClassMethod {
+                                        key: Ident {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 12,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 15,
+                                                },
+                                            },
+                                            span: 12..15,
+                                            name: "foo",
+                                        },
+                                        kind: Method,
+                                        lambda: Lambda {
+                                            params: [],
+                                            body: Block(
+                                                Block {
+                                                    span: 26..28,
+                                                    stmts: [],
+                                                },
+                                            ),
+                                            is_async: false,
+                                            return_type: Some(
+                                                TypeAnn {
+                                                    kind: Keyword(
+                                                        KeywordType {
+                                                            keyword: String,
+                                                        },
+                                                    ),
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 0,
+                                                            column: 19,
+                                                        },
+                                                        end: Position {
+                                                            line: 0,
+                                                            column: 25,
+                                                        },
+                                                    },
+                                                    span: 19..25,
+                                                    inferred_type: None,
+                                                },
+                                            ),
+                                            type_params: None,
+                                        },
+                                        is_static: false,
+                                        is_mutating: false,
+                                    },
+                                ),
+                            ],
+                            type_params: None,
+                        },
+                    },
+                ),
+            },
+        ],
+    },
+)

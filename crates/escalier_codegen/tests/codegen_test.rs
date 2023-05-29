@@ -1,7 +1,7 @@
 use escalier_codegen::d_ts::codegen_d_ts;
 use escalier_codegen::js::codegen_js;
 use escalier_infer::{infer_prog, Checker, TypeError};
-use escalier_parser::parse;
+use escalier_old_parser::parse;
 
 fn compile(input: &str) -> (String, String) {
     let program = parse(input).unwrap();

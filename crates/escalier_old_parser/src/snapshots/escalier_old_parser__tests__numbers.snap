@@ -1,0 +1,57 @@
+---
+source: crates/escalier_old_parser/src/lib.rs
+expression: "parse(\"10;\")"
+---
+Ok(
+    Program {
+        body: [
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 3,
+                    },
+                },
+                span: 0..3,
+                kind: ExprStmt(
+                    Expr {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 0,
+                                column: 0,
+                            },
+                            end: Position {
+                                line: 0,
+                                column: 2,
+                            },
+                        },
+                        span: 0..2,
+                        kind: Lit(
+                            Num(
+                                Num {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 0,
+                                            column: 0,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 2,
+                                        },
+                                    },
+                                    span: 0..2,
+                                    value: "10",
+                                },
+                            ),
+                        ),
+                        inferred_type: None,
+                    },
+                ),
+            },
+        ],
+    },
+)

@@ -375,7 +375,7 @@ dependencies = [
  "escalier_codegen",
  "escalier_infer",
  "escalier_interop",
- "escalier_parser",
+ "escalier_old_parser",
  "insta",
  "pretty_assertions",
  "strip-ansi-escapes",
@@ -404,7 +404,7 @@ dependencies = [
  "escalier_codegen",
  "escalier_infer",
  "escalier_interop",
- "escalier_parser",
+ "escalier_old_parser",
  "insta",
  "pretty_assertions",
  "tree-sitter",
@@ -417,7 +417,7 @@ version = "0.1.0"
 dependencies = [
  "escalier_ast",
  "escalier_infer",
- "escalier_parser",
+ "escalier_old_parser",
  "insta",
  "itertools",
  "pretty_assertions",
@@ -457,7 +457,7 @@ dependencies = [
  "defaultmap",
  "derive-visitor",
  "escalier_ast",
- "escalier_parser",
+ "escalier_old_parser",
  "im",
  "insta",
  "itertools",
@@ -472,7 +472,7 @@ dependencies = [
  "derive-visitor",
  "escalier_ast",
  "escalier_infer",
- "escalier_parser",
+ "escalier_old_parser",
  "insta",
  "memoize",
  "swc_atoms",
@@ -491,7 +491,7 @@ dependencies = [
  "escalier_ast",
  "escalier_infer",
  "escalier_interop",
- "escalier_parser",
+ "escalier_old_parser",
  "insta",
  "lsp-server",
  "lsp-types",
@@ -500,7 +500,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "escalier_parser"
+name = "escalier_old_parser"
 version = "0.1.0"
 dependencies = [
  "escalier_ast",
@@ -511,6 +511,10 @@ dependencies = [
  "tree_sitter_escalier",
  "unescape",
 ]
+
+[[package]]
+name = "escalier_parser"
+version = "0.1.0"
 
 [[package]]
 name = "fnv"

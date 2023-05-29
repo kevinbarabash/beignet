@@ -1,0 +1,94 @@
+---
+source: crates/escalier_old_parser/src/lib.rs
+expression: "parse(\"   let x = 5;\")"
+---
+Ok(
+    Program {
+        body: [
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 3,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 13,
+                    },
+                },
+                span: 3..13,
+                kind: VarDecl(
+                    VarDecl {
+                        pattern: Pattern {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 7,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 8,
+                                },
+                            },
+                            span: 7..8,
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "x",
+                                    mutable: false,
+                                    span: 7..8,
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 0,
+                                            column: 7,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 8,
+                                        },
+                                    },
+                                },
+                            ),
+                            inferred_type: None,
+                        },
+                        type_ann: None,
+                        init: Some(
+                            Expr {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 11,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 12,
+                                    },
+                                },
+                                span: 11..12,
+                                kind: Lit(
+                                    Num(
+                                        Num {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 0,
+                                                    column: 11,
+                                                },
+                                                end: Position {
+                                                    line: 0,
+                                                    column: 12,
+                                                },
+                                            },
+                                            span: 11..12,
+                                            value: "5",
+                                        },
+                                    ),
+                                ),
+                                inferred_type: None,
+                            },
+                        ),
+                        declare: false,
+                    },
+                ),
+            },
+        ],
+    },
+)

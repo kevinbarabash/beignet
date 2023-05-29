@@ -1,5 +1,5 @@
 use escalier_codegen::js::*;
-use escalier_parser::parse;
+use escalier_old_parser::parse;
 
 fn compile(input: &str) -> String {
     let program = parse(input).unwrap();

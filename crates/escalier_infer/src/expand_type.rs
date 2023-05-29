@@ -784,7 +784,7 @@ const NEVER_TYPE: Type = Type {
 #[cfg(test)]
 mod tests {
     use crate::checker::Checker;
-    use escalier_parser::*;
+    use escalier_old_parser::*;
 
     fn infer_prog(input: &str) -> Checker {
         let mut prog = parse(input).unwrap();

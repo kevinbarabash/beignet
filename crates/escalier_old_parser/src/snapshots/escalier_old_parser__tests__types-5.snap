@@ -1,0 +1,176 @@
+---
+source: crates/escalier_old_parser/src/lib.rs
+expression: "parse(\"let arr: string[] | number[] = [];\")"
+---
+Ok(
+    Program {
+        body: [
+            Statement {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 0,
+                        column: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        column: 34,
+                    },
+                },
+                span: 0..34,
+                kind: VarDecl(
+                    VarDecl {
+                        pattern: Pattern {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 0,
+                                    column: 4,
+                                },
+                                end: Position {
+                                    line: 0,
+                                    column: 7,
+                                },
+                            },
+                            span: 4..7,
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "arr",
+                                    mutable: false,
+                                    span: 4..7,
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 0,
+                                            column: 4,
+                                        },
+                                        end: Position {
+                                            line: 0,
+                                            column: 7,
+                                        },
+                                    },
+                                },
+                            ),
+                            inferred_type: None,
+                        },
+                        type_ann: Some(
+                            TypeAnn {
+                                kind: Union(
+                                    UnionType {
+                                        types: [
+                                            TypeAnn {
+                                                kind: Array(
+                                                    ArrayType {
+                                                        elem_type: TypeAnn {
+                                                            kind: Keyword(
+                                                                KeywordType {
+                                                                    keyword: String,
+                                                                },
+                                                            ),
+                                                            loc: SourceLocation {
+                                                                start: Position {
+                                                                    line: 0,
+                                                                    column: 9,
+                                                                },
+                                                                end: Position {
+                                                                    line: 0,
+                                                                    column: 15,
+                                                                },
+                                                            },
+                                                            span: 9..15,
+                                                            inferred_type: None,
+                                                        },
+                                                    },
+                                                ),
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 9,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 17,
+                                                    },
+                                                },
+                                                span: 9..17,
+                                                inferred_type: None,
+                                            },
+                                            TypeAnn {
+                                                kind: Array(
+                                                    ArrayType {
+                                                        elem_type: TypeAnn {
+                                                            kind: Keyword(
+                                                                KeywordType {
+                                                                    keyword: Number,
+                                                                },
+                                                            ),
+                                                            loc: SourceLocation {
+                                                                start: Position {
+                                                                    line: 0,
+                                                                    column: 20,
+                                                                },
+                                                                end: Position {
+                                                                    line: 0,
+                                                                    column: 26,
+                                                                },
+                                                            },
+                                                            span: 20..26,
+                                                            inferred_type: None,
+                                                        },
+                                                    },
+                                                ),
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 0,
+                                                        column: 20,
+                                                    },
+                                                    end: Position {
+                                                        line: 0,
+                                                        column: 28,
+                                                    },
+                                                },
+                                                span: 20..28,
+                                                inferred_type: None,
+                                            },
+                                        ],
+                                    },
+                                ),
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 9,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 28,
+                                    },
+                                },
+                                span: 9..28,
+                                inferred_type: None,
+                            },
+                        ),
+                        init: Some(
+                            Expr {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 0,
+                                        column: 31,
+                                    },
+                                    end: Position {
+                                        line: 0,
+                                        column: 33,
+                                    },
+                                },
+                                span: 31..33,
+                                kind: Tuple(
+                                    Tuple {
+                                        elems: [],
+                                    },
+                                ),
+                                inferred_type: None,
+                            },
+                        ),
+                        declare: false,
+                    },
+                ),
+            },
+        ],
+    },
+)

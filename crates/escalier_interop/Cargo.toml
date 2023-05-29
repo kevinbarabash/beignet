@@ -19,4 +19,4 @@ escalier_infer = { version = "0.1.0", path = "../escalier_infer" }
 
 [dev-dependencies]
 insta = "1.13.0"
-escalier_parser = { version = "0.1.0", path = "../escalier_old_parser" }
+escalier_old_parser = { version = "0.1.0", path = "../escalier_old_parser" }

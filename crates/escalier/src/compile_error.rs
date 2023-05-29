@@ -1,7 +1,7 @@
 use std::fmt;
 
 use escalier_infer::{Diagnostic, TypeError};
-use escalier_parser::ParseError;
+use escalier_old_parser::ParseError;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum CompileError {

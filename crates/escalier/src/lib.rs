@@ -49,7 +49,7 @@ pub unsafe extern "C" fn deallocate(ptr: *mut c_void, length: usize) {
 }
 
 fn _compile(input: &str, lib: &str) -> Result<(String, String, String, String), CompileError> {
-    let mut program = escalier_parser::parse(input)?;
+    let mut program = escalier_old_parser::parse(input)?;
     let ast = format!("{program:#?}");
 
     let (js, srcmap) = escalier_codegen::js::codegen_js(input, &program);
