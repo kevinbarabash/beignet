@@ -10,5 +10,6 @@ members = [
     "crates/escalier_infer",
     "crates/escalier_lsp",
     "crates/escalier_old_parser",
+    "crates/escalier_parser",
     "crates/tree_sitter_escalier",
 ]

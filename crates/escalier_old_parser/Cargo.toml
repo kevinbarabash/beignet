@@ -1,5 +1,5 @@
 [package]
-name = "escalier_parser"
+name = "escalier_old_parser"
 version = "0.1.0"
 edition = "2021"
 

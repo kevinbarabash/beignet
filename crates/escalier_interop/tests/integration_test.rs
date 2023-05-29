@@ -3,7 +3,7 @@ use std::fs;
 use escalier_ast::values::Program;
 use escalier_infer::{Checker, Context, TypeError};
 use escalier_interop::parse::*;
-use escalier_parser::parse;
+use escalier_old_parser::parse;
 
 pub fn messages(report: &[TypeError]) -> Vec<String> {
     report.iter().map(|error| error.to_string()).collect()

@@ -14,7 +14,7 @@ serde_json = "1.0.91"
 escalier_ast = { version = "0.1.0", path = "../escalier_ast" }
 escalier_interop = { version = "0.1.0", path = "../escalier_interop" }
 escalier_infer = { version = "0.1.0", path = "../escalier_infer" }
-escalier_parser = { version = "0.1.0", path = "../escalier_old_parser" }
+escalier_old_parser = { version = "0.1.0", path = "../escalier_old_parser" }
 
 [dev-dependencies]
 crossbeam = "0.8.2"
