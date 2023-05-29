@@ -1,3 +1,5 @@
+use crate::source_location::SourceLocation;
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TokenKind {
     Number(String),
@@ -5,6 +7,8 @@ pub enum TokenKind {
     Assign,
     Plus,
     Minus,
+    Times,
+    Divide,
     LeftParen,
     RightParen,
     LeftBrace,
@@ -22,21 +26,13 @@ pub enum TokenKind {
     LessThanOrEqual,
     GreaterThan,
     GreaterThanOrEqual,
+    Or,
+    And,
+    Eof,
 }
 
-#[derive(Debug)]
-pub struct Position {
-    pub line: usize,
-    pub column: usize,
-}
+#[derive(Debug, PartialEq, Eq, Clone)]
 
-#[derive(Debug)]
-pub struct SourceLocation {
-    pub start: Position,
-    pub end: Position,
-}
-
-#[derive(Debug)]
 pub struct Token {
     pub kind: TokenKind,
     pub loc: SourceLocation,

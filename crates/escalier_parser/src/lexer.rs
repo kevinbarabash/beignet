@@ -1,6 +1,7 @@
 use core::panic;
 
 use crate::scanner::Scanner;
+use crate::source_location::*;
 use crate::token::*;
 
 pub struct Lexer {
@@ -18,7 +19,7 @@ impl Lexer {
         let mut tokens = Vec::new();
         while !self.scanner.is_done() {
             let character = self.scanner.peek(0).unwrap();
-            let start: Position = self.scanner.position();
+            let start = self.scanner.position();
             let kind = match character {
                 'a'..='z' | 'A'..='Z' | '_' => {
                     tokens.push(self.lex_ident(start));

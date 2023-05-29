@@ -2,12 +2,19 @@ pub fn add(left: usize, right: usize) -> usize {
     left + right
 }
 
+mod expr;
+mod expr_parser;
 mod lexer;
 mod scanner;
+mod source_location;
 mod token;
+
+pub use expr_parser::parse_expr;
+pub use lexer::Lexer;
 
 #[cfg(test)]
 mod tests {
+    use crate::expr_parser::parse_expr;
     use crate::lexer::Lexer;
 
     #[test]
@@ -70,5 +77,32 @@ mod tests {
         let mut lexer = Lexer::new("1 ! 2");
 
         lexer.lex();
+    }
+
+    #[test]
+    fn parse_simple_addition() {
+        let mut lexer = Lexer::new("1 + 2 + 3");
+        let tokens = lexer.lex();
+
+        let ast = parse_expr(tokens);
+        eprintln!("{:#?}", ast);
+    }
+
+    #[test]
+    fn parse_addition_and_subtraction() {
+        let mut lexer = Lexer::new("1 + 2 - 3 + 4");
+        let tokens = lexer.lex();
+
+        let ast = parse_expr(tokens);
+        eprintln!("{:#?}", ast);
+    }
+
+    #[test]
+    fn parse_unary_operators() {
+        let mut lexer = Lexer::new("--a - +b");
+        let tokens = lexer.lex();
+
+        let ast = parse_expr(tokens);
+        eprintln!("{:#?}", ast);
     }
 }
