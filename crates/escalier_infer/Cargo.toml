@@ -16,5 +16,5 @@ im = "15.1.0"
 regex-syntax = "0.6.28"
 
 [dev-dependencies]
-escalier_parser = { version = "0.1.0", path = "../escalier_parser" }
+escalier_parser = { version = "0.1.0", path = "../escalier_old_parser" }
 insta = "1.13.0"

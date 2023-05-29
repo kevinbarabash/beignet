@@ -11,7 +11,7 @@ escalier_ast = { version = "0.1.0", path = "../escalier_ast" }
 escalier_codegen = { version = "0.1.0", path = "../escalier_codegen" }
 escalier_interop = { version = "0.1.0", path = "../escalier_interop" }
 escalier_infer = { version = "0.1.0", path = "../escalier_infer" }
-escalier_parser = { version = "0.1.0", path = "../escalier_parser" }
+escalier_parser = { version = "0.1.0", path = "../escalier_old_parser" }
 tree_sitter_escalier = { version = "0.1.0", path = "../tree_sitter_escalier" }
 
 [dev-dependencies]
