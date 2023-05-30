@@ -14,7 +14,7 @@ pub use lexer::Lexer;
 
 #[cfg(test)]
 mod tests {
-    use crate::expr_parser::parse_expr;
+    use crate::expr_parser::parse;
     use crate::lexer::Lexer;
 
     #[test]
@@ -81,28 +81,16 @@ mod tests {
 
     #[test]
     fn parse_simple_addition() {
-        let mut lexer = Lexer::new("1 + 2 + 3");
-        let tokens = lexer.lex();
-
-        let ast = parse_expr(tokens);
-        eprintln!("{:#?}", ast);
+        insta::assert_debug_snapshot!(parse("1 + 2 + 3"));
     }
 
     #[test]
     fn parse_addition_and_subtraction() {
-        let mut lexer = Lexer::new("1 + 2 - 3 + 4");
-        let tokens = lexer.lex();
-
-        let ast = parse_expr(tokens);
-        eprintln!("{:#?}", ast);
+        insta::assert_debug_snapshot!(parse("1 + 2 - 3 + 4"));
     }
 
     #[test]
     fn parse_unary_operators() {
-        let mut lexer = Lexer::new("--a - +b");
-        let tokens = lexer.lex();
-
-        let ast = parse_expr(tokens);
-        eprintln!("{:#?}", ast);
+        insta::assert_debug_snapshot!(parse("--a - +b"));
     }
 }

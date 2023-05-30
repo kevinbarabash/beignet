@@ -515,6 +515,9 @@ dependencies = [
 [[package]]
 name = "escalier_parser"
 version = "0.1.0"
+dependencies = [
+ "insta",
+]
 
 [[package]]
 name = "fnv"

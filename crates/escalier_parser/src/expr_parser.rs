@@ -1,5 +1,6 @@
 use crate::expr::{BinaryOp, Expr, ExprKind, UnaryOp};
-use crate::source_location::{Position, SourceLocation};
+use crate::lexer::Lexer;
+use crate::source_location::*;
 use crate::token::{Token, TokenKind};
 
 pub struct Parser {
@@ -73,6 +74,7 @@ fn get_postfix_precedence(op: &Token) -> Option<u8> {
 
 fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
     let next = parser.next();
+
     let mut lhs = match &next.kind {
         TokenKind::Number(n) => Expr {
             kind: ExprKind::Number(n.to_owned()),
@@ -89,25 +91,20 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
         }
         t => match get_prefix_precedence(&next) {
             Some(precendence) => {
-                let rhs = parse_expr_with_precedence(parser, precendence);
-                match t {
-                    TokenKind::Plus => Expr {
-                        kind: ExprKind::Unary {
-                            op: UnaryOp::Plus,
-                            right: Box::new(rhs),
-                        },
-                        // TODO: merge with rhs loc
-                        loc: next.loc.clone(),
-                    },
-                    TokenKind::Minus => Expr {
-                        kind: ExprKind::Unary {
-                            op: UnaryOp::Minus,
-                            right: Box::new(rhs),
-                        },
-                        // TODO: merge with rhs loc
-                        loc: next.loc.clone(),
-                    },
+                let op = match t {
+                    TokenKind::Plus => UnaryOp::Plus,
+                    TokenKind::Minus => UnaryOp::Minus,
                     _ => panic!("unexpected token: {:?}", t),
+                };
+
+                let rhs = parse_expr_with_precedence(parser, precendence);
+                let loc = merge_locations(&next.loc, &rhs.loc);
+                Expr {
+                    kind: ExprKind::Unary {
+                        op,
+                        right: Box::new(rhs),
+                    },
+                    loc,
                 }
             }
             None => panic!("unexpected token: {:?}", t),
@@ -130,13 +127,14 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             lhs = match &next.kind {
                 TokenKind::LeftBrace => {
                     let rhs = parse_expr_with_precedence(parser, 0);
+                    let loc = merge_locations(&lhs.loc, &rhs.loc);
                     assert_eq!(parser.next().kind, TokenKind::RightBrace);
                     Expr {
                         kind: ExprKind::Index {
                             left: Box::new(lhs),
                             right: Box::new(rhs),
                         },
-                        loc: next.loc.clone(),
+                        loc,
                     }
                 }
                 _ => panic!("unexpected token: {:?}", next),
@@ -171,13 +169,15 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             };
 
             let rhs = parse_expr_with_precedence(parser, next_precedence);
+            let loc = merge_locations(&lhs.loc, &rhs.loc);
+
             lhs = Expr {
                 kind: ExprKind::Binary {
                     op,
                     left: Box::new(lhs),
                     right: Box::new(rhs),
                 },
-                loc: next.loc.clone(),
+                loc,
             };
 
             continue;
@@ -190,6 +190,11 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
 }
 
 pub fn parse_expr(tokens: Vec<Token>) -> Expr {
-    let mut parser = Parser { tokens, cursor: 0 };
+    let mut parser = Parser::new(tokens);
     parse_expr_with_precedence(&mut parser, 0)
+}
+
+pub fn parse(input: &str) -> Expr {
+    let mut lexer = Lexer::new(input);
+    parse_expr(lexer.lex())
 }

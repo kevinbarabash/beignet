@@ -9,3 +9,10 @@ pub struct SourceLocation {
     pub start: Position,
     pub end: Position,
 }
+
+pub fn merge_locations(left: &SourceLocation, right: &SourceLocation) -> SourceLocation {
+    SourceLocation {
+        start: left.start.clone(),
+        end: right.end.clone(),
+    }
+}
