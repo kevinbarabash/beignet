@@ -1,6 +1,7 @@
 use core::panic;
 
 use crate::scanner::Scanner;
+use crate::source_location::*;
 use crate::token::*;
 
 pub struct Lexer {
@@ -18,7 +19,7 @@ impl Lexer {
         let mut tokens = Vec::new();
         while !self.scanner.is_done() {
             let character = self.scanner.peek(0).unwrap();
-            let start: Position = self.scanner.position();
+            let start = self.scanner.position();
             let kind = match character {
                 'a'..='z' | 'A'..='Z' | '_' => {
                     tokens.push(self.lex_ident(start));
@@ -37,6 +38,8 @@ impl Lexer {
                 },
                 '+' => TokenKind::Plus,
                 '-' => TokenKind::Minus,
+                '*' => TokenKind::Times,
+                '/' => TokenKind::Divide,
                 '(' => TokenKind::LeftParen,
                 ')' => TokenKind::RightParen,
                 '{' => TokenKind::LeftBrace,
@@ -66,6 +69,20 @@ impl Lexer {
                     Some('=') => {
                         self.scanner.pop();
                         TokenKind::NotEquals
+                    }
+                    _ => panic!("Unexpected character: '{}'", character),
+                },
+                '&' => match self.scanner.peek(1) {
+                    Some('&') => {
+                        self.scanner.pop();
+                        TokenKind::And
+                    }
+                    _ => panic!("Unexpected character: '{}'", character),
+                },
+                '|' => match self.scanner.peek(1) {
+                    Some('|') => {
+                        self.scanner.pop();
+                        TokenKind::Or
                     }
                     _ => panic!("Unexpected character: '{}'", character),
                 },

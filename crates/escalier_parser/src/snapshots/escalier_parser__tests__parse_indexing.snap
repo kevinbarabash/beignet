@@ -1,0 +1,77 @@
+---
+source: crates/escalier_parser/src/lib.rs
+expression: "parse(\"a[1][c]\")"
+---
+Expr {
+    kind: Index {
+        left: Expr {
+            kind: Index {
+                left: Expr {
+                    kind: Identifier(
+                        "a",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 1,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 2,
+                        },
+                    },
+                },
+                right: Expr {
+                    kind: Number(
+                        "1",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 3,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 4,
+                        },
+                    },
+                },
+            },
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 4,
+                },
+            },
+        },
+        right: Expr {
+            kind: Identifier(
+                "c",
+            ),
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 6,
+                },
+                end: Position {
+                    line: 1,
+                    column: 7,
+                },
+            },
+        },
+    },
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 7,
+        },
+    },
+}

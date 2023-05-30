@@ -1,4 +1,4 @@
-use crate::token::Position;
+use crate::source_location::Position;
 
 pub struct Scanner {
     cursor: usize,

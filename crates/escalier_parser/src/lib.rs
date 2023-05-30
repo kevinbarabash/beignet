@@ -2,12 +2,19 @@ pub fn add(left: usize, right: usize) -> usize {
     left + right
 }
 
+mod expr;
+mod expr_parser;
 mod lexer;
 mod scanner;
+mod source_location;
 mod token;
+
+pub use expr_parser::parse;
+pub use lexer::Lexer;
 
 #[cfg(test)]
 mod tests {
+    use crate::expr_parser::parse;
     use crate::lexer::Lexer;
 
     #[test]
@@ -70,5 +77,40 @@ mod tests {
         let mut lexer = Lexer::new("1 ! 2");
 
         lexer.lex();
+    }
+
+    #[test]
+    fn parse_simple_addition() {
+        insta::assert_debug_snapshot!(parse("1 + 2 + 3"));
+    }
+
+    #[test]
+    fn parse_addition_and_subtraction() {
+        insta::assert_debug_snapshot!(parse("1 + 2 - 3 + 4"));
+    }
+
+    #[test]
+    fn parse_additive_and_multiplicative() {
+        insta::assert_debug_snapshot!(parse("1 * 2 + 3"));
+    }
+
+    #[test]
+    fn parse_parens() {
+        insta::assert_debug_snapshot!(parse("5 * (x + 1)"));
+    }
+
+    #[test]
+    fn parse_comparisons_and_logic() {
+        insta::assert_debug_snapshot!(parse("a > b && c >= d || e < f && g <= h"));
+    }
+
+    #[test]
+    fn parse_unary_operators() {
+        insta::assert_debug_snapshot!(parse("--a - +b"));
+    }
+
+    #[test]
+    fn parse_indexing() {
+        insta::assert_debug_snapshot!(parse("a[1][c]"));
     }
 }

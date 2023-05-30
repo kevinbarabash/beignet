@@ -1,0 +1,79 @@
+---
+source: crates/escalier_parser/src/lib.rs
+expression: "parse(\"5 * (x + 1)\")"
+---
+Expr {
+    kind: Binary {
+        left: Expr {
+            kind: Number(
+                "5",
+            ),
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 2,
+                },
+            },
+        },
+        op: Times,
+        right: Expr {
+            kind: Binary {
+                left: Expr {
+                    kind: Identifier(
+                        "x",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 6,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 7,
+                        },
+                    },
+                },
+                op: Plus,
+                right: Expr {
+                    kind: Number(
+                        "1",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 10,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 11,
+                        },
+                    },
+                },
+            },
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 6,
+                },
+                end: Position {
+                    line: 1,
+                    column: 11,
+                },
+            },
+        },
+    },
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 11,
+        },
+    },
+}

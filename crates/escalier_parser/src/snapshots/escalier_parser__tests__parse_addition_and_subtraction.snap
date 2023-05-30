@@ -1,0 +1,109 @@
+---
+source: crates/escalier_parser/src/lib.rs
+expression: "parse(\"1 + 2 - 3 + 4\")"
+---
+Expr {
+    kind: Binary {
+        left: Expr {
+            kind: Binary {
+                left: Expr {
+                    kind: Binary {
+                        left: Expr {
+                            kind: Number(
+                                "1",
+                            ),
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 1,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 2,
+                                },
+                            },
+                        },
+                        op: Plus,
+                        right: Expr {
+                            kind: Number(
+                                "2",
+                            ),
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 5,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 6,
+                                },
+                            },
+                        },
+                    },
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 1,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 6,
+                        },
+                    },
+                },
+                op: Minus,
+                right: Expr {
+                    kind: Number(
+                        "3",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 9,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 10,
+                        },
+                    },
+                },
+            },
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 10,
+                },
+            },
+        },
+        op: Plus,
+        right: Expr {
+            kind: Number(
+                "4",
+            ),
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 13,
+                },
+                end: Position {
+                    line: 1,
+                    column: 14,
+                },
+            },
+        },
+    },
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 14,
+        },
+    },
+}
