@@ -38,6 +38,8 @@ impl Lexer {
                 },
                 '+' => TokenKind::Plus,
                 '-' => TokenKind::Minus,
+                '*' => TokenKind::Times,
+                '/' => TokenKind::Divide,
                 '(' => TokenKind::LeftParen,
                 ')' => TokenKind::RightParen,
                 '{' => TokenKind::LeftBrace,
@@ -67,6 +69,20 @@ impl Lexer {
                     Some('=') => {
                         self.scanner.pop();
                         TokenKind::NotEquals
+                    }
+                    _ => panic!("Unexpected character: '{}'", character),
+                },
+                '&' => match self.scanner.peek(1) {
+                    Some('&') => {
+                        self.scanner.pop();
+                        TokenKind::And
+                    }
+                    _ => panic!("Unexpected character: '{}'", character),
+                },
+                '|' => match self.scanner.peek(1) {
+                    Some('|') => {
+                        self.scanner.pop();
+                        TokenKind::Or
                     }
                     _ => panic!("Unexpected character: '{}'", character),
                 },

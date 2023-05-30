@@ -1,0 +1,229 @@
+---
+source: crates/escalier_parser/src/lib.rs
+expression: "parse(\"a > b && c >= d || e < f && g <= h\")"
+---
+Expr {
+    kind: Binary {
+        left: Expr {
+            kind: Binary {
+                left: Expr {
+                    kind: Binary {
+                        left: Expr {
+                            kind: Identifier(
+                                "a",
+                            ),
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 1,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 2,
+                                },
+                            },
+                        },
+                        op: GreaterThan,
+                        right: Expr {
+                            kind: Identifier(
+                                "b",
+                            ),
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 5,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 6,
+                                },
+                            },
+                        },
+                    },
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 1,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 6,
+                        },
+                    },
+                },
+                op: And,
+                right: Expr {
+                    kind: Binary {
+                        left: Expr {
+                            kind: Identifier(
+                                "c",
+                            ),
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 10,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 11,
+                                },
+                            },
+                        },
+                        op: GreaterThanOrEqual,
+                        right: Expr {
+                            kind: Identifier(
+                                "d",
+                            ),
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 15,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 16,
+                                },
+                            },
+                        },
+                    },
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 10,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 16,
+                        },
+                    },
+                },
+            },
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 16,
+                },
+            },
+        },
+        op: Or,
+        right: Expr {
+            kind: Binary {
+                left: Expr {
+                    kind: Binary {
+                        left: Expr {
+                            kind: Identifier(
+                                "e",
+                            ),
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 20,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 21,
+                                },
+                            },
+                        },
+                        op: LessThan,
+                        right: Expr {
+                            kind: Identifier(
+                                "f",
+                            ),
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 24,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 25,
+                                },
+                            },
+                        },
+                    },
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 20,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 25,
+                        },
+                    },
+                },
+                op: And,
+                right: Expr {
+                    kind: Binary {
+                        left: Expr {
+                            kind: Identifier(
+                                "g",
+                            ),
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 29,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 30,
+                                },
+                            },
+                        },
+                        op: LessThanOrEqual,
+                        right: Expr {
+                            kind: Identifier(
+                                "h",
+                            ),
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 34,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 35,
+                                },
+                            },
+                        },
+                    },
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 29,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 35,
+                        },
+                    },
+                },
+            },
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 20,
+                },
+                end: Position {
+                    line: 1,
+                    column: 35,
+                },
+            },
+        },
+    },
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 35,
+        },
+    },
+}

@@ -67,7 +67,7 @@ fn get_postfix_precedence(op: &Token) -> Option<u8> {
     // - square bracket member access
     // - parens for function calls
     match &op.kind {
-        TokenKind::RightBracket => Some(11),
+        TokenKind::LeftBracket => Some(11),
         _ => None,
     }
 }
@@ -117,7 +117,14 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             break;
         }
 
+        eprintln!(
+            "get_postfix_precedence(&next) = {:#?}",
+            get_postfix_precedence(&next)
+        );
+        eprintln!("next = {:#?}", next);
+
         if let Some(next_precedence) = get_postfix_precedence(&next) {
+            eprintln!("next_precedence = {}", next_precedence);
             if next_precedence < precedence {
                 break;
             }
@@ -125,10 +132,10 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             parser.next();
 
             lhs = match &next.kind {
-                TokenKind::LeftBrace => {
+                TokenKind::LeftBracket => {
                     let rhs = parse_expr_with_precedence(parser, 0);
                     let loc = merge_locations(&lhs.loc, &rhs.loc);
-                    assert_eq!(parser.next().kind, TokenKind::RightBrace);
+                    assert_eq!(parser.next().kind, TokenKind::RightBracket);
                     Expr {
                         kind: ExprKind::Index {
                             left: Box::new(lhs),
@@ -144,9 +151,9 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
         }
 
         if let Some(next_precedence) = get_infix_precedence(&next) {
-            // '>' produces right associativity
-            // '>=' produces left associativity
-            if precedence >= next_precedence {
+            // '<' produces right associativity
+            // '<=' produces left associativity
+            if next_precedence <= precedence {
                 break;
             }
 
@@ -196,5 +203,7 @@ pub fn parse_expr(tokens: Vec<Token>) -> Expr {
 
 pub fn parse(input: &str) -> Expr {
     let mut lexer = Lexer::new(input);
-    parse_expr(lexer.lex())
+    let ast = lexer.lex();
+    eprintln!("{:#?}", ast);
+    parse_expr(ast)
 }

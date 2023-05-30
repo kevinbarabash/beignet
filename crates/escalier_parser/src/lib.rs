@@ -9,7 +9,7 @@ mod scanner;
 mod source_location;
 mod token;
 
-pub use expr_parser::parse_expr;
+pub use expr_parser::parse;
 pub use lexer::Lexer;
 
 #[cfg(test)]
@@ -90,7 +90,27 @@ mod tests {
     }
 
     #[test]
+    fn parse_additive_and_multiplicative() {
+        insta::assert_debug_snapshot!(parse("1 * 2 + 3"));
+    }
+
+    #[test]
+    fn parse_parens() {
+        insta::assert_debug_snapshot!(parse("5 * (x + 1)"));
+    }
+
+    #[test]
+    fn parse_comparisons_and_logic() {
+        insta::assert_debug_snapshot!(parse("a > b && c >= d || e < f && g <= h"));
+    }
+
+    #[test]
     fn parse_unary_operators() {
         insta::assert_debug_snapshot!(parse("--a - +b"));
+    }
+
+    #[test]
+    fn parse_indexing() {
+        insta::assert_debug_snapshot!(parse("a[1][c]"));
     }
 }
