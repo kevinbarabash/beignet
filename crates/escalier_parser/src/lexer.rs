@@ -22,7 +22,7 @@ impl Lexer {
             let start = self.scanner.position();
             let kind = match character {
                 'a'..='z' | 'A'..='Z' | '_' => {
-                    tokens.push(self.lex_ident(start));
+                    tokens.push(self.lex_ident_or_keyword(start));
                     continue;
                 }
                 '0'..='9' => {
@@ -87,6 +87,7 @@ impl Lexer {
                     _ => panic!("Unexpected character: '{}'", character),
                 },
                 _ => {
+                    // It's okay fo
                     // TODO: Error handling
                     self.scanner.pop();
                     continue;
@@ -104,7 +105,7 @@ impl Lexer {
         tokens
     }
 
-    pub fn lex_ident(&mut self, start: Position) -> Token {
+    pub fn lex_ident_or_keyword(&mut self, start: Position) -> Token {
         let mut ident = String::new();
         while !self.scanner.is_done() {
             let character = self.scanner.peek(0).unwrap();
@@ -118,8 +119,13 @@ impl Lexer {
                 }
             }
         }
+        let kind = match ident.as_ref() {
+            "let" => TokenKind::Let,
+            "return" => TokenKind::Return,
+            _ => TokenKind::Identifier(ident),
+        };
         Token {
-            kind: TokenKind::Identifier(ident),
+            kind,
             loc: SourceLocation {
                 start,
                 end: self.scanner.position(),
@@ -157,5 +163,72 @@ impl Lexer {
                 end: self.scanner.position(),
             },
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lex_identifiers() {
+        let mut lexer = Lexer::new("abc _a0 123");
+
+        let tokens = lexer.lex();
+
+        assert_eq!(
+            tokens[0].kind,
+            crate::token::TokenKind::Identifier("abc".to_string())
+        );
+        assert_eq!(
+            tokens[1].kind,
+            crate::token::TokenKind::Identifier("_a0".to_string())
+        );
+    }
+
+    #[test]
+    fn lex_numbers() {
+        let mut lexer = Lexer::new("123 1.23");
+
+        let tokens = lexer.lex();
+
+        assert_eq!(
+            tokens[0].kind,
+            crate::token::TokenKind::Number("123".to_string())
+        );
+        assert_eq!(
+            tokens[1].kind,
+            crate::token::TokenKind::Number("1.23".to_string())
+        );
+    }
+
+    #[test]
+    #[should_panic = "Unexpected character: '.'"]
+    fn lex_number_multiple_decimals_error() {
+        let mut lexer = Lexer::new("1.2.3");
+
+        lexer.lex();
+    }
+
+    #[test]
+    fn lex_comparison_ops() {
+        let mut lexer = Lexer::new("> >= < <= == !=");
+
+        let tokens = lexer.lex();
+
+        assert_eq!(tokens[0].kind, crate::token::TokenKind::GreaterThan);
+        assert_eq!(tokens[1].kind, crate::token::TokenKind::GreaterThanOrEqual);
+        assert_eq!(tokens[2].kind, crate::token::TokenKind::LessThan);
+        assert_eq!(tokens[3].kind, crate::token::TokenKind::LessThanOrEqual);
+        assert_eq!(tokens[4].kind, crate::token::TokenKind::Equals);
+        assert_eq!(tokens[5].kind, crate::token::TokenKind::NotEquals);
+    }
+
+    #[test]
+    #[should_panic = "Unexpected character: '!'"]
+    fn lex_unexpected_exclamation() {
+        let mut lexer = Lexer::new("1 ! 2");
+
+        lexer.lex();
     }
 }
