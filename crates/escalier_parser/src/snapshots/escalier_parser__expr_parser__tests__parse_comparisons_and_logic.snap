@@ -1,5 +1,5 @@
 ---
-source: crates/escalier_parser/src/lib.rs
+source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"a > b && c >= d || e < f && g <= h\")"
 ---
 Expr {

@@ -1,33 +1,7 @@
 use crate::expr::{BinaryOp, Expr, ExprKind, UnaryOp};
-use crate::lexer::Lexer;
+use crate::parser::Parser;
 use crate::source_location::*;
 use crate::token::{Token, TokenKind};
-
-pub struct Parser {
-    tokens: Vec<Token>,
-    cursor: usize,
-}
-
-impl Parser {
-    pub fn new(tokens: Vec<Token>) -> Self {
-        Self { tokens, cursor: 0 }
-    }
-
-    fn next(&mut self) -> Token {
-        let result = self.peek();
-        self.cursor += 1;
-        result
-    }
-    fn peek(&mut self) -> Token {
-        self.tokens.get(self.cursor).cloned().unwrap_or(Token {
-            kind: TokenKind::Eof,
-            loc: SourceLocation {
-                start: Position { line: 0, column: 0 },
-                end: Position { line: 0, column: 0 },
-            },
-        })
-    }
-}
 
 fn get_prefix_precedence(op: &Token) -> Option<u8> {
     match &op.kind {
@@ -117,14 +91,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             break;
         }
 
-        eprintln!(
-            "get_postfix_precedence(&next) = {:#?}",
-            get_postfix_precedence(&next)
-        );
-        eprintln!("next = {:#?}", next);
-
         if let Some(next_precedence) = get_postfix_precedence(&next) {
-            eprintln!("next_precedence = {}", next_precedence);
             if next_precedence < precedence {
                 break;
             }
@@ -196,14 +163,54 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
     lhs
 }
 
-pub fn parse_expr(tokens: Vec<Token>) -> Expr {
-    let mut parser = Parser::new(tokens);
-    parse_expr_with_precedence(&mut parser, 0)
+pub fn parse_expr(parser: &mut Parser) -> Expr {
+    parse_expr_with_precedence(parser, 0)
 }
 
-pub fn parse(input: &str) -> Expr {
-    let mut lexer = Lexer::new(input);
-    let ast = lexer.lex();
-    eprintln!("{:#?}", ast);
-    parse_expr(ast)
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lexer::Lexer;
+
+    pub fn parse(input: &str) -> Expr {
+        let mut lexer = Lexer::new(input);
+        let tokens = lexer.lex();
+        let mut parser = Parser::new(tokens);
+        parse_expr(&mut parser)
+    }
+
+    #[test]
+    fn parse_simple_addition() {
+        insta::assert_debug_snapshot!(parse("1 + 2 + 3"));
+    }
+
+    #[test]
+    fn parse_addition_and_subtraction() {
+        insta::assert_debug_snapshot!(parse("1 + 2 - 3 + 4"));
+    }
+
+    #[test]
+    fn parse_additive_and_multiplicative() {
+        insta::assert_debug_snapshot!(parse("1 * 2 + 3"));
+    }
+
+    #[test]
+    fn parse_parens() {
+        insta::assert_debug_snapshot!(parse("5 * (x + 1)"));
+    }
+
+    #[test]
+    fn parse_comparisons_and_logic() {
+        insta::assert_debug_snapshot!(parse("a > b && c >= d || e < f && g <= h"));
+    }
+
+    #[test]
+    fn parse_unary_operators() {
+        insta::assert_debug_snapshot!(parse("--a - +b"));
+    }
+
+    #[test]
+    fn parse_indexing() {
+        insta::assert_debug_snapshot!(parse("a[1][c]"));
+    }
 }

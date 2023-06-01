@@ -4,6 +4,12 @@ use crate::source_location::SourceLocation;
 pub enum TokenKind {
     Number(String),
     Identifier(String), // [a-zA-Z_][a-zA-Z0-9_]*
+
+    // Keywords
+    Let,
+    Return,
+
+    // Operators
     Assign,
     Plus,
     Minus,

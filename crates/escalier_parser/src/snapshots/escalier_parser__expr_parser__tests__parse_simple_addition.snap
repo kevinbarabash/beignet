@@ -1,6 +1,6 @@
 ---
-source: crates/escalier_parser/src/lib.rs
-expression: "parse(\"1 * 2 + 3\")"
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(\"1 + 2 + 3\")"
 ---
 Expr {
     kind: Binary {
@@ -21,7 +21,7 @@ Expr {
                         },
                     },
                 },
-                op: Times,
+                op: Plus,
                 right: Expr {
                     kind: Number(
                         "2",
