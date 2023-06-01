@@ -1,14 +1,14 @@
 ---
-source: crates/escalier_parser/src/lib.rs
-expression: "parse(\"1 + 2 + 3\")"
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(\"a[1][c]\")"
 ---
 Expr {
-    kind: Binary {
+    kind: Index {
         left: Expr {
-            kind: Binary {
+            kind: Index {
                 left: Expr {
-                    kind: Number(
-                        "1",
+                    kind: Identifier(
+                        "a",
                     ),
                     loc: SourceLocation {
                         start: Position {
@@ -21,19 +21,18 @@ Expr {
                         },
                     },
                 },
-                op: Plus,
                 right: Expr {
                     kind: Number(
-                        "2",
+                        "1",
                     ),
                     loc: SourceLocation {
                         start: Position {
                             line: 1,
-                            column: 5,
+                            column: 3,
                         },
                         end: Position {
                             line: 1,
-                            column: 6,
+                            column: 4,
                         },
                     },
                 },
@@ -45,23 +44,22 @@ Expr {
                 },
                 end: Position {
                     line: 1,
-                    column: 6,
+                    column: 4,
                 },
             },
         },
-        op: Plus,
         right: Expr {
-            kind: Number(
-                "3",
+            kind: Identifier(
+                "c",
             ),
             loc: SourceLocation {
                 start: Position {
                     line: 1,
-                    column: 9,
+                    column: 6,
                 },
                 end: Position {
                     line: 1,
-                    column: 10,
+                    column: 7,
                 },
             },
         },
@@ -73,7 +71,7 @@ Expr {
         },
         end: Position {
             line: 1,
-            column: 10,
+            column: 7,
         },
     },
 }
