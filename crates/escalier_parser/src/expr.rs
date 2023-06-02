@@ -1,9 +1,11 @@
 use crate::source_location::SourceLocation;
+use crate::stmt::Stmt;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ExprKind {
-    Number(String),
     Identifier(String),
+    Number(String),
+    String(String),
     Binary {
         left: Box<Expr>,
         op: BinaryOp,
@@ -16,6 +18,14 @@ pub enum ExprKind {
     Index {
         left: Box<Expr>,
         right: Box<Expr>,
+    },
+    Function {
+        params: Vec<String>,
+        body: Vec<Stmt>,
+    },
+    Call {
+        args: Vec<Expr>,
+        callee: Box<Expr>,
     },
 }
 

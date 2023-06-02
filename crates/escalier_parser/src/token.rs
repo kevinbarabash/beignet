@@ -8,6 +8,7 @@ pub enum TokenKind {
     // Keywords
     Let,
     Return,
+    Fn,
 
     // Operators
     Assign,

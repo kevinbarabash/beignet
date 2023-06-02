@@ -5,7 +5,7 @@ use crate::source_location::merge_locations;
 use crate::stmt::{Stmt, StmtKind};
 use crate::token::TokenKind;
 
-fn parse_stmt(parser: &mut Parser) -> Stmt {
+pub fn parse_stmt(parser: &mut Parser) -> Stmt {
     let token = parser.next();
     let next = parser.peek();
 

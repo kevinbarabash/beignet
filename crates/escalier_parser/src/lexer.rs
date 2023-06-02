@@ -120,6 +120,7 @@ impl Lexer {
             }
         }
         let kind = match ident.as_ref() {
+            "fn" => TokenKind::Fn,
             "let" => TokenKind::Let,
             "return" => TokenKind::Return,
             _ => TokenKind::Identifier(ident),
