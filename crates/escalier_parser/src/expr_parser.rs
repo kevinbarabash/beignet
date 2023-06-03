@@ -1,6 +1,8 @@
 use crate::expr::{BinaryOp, Expr, ExprKind, UnaryOp};
 use crate::parser::Parser;
 use crate::source_location::*;
+use crate::stmt::Stmt;
+use crate::stmt_parser::parse_stmt;
 use crate::token::{Token, TokenKind};
 
 fn get_prefix_precedence(op: &Token) -> Option<u8> {
@@ -42,8 +44,38 @@ fn get_postfix_precedence(op: &Token) -> Option<u8> {
     // - parens for function calls
     match &op.kind {
         TokenKind::LeftBracket => Some(11),
+        TokenKind::LeftParen => Some(11), // function call
         _ => None,
     }
+}
+
+fn parse_params(parser: &mut Parser) -> Vec<String> {
+    let mut params = Vec::new();
+    while parser.peek().kind != TokenKind::RightParen {
+        let param = parser.next();
+        if let TokenKind::Identifier(name) = param.kind {
+            params.push(name.to_owned());
+        } else {
+            panic!("Expected identifier, got {:?}", param);
+        }
+
+        match parser.peek().kind {
+            TokenKind::RightParen => break,
+            TokenKind::Comma => {
+                parser.next();
+            }
+            _ => panic!("Expected comma or right paren, got {:?}", parser.peek()),
+        }
+    }
+    params
+}
+
+fn parse_block(parser: &mut Parser) -> Vec<Stmt> {
+    let mut stmts = Vec::new();
+    while parser.peek().kind != TokenKind::RightBrace {
+        stmts.push(parse_stmt(parser));
+    }
+    stmts
 }
 
 fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
@@ -62,6 +94,21 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             let lhs = parse_expr_with_precedence(parser, 0);
             assert_eq!(parser.next().kind, TokenKind::RightParen);
             lhs
+        }
+        TokenKind::Fn => {
+            assert_eq!(parser.next().kind, TokenKind::LeftParen);
+            let params = parse_params(parser);
+            assert_eq!(parser.next().kind, TokenKind::RightParen);
+            assert_eq!(parser.next().kind, TokenKind::LeftBrace);
+            let body = parse_block(parser);
+            let close_brace = parser.next();
+            assert_eq!(close_brace.kind, TokenKind::RightBrace);
+
+            let loc = merge_locations(&next.loc, &close_brace.loc);
+            Expr {
+                kind: ExprKind::Function { params, body },
+                loc,
+            }
         }
         t => match get_prefix_precedence(&next) {
             Some(precendence) => {
@@ -92,7 +139,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
         }
 
         if let Some(next_precedence) = get_postfix_precedence(&next) {
-            if next_precedence < precedence {
+            if precedence >= next_precedence {
                 break;
             }
 
@@ -111,6 +158,29 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                         loc,
                     }
                 }
+                TokenKind::LeftParen => {
+                    let mut args = Vec::new();
+                    while parser.peek().kind != TokenKind::RightParen {
+                        args.push(parse_expr_with_precedence(parser, 0));
+
+                        match parser.peek().kind {
+                            TokenKind::RightParen => break,
+                            TokenKind::Comma => {
+                                parser.next();
+                            }
+                            _ => panic!("Expected comma or right paren, got {:?}", parser.peek()),
+                        }
+                    }
+                    let loc = merge_locations(&lhs.loc, &parser.peek().loc);
+                    assert_eq!(parser.next().kind, TokenKind::RightParen);
+                    Expr {
+                        kind: ExprKind::Call {
+                            callee: Box::new(lhs),
+                            args,
+                        },
+                        loc,
+                    }
+                }
                 _ => panic!("unexpected token: {:?}", next),
             };
 
@@ -118,9 +188,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
         }
 
         if let Some(next_precedence) = get_infix_precedence(&next) {
-            // '<' produces right associativity
-            // '<=' produces left associativity
-            if next_precedence <= precedence {
+            if precedence >= next_precedence {
                 break;
             }
 
@@ -142,7 +210,14 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                 _ => panic!("unexpected token: {:?}", next),
             };
 
-            let rhs = parse_expr_with_precedence(parser, next_precedence);
+            // TODO: update precedence tables to include associativity
+            let precedence = if true {
+                next_precedence // left associativity
+            } else {
+                next_precedence - 1 // right associativity
+            };
+
+            let rhs = parse_expr_with_precedence(parser, precedence);
             let loc = merge_locations(&lhs.loc, &rhs.loc);
 
             lhs = Expr {
@@ -212,5 +287,43 @@ mod tests {
     #[test]
     fn parse_indexing() {
         insta::assert_debug_snapshot!(parse("a[1][c]"));
+    }
+
+    #[test]
+    fn parse_function() {
+        let src = r#"fn () { let x = 5; let y = 10; return x + y; }"#;
+        insta::assert_debug_snapshot!(parse(src));
+    }
+
+    #[test]
+    fn parse_function_with_params() {
+        let src = r#"fn (x, y) { return x + y; }"#;
+        insta::assert_debug_snapshot!(parse(src));
+    }
+
+    #[test]
+    #[should_panic]
+    fn parse_function_expected_comma_or_left_brace() {
+        let src = r#"fn (x, y { return x + y; }"#;
+        parse(src);
+    }
+
+    #[test]
+    #[should_panic]
+    fn parse_function_expected_identifier() {
+        let src = r#"fn (, y) { return x + y; }"#;
+        parse(src);
+    }
+
+    #[test]
+    fn parse_function_call() {
+        let src = r#"add(5 * i, 10 * j)"#;
+        insta::assert_debug_snapshot!(parse(src));
+    }
+
+    #[test]
+    fn parse_call_expr() {
+        let src = r#"foo[bar](5, 10)"#;
+        insta::assert_debug_snapshot!(parse(src));
     }
 }
