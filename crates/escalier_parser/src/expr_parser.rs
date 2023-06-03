@@ -1,50 +1,57 @@
 use crate::expr::{BinaryOp, Expr, ExprKind, UnaryOp};
 use crate::parser::Parser;
+use crate::precedence::{Associativity, Operator, PRECEDENCE_TABLE};
 use crate::source_location::*;
 use crate::stmt::Stmt;
 use crate::stmt_parser::parse_stmt;
 use crate::token::{Token, TokenKind};
 
-fn get_prefix_precedence(op: &Token) -> Option<u8> {
+fn get_prefix_precedence(op: &Token) -> Option<(u8, Associativity)> {
     match &op.kind {
-        TokenKind::Plus => Some(9),
-        TokenKind::Minus => Some(9),
+        TokenKind::Plus => PRECEDENCE_TABLE.get(&Operator::UnaryPlus).cloned(),
+        TokenKind::Minus => PRECEDENCE_TABLE.get(&Operator::UnaryMinus).cloned(),
         _ => None,
     }
 }
 
-fn get_infix_precedence(op: &Token) -> Option<u8> {
+fn get_infix_precedence(op: &Token) -> Option<(u8, Associativity)> {
     match &op.kind {
         // multiplicative
-        TokenKind::Times => Some(7),
-        TokenKind::Divide => Some(7),
+        TokenKind::Times => PRECEDENCE_TABLE.get(&Operator::Multiplication).cloned(),
+        TokenKind::Divide => PRECEDENCE_TABLE.get(&Operator::Division).cloned(),
+        // TODO: modulo
 
         // additive
-        TokenKind::Plus => Some(6),
-        TokenKind::Minus => Some(6),
+        TokenKind::Plus => PRECEDENCE_TABLE.get(&Operator::Addition).cloned(),
+        TokenKind::Minus => PRECEDENCE_TABLE.get(&Operator::Subtraction).cloned(),
 
         // equality
-        TokenKind::Equals => Some(3),
-        TokenKind::LessThan => Some(3),
-        TokenKind::LessThanOrEqual => Some(3),
-        TokenKind::GreaterThan => Some(3),
-        TokenKind::GreaterThanOrEqual => Some(3),
+        TokenKind::Equals => PRECEDENCE_TABLE.get(&Operator::Equals).cloned(),
+        TokenKind::LessThan => PRECEDENCE_TABLE.get(&Operator::LessThan).cloned(),
+        TokenKind::LessThanOrEqual => PRECEDENCE_TABLE.get(&Operator::LessThanOrEqual).cloned(),
+        TokenKind::GreaterThan => PRECEDENCE_TABLE.get(&Operator::GreaterThan).cloned(),
+        TokenKind::GreaterThanOrEqual => {
+            PRECEDENCE_TABLE.get(&Operator::GreaterThanOrEqual).cloned()
+        }
 
         // logic
-        TokenKind::And => Some(2),
-        TokenKind::Or => Some(1),
+        TokenKind::And => PRECEDENCE_TABLE.get(&Operator::LogicalAnd).cloned(),
+        TokenKind::Or => PRECEDENCE_TABLE.get(&Operator::LogicalOr).cloned(),
+
+        // assignment
+        TokenKind::Assign => PRECEDENCE_TABLE.get(&Operator::Assignment).cloned(),
         _ => None,
     }
 }
 
-fn get_postfix_precedence(op: &Token) -> Option<u8> {
-    // TODO: handle things like:
-    // - dot member access
-    // - square bracket member access
-    // - parens for function calls
+fn get_postfix_precedence(op: &Token) -> Option<(u8, Associativity)> {
     match &op.kind {
-        TokenKind::LeftBracket => Some(11),
-        TokenKind::LeftParen => Some(11), // function call
+        TokenKind::LeftBracket => PRECEDENCE_TABLE
+            .get(&Operator::ComputedMemberAccess)
+            .cloned(),
+        TokenKind::LeftParen => PRECEDENCE_TABLE.get(&Operator::FunctionCall).cloned(),
+        // TODO: handle optional chaining
+        TokenKind::Dot => PRECEDENCE_TABLE.get(&Operator::MemberAccess).cloned(),
         _ => None,
     }
 }
@@ -118,7 +125,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                     _ => panic!("unexpected token: {:?}", t),
                 };
 
-                let rhs = parse_expr_with_precedence(parser, precendence);
+                let rhs = parse_expr_with_precedence(parser, precendence.0);
                 let loc = merge_locations(&next.loc, &rhs.loc);
                 Expr {
                     kind: ExprKind::Unary {
@@ -139,9 +146,15 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
         }
 
         if let Some(next_precedence) = get_postfix_precedence(&next) {
-            if precedence >= next_precedence {
+            if precedence >= next_precedence.0 {
                 break;
             }
+
+            let precedence = if next_precedence.1 == Associativity::Left {
+                next_precedence.0
+            } else {
+                next_precedence.0 - 1
+            };
 
             parser.next();
 
@@ -181,6 +194,17 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                         loc,
                     }
                 }
+                TokenKind::Dot => {
+                    let rhs = parse_expr_with_precedence(parser, precedence);
+                    let loc = merge_locations(&lhs.loc, &rhs.loc);
+                    Expr {
+                        kind: ExprKind::Member {
+                            object: Box::new(lhs),
+                            property: Box::new(rhs),
+                        },
+                        loc,
+                    }
+                }
                 _ => panic!("unexpected token: {:?}", next),
             };
 
@@ -188,7 +212,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
         }
 
         if let Some(next_precedence) = get_infix_precedence(&next) {
-            if precedence >= next_precedence {
+            if precedence >= next_precedence.0 {
                 break;
             }
 
@@ -210,11 +234,10 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                 _ => panic!("unexpected token: {:?}", next),
             };
 
-            // TODO: update precedence tables to include associativity
-            let precedence = if true {
-                next_precedence // left associativity
+            let precedence = if next_precedence.1 == Associativity::Left {
+                next_precedence.0
             } else {
-                next_precedence - 1 // right associativity
+                next_precedence.0 - 1
             };
 
             let rhs = parse_expr_with_precedence(parser, precedence);
@@ -325,5 +348,11 @@ mod tests {
     fn parse_call_expr() {
         let src = r#"foo[bar](5, 10)"#;
         insta::assert_debug_snapshot!(parse(src));
+    }
+
+    #[test]
+    fn parse_member_access() {
+        insta::assert_debug_snapshot!(parse("a.b.c"));
+        insta::assert_debug_snapshot!(parse("a.b+c.d"));
     }
 }

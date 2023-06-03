@@ -1,0 +1,77 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(\"a.b.c\")"
+---
+Expr {
+    kind: Member {
+        object: Expr {
+            kind: Member {
+                object: Expr {
+                    kind: Identifier(
+                        "a",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 1,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 2,
+                        },
+                    },
+                },
+                property: Expr {
+                    kind: Identifier(
+                        "b",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 3,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 4,
+                        },
+                    },
+                },
+            },
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 4,
+                },
+            },
+        },
+        property: Expr {
+            kind: Identifier(
+                "c",
+            ),
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 5,
+                },
+                end: Position {
+                    line: 1,
+                    column: 6,
+                },
+            },
+        },
+    },
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 6,
+        },
+    },
+}

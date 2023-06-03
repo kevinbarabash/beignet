@@ -27,6 +27,10 @@ pub enum ExprKind {
         args: Vec<Expr>,
         callee: Box<Expr>,
     },
+    Member {
+        object: Box<Expr>,
+        property: Box<Expr>,
+    },
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
