@@ -340,8 +340,8 @@ mod tests {
 
     #[test]
     fn parse_function_call() {
-        let src = r#"add(5 * i, 10 * j)"#;
-        insta::assert_debug_snapshot!(parse(src));
+        insta::assert_debug_snapshot!(parse("add(5, 10)"));
+        insta::assert_debug_snapshot!(parse("add(5)(10)"));
     }
 
     #[test]
@@ -354,5 +354,6 @@ mod tests {
     fn parse_member_access() {
         insta::assert_debug_snapshot!(parse("a.b.c"));
         insta::assert_debug_snapshot!(parse("a.b+c.d"));
+        insta::assert_debug_snapshot!(parse("a[b][c]"));
     }
 }
