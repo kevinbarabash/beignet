@@ -139,7 +139,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
         }
 
         if let Some(next_precedence) = get_postfix_precedence(&next) {
-            if next_precedence < precedence {
+            if precedence >= next_precedence {
                 break;
             }
 
@@ -188,9 +188,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
         }
 
         if let Some(next_precedence) = get_infix_precedence(&next) {
-            // '<' produces right associativity
-            // '<=' produces left associativity
-            if next_precedence < precedence {
+            if precedence >= next_precedence {
                 break;
             }
 
@@ -214,9 +212,9 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
 
             // TODO: update precedence tables to include associativity
             let precedence = if true {
-                next_precedence - 1 // left associativity
+                next_precedence // left associativity
             } else {
-                next_precedence // right associativity
+                next_precedence - 1 // right associativity
             };
 
             let rhs = parse_expr_with_precedence(parser, precedence);

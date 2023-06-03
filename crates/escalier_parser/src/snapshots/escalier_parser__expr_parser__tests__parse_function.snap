@@ -16,11 +16,11 @@ Expr {
                         loc: SourceLocation {
                             start: Position {
                                 line: 1,
-                                column: 20,
+                                column: 17,
                             },
                             end: Position {
                                 line: 1,
-                                column: 21,
+                                column: 18,
                             },
                         },
                     },
@@ -28,11 +28,11 @@ Expr {
                 loc: SourceLocation {
                     start: Position {
                         line: 1,
-                        column: 12,
+                        column: 9,
                     },
                     end: Position {
                         line: 1,
-                        column: 21,
+                        column: 18,
                     },
                 },
             },
@@ -46,11 +46,11 @@ Expr {
                         loc: SourceLocation {
                             start: Position {
                                 line: 1,
-                                column: 31,
+                                column: 28,
                             },
                             end: Position {
                                 line: 1,
-                                column: 33,
+                                column: 30,
                             },
                         },
                     },
@@ -58,11 +58,11 @@ Expr {
                 loc: SourceLocation {
                     start: Position {
                         line: 1,
-                        column: 23,
+                        column: 20,
                     },
                     end: Position {
                         line: 1,
-                        column: 33,
+                        column: 30,
                     },
                 },
             },
@@ -78,11 +78,11 @@ Expr {
                                     loc: SourceLocation {
                                         start: Position {
                                             line: 1,
-                                            column: 42,
+                                            column: 39,
                                         },
                                         end: Position {
                                             line: 1,
-                                            column: 43,
+                                            column: 40,
                                         },
                                     },
                                 },
@@ -94,11 +94,11 @@ Expr {
                                     loc: SourceLocation {
                                         start: Position {
                                             line: 1,
-                                            column: 46,
+                                            column: 43,
                                         },
                                         end: Position {
                                             line: 1,
-                                            column: 47,
+                                            column: 44,
                                         },
                                     },
                                 },
@@ -106,11 +106,11 @@ Expr {
                             loc: SourceLocation {
                                 start: Position {
                                     line: 1,
-                                    column: 42,
+                                    column: 39,
                                 },
                                 end: Position {
                                     line: 1,
-                                    column: 47,
+                                    column: 44,
                                 },
                             },
                         },
@@ -119,11 +119,11 @@ Expr {
                 loc: SourceLocation {
                     start: Position {
                         line: 1,
-                        column: 42,
+                        column: 39,
                     },
                     end: Position {
                         line: 1,
-                        column: 47,
+                        column: 44,
                     },
                 },
             },
@@ -136,7 +136,7 @@ Expr {
         },
         end: Position {
             line: 1,
-            column: 50,
+            column: 47,
         },
     },
 }

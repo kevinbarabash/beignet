@@ -21,11 +21,11 @@ Expr {
                                     loc: SourceLocation {
                                         start: Position {
                                             line: 1,
-                                            column: 23,
+                                            column: 20,
                                         },
                                         end: Position {
                                             line: 1,
-                                            column: 24,
+                                            column: 21,
                                         },
                                     },
                                 },
@@ -37,11 +37,11 @@ Expr {
                                     loc: SourceLocation {
                                         start: Position {
                                             line: 1,
-                                            column: 27,
+                                            column: 24,
                                         },
                                         end: Position {
                                             line: 1,
-                                            column: 28,
+                                            column: 25,
                                         },
                                     },
                                 },
@@ -49,11 +49,11 @@ Expr {
                             loc: SourceLocation {
                                 start: Position {
                                     line: 1,
-                                    column: 23,
+                                    column: 20,
                                 },
                                 end: Position {
                                     line: 1,
-                                    column: 28,
+                                    column: 25,
                                 },
                             },
                         },
@@ -62,11 +62,11 @@ Expr {
                 loc: SourceLocation {
                     start: Position {
                         line: 1,
-                        column: 23,
+                        column: 20,
                     },
                     end: Position {
                         line: 1,
-                        column: 28,
+                        column: 25,
                     },
                 },
             },
@@ -79,7 +79,7 @@ Expr {
         },
         end: Position {
             line: 1,
-            column: 31,
+            column: 28,
         },
     },
 }
