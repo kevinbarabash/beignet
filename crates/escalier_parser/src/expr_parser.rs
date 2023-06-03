@@ -96,8 +96,6 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             lhs
         }
         TokenKind::Fn => {
-            let name = parser.next();
-            assert!(matches!(name.kind, TokenKind::Identifier(_)));
             assert_eq!(parser.next().kind, TokenKind::LeftParen);
             let params = parse_params(parser);
             assert_eq!(parser.next().kind, TokenKind::RightParen);
@@ -192,7 +190,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
         if let Some(next_precedence) = get_infix_precedence(&next) {
             // '<' produces right associativity
             // '<=' produces left associativity
-            if next_precedence <= precedence {
+            if next_precedence < precedence {
                 break;
             }
 
@@ -214,7 +212,14 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                 _ => panic!("unexpected token: {:?}", next),
             };
 
-            let rhs = parse_expr_with_precedence(parser, next_precedence);
+            // TODO: update precedence tables to include associativity
+            let precedence = if true {
+                next_precedence - 1 // left associativity
+            } else {
+                next_precedence // right associativity
+            };
+
+            let rhs = parse_expr_with_precedence(parser, precedence);
             let loc = merge_locations(&lhs.loc, &rhs.loc);
 
             lhs = Expr {
@@ -288,14 +293,28 @@ mod tests {
 
     #[test]
     fn parse_function() {
-        let src = r#"fn add() { let x = 5; let y = 10; return x + y; }"#;
+        let src = r#"fn () { let x = 5; let y = 10; return x + y; }"#;
         insta::assert_debug_snapshot!(parse(src));
     }
 
     #[test]
     fn parse_function_with_params() {
-        let src = r#"fn add(x, y) { return x + y; }"#;
+        let src = r#"fn (x, y) { return x + y; }"#;
         insta::assert_debug_snapshot!(parse(src));
+    }
+
+    #[test]
+    #[should_panic]
+    fn parse_function_expected_comma_or_left_brace() {
+        let src = r#"fn (x, y { return x + y; }"#;
+        parse(src);
+    }
+
+    #[test]
+    #[should_panic]
+    fn parse_function_expected_identifier() {
+        let src = r#"fn (, y) { return x + y; }"#;
+        parse(src);
     }
 
     #[test]
