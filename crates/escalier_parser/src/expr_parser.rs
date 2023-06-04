@@ -19,7 +19,7 @@ fn get_infix_precedence(op: &Token) -> Option<(u8, Associativity)> {
         // multiplicative
         TokenKind::Times => PRECEDENCE_TABLE.get(&Operator::Multiplication).cloned(),
         TokenKind::Divide => PRECEDENCE_TABLE.get(&Operator::Division).cloned(),
-        // TODO: modulo
+        TokenKind::Modulo => PRECEDENCE_TABLE.get(&Operator::Remainder).cloned(),
 
         // additive
         TokenKind::Plus => PRECEDENCE_TABLE.get(&Operator::Addition).cloned(),
@@ -305,6 +305,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                 TokenKind::Minus => BinaryOp::Minus,
                 TokenKind::Times => BinaryOp::Times,
                 TokenKind::Divide => BinaryOp::Divide,
+                TokenKind::Modulo => BinaryOp::Modulo,
                 TokenKind::Equals => BinaryOp::Equals,
                 TokenKind::NotEquals => BinaryOp::NotEquals,
                 TokenKind::LessThan => BinaryOp::LessThan,
@@ -381,6 +382,11 @@ mod tests {
     }
 
     #[test]
+    fn parse_multiplicative_operators() {
+        insta::assert_debug_snapshot!(parse("a * b / c % d"));
+    }
+
+    #[test]
     fn parse_additive_and_multiplicative() {
         insta::assert_debug_snapshot!(parse("1 * 2 + 3"));
     }
@@ -393,6 +399,7 @@ mod tests {
     #[test]
     fn parse_comparisons_and_logic() {
         insta::assert_debug_snapshot!(parse("a > b && c >= d || e < f && g <= h"));
+        insta::assert_debug_snapshot!(parse("x != y && z == w"));
     }
 
     #[test]

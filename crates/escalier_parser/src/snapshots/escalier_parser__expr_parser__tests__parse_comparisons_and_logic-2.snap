@@ -1,0 +1,109 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(\"x != y && z == w\")"
+---
+Expr {
+    kind: Binary {
+        left: Expr {
+            kind: Binary {
+                left: Expr {
+                    kind: Identifier(
+                        "x",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 1,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 2,
+                        },
+                    },
+                },
+                op: NotEquals,
+                right: Expr {
+                    kind: Identifier(
+                        "y",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 6,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 7,
+                        },
+                    },
+                },
+            },
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 7,
+                },
+            },
+        },
+        op: And,
+        right: Expr {
+            kind: Binary {
+                left: Expr {
+                    kind: Identifier(
+                        "z",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 11,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 12,
+                        },
+                    },
+                },
+                op: Equals,
+                right: Expr {
+                    kind: Identifier(
+                        "w",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 16,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 17,
+                        },
+                    },
+                },
+            },
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 11,
+                },
+                end: Position {
+                    line: 1,
+                    column: 17,
+                },
+            },
+        },
+    },
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 17,
+        },
+    },
+}

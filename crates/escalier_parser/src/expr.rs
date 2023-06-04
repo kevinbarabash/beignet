@@ -56,6 +56,7 @@ pub enum BinaryOp {
     Minus,
     Times,
     Divide,
+    Modulo,
     Equals,
     NotEquals,
     LessThan,

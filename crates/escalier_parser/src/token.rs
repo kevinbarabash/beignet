@@ -26,6 +26,7 @@ pub enum TokenKind {
     Minus,
     Times,
     Divide,
+    Modulo,
     Dot,
     Colon,
     Question,

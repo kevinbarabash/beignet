@@ -44,6 +44,7 @@ impl Lexer {
                 '-' => TokenKind::Minus,
                 '*' => TokenKind::Times,
                 '/' => TokenKind::Divide,
+                '%' => TokenKind::Modulo,
                 '(' => TokenKind::LeftParen,
                 ')' => TokenKind::RightParen,
                 '{' => TokenKind::LeftBrace,
