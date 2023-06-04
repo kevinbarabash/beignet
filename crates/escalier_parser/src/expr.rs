@@ -31,6 +31,10 @@ pub enum ExprKind {
         params: Vec<String>,
         body: Vec<Stmt>,
     },
+    Lambda {
+        params: Vec<String>,
+        expr: Box<Expr>,
+    },
     Call {
         args: Vec<Expr>,
         callee: Box<Expr>,

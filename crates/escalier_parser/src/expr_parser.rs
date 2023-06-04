@@ -130,32 +130,44 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             assert_eq!(parser.next().kind, TokenKind::LeftParen);
             let params = parse_params(parser);
             assert_eq!(parser.next().kind, TokenKind::RightParen);
-            assert_eq!(parser.next().kind, TokenKind::LeftBrace);
-            let body = parse_block(parser);
-            let close_brace = parser.next();
-            assert_eq!(close_brace.kind, TokenKind::RightBrace);
 
-            let loc = merge_locations(&next.loc, &close_brace.loc);
-            Expr {
-                kind: ExprKind::Function { params, body },
-                loc,
+            match parser.next().kind {
+                TokenKind::LeftBrace => {
+                    let body = parse_block(parser);
+                    let close_brace = parser.next();
+                    assert_eq!(close_brace.kind, TokenKind::RightBrace);
+
+                    let loc = merge_locations(&next.loc, &close_brace.loc);
+                    Expr {
+                        kind: ExprKind::Function { params, body },
+                        loc,
+                    }
+                }
+                TokenKind::Arrow => {
+                    let expr = parse_expr(parser);
+                    let loc = merge_locations(&next.loc, &expr.loc);
+
+                    Expr {
+                        kind: ExprKind::Lambda {
+                            params,
+                            expr: Box::new(expr),
+                        },
+                        loc,
+                    }
+                }
+                _ => panic!("Expected left brace or arrow, got {:?}", parser.peek()),
             }
         }
         TokenKind::If => {
-            eprintln!("parsing if");
             assert_eq!(parser.next().kind, TokenKind::LeftParen);
             let cond = parse_expr(parser);
-            eprintln!("cond = {:?}", cond);
             assert_eq!(parser.next().kind, TokenKind::RightParen);
-            eprintln!("after right paren");
             assert_eq!(parser.next().kind, TokenKind::LeftBrace);
             let consequent = parse_block(parser);
-            eprintln!("consequent = {:?}", cond);
             let close_brace = parser.next();
             assert_eq!(close_brace.kind, TokenKind::RightBrace);
 
             if parser.peek().kind == TokenKind::Else {
-                eprintln!("parsing else");
                 parser.next();
                 assert_eq!(parser.next().kind, TokenKind::LeftBrace);
                 let alternate = parse_block(parser);
@@ -395,14 +407,19 @@ mod tests {
 
     #[test]
     fn parse_function() {
-        let src = r#"fn () { let x = 5; let y = 10; return x + y; }"#;
-        insta::assert_debug_snapshot!(parse(src));
+        insta::assert_debug_snapshot!(parse("fn () { let x = 5; let y = 10; return x + y; }"));
     }
 
     #[test]
     fn parse_function_with_params() {
         let src = r#"fn (x, y) { return x + y; }"#;
         insta::assert_debug_snapshot!(parse(src));
+    }
+
+    #[test]
+    fn parse_lambdas() {
+        insta::assert_debug_snapshot!(parse("fn (x, y) { return x + y; }"));
+        insta::assert_debug_snapshot!(parse("fn (x) => fn (y) => x + y;"));
     }
 
     #[test]

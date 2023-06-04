@@ -1,0 +1,84 @@
+---
+source: crates/escalier_parser/src/stmt_parser.rs
+expression: "parse(\"let add = fn (x, y) => x + y;\")"
+---
+[
+    Stmt {
+        kind: Let {
+            name: "add",
+            expr: Expr {
+                kind: Lambda {
+                    params: [
+                        "x",
+                        "y",
+                    ],
+                    expr: Expr {
+                        kind: Binary {
+                            left: Expr {
+                                kind: Identifier(
+                                    "x",
+                                ),
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 1,
+                                        column: 24,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 25,
+                                    },
+                                },
+                            },
+                            op: Plus,
+                            right: Expr {
+                                kind: Identifier(
+                                    "y",
+                                ),
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 1,
+                                        column: 28,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 29,
+                                    },
+                                },
+                            },
+                        },
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 24,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 29,
+                            },
+                        },
+                    },
+                },
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 11,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 29,
+                    },
+                },
+            },
+        },
+        loc: SourceLocation {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 1,
+                column: 29,
+            },
+        },
+    },
+]

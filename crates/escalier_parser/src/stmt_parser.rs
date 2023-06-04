@@ -110,7 +110,13 @@ mod tests {
 
     #[test]
     fn parse_conditionals() {
-        let src = r#"let max = if (x > y) { x; } else { y; };"#;
-        insta::assert_debug_snapshot!(parse(src));
+        insta::assert_debug_snapshot!(parse("let max = if (x > y) { x; } else { y; };"));
+        insta::assert_debug_snapshot!(parse("if (foo) { console.log(foo); };"));
+    }
+
+    #[test]
+    fn parse_lambda() {
+        insta::assert_debug_snapshot!(parse("let add = fn (x, y) => x + y;"));
+        insta::assert_debug_snapshot!(parse("let add = fn (x) => fn (y) => x + y;"));
     }
 }

@@ -34,6 +34,10 @@ impl Lexer {
                         self.scanner.pop();
                         TokenKind::Equals
                     }
+                    Some('>') => {
+                        self.scanner.pop();
+                        TokenKind::Arrow
+                    }
                     _ => TokenKind::Assign,
                 },
                 '+' => TokenKind::Plus,

@@ -47,6 +47,7 @@ pub enum TokenKind {
     RightBrace,
     LeftBracket,
     RightBracket,
+    Arrow,
 
     Eof,
 }
