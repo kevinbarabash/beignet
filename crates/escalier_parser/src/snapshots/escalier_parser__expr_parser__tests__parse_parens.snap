@@ -5,8 +5,10 @@ expression: "parse(\"5 * (x + 1)\")"
 Expr {
     kind: Binary {
         left: Expr {
-            kind: Number(
-                "5",
+            kind: Literal(
+                Number(
+                    "5",
+                ),
             ),
             loc: SourceLocation {
                 start: Position {
@@ -39,8 +41,10 @@ Expr {
                 },
                 op: Plus,
                 right: Expr {
-                    kind: Number(
-                        "1",
+                    kind: Literal(
+                        Number(
+                            "1",
+                        ),
                     ),
                     loc: SourceLocation {
                         start: Position {

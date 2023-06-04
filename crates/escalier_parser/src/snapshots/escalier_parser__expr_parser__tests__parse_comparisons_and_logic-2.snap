@@ -1,16 +1,14 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(\"1 + 2 + 3\")"
+expression: "parse(\"x != y && z == w\")"
 ---
 Expr {
     kind: Binary {
         left: Expr {
             kind: Binary {
                 left: Expr {
-                    kind: Literal(
-                        Number(
-                            "1",
-                        ),
+                    kind: Identifier(
+                        "x",
                     ),
                     loc: SourceLocation {
                         start: Position {
@@ -23,21 +21,19 @@ Expr {
                         },
                     },
                 },
-                op: Plus,
+                op: NotEquals,
                 right: Expr {
-                    kind: Literal(
-                        Number(
-                            "2",
-                        ),
+                    kind: Identifier(
+                        "y",
                     ),
                     loc: SourceLocation {
                         start: Position {
                             line: 1,
-                            column: 5,
+                            column: 6,
                         },
                         end: Position {
                             line: 1,
-                            column: 6,
+                            column: 7,
                         },
                     },
                 },
@@ -49,25 +45,53 @@ Expr {
                 },
                 end: Position {
                     line: 1,
-                    column: 6,
+                    column: 7,
                 },
             },
         },
-        op: Plus,
+        op: And,
         right: Expr {
-            kind: Literal(
-                Number(
-                    "3",
-                ),
-            ),
+            kind: Binary {
+                left: Expr {
+                    kind: Identifier(
+                        "z",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 11,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 12,
+                        },
+                    },
+                },
+                op: Equals,
+                right: Expr {
+                    kind: Identifier(
+                        "w",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 16,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 17,
+                        },
+                    },
+                },
+            },
             loc: SourceLocation {
                 start: Position {
                     line: 1,
-                    column: 9,
+                    column: 11,
                 },
                 end: Position {
                     line: 1,
-                    column: 10,
+                    column: 17,
                 },
             },
         },
@@ -79,7 +103,7 @@ Expr {
         },
         end: Position {
             line: 1,
-            column: 10,
+            column: 17,
         },
     },
 }

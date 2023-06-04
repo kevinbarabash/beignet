@@ -34,12 +34,17 @@ impl Lexer {
                         self.scanner.pop();
                         TokenKind::Equals
                     }
+                    Some('>') => {
+                        self.scanner.pop();
+                        TokenKind::Arrow
+                    }
                     _ => TokenKind::Assign,
                 },
                 '+' => TokenKind::Plus,
                 '-' => TokenKind::Minus,
                 '*' => TokenKind::Times,
                 '/' => TokenKind::Divide,
+                '%' => TokenKind::Modulo,
                 '(' => TokenKind::LeftParen,
                 ')' => TokenKind::RightParen,
                 '{' => TokenKind::LeftBrace,
@@ -121,8 +126,16 @@ impl Lexer {
         }
         let kind = match ident.as_ref() {
             "fn" => TokenKind::Fn,
+            "async" => TokenKind::Async,
+            "await" => TokenKind::Await,
             "let" => TokenKind::Let,
             "return" => TokenKind::Return,
+            "if" => TokenKind::If,
+            "else" => TokenKind::Else,
+            "true" => TokenKind::True,
+            "false" => TokenKind::False,
+            "null" => TokenKind::Null,
+            "undefined" => TokenKind::Undefined,
             _ => TokenKind::Identifier(ident),
         };
         Token {
@@ -164,6 +177,10 @@ impl Lexer {
                 end: self.scanner.position(),
             },
         }
+    }
+
+    pub fn lex_string(&mut self, start: Position) -> Token {
+        todo!()
     }
 }
 

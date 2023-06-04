@@ -1,44 +1,16 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: parse(src)
+expression: "parse(\"add(5, 10)\")"
 ---
 Expr {
     kind: Call {
         args: [
             Expr {
-                kind: Binary {
-                    left: Expr {
-                        kind: Number(
-                            "5",
-                        ),
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 5,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 6,
-                            },
-                        },
-                    },
-                    op: Times,
-                    right: Expr {
-                        kind: Identifier(
-                            "i",
-                        ),
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 9,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 10,
-                            },
-                        },
-                    },
-                },
+                kind: Literal(
+                    Number(
+                        "5",
+                    ),
+                ),
                 loc: SourceLocation {
                     start: Position {
                         line: 1,
@@ -46,52 +18,24 @@ Expr {
                     },
                     end: Position {
                         line: 1,
-                        column: 10,
+                        column: 6,
                     },
                 },
             },
             Expr {
-                kind: Binary {
-                    left: Expr {
-                        kind: Number(
-                            "10",
-                        ),
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 12,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 14,
-                            },
-                        },
-                    },
-                    op: Times,
-                    right: Expr {
-                        kind: Identifier(
-                            "j",
-                        ),
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 17,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 18,
-                            },
-                        },
-                    },
-                },
+                kind: Literal(
+                    Number(
+                        "10",
+                    ),
+                ),
                 loc: SourceLocation {
                     start: Position {
                         line: 1,
-                        column: 12,
+                        column: 8,
                     },
                     end: Position {
                         line: 1,
-                        column: 18,
+                        column: 10,
                     },
                 },
             },
@@ -119,7 +63,7 @@ Expr {
         },
         end: Position {
             line: 1,
-            column: 19,
+            column: 11,
         },
     },
 }

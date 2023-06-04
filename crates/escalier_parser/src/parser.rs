@@ -26,4 +26,17 @@ impl Parser {
             },
         })
     }
+
+    pub fn peek_ahead(&mut self, offset: usize) -> Token {
+        self.tokens
+            .get(self.cursor + offset)
+            .cloned()
+            .unwrap_or(Token {
+                kind: TokenKind::Eof,
+                loc: SourceLocation {
+                    start: Position { line: 0, column: 0 },
+                    end: Position { line: 0, column: 0 },
+                },
+            })
+    }
 }

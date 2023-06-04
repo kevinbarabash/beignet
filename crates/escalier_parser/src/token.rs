@@ -2,13 +2,23 @@ use crate::source_location::SourceLocation;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TokenKind {
-    Number(String),
     Identifier(String), // [a-zA-Z_][a-zA-Z0-9_]*
+
+    // Literals
+    Number(String),
+    True,
+    False,
+    Null,
+    Undefined,
 
     // Keywords
     Let,
     Return,
     Fn,
+    Await,
+    Async,
+    If,
+    Else,
 
     // Operators
     Assign,
@@ -16,15 +26,8 @@ pub enum TokenKind {
     Minus,
     Times,
     Divide,
-    LeftParen,
-    RightParen,
-    LeftBrace,
-    RightBrace,
-    LeftBracket,
-    RightBracket,
-    Comma,
+    Modulo,
     Dot,
-    Semicolon,
     Colon,
     Question,
     Equals,
@@ -35,6 +38,18 @@ pub enum TokenKind {
     GreaterThanOrEqual,
     Or,
     And,
+
+    // punctuation
+    Semicolon,
+    Comma,
+    LeftParen,
+    RightParen,
+    LeftBrace,
+    RightBrace,
+    LeftBracket,
+    RightBracket,
+    Arrow,
+
     Eof,
 }
 

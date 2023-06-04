@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(\"1 + 2 - 3 + 4\")"
+expression: "parse(\"a * b / c % d\")"
 ---
 Expr {
     kind: Binary {
@@ -9,10 +9,8 @@ Expr {
                 left: Expr {
                     kind: Binary {
                         left: Expr {
-                            kind: Literal(
-                                Number(
-                                    "1",
-                                ),
+                            kind: Identifier(
+                                "a",
                             ),
                             loc: SourceLocation {
                                 start: Position {
@@ -25,12 +23,10 @@ Expr {
                                 },
                             },
                         },
-                        op: Plus,
+                        op: Times,
                         right: Expr {
-                            kind: Literal(
-                                Number(
-                                    "2",
-                                ),
+                            kind: Identifier(
+                                "b",
                             ),
                             loc: SourceLocation {
                                 start: Position {
@@ -55,12 +51,10 @@ Expr {
                         },
                     },
                 },
-                op: Minus,
+                op: Divide,
                 right: Expr {
-                    kind: Literal(
-                        Number(
-                            "3",
-                        ),
+                    kind: Identifier(
+                        "c",
                     ),
                     loc: SourceLocation {
                         start: Position {
@@ -85,12 +79,10 @@ Expr {
                 },
             },
         },
-        op: Plus,
+        op: Modulo,
         right: Expr {
-            kind: Literal(
-                Number(
-                    "4",
-                ),
+            kind: Identifier(
+                "d",
             ),
             loc: SourceLocation {
                 start: Position {

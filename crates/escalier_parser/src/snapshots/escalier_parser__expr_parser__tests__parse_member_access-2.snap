@@ -1,16 +1,14 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(\"1 + 2 + 3\")"
+expression: "parse(\"a.b+c.d\")"
 ---
 Expr {
     kind: Binary {
         left: Expr {
-            kind: Binary {
-                left: Expr {
-                    kind: Literal(
-                        Number(
-                            "1",
-                        ),
+            kind: Member {
+                object: Expr {
+                    kind: Identifier(
+                        "a",
                     ),
                     loc: SourceLocation {
                         start: Position {
@@ -23,12 +21,39 @@ Expr {
                         },
                     },
                 },
-                op: Plus,
-                right: Expr {
-                    kind: Literal(
-                        Number(
-                            "2",
-                        ),
+                property: Expr {
+                    kind: Identifier(
+                        "b",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 3,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 4,
+                        },
+                    },
+                },
+            },
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 4,
+                },
+            },
+        },
+        op: Plus,
+        right: Expr {
+            kind: Member {
+                object: Expr {
+                    kind: Identifier(
+                        "c",
                     ),
                     loc: SourceLocation {
                         start: Position {
@@ -41,33 +66,30 @@ Expr {
                         },
                     },
                 },
+                property: Expr {
+                    kind: Identifier(
+                        "d",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 7,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 8,
+                        },
+                    },
+                },
             },
             loc: SourceLocation {
                 start: Position {
                     line: 1,
-                    column: 1,
+                    column: 5,
                 },
                 end: Position {
                     line: 1,
-                    column: 6,
-                },
-            },
-        },
-        op: Plus,
-        right: Expr {
-            kind: Literal(
-                Number(
-                    "3",
-                ),
-            ),
-            loc: SourceLocation {
-                start: Position {
-                    line: 1,
-                    column: 9,
-                },
-                end: Position {
-                    line: 1,
-                    column: 10,
+                    column: 8,
                 },
             },
         },
@@ -79,7 +101,7 @@ Expr {
         },
         end: Position {
             line: 1,
-            column: 10,
+            column: 8,
         },
     },
 }
