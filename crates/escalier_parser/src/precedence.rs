@@ -90,7 +90,7 @@ pub enum Operator {
 
     // 2
     Assignment,
-    // Conditional, // ternary
+    Conditional,
     Arrow,
     Yield,
     YieldStar,
@@ -149,7 +149,9 @@ lazy_static! {
         table.insert(Operator::LogicalOr, (3, Associativity::Left));
         table.insert(Operator::NullishCoalescing, (3, Associativity::Left));
 
-        table.insert(Operator::Assignment, (2, Associativity::Right));
+        // QUESTION: How do we prevent chaining of assignment operators?
+        table.insert(Operator::Assignment, (2, Associativity::NotApplicable));
+        table.insert(Operator::Conditional, (2, Associativity::Left));
         table.insert(Operator::Arrow, (2, Associativity::Right));
         table.insert(Operator::Yield, (2, Associativity::Right));
         table.insert(Operator::YieldStar, (2, Associativity::Right));

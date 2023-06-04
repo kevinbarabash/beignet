@@ -1,0 +1,144 @@
+---
+source: crates/escalier_parser/src/stmt_parser.rs
+expression: parse(src)
+---
+[
+    Stmt {
+        kind: Let {
+            name: "max",
+            expr: Expr {
+                kind: IfElse {
+                    cond: Expr {
+                        kind: Binary {
+                            left: Expr {
+                                kind: Identifier(
+                                    "x",
+                                ),
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 1,
+                                        column: 15,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 16,
+                                    },
+                                },
+                            },
+                            op: GreaterThan,
+                            right: Expr {
+                                kind: Identifier(
+                                    "y",
+                                ),
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 1,
+                                        column: 19,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 20,
+                                    },
+                                },
+                            },
+                        },
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 15,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 20,
+                            },
+                        },
+                    },
+                    consequent: [
+                        Stmt {
+                            kind: Expr {
+                                expr: Expr {
+                                    kind: Identifier(
+                                        "x",
+                                    ),
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 1,
+                                            column: 24,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 25,
+                                        },
+                                    },
+                                },
+                            },
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 24,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 25,
+                                },
+                            },
+                        },
+                    ],
+                    alternate: Some(
+                        [
+                            Stmt {
+                                kind: Expr {
+                                    expr: Expr {
+                                        kind: Identifier(
+                                            "y",
+                                        ),
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 1,
+                                                column: 36,
+                                            },
+                                            end: Position {
+                                                line: 1,
+                                                column: 37,
+                                            },
+                                        },
+                                    },
+                                },
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 1,
+                                        column: 36,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 37,
+                                    },
+                                },
+                            },
+                        ],
+                    ),
+                },
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 11,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 40,
+                    },
+                },
+            },
+        },
+        loc: SourceLocation {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 1,
+                column: 40,
+            },
+        },
+    },
+]

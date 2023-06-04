@@ -6,8 +6,10 @@ Expr {
     kind: Call {
         args: [
             Expr {
-                kind: Number(
-                    "10",
+                kind: Literal(
+                    Number(
+                        "10",
+                    ),
                 ),
                 loc: SourceLocation {
                     start: Position {
@@ -25,8 +27,10 @@ Expr {
             kind: Call {
                 args: [
                     Expr {
-                        kind: Number(
-                            "5",
+                        kind: Literal(
+                            Number(
+                                "5",
+                            ),
                         ),
                         loc: SourceLocation {
                             start: Position {

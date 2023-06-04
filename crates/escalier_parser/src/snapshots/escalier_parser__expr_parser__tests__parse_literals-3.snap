@@ -1,0 +1,21 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(\"false\")"
+---
+Expr {
+    kind: Literal(
+        Boolean(
+            false,
+        ),
+    ),
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 6,
+        },
+    },
+}

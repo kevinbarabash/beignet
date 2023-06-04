@@ -6,11 +6,12 @@ use crate::stmt::{Stmt, StmtKind};
 use crate::token::TokenKind;
 
 pub fn parse_stmt(parser: &mut Parser) -> Stmt {
-    let token = parser.next();
-    let next = parser.peek();
+    let token = parser.peek();
+    let next = parser.peek_ahead(1);
 
     match (&token.kind, &next.kind) {
         (TokenKind::Let, TokenKind::Identifier(id)) => {
+            parser.next();
             let name = id.to_owned();
             parser.next();
             assert_eq!(parser.next().kind, TokenKind::Assign);
@@ -25,12 +26,14 @@ pub fn parse_stmt(parser: &mut Parser) -> Stmt {
         }
         (TokenKind::Return, TokenKind::Semicolon) => {
             parser.next();
+            parser.next();
             Stmt {
                 kind: StmtKind::Return { arg: None },
                 loc: merge_locations(&token.loc, &next.loc),
             }
         }
         (TokenKind::Return, _) => {
+            parser.next();
             let arg = parse_expr(parser);
             assert_eq!(parser.next().kind, TokenKind::Semicolon);
 
@@ -79,6 +82,13 @@ mod tests {
     }
 
     #[test]
+    fn single_variable_expression() {
+        let input = "x;";
+        let stmts = parse(input);
+        assert_eq!(stmts.len(), 1);
+    }
+
+    #[test]
     fn multiple_statements() {
         let input = r#"
         let x = 5;
@@ -90,5 +100,17 @@ mod tests {
         let stmts = parse(input);
 
         assert_eq!(stmts.len(), 4);
+    }
+
+    #[test]
+    fn parse_assignment() {
+        let src = r#"let y = m*x + b;"#;
+        insta::assert_debug_snapshot!(parse(src));
+    }
+
+    #[test]
+    fn parse_conditionals() {
+        let src = r#"let max = if (x > y) { x; } else { y; };"#;
+        insta::assert_debug_snapshot!(parse(src));
     }
 }

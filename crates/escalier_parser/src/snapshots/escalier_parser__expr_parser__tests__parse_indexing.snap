@@ -22,8 +22,10 @@ Expr {
                     },
                 },
                 right: Expr {
-                    kind: Number(
-                        "1",
+                    kind: Literal(
+                        Number(
+                            "1",
+                        ),
                     ),
                     loc: SourceLocation {
                         start: Position {

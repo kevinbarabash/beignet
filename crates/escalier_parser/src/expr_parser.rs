@@ -1,4 +1,4 @@
-use crate::expr::{BinaryOp, Expr, ExprKind, UnaryOp};
+use crate::expr::{BinaryOp, Expr, ExprKind, Literal, UnaryOp};
 use crate::parser::Parser;
 use crate::precedence::{Associativity, Operator, PRECEDENCE_TABLE};
 use crate::source_location::*;
@@ -27,6 +27,7 @@ fn get_infix_precedence(op: &Token) -> Option<(u8, Associativity)> {
 
         // equality
         TokenKind::Equals => PRECEDENCE_TABLE.get(&Operator::Equals).cloned(),
+        TokenKind::NotEquals => PRECEDENCE_TABLE.get(&Operator::NotEquals).cloned(),
         TokenKind::LessThan => PRECEDENCE_TABLE.get(&Operator::LessThan).cloned(),
         TokenKind::LessThanOrEqual => PRECEDENCE_TABLE.get(&Operator::LessThanOrEqual).cloned(),
         TokenKind::GreaterThan => PRECEDENCE_TABLE.get(&Operator::GreaterThan).cloned(),
@@ -89,12 +90,35 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
     let next = parser.next();
 
     let mut lhs = match &next.kind {
+        // TODO:
+        // - arrays
+        // - objects
+        // - do-expression
+        // - if-else conditional
+        // - try-catch
+        // - match
         TokenKind::Number(n) => Expr {
-            kind: ExprKind::Number(n.to_owned()),
+            kind: ExprKind::Literal(Literal::Number(n.to_owned())),
             loc: next.loc.clone(),
         },
         TokenKind::Identifier(id) => Expr {
             kind: ExprKind::Identifier(id.to_owned()),
+            loc: next.loc.clone(),
+        },
+        TokenKind::True => Expr {
+            kind: ExprKind::Literal(Literal::Boolean(true)),
+            loc: next.loc.clone(),
+        },
+        TokenKind::False => Expr {
+            kind: ExprKind::Literal(Literal::Boolean(false)),
+            loc: next.loc.clone(),
+        },
+        TokenKind::Null => Expr {
+            kind: ExprKind::Literal(Literal::Null),
+            loc: next.loc.clone(),
+        },
+        TokenKind::Undefined => Expr {
+            kind: ExprKind::Literal(Literal::Null),
             loc: next.loc.clone(),
         },
         TokenKind::LeftParen => {
@@ -115,6 +139,48 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             Expr {
                 kind: ExprKind::Function { params, body },
                 loc,
+            }
+        }
+        TokenKind::If => {
+            eprintln!("parsing if");
+            assert_eq!(parser.next().kind, TokenKind::LeftParen);
+            let cond = parse_expr(parser);
+            eprintln!("cond = {:?}", cond);
+            assert_eq!(parser.next().kind, TokenKind::RightParen);
+            eprintln!("after right paren");
+            assert_eq!(parser.next().kind, TokenKind::LeftBrace);
+            let consequent = parse_block(parser);
+            eprintln!("consequent = {:?}", cond);
+            let close_brace = parser.next();
+            assert_eq!(close_brace.kind, TokenKind::RightBrace);
+
+            if parser.peek().kind == TokenKind::Else {
+                eprintln!("parsing else");
+                parser.next();
+                assert_eq!(parser.next().kind, TokenKind::LeftBrace);
+                let alternate = parse_block(parser);
+                let close_brace = parser.next();
+                assert_eq!(close_brace.kind, TokenKind::RightBrace);
+
+                let loc = merge_locations(&next.loc, &close_brace.loc);
+                Expr {
+                    kind: ExprKind::IfElse {
+                        cond: Box::new(cond),
+                        consequent,
+                        alternate: Some(alternate),
+                    },
+                    loc,
+                }
+            } else {
+                let loc = merge_locations(&next.loc, &close_brace.loc);
+                Expr {
+                    kind: ExprKind::IfElse {
+                        cond: Box::new(cond),
+                        consequent,
+                        alternate: None,
+                    },
+                    loc,
+                }
             }
         }
         t => match get_prefix_precedence(&next) {
@@ -145,6 +211,10 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             break;
         }
 
+        if let TokenKind::Semicolon = next.kind {
+            break;
+        }
+
         if let Some(next_precedence) = get_postfix_precedence(&next) {
             if precedence >= next_precedence.0 {
                 break;
@@ -160,7 +230,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
 
             lhs = match &next.kind {
                 TokenKind::LeftBracket => {
-                    let rhs = parse_expr_with_precedence(parser, 0);
+                    let rhs = parse_expr(parser);
                     let loc = merge_locations(&lhs.loc, &rhs.loc);
                     assert_eq!(parser.next().kind, TokenKind::RightBracket);
                     Expr {
@@ -174,7 +244,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                 TokenKind::LeftParen => {
                     let mut args = Vec::new();
                     while parser.peek().kind != TokenKind::RightParen {
-                        args.push(parse_expr_with_precedence(parser, 0));
+                        args.push(parse_expr(parser));
 
                         match parser.peek().kind {
                             TokenKind::RightParen => break,
@@ -275,6 +345,17 @@ mod tests {
         let tokens = lexer.lex();
         let mut parser = Parser::new(tokens);
         parse_expr(&mut parser)
+    }
+
+    #[test]
+    fn parse_literals() {
+        insta::assert_debug_snapshot!(parse("123"));
+        insta::assert_debug_snapshot!(parse("true"));
+        insta::assert_debug_snapshot!(parse("false"));
+        insta::assert_debug_snapshot!(parse("null"));
+        insta::assert_debug_snapshot!(parse("undefined"));
+        // TODO: update lexer to handle string literals
+        // insta::assert_debug_snapshot!(parse(r#""hello""#));
     }
 
     #[test]

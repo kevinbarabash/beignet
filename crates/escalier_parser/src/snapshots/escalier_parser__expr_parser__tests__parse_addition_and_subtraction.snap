@@ -9,8 +9,10 @@ Expr {
                 left: Expr {
                     kind: Binary {
                         left: Expr {
-                            kind: Number(
-                                "1",
+                            kind: Literal(
+                                Number(
+                                    "1",
+                                ),
                             ),
                             loc: SourceLocation {
                                 start: Position {
@@ -25,8 +27,10 @@ Expr {
                         },
                         op: Plus,
                         right: Expr {
-                            kind: Number(
-                                "2",
+                            kind: Literal(
+                                Number(
+                                    "2",
+                                ),
                             ),
                             loc: SourceLocation {
                                 start: Position {
@@ -53,8 +57,10 @@ Expr {
                 },
                 op: Minus,
                 right: Expr {
-                    kind: Number(
-                        "3",
+                    kind: Literal(
+                        Number(
+                            "3",
+                        ),
                     ),
                     loc: SourceLocation {
                         start: Position {
@@ -81,8 +87,10 @@ Expr {
         },
         op: Plus,
         right: Expr {
-            kind: Number(
-                "4",
+            kind: Literal(
+                Number(
+                    "4",
+                ),
             ),
             loc: SourceLocation {
                 start: Position {
