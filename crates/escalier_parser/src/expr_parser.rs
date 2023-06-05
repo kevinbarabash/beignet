@@ -97,7 +97,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
         // - if-else conditional
         // - try-catch
         // - match
-        TokenKind::Number(n) => Expr {
+        TokenKind::NumLit(n) => Expr {
             kind: ExprKind::Literal(Literal::Number(n.to_owned())),
             loc: next.loc.clone(),
         },
@@ -105,12 +105,8 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             kind: ExprKind::Identifier(id.to_owned()),
             loc: next.loc.clone(),
         },
-        TokenKind::True => Expr {
-            kind: ExprKind::Literal(Literal::Boolean(true)),
-            loc: next.loc.clone(),
-        },
-        TokenKind::False => Expr {
-            kind: ExprKind::Literal(Literal::Boolean(false)),
+        TokenKind::BoolLit(b) => Expr {
+            kind: ExprKind::Literal(Literal::Boolean(*b)),
             loc: next.loc.clone(),
         },
         TokenKind::Null => Expr {
