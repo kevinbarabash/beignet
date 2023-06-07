@@ -1,0 +1,80 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(\"{a: {b: {c: boolean}}}\")"
+---
+TypeAnn {
+    kind: Object(
+        [
+            ObjectProp {
+                name: "a",
+                optional: false,
+                mutable: false,
+                type_ann: TypeAnn {
+                    kind: Object(
+                        [
+                            ObjectProp {
+                                name: "b",
+                                optional: false,
+                                mutable: false,
+                                type_ann: TypeAnn {
+                                    kind: Object(
+                                        [
+                                            ObjectProp {
+                                                name: "c",
+                                                optional: false,
+                                                mutable: false,
+                                                type_ann: TypeAnn {
+                                                    kind: Boolean,
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 1,
+                                                            column: 13,
+                                                        },
+                                                        end: Position {
+                                                            line: 1,
+                                                            column: 20,
+                                                        },
+                                                    },
+                                                },
+                                            },
+                                        ],
+                                    ),
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 1,
+                                            column: 9,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 10,
+                                        },
+                                    },
+                                },
+                            },
+                        ],
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 5,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 6,
+                        },
+                    },
+                },
+            },
+        ],
+    ),
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 2,
+        },
+    },
+}
