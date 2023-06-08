@@ -1,10 +1,11 @@
 use crate::parser::Parser;
+use crate::source_location::merge_locations;
 use crate::token::TokenKind;
 use crate::type_ann::{ObjectProp, TypeAnn, TypeAnnKind};
 
 pub fn parse_type_ann(parser: &mut Parser) -> TypeAnn {
-    let loc = parser.peek().loc;
-    let kind = match parser.next().kind {
+    let mut loc = parser.peek().loc;
+    let mut kind = match parser.next().kind {
         TokenKind::BoolLit(value) => TypeAnnKind::BoolLit(value),
         TokenKind::Boolean => TypeAnnKind::Boolean,
         TokenKind::NumLit(value) => TypeAnnKind::NumLit(value),
@@ -45,6 +46,7 @@ pub fn parse_type_ann(parser: &mut Parser) -> TypeAnn {
                 }
             }
 
+            loc = merge_locations(&loc, &parser.peek().loc);
             assert_eq!(parser.next().kind, TokenKind::RightBrace);
 
             TypeAnnKind::Object(props)
@@ -62,6 +64,7 @@ pub fn parse_type_ann(parser: &mut Parser) -> TypeAnn {
                 }
             }
 
+            loc = merge_locations(&loc, &parser.peek().loc);
             assert_eq!(parser.next().kind, TokenKind::RightBracket);
 
             TypeAnnKind::Tuple(elems)
@@ -81,6 +84,7 @@ pub fn parse_type_ann(parser: &mut Parser) -> TypeAnn {
                     }
                 }
 
+                loc = merge_locations(&loc, &parser.peek().loc);
                 assert_eq!(parser.next().kind, TokenKind::GreaterThan);
 
                 TypeAnnKind::TypeRef(ident, Some(params))
@@ -92,6 +96,15 @@ pub fn parse_type_ann(parser: &mut Parser) -> TypeAnn {
             panic!("expected token to start type annotation, found {:?}", token)
         }
     };
+
+    while parser.peek().kind == TokenKind::LeftBracket {
+        parser.next();
+        let right = parser.peek().loc;
+        let merged_loc = merge_locations(&loc, &right);
+        assert_eq!(parser.next().kind, TokenKind::RightBracket);
+        kind = TypeAnnKind::Array(Box::new(TypeAnn { kind, loc }));
+        loc = merged_loc;
+    }
 
     TypeAnn { kind, loc }
 }
@@ -162,6 +175,13 @@ mod tests {
     #[should_panic]
     fn parse_tuple_type_missing_right_bracket() {
         insta::assert_debug_snapshot!(parse("[number, string"));
+    }
+
+    #[test]
+    fn parse_array_types() {
+        insta::assert_debug_snapshot!(parse("number[]"));
+        insta::assert_debug_snapshot!(parse("{x: number, y: number}[]"));
+        insta::assert_debug_snapshot!(parse("T[][]"));
     }
 
     #[test]

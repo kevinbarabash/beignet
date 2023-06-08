@@ -67,7 +67,7 @@ TypeAnn {
             column: 1,
         },
         end: Position {
-            line: 1,
+            line: 5,
             column: 2,
         },
     },

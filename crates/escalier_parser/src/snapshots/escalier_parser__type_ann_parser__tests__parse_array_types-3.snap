@@ -1,12 +1,11 @@
 ---
 source: crates/escalier_parser/src/type_ann_parser.rs
-expression: "parse(\"Array<T>\")"
+expression: "parse(\"T[][]\")"
 ---
 TypeAnn {
-    kind: TypeRef(
-        "Array",
-        Some(
-            [
+    kind: Array(
+        TypeAnn {
+            kind: Array(
                 TypeAnn {
                     kind: TypeRef(
                         "T",
@@ -15,16 +14,26 @@ TypeAnn {
                     loc: SourceLocation {
                         start: Position {
                             line: 1,
-                            column: 7,
+                            column: 1,
                         },
                         end: Position {
                             line: 1,
-                            column: 8,
+                            column: 2,
                         },
                     },
                 },
-            ],
-        ),
+            ),
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 4,
+                },
+            },
+        },
     ),
     loc: SourceLocation {
         start: Position {
@@ -33,7 +42,7 @@ TypeAnn {
         },
         end: Position {
             line: 1,
-            column: 9,
+            column: 6,
         },
     },
 }

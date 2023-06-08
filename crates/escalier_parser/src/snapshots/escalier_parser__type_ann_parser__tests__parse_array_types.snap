@@ -1,0 +1,31 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(\"number[]\")"
+---
+TypeAnn {
+    kind: Array(
+        TypeAnn {
+            kind: Number,
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 7,
+                },
+            },
+        },
+    ),
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 9,
+        },
+    },
+}
