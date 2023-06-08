@@ -4,12 +4,12 @@ use crate::scanner::Scanner;
 use crate::source_location::*;
 use crate::token::*;
 
-pub struct Lexer {
-    scanner: Scanner,
+pub struct Lexer<'a> {
+    scanner: Scanner<'a>,
 }
 
-impl Lexer {
-    pub fn new(string: &str) -> Self {
+impl<'a> Lexer<'a> {
+    pub fn new(string: &'a str) -> Self {
         Self {
             scanner: Scanner::new(string),
         }
@@ -124,7 +124,7 @@ impl Lexer {
             let character = self.scanner.peek(0).unwrap();
             match character {
                 'a'..='z' | 'A'..='Z' | '_' | '0'..='9' => {
-                    ident.push(*character);
+                    ident.push(character);
                     self.scanner.pop();
                 }
                 _ => {
@@ -166,14 +166,14 @@ impl Lexer {
             let character = self.scanner.peek(0).unwrap();
             match character {
                 '0'..='9' => {
-                    number.push(*character);
+                    number.push(character);
                     self.scanner.pop();
                 }
                 '.' => {
                     if decimal {
                         panic!("Unexpected character: '{}'", character);
                     }
-                    number.push(*character);
+                    number.push(character);
                     self.scanner.pop();
                     decimal = true;
                 }
@@ -216,7 +216,7 @@ impl Lexer {
                             self.scanner.pop();
                             let mut code = String::new();
                             for _ in 0..4 {
-                                code.push(*self.scanner.peek(0).unwrap());
+                                code.push(self.scanner.peek(0).unwrap());
                                 self.scanner.pop();
                             }
                             let code = u32::from_str_radix(&code, 16).unwrap();
@@ -226,7 +226,7 @@ impl Lexer {
                     }
                 }
                 character => {
-                    string.push(*character);
+                    string.push(character);
                     self.scanner.pop();
                 }
             }
@@ -267,7 +267,7 @@ impl Lexer {
                             self.scanner.pop();
                             let mut code = String::new();
                             for _ in 0..4 {
-                                code.push(*self.scanner.peek(0).unwrap());
+                                code.push(self.scanner.peek(0).unwrap());
                                 self.scanner.pop();
                             }
                             let code = u32::from_str_radix(&code, 16).unwrap();
@@ -278,7 +278,7 @@ impl Lexer {
                 }
                 '$' => {
                     self.scanner.pop();
-                    if self.scanner.peek(0).unwrap() == &'{' {
+                    if self.scanner.peek(0).unwrap() == '{' {
                         self.scanner.pop();
 
                         parts.push(string);
@@ -292,7 +292,7 @@ impl Lexer {
                     }
                 }
                 character => {
-                    string.push(*character);
+                    string.push(character);
                     self.scanner.pop();
                 }
             }
