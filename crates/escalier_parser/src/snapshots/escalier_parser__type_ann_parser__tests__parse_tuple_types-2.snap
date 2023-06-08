@@ -1,0 +1,59 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(\"[\\n  number,\\n  string,\\n  boolean,\\n]\")"
+---
+TypeAnn {
+    kind: Tuple(
+        [
+            TypeAnn {
+                kind: Number,
+                loc: SourceLocation {
+                    start: Position {
+                        line: 2,
+                        column: 3,
+                    },
+                    end: Position {
+                        line: 2,
+                        column: 9,
+                    },
+                },
+            },
+            TypeAnn {
+                kind: String,
+                loc: SourceLocation {
+                    start: Position {
+                        line: 3,
+                        column: 3,
+                    },
+                    end: Position {
+                        line: 3,
+                        column: 9,
+                    },
+                },
+            },
+            TypeAnn {
+                kind: Boolean,
+                loc: SourceLocation {
+                    start: Position {
+                        line: 4,
+                        column: 3,
+                    },
+                    end: Position {
+                        line: 4,
+                        column: 10,
+                    },
+                },
+            },
+        ],
+    ),
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 5,
+            column: 2,
+        },
+    },
+}

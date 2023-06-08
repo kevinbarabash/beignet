@@ -1,0 +1,55 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(\"Map<K, V>\")"
+---
+TypeAnn {
+    kind: TypeRef(
+        "Map",
+        Some(
+            [
+                TypeAnn {
+                    kind: TypeRef(
+                        "K",
+                        None,
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 5,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 6,
+                        },
+                    },
+                },
+                TypeAnn {
+                    kind: TypeRef(
+                        "V",
+                        None,
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 8,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 9,
+                        },
+                    },
+                },
+            ],
+        ),
+    ),
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 10,
+        },
+    },
+}

@@ -1,0 +1,70 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(\"{x: number, y: number}[]\")"
+---
+TypeAnn {
+    kind: Array(
+        TypeAnn {
+            kind: Object(
+                [
+                    ObjectProp {
+                        name: "x",
+                        optional: false,
+                        mutable: false,
+                        type_ann: TypeAnn {
+                            kind: Number,
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 5,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 11,
+                                },
+                            },
+                        },
+                    },
+                    ObjectProp {
+                        name: "y",
+                        optional: false,
+                        mutable: false,
+                        type_ann: TypeAnn {
+                            kind: Number,
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 16,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 22,
+                                },
+                            },
+                        },
+                    },
+                ],
+            ),
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 23,
+                },
+            },
+        },
+    ),
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 25,
+        },
+    },
+}

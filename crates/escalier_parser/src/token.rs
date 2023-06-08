@@ -5,11 +5,17 @@ pub enum TokenKind {
     Identifier(String), // [a-zA-Z_][a-zA-Z0-9_]*
 
     // Literals
-    Number(String),
-    True,
-    False,
+    BoolLit(bool),
+    NumLit(String),
+    StrLit(String),
     Null,
     Undefined,
+
+    // Types
+    Number,
+    Boolean,
+    String,
+    Symbol,
 
     // Keywords
     Let,

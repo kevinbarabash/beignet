@@ -1,0 +1,17 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(\"symbol\")"
+---
+TypeAnn {
+    kind: Symbol,
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 7,
+        },
+    },
+}

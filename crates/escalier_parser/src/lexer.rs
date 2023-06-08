@@ -132,10 +132,14 @@ impl Lexer {
             "return" => TokenKind::Return,
             "if" => TokenKind::If,
             "else" => TokenKind::Else,
-            "true" => TokenKind::True,
-            "false" => TokenKind::False,
+            "true" => TokenKind::BoolLit(true),
+            "false" => TokenKind::BoolLit(false),
             "null" => TokenKind::Null,
             "undefined" => TokenKind::Undefined,
+            "number" => TokenKind::Number,
+            "string" => TokenKind::String,
+            "boolean" => TokenKind::Boolean,
+            "symbol" => TokenKind::Symbol,
             _ => TokenKind::Identifier(ident),
         };
         Token {
@@ -171,7 +175,7 @@ impl Lexer {
             }
         }
         Token {
-            kind: TokenKind::Number(number),
+            kind: TokenKind::NumLit(number),
             loc: SourceLocation {
                 start,
                 end: self.scanner.position(),
@@ -212,11 +216,11 @@ mod tests {
 
         assert_eq!(
             tokens[0].kind,
-            crate::token::TokenKind::Number("123".to_string())
+            crate::token::TokenKind::NumLit("123".to_string())
         );
         assert_eq!(
             tokens[1].kind,
-            crate::token::TokenKind::Number("1.23".to_string())
+            crate::token::TokenKind::NumLit("1.23".to_string())
         );
     }
 

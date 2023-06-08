@@ -1,0 +1,74 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(\"{\\n  a: number,\\n  b?: string,\\n  c: boolean,\\n}\")"
+---
+TypeAnn {
+    kind: Object(
+        [
+            ObjectProp {
+                name: "a",
+                optional: false,
+                mutable: false,
+                type_ann: TypeAnn {
+                    kind: Number,
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 2,
+                            column: 6,
+                        },
+                        end: Position {
+                            line: 2,
+                            column: 12,
+                        },
+                    },
+                },
+            },
+            ObjectProp {
+                name: "b",
+                optional: true,
+                mutable: false,
+                type_ann: TypeAnn {
+                    kind: String,
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 3,
+                            column: 7,
+                        },
+                        end: Position {
+                            line: 3,
+                            column: 13,
+                        },
+                    },
+                },
+            },
+            ObjectProp {
+                name: "c",
+                optional: false,
+                mutable: false,
+                type_ann: TypeAnn {
+                    kind: Boolean,
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 4,
+                            column: 6,
+                        },
+                        end: Position {
+                            line: 4,
+                            column: 13,
+                        },
+                    },
+                },
+            },
+        ],
+    ),
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 5,
+            column: 2,
+        },
+    },
+}
