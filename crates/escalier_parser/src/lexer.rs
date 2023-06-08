@@ -29,6 +29,14 @@ impl Lexer {
                     tokens.push(self.lex_number(start));
                     continue;
                 }
+                '"' => {
+                    tokens.push(self.lex_string(start));
+                    continue;
+                }
+                '`' => {
+                    tokens.push(self.lex_template_string(start));
+                    continue;
+                }
                 '=' => match self.scanner.peek(1) {
                     Some('=') => {
                         self.scanner.pop();
@@ -184,7 +192,122 @@ impl Lexer {
     }
 
     pub fn lex_string(&mut self, start: Position) -> Token {
-        todo!()
+        let mut string = String::new();
+        self.scanner.pop();
+        while !self.scanner.is_done() {
+            match self.scanner.peek(0).unwrap() {
+                '"' => {
+                    self.scanner.pop();
+                    break;
+                }
+                '\\' => {
+                    self.scanner.pop();
+                    let escaped = self.scanner.peek(0).unwrap();
+                    match escaped {
+                        '"' => string.push('"'),
+                        '\\' => string.push('\\'),
+                        '/' => string.push('/'),
+                        'b' => string.push('\u{0008}'),
+                        'f' => string.push('\u{000c}'),
+                        'n' => string.push('\n'),
+                        'r' => string.push('\r'),
+                        't' => string.push('\t'),
+                        'u' => {
+                            self.scanner.pop();
+                            let mut code = String::new();
+                            for _ in 0..4 {
+                                code.push(*self.scanner.peek(0).unwrap());
+                                self.scanner.pop();
+                            }
+                            let code = u32::from_str_radix(&code, 16).unwrap();
+                            string.push(char::from_u32(code).unwrap());
+                        }
+                        character => panic!("Unexpected character: '{}'", character),
+                    }
+                }
+                character => {
+                    string.push(*character);
+                    self.scanner.pop();
+                }
+            }
+        }
+        Token {
+            kind: TokenKind::StrLit(string),
+            loc: SourceLocation {
+                start,
+                end: self.scanner.position(),
+            },
+        }
+    }
+
+    pub fn lex_template_string(&mut self, start: Position) -> Token {
+        let mut string = String::new();
+        let mut parts: Vec<String> = vec![];
+        self.scanner.pop();
+        while !self.scanner.is_done() {
+            match self.scanner.peek(0).unwrap() {
+                '`' => {
+                    self.scanner.pop();
+                    break;
+                }
+                '\\' => {
+                    self.scanner.pop();
+                    let escaped = self.scanner.peek(0).unwrap();
+                    match escaped {
+                        '`' => string.push('`'),
+                        '"' => string.push('"'),
+                        '\\' => string.push('\\'),
+                        '/' => string.push('/'),
+                        'b' => string.push('\u{0008}'),
+                        'f' => string.push('\u{000c}'),
+                        'n' => string.push('\n'),
+                        'r' => string.push('\r'),
+                        't' => string.push('\t'),
+                        'u' => {
+                            self.scanner.pop();
+                            let mut code = String::new();
+                            for _ in 0..4 {
+                                code.push(*self.scanner.peek(0).unwrap());
+                                self.scanner.pop();
+                            }
+                            let code = u32::from_str_radix(&code, 16).unwrap();
+                            string.push(char::from_u32(code).unwrap());
+                        }
+                        character => panic!("Unexpected character: '{}'", character),
+                    }
+                }
+                '$' => {
+                    self.scanner.pop();
+                    if self.scanner.peek(0).unwrap() == &'{' {
+                        self.scanner.pop();
+
+                        parts.push(string);
+                        string = String::new();
+
+                        todo!("parse the expression");
+
+                        break;
+                    } else {
+                        string.push('$');
+                    }
+                }
+                character => {
+                    string.push(*character);
+                    self.scanner.pop();
+                }
+            }
+        }
+        parts.push(string);
+        Token {
+            kind: TokenKind::StrTemplateLit {
+                parts,
+                exprs: vec![],
+            },
+            loc: SourceLocation {
+                start,
+                end: self.scanner.position(),
+            },
+        }
     }
 }
 
@@ -252,5 +375,32 @@ mod tests {
         let mut lexer = Lexer::new("1 ! 2");
 
         lexer.lex();
+    }
+
+    #[test]
+    fn lex_string() {
+        let mut lexer = Lexer::new("\"abc\"");
+
+        let tokens = lexer.lex();
+
+        assert_eq!(
+            tokens[0].kind,
+            crate::token::TokenKind::StrLit("abc".to_string())
+        );
+    }
+
+    #[test]
+    fn lex_template_string() {
+        let mut lexer = Lexer::new("`abc`");
+
+        let tokens = lexer.lex();
+
+        assert_eq!(
+            tokens[0].kind,
+            crate::token::TokenKind::StrTemplateLit {
+                parts: vec!["abc".to_string()],
+                exprs: vec![]
+            }
+        );
     }
 }

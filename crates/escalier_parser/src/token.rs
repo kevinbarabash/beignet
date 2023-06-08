@@ -8,6 +8,10 @@ pub enum TokenKind {
     BoolLit(bool),
     NumLit(String),
     StrLit(String),
+    StrTemplateLit {
+        parts: Vec<String>,
+        exprs: Vec<String>,
+    },
     Null,
     Undefined,
 
