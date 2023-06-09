@@ -12,9 +12,9 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
-    pub fn new(string: &'a str) -> Self {
+    pub fn new(input: &'a str) -> Self {
         Self {
-            scanner: Scanner::new(string),
+            scanner: Scanner::new(input),
         }
     }
 

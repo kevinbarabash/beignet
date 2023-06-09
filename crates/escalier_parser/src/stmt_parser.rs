@@ -6,8 +6,8 @@ use crate::stmt::{Stmt, StmtKind};
 use crate::token::TokenKind;
 
 pub fn parse_stmt(parser: &mut Parser) -> Stmt {
-    let token = parser.peek();
-    let next = parser.peek_ahead(1);
+    let token = parser.peek(0);
+    let next = parser.peek(1);
 
     match (&token.kind, &next.kind) {
         (TokenKind::Let, TokenKind::Identifier(id)) => {
@@ -58,7 +58,7 @@ pub fn parse_stmt(parser: &mut Parser) -> Stmt {
 
 pub fn parse_program(parser: &mut Parser) -> Vec<Stmt> {
     let mut stmts = Vec::new();
-    while parser.peek().kind != TokenKind::Eof {
+    while parser.peek(0).kind != TokenKind::Eof {
         stmts.push(parse_stmt(parser));
     }
     stmts

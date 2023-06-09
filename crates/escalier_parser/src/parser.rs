@@ -13,22 +13,12 @@ impl Parser {
     }
 
     pub fn next(&mut self) -> Token {
-        let result = self.peek();
+        let result = self.peek(0);
         self.cursor += 1;
         result
     }
 
-    pub fn peek(&mut self) -> Token {
-        self.tokens.get(self.cursor).cloned().unwrap_or(Token {
-            kind: TokenKind::Eof,
-            loc: SourceLocation {
-                start: Position { line: 0, column: 0 },
-                end: Position { line: 0, column: 0 },
-            },
-        })
-    }
-
-    pub fn peek_ahead(&mut self, offset: usize) -> Token {
+    pub fn peek(&mut self, offset: usize) -> Token {
         self.tokens
             .get(self.cursor + offset)
             .cloned()
