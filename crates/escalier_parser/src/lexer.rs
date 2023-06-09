@@ -126,9 +126,12 @@ impl<'a> Lexer<'a> {
     // parser can decide when to stop.
     pub fn lex_to(&mut self, c: char) -> Vec<Token> {
         let mut tokens = Vec::new();
+        let mut brace_count = 0;
+        // let mut bracket_count = 0;
+        // let mut paren_count = 0;
         while !self.scanner.is_done() {
             let character = self.scanner.peek(0).unwrap();
-            if c == character {
+            if c == character && brace_count == 0 {
                 self.scanner.pop();
                 return tokens;
             }
@@ -168,8 +171,14 @@ impl<'a> Lexer<'a> {
                 '%' => TokenKind::Modulo,
                 '(' => TokenKind::LeftParen,
                 ')' => TokenKind::RightParen,
-                '{' => TokenKind::LeftBrace,
-                '}' => TokenKind::RightBrace,
+                '{' => {
+                    brace_count += 1;
+                    TokenKind::LeftBrace
+                }
+                '}' => {
+                    brace_count -= 1;
+                    TokenKind::RightBrace
+                }
                 '[' => TokenKind::LeftBracket,
                 ']' => TokenKind::RightBracket,
                 ',' => TokenKind::Comma,
@@ -405,6 +414,8 @@ impl<'a> Lexer<'a> {
                         self.scanner.pop();
                         let tokens = self.lex_to('}');
 
+                        eprintln!("tokens = {tokens:#?}");
+
                         let mut parser = Parser::new(tokens);
                         exprs.push(parse_expr(&mut parser));
 
@@ -537,7 +548,7 @@ mod tests {
 
     #[test]
     fn lex_nested_template_strings() {
-        let mut lexer = Lexer::new(r#"`a${b`c${d}`}`"#);
+        let mut lexer = Lexer::new(r#"`a${`b${c}`}`"#);
 
         let tokens = lexer.lex();
 
@@ -546,7 +557,7 @@ mod tests {
 
     #[test]
     fn lex_nested_template_strings_complex() {
-        let mut lexer = Lexer::new(r#"`ids = ${ids.map(fn (id) => id)).join(", ")}`"#);
+        let mut lexer = Lexer::new(r#"`ids = ${ids.map(fn (id) => `x${id}`)).join(", ")}`"#);
 
         let tokens = lexer.lex();
 

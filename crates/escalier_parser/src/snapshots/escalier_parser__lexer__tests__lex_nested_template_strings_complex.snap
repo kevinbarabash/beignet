@@ -26,11 +26,11 @@ StrTemplateLit {
             loc: SourceLocation {
                 start: Position {
                     line: 1,
-                    column: 45,
+                    column: 51,
                 },
                 end: Position {
                     line: 1,
-                    column: 46,
+                    column: 52,
                 },
             },
         },
@@ -45,9 +45,33 @@ StrTemplateLit {
                                 "id",
                             ],
                             expr: Expr {
-                                kind: Identifier(
-                                    "id",
-                                ),
+                                kind: TemplateLiteral {
+                                    parts: [
+                                        String(
+                                            "x",
+                                        ),
+                                        String(
+                                            "",
+                                        ),
+                                    ],
+                                    exprs: [
+                                        Expr {
+                                            kind: Identifier(
+                                                "id",
+                                            ),
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 1,
+                                                    column: 33,
+                                                },
+                                                end: Position {
+                                                    line: 1,
+                                                    column: 35,
+                                                },
+                                            },
+                                        },
+                                    ],
+                                },
                                 loc: SourceLocation {
                                     start: Position {
                                         line: 1,
@@ -55,7 +79,7 @@ StrTemplateLit {
                                     },
                                     end: Position {
                                         line: 1,
-                                        column: 31,
+                                        column: 37,
                                     },
                                 },
                             },
@@ -67,7 +91,7 @@ StrTemplateLit {
                             },
                             end: Position {
                                 line: 1,
-                                column: 31,
+                                column: 37,
                             },
                         },
                     },
@@ -124,7 +148,7 @@ StrTemplateLit {
                 },
                 end: Position {
                     line: 1,
-                    column: 32,
+                    column: 38,
                 },
             },
         },

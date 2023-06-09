@@ -113,6 +113,19 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             kind: ExprKind::Literal(Literal::String(s.to_owned())),
             loc: next.loc.clone(),
         },
+        TokenKind::StrTemplateLit { parts, exprs } => Expr {
+            kind: ExprKind::TemplateLiteral {
+                parts: parts
+                    .iter()
+                    .map(|s| match &s.kind {
+                        TokenKind::StrLit(s) => Literal::String(s.to_owned()),
+                        _ => panic!("Expected string literal, got {:?}", s),
+                    })
+                    .collect(),
+                exprs: exprs.to_owned(),
+            },
+            loc: next.loc.clone(),
+        },
         TokenKind::Null => Expr {
             kind: ExprKind::Literal(Literal::Null),
             loc: next.loc.clone(),

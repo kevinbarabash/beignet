@@ -14,6 +14,10 @@ pub enum Literal {
 pub enum ExprKind {
     Identifier(String),
     Literal(Literal),
+    TemplateLiteral {
+        parts: Vec<Literal>,
+        exprs: Vec<Expr>,
+    },
     Binary {
         left: Box<Expr>,
         op: BinaryOp,
