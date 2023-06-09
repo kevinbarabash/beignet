@@ -1,5 +1,8 @@
 use core::panic;
 
+use crate::expr::Expr;
+use crate::expr_parser::parse_expr;
+use crate::parser::Parser;
 use crate::scanner::Scanner;
 use crate::source_location::*;
 use crate::token::*;
@@ -19,6 +22,116 @@ impl<'a> Lexer<'a> {
         let mut tokens = Vec::new();
         while !self.scanner.is_done() {
             let character = self.scanner.peek(0).unwrap();
+            let start = self.scanner.position();
+            let kind = match character {
+                'a'..='z' | 'A'..='Z' | '_' => {
+                    tokens.push(self.lex_ident_or_keyword(start));
+                    continue;
+                }
+                '0'..='9' => {
+                    tokens.push(self.lex_number(start));
+                    continue;
+                }
+                '"' => {
+                    tokens.push(self.lex_string(start));
+                    continue;
+                }
+                '`' => {
+                    tokens.push(self.lex_template_string(start));
+                    continue;
+                }
+                '=' => match self.scanner.peek(1) {
+                    Some('=') => {
+                        self.scanner.pop();
+                        TokenKind::Equals
+                    }
+                    Some('>') => {
+                        self.scanner.pop();
+                        TokenKind::Arrow
+                    }
+                    _ => TokenKind::Assign,
+                },
+                '+' => TokenKind::Plus,
+                '-' => TokenKind::Minus,
+                '*' => TokenKind::Times,
+                '/' => TokenKind::Divide,
+                '%' => TokenKind::Modulo,
+                '(' => TokenKind::LeftParen,
+                ')' => TokenKind::RightParen,
+                '{' => TokenKind::LeftBrace,
+                '}' => TokenKind::RightBrace,
+                '[' => TokenKind::LeftBracket,
+                ']' => TokenKind::RightBracket,
+                ',' => TokenKind::Comma,
+                '.' => TokenKind::Dot,
+                ';' => TokenKind::Semicolon,
+                ':' => TokenKind::Colon,
+                '?' => TokenKind::Question,
+                '<' => match self.scanner.peek(1) {
+                    Some('=') => {
+                        self.scanner.pop();
+                        TokenKind::LessThanOrEqual
+                    }
+                    _ => TokenKind::LessThan,
+                },
+                '>' => match self.scanner.peek(1) {
+                    Some('=') => {
+                        self.scanner.pop();
+                        TokenKind::GreaterThanOrEqual
+                    }
+                    _ => TokenKind::GreaterThan,
+                },
+                '!' => match self.scanner.peek(1) {
+                    Some('=') => {
+                        self.scanner.pop();
+                        TokenKind::NotEquals
+                    }
+                    _ => panic!("Unexpected character: '{}'", character),
+                },
+                '&' => match self.scanner.peek(1) {
+                    Some('&') => {
+                        self.scanner.pop();
+                        TokenKind::And
+                    }
+                    _ => panic!("Unexpected character: '{}'", character),
+                },
+                '|' => match self.scanner.peek(1) {
+                    Some('|') => {
+                        self.scanner.pop();
+                        TokenKind::Or
+                    }
+                    _ => panic!("Unexpected character: '{}'", character),
+                },
+                _ => {
+                    // It's okay fo
+                    // TODO: Error handling
+                    self.scanner.pop();
+                    continue;
+                }
+            };
+            self.scanner.pop();
+            tokens.push(Token {
+                kind,
+                loc: SourceLocation {
+                    start,
+                    end: self.scanner.position(),
+                },
+            });
+        }
+        tokens
+    }
+
+    // TODO: we need to match braces, we can't just stop at the first '}' we see.
+    // Instead of using vectors, consider user iterables.  That way the expression
+    // parser can decide when to stop.
+    pub fn lex_to(&mut self, c: char) -> Vec<Token> {
+        let mut tokens = Vec::new();
+        while !self.scanner.is_done() {
+            let character = self.scanner.peek(0).unwrap();
+            if c == character {
+                self.scanner.pop();
+                return tokens;
+            }
             let start = self.scanner.position();
             let kind = match character {
                 'a'..='z' | 'A'..='Z' | '_' => {
@@ -242,7 +355,9 @@ impl<'a> Lexer<'a> {
 
     pub fn lex_template_string(&mut self, start: Position) -> Token {
         let mut string = String::new();
-        let mut parts: Vec<String> = vec![];
+        let mut parts: Vec<Token> = vec![];
+        let mut exprs: Vec<Expr> = vec![];
+        let mut string_start = start.clone();
         self.scanner.pop();
         while !self.scanner.is_done() {
             match self.scanner.peek(0).unwrap() {
@@ -277,16 +392,24 @@ impl<'a> Lexer<'a> {
                     }
                 }
                 '$' => {
+                    let string_end = self.scanner.position();
                     self.scanner.pop();
                     if self.scanner.peek(0).unwrap() == '{' {
+                        parts.push(Token {
+                            kind: TokenKind::StrLit(string),
+                            loc: SourceLocation {
+                                start: string_start,
+                                end: string_end,
+                            },
+                        });
                         self.scanner.pop();
+                        let tokens = self.lex_to('}');
 
-                        parts.push(string);
+                        let mut parser = Parser::new(tokens);
+                        exprs.push(parse_expr(&mut parser));
+
                         string = String::new();
-
-                        todo!("parse the expression");
-
-                        break;
+                        string_start = self.scanner.position();
                     } else {
                         string.push('$');
                     }
@@ -297,12 +420,17 @@ impl<'a> Lexer<'a> {
                 }
             }
         }
-        parts.push(string);
-        Token {
-            kind: TokenKind::StrTemplateLit {
-                parts,
-                exprs: vec![],
+
+        parts.push(Token {
+            kind: TokenKind::StrLit(string),
+            loc: SourceLocation {
+                start: string_start,
+                end: self.scanner.position(),
             },
+        });
+
+        Token {
+            kind: TokenKind::StrTemplateLit { parts, exprs },
             loc: SourceLocation {
                 start,
                 end: self.scanner.position(),
@@ -395,12 +523,33 @@ mod tests {
 
         let tokens = lexer.lex();
 
-        assert_eq!(
-            tokens[0].kind,
-            crate::token::TokenKind::StrTemplateLit {
-                parts: vec!["abc".to_string()],
-                exprs: vec![]
-            }
-        );
+        insta::assert_debug_snapshot!(tokens[0].kind);
+    }
+
+    #[test]
+    fn lex_template_string_with_exprs() {
+        let mut lexer = Lexer::new("`abc${x}`");
+
+        let tokens = lexer.lex();
+
+        insta::assert_debug_snapshot!(tokens[0].kind);
+    }
+
+    #[test]
+    fn lex_nested_template_strings() {
+        let mut lexer = Lexer::new(r#"`a${b`c${d}`}`"#);
+
+        let tokens = lexer.lex();
+
+        insta::assert_debug_snapshot!(tokens[0].kind);
+    }
+
+    #[test]
+    fn lex_nested_template_strings_complex() {
+        let mut lexer = Lexer::new(r#"`ids = ${ids.map(fn (id) => id)).join(", ")}`"#);
+
+        let tokens = lexer.lex();
+
+        insta::assert_debug_snapshot!(tokens[0].kind);
     }
 }

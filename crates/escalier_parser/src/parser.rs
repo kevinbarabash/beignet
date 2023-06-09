@@ -7,6 +7,7 @@ pub struct Parser {
 }
 
 impl Parser {
+    // TODO: change this to an iterator
     pub fn new(tokens: Vec<Token>) -> Self {
         Self { tokens, cursor: 0 }
     }

@@ -109,6 +109,10 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             kind: ExprKind::Literal(Literal::Boolean(*b)),
             loc: next.loc.clone(),
         },
+        TokenKind::StrLit(s) => Expr {
+            kind: ExprKind::Literal(Literal::String(s.to_owned())),
+            loc: next.loc.clone(),
+        },
         TokenKind::Null => Expr {
             kind: ExprKind::Literal(Literal::Null),
             loc: next.loc.clone(),
@@ -363,8 +367,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse("false"));
         insta::assert_debug_snapshot!(parse("null"));
         insta::assert_debug_snapshot!(parse("undefined"));
-        // TODO: update lexer to handle string literals
-        // insta::assert_debug_snapshot!(parse(r#""hello""#));
+        insta::assert_debug_snapshot!(parse(r#""hello""#));
     }
 
     #[test]
@@ -456,5 +459,10 @@ mod tests {
         insta::assert_debug_snapshot!(parse("a.b.c"));
         insta::assert_debug_snapshot!(parse("a.b+c.d"));
         insta::assert_debug_snapshot!(parse("a[b][c]"));
+    }
+
+    #[test]
+    fn parse_callback() {
+        insta::assert_debug_snapshot!(parse(r#"ids.map(fn (id) => id).join(", ")"#));
     }
 }

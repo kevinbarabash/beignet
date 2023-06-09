@@ -1,0 +1,55 @@
+---
+source: crates/escalier_parser/src/lexer.rs
+expression: "tokens[0].kind"
+---
+StrTemplateLit {
+    parts: [
+        Token {
+            kind: StrLit(
+                "abc",
+            ),
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 5,
+                },
+            },
+        },
+        Token {
+            kind: StrLit(
+                "",
+            ),
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 9,
+                },
+                end: Position {
+                    line: 1,
+                    column: 10,
+                },
+            },
+        },
+    ],
+    exprs: [
+        Expr {
+            kind: Identifier(
+                "x",
+            ),
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 7,
+                },
+                end: Position {
+                    line: 1,
+                    column: 8,
+                },
+            },
+        },
+    ],
+}

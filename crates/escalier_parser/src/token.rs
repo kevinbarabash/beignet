@@ -1,3 +1,4 @@
+use crate::expr::Expr;
 use crate::source_location::SourceLocation;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -9,8 +10,8 @@ pub enum TokenKind {
     NumLit(String),
     StrLit(String),
     StrTemplateLit {
-        parts: Vec<String>,
-        exprs: Vec<String>,
+        parts: Vec<Token>, // This should only contain StrLit tokens
+        exprs: Vec<Expr>,
     },
     Null,
     Undefined,
