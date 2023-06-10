@@ -1,0 +1,79 @@
+---
+source: crates/escalier_parser/src/lexer.rs
+expression: "tokens[0].kind"
+---
+StrTemplateLit {
+    parts: [
+        Token {
+            kind: StrLit(
+                "a",
+            ),
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 3,
+                },
+            },
+        },
+        Token {
+            kind: StrLit(
+                "",
+            ),
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 13,
+                },
+                end: Position {
+                    line: 1,
+                    column: 14,
+                },
+            },
+        },
+    ],
+    exprs: [
+        Expr {
+            kind: TemplateLiteral {
+                parts: [
+                    String(
+                        "b",
+                    ),
+                    String(
+                        "",
+                    ),
+                ],
+                exprs: [
+                    Expr {
+                        kind: Identifier(
+                            "c",
+                        ),
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 9,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 10,
+                            },
+                        },
+                    },
+                ],
+            },
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 5,
+                },
+                end: Position {
+                    line: 1,
+                    column: 12,
+                },
+            },
+        },
+    ],
+}

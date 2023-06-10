@@ -4,7 +4,7 @@ use crate::token::TokenKind;
 use crate::type_ann::{ObjectProp, TypeAnn, TypeAnnKind};
 
 pub fn parse_type_ann(parser: &mut Parser) -> TypeAnn {
-    let mut loc = parser.peek().loc;
+    let mut loc = parser.peek(0).loc;
     let mut kind = match parser.next().kind {
         TokenKind::BoolLit(value) => TypeAnnKind::BoolLit(value),
         TokenKind::Boolean => TypeAnnKind::Boolean,
@@ -18,9 +18,9 @@ pub fn parse_type_ann(parser: &mut Parser) -> TypeAnn {
         TokenKind::LeftBrace => {
             let mut props: Vec<ObjectProp> = vec![];
 
-            while parser.peek().kind != TokenKind::RightBrace {
+            while parser.peek(0).kind != TokenKind::RightBrace {
                 if let TokenKind::Identifier(name) = parser.next().kind {
-                    let optional = if parser.peek().kind == TokenKind::Question {
+                    let optional = if parser.peek(0).kind == TokenKind::Question {
                         parser.next();
                         true
                     } else {
@@ -36,7 +36,7 @@ pub fn parse_type_ann(parser: &mut Parser) -> TypeAnn {
                         type_ann,
                     });
 
-                    if parser.peek().kind == TokenKind::Comma {
+                    if parser.peek(0).kind == TokenKind::Comma {
                         parser.next();
                     } else {
                         break;
@@ -46,7 +46,7 @@ pub fn parse_type_ann(parser: &mut Parser) -> TypeAnn {
                 }
             }
 
-            loc = merge_locations(&loc, &parser.peek().loc);
+            loc = merge_locations(&loc, &parser.peek(0).loc);
             assert_eq!(parser.next().kind, TokenKind::RightBrace);
 
             TypeAnnKind::Object(props)
@@ -54,37 +54,37 @@ pub fn parse_type_ann(parser: &mut Parser) -> TypeAnn {
         TokenKind::LeftBracket => {
             let mut elems: Vec<TypeAnn> = vec![];
 
-            while parser.peek().kind != TokenKind::RightBracket {
+            while parser.peek(0).kind != TokenKind::RightBracket {
                 elems.push(parse_type_ann(parser));
 
-                if parser.peek().kind == TokenKind::Comma {
+                if parser.peek(0).kind == TokenKind::Comma {
                     parser.next();
                 } else {
                     break;
                 }
             }
 
-            loc = merge_locations(&loc, &parser.peek().loc);
+            loc = merge_locations(&loc, &parser.peek(0).loc);
             assert_eq!(parser.next().kind, TokenKind::RightBracket);
 
             TypeAnnKind::Tuple(elems)
         }
         TokenKind::Identifier(ident) => {
-            if parser.peek().kind == TokenKind::LessThan {
+            if parser.peek(0).kind == TokenKind::LessThan {
                 parser.next();
                 let mut params: Vec<TypeAnn> = vec![];
 
-                while parser.peek().kind != TokenKind::GreaterThan {
+                while parser.peek(0).kind != TokenKind::GreaterThan {
                     params.push(parse_type_ann(parser));
 
-                    if parser.peek().kind == TokenKind::Comma {
+                    if parser.peek(0).kind == TokenKind::Comma {
                         parser.next();
                     } else {
                         break;
                     }
                 }
 
-                loc = merge_locations(&loc, &parser.peek().loc);
+                loc = merge_locations(&loc, &parser.peek(0).loc);
                 assert_eq!(parser.next().kind, TokenKind::GreaterThan);
 
                 TypeAnnKind::TypeRef(ident, Some(params))
@@ -97,9 +97,9 @@ pub fn parse_type_ann(parser: &mut Parser) -> TypeAnn {
         }
     };
 
-    while parser.peek().kind == TokenKind::LeftBracket {
+    while parser.peek(0).kind == TokenKind::LeftBracket {
         parser.next();
-        let right = parser.peek().loc;
+        let right = parser.peek(0).loc;
         let merged_loc = merge_locations(&loc, &right);
         assert_eq!(parser.next().kind, TokenKind::RightBracket);
         kind = TypeAnnKind::Array(Box::new(TypeAnn { kind, loc }));

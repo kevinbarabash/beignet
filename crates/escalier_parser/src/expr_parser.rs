@@ -59,7 +59,7 @@ fn get_postfix_precedence(op: &Token) -> Option<(u8, Associativity)> {
 
 fn parse_params(parser: &mut Parser) -> Vec<String> {
     let mut params = Vec::new();
-    while parser.peek().kind != TokenKind::RightParen {
+    while parser.peek(0).kind != TokenKind::RightParen {
         let param = parser.next();
         if let TokenKind::Identifier(name) = param.kind {
             params.push(name.to_owned());
@@ -67,12 +67,12 @@ fn parse_params(parser: &mut Parser) -> Vec<String> {
             panic!("Expected identifier, got {:?}", param);
         }
 
-        match parser.peek().kind {
+        match parser.peek(0).kind {
             TokenKind::RightParen => break,
             TokenKind::Comma => {
                 parser.next();
             }
-            _ => panic!("Expected comma or right paren, got {:?}", parser.peek()),
+            _ => panic!("Expected comma or right paren, got {:?}", parser.peek(0)),
         }
     }
     params
@@ -80,7 +80,7 @@ fn parse_params(parser: &mut Parser) -> Vec<String> {
 
 fn parse_block(parser: &mut Parser) -> Vec<Stmt> {
     let mut stmts = Vec::new();
-    while parser.peek().kind != TokenKind::RightBrace {
+    while parser.peek(0).kind != TokenKind::RightBrace {
         stmts.push(parse_stmt(parser));
     }
     stmts
@@ -107,6 +107,23 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
         },
         TokenKind::BoolLit(b) => Expr {
             kind: ExprKind::Literal(Literal::Boolean(*b)),
+            loc: next.loc.clone(),
+        },
+        TokenKind::StrLit(s) => Expr {
+            kind: ExprKind::Literal(Literal::String(s.to_owned())),
+            loc: next.loc.clone(),
+        },
+        TokenKind::StrTemplateLit { parts, exprs } => Expr {
+            kind: ExprKind::TemplateLiteral {
+                parts: parts
+                    .iter()
+                    .map(|s| match &s.kind {
+                        TokenKind::StrLit(s) => Literal::String(s.to_owned()),
+                        _ => panic!("Expected string literal, got {:?}", s),
+                    })
+                    .collect(),
+                exprs: exprs.to_owned(),
+            },
             loc: next.loc.clone(),
         },
         TokenKind::Null => Expr {
@@ -151,7 +168,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                         loc,
                     }
                 }
-                _ => panic!("Expected left brace or arrow, got {:?}", parser.peek()),
+                _ => panic!("Expected left brace or arrow, got {:?}", parser.peek(0)),
             }
         }
         TokenKind::If => {
@@ -163,7 +180,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             let close_brace = parser.next();
             assert_eq!(close_brace.kind, TokenKind::RightBrace);
 
-            if parser.peek().kind == TokenKind::Else {
+            if parser.peek(0).kind == TokenKind::Else {
                 parser.next();
                 assert_eq!(parser.next().kind, TokenKind::LeftBrace);
                 let alternate = parse_block(parser);
@@ -209,12 +226,12 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                     loc,
                 }
             }
-            None => panic!("unexpected token: {:?}", t),
+            None => panic!("unexpected token: {:?}", next),
         },
     };
 
     loop {
-        let next = parser.peek();
+        let next = parser.peek(0);
         if let TokenKind::Eof = next.kind {
             break;
         }
@@ -251,18 +268,18 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                 }
                 TokenKind::LeftParen => {
                     let mut args = Vec::new();
-                    while parser.peek().kind != TokenKind::RightParen {
+                    while parser.peek(0).kind != TokenKind::RightParen {
                         args.push(parse_expr(parser));
 
-                        match parser.peek().kind {
+                        match parser.peek(0).kind {
                             TokenKind::RightParen => break,
                             TokenKind::Comma => {
                                 parser.next();
                             }
-                            _ => panic!("Expected comma or right paren, got {:?}", parser.peek()),
+                            _ => panic!("Expected comma or right paren, got {:?}", parser.peek(0)),
                         }
                     }
-                    let loc = merge_locations(&lhs.loc, &parser.peek().loc);
+                    let loc = merge_locations(&lhs.loc, &parser.peek(0).loc);
                     assert_eq!(parser.next().kind, TokenKind::RightParen);
                     Expr {
                         kind: ExprKind::Call {
@@ -363,8 +380,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse("false"));
         insta::assert_debug_snapshot!(parse("null"));
         insta::assert_debug_snapshot!(parse("undefined"));
-        // TODO: update lexer to handle string literals
-        // insta::assert_debug_snapshot!(parse(r#""hello""#));
+        insta::assert_debug_snapshot!(parse(r#""hello""#));
     }
 
     #[test]
@@ -456,5 +472,26 @@ mod tests {
         insta::assert_debug_snapshot!(parse("a.b.c"));
         insta::assert_debug_snapshot!(parse("a.b+c.d"));
         insta::assert_debug_snapshot!(parse("a[b][c]"));
+    }
+
+    #[test]
+    fn parse_callback() {
+        insta::assert_debug_snapshot!(parse(r#"ids.map(fn (id) => id).join(", ")"#));
+    }
+
+    #[test]
+    fn parse_conditionals() {
+        insta::assert_debug_snapshot!(parse(r#"if (cond) { x; }"#));
+        insta::assert_debug_snapshot!(parse(r#"if (cond) { x; } else { y; }"#));
+        // TODO: enable this test case once we have object literals
+        // insta::assert_debug_snapshot!(parse(
+        //     r#"
+        //     if (cond) {
+        //         {x: 5, y: 10};
+        //     } else {
+        //         {a: 1, b: 2};
+        //     }
+        //     "#
+        // ));
     }
 }
