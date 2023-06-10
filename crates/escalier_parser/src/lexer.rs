@@ -11,13 +11,6 @@ pub struct Lexer<'a> {
     scanner: Scanner<'a>,
 }
 
-pub enum Delimiter {
-    Paren,
-    Brace,
-    Bracket,
-    None,
-}
-
 impl<'a> Lexer<'a> {
     pub fn new(input: &'a str) -> Self {
         Self {
@@ -26,10 +19,10 @@ impl<'a> Lexer<'a> {
     }
 
     pub fn lex(&mut self) -> Vec<Token> {
-        self.lex_to(Delimiter::None)
+        self.lex_to(None)
     }
 
-    pub fn lex_to(&mut self, delim: Delimiter) -> Vec<Token> {
+    pub fn lex_to(&mut self, delim: Option<char>) -> Vec<Token> {
         let mut tokens = Vec::new();
         let mut brace_count = 0;
         // let mut bracket_count = 0;
@@ -38,12 +31,10 @@ impl<'a> Lexer<'a> {
             let character = self.scanner.peek(0).unwrap();
 
             match delim {
-                Delimiter::Paren => todo!(),
-                Delimiter::Brace if character == '}' && brace_count == 0 => {
+                Some(c) if character == c && brace_count == 0 => {
                     self.scanner.pop();
                     return tokens;
                 }
-                Delimiter::Bracket => todo!(),
                 _ => (),
             }
 
@@ -322,7 +313,7 @@ impl<'a> Lexer<'a> {
                             },
                         });
                         self.scanner.pop();
-                        let tokens = self.lex_to(Delimiter::Brace);
+                        let tokens = self.lex_to(Some('}'));
 
                         eprintln!("tokens = {tokens:#?}");
 

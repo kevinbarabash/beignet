@@ -226,7 +226,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                     loc,
                 }
             }
-            None => panic!("unexpected token: {:?}", t),
+            None => panic!("unexpected token: {:?}", next),
         },
     };
 
@@ -477,5 +477,21 @@ mod tests {
     #[test]
     fn parse_callback() {
         insta::assert_debug_snapshot!(parse(r#"ids.map(fn (id) => id).join(", ")"#));
+    }
+
+    #[test]
+    fn parse_conditionals() {
+        insta::assert_debug_snapshot!(parse(r#"if (cond) { x; }"#));
+        insta::assert_debug_snapshot!(parse(r#"if (cond) { x; } else { y; }"#));
+        // TODO: enable this test case once we have object literals
+        // insta::assert_debug_snapshot!(parse(
+        //     r#"
+        //     if (cond) {
+        //         {x: 5, y: 10};
+        //     } else {
+        //         {a: 1, b: 2};
+        //     }
+        //     "#
+        // ));
     }
 }
