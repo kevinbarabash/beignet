@@ -236,7 +236,7 @@ impl<'a> Lexer<'a> {
                 }
                 '\\' => {
                     self.scanner.pop();
-                    let escaped = self.scanner.peek(0).unwrap();
+                    let escaped = self.scanner.pop().unwrap();
                     match escaped {
                         '"' => string.push('"'),
                         '\\' => string.push('\\'),
@@ -247,7 +247,6 @@ impl<'a> Lexer<'a> {
                         'r' => string.push('\r'),
                         't' => string.push('\t'),
                         'u' => {
-                            self.scanner.pop();
                             let mut code = String::new();
                             for _ in 0..4 {
                                 code.push(self.scanner.peek(0).unwrap());
@@ -256,6 +255,7 @@ impl<'a> Lexer<'a> {
                             let code = u32::from_str_radix(&code, 16).unwrap();
                             string.push(char::from_u32(code).unwrap());
                         }
+                        // NOTE: This doesn't match JS behavior
                         character => panic!("Unexpected character: '{}'", character),
                     }
                 }
@@ -288,11 +288,9 @@ impl<'a> Lexer<'a> {
                 }
                 '\\' => {
                     self.scanner.pop();
-                    let escaped = self.scanner.peek(0).unwrap();
+                    let escaped = self.scanner.pop().unwrap();
                     match escaped {
                         '`' => string.push('`'),
-                        '"' => string.push('"'),
-                        '\\' => string.push('\\'),
                         '/' => string.push('/'),
                         'b' => string.push('\u{0008}'),
                         'f' => string.push('\u{000c}'),
@@ -300,7 +298,6 @@ impl<'a> Lexer<'a> {
                         'r' => string.push('\r'),
                         't' => string.push('\t'),
                         'u' => {
-                            self.scanner.pop();
                             let mut code = String::new();
                             for _ in 0..4 {
                                 code.push(self.scanner.peek(0).unwrap());
@@ -309,6 +306,7 @@ impl<'a> Lexer<'a> {
                             let code = u32::from_str_radix(&code, 16).unwrap();
                             string.push(char::from_u32(code).unwrap());
                         }
+                        // NOTE: This doesn't match JS behavior
                         character => panic!("Unexpected character: '{}'", character),
                     }
                 }
@@ -441,12 +439,48 @@ mod tests {
     }
 
     #[test]
+    fn lex_string_escapes() {
+        let mut lexer = Lexer::new(r#""\"\\\/\b\f\n\r\t\u221E""#);
+
+        let tokens = lexer.lex();
+
+        assert_eq!(
+            tokens[0].kind,
+            crate::token::TokenKind::StrLit("\"\\/\u{8}\u{c}\n\r\t∞".to_string())
+        );
+    }
+
+    #[test]
     fn lex_template_string() {
         let mut lexer = Lexer::new("`abc`");
 
         let tokens = lexer.lex();
 
         insta::assert_debug_snapshot!(tokens[0].kind);
+    }
+
+    #[test]
+    fn lex_template_string_escapes() {
+        let mut lexer = Lexer::new(r#"`\`\/\b\f\n\r\t\u221E`"#);
+
+        let tokens = lexer.lex();
+
+        assert_eq!(
+            tokens[0].kind,
+            TokenKind::StrTemplateLit {
+                parts: vec![Token {
+                    kind: TokenKind::StrLit("`/\u{8}\u{c}\n\r\t∞".to_string()),
+                    loc: SourceLocation {
+                        start: Position { line: 1, column: 1 },
+                        end: Position {
+                            line: 1,
+                            column: 23
+                        }
+                    }
+                }],
+                exprs: vec![]
+            }
+        );
     }
 
     #[test]

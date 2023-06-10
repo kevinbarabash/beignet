@@ -60,8 +60,7 @@ impl<'a> Scanner<'a> {
                     self.column += 1;
                 }
 
-                str.get(start..end)
-                    .map(|sub_str| sub_str.chars().next().unwrap())
+                str.get(0..1).map(|sub_str| sub_str.chars().next().unwrap())
             }
             None => None,
         }
