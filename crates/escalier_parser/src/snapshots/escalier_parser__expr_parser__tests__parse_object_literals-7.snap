@@ -1,44 +1,57 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(\"[1, 2,]\")"
+expression: "parse(\"{ ...a, ...b, ...c }\")"
 ---
 Expr {
-    kind: Tuple {
-        elements: [
-            Expr(
+    kind: Object {
+        properties: [
+            Spread(
                 Expr {
-                    kind: Literal(
-                        Number(
-                            "1",
-                        ),
+                    kind: Identifier(
+                        "a",
                     ),
                     loc: SourceLocation {
                         start: Position {
                             line: 1,
-                            column: 2,
+                            column: 6,
                         },
                         end: Position {
                             line: 1,
-                            column: 3,
+                            column: 7,
                         },
                     },
                 },
             ),
-            Expr(
+            Spread(
                 Expr {
-                    kind: Literal(
-                        Number(
-                            "2",
-                        ),
+                    kind: Identifier(
+                        "b",
                     ),
                     loc: SourceLocation {
                         start: Position {
                             line: 1,
-                            column: 5,
+                            column: 12,
                         },
                         end: Position {
                             line: 1,
-                            column: 6,
+                            column: 13,
+                        },
+                    },
+                },
+            ),
+            Spread(
+                Expr {
+                    kind: Identifier(
+                        "c",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 18,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 19,
                         },
                     },
                 },
@@ -52,7 +65,7 @@ Expr {
         },
         end: Position {
             line: 1,
-            column: 8,
+            column: 21,
         },
     },
 }

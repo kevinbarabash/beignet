@@ -5,40 +5,44 @@ expression: "parse(\"[1, 2]\")"
 Expr {
     kind: Tuple {
         elements: [
-            Expr {
-                kind: Literal(
-                    Number(
-                        "1",
+            Expr(
+                Expr {
+                    kind: Literal(
+                        Number(
+                            "1",
+                        ),
                     ),
-                ),
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 2,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 3,
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 2,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 3,
+                        },
                     },
                 },
-            },
-            Expr {
-                kind: Literal(
-                    Number(
-                        "2",
+            ),
+            Expr(
+                Expr {
+                    kind: Literal(
+                        Number(
+                            "2",
+                        ),
                     ),
-                ),
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 5,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 6,
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 5,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 6,
+                        },
                     },
                 },
-            },
+            ),
         ],
     },
     loc: SourceLocation {

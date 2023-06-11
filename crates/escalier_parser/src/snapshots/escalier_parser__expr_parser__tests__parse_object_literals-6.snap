@@ -1,13 +1,13 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(r#\"{ \"a\": 1, [b]: 2, 0: \"zero\" }\"#)"
+expression: "parse(\"{ a: 1, b: 2, ...c }\")"
 ---
 Expr {
     kind: Object {
         properties: [
             Prop(
                 Property {
-                    key: String(
+                    key: Identifier(
                         "a",
                     ),
                     value: Expr {
@@ -19,11 +19,11 @@ Expr {
                         loc: SourceLocation {
                             start: Position {
                                 line: 1,
-                                column: 8,
+                                column: 6,
                             },
                             end: Position {
                                 line: 1,
-                                column: 9,
+                                column: 7,
                             },
                         },
                     },
@@ -31,22 +31,8 @@ Expr {
             ),
             Prop(
                 Property {
-                    key: Computed(
-                        Expr {
-                            kind: Identifier(
-                                "b",
-                            ),
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 12,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 13,
-                                },
-                            },
-                        },
+                    key: Identifier(
+                        "b",
                     ),
                     value: Expr {
                         kind: Literal(
@@ -57,36 +43,29 @@ Expr {
                         loc: SourceLocation {
                             start: Position {
                                 line: 1,
-                                column: 16,
+                                column: 12,
                             },
                             end: Position {
                                 line: 1,
-                                column: 17,
+                                column: 13,
                             },
                         },
                     },
                 },
             ),
-            Prop(
-                Property {
-                    key: Number(
-                        "0",
+            Spread(
+                Expr {
+                    kind: Identifier(
+                        "c",
                     ),
-                    value: Expr {
-                        kind: Literal(
-                            String(
-                                "zero",
-                            ),
-                        ),
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 22,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 28,
-                            },
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 18,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 19,
                         },
                     },
                 },
@@ -100,7 +79,7 @@ Expr {
         },
         end: Position {
             line: 1,
-            column: 30,
+            column: 21,
         },
     },
 }

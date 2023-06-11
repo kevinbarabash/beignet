@@ -1,16 +1,14 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(\"[1, 2,]\")"
+expression: "parse(\"[a, b, ...c]\")"
 ---
 Expr {
     kind: Tuple {
         elements: [
             Expr(
                 Expr {
-                    kind: Literal(
-                        Number(
-                            "1",
-                        ),
+                    kind: Identifier(
+                        "a",
                     ),
                     loc: SourceLocation {
                         start: Position {
@@ -26,10 +24,8 @@ Expr {
             ),
             Expr(
                 Expr {
-                    kind: Literal(
-                        Number(
-                            "2",
-                        ),
+                    kind: Identifier(
+                        "b",
                     ),
                     loc: SourceLocation {
                         start: Position {
@@ -43,6 +39,23 @@ Expr {
                     },
                 },
             ),
+            Spread(
+                Expr {
+                    kind: Identifier(
+                        "c",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 11,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 12,
+                        },
+                    },
+                },
+            ),
         ],
     },
     loc: SourceLocation {
@@ -52,7 +65,7 @@ Expr {
         },
         end: Position {
             line: 1,
-            column: 8,
+            column: 13,
         },
     },
 }

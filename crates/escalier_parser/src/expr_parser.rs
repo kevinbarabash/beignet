@@ -1,4 +1,4 @@
-use crate::expr::{BinaryOp, Expr, ExprKind, Literal, ObjectKey, UnaryOp};
+use crate::expr::*;
 use crate::parser::Parser;
 use crate::precedence::{Associativity, Operator, PRECEDENCE_TABLE};
 use crate::source_location::*;
@@ -141,10 +141,21 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
         }
         TokenKind::LeftBracket => {
             let start = next;
-            let mut elements = Vec::new();
+            let mut elements: Vec<ExprOrSpread> = Vec::new();
             while parser.peek(0).kind != TokenKind::RightBracket {
-                let expr = parse_expr_with_precedence(parser, 0);
-                elements.push(expr);
+                let elem = match parser.peek(0).kind {
+                    TokenKind::DotDotDot => {
+                        parser.next(); // skips `...`
+                        let expr = parse_expr_with_precedence(parser, 0);
+                        ExprOrSpread::Spread(expr)
+                    }
+                    _ => {
+                        let expr = parse_expr_with_precedence(parser, 0);
+                        ExprOrSpread::Expr(expr)
+                    }
+                };
+
+                elements.push(elem);
 
                 match parser.peek(0).kind {
                     TokenKind::RightBracket => break,
@@ -166,26 +177,43 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
         }
         TokenKind::LeftBrace => {
             let start = next;
-            let mut properties = Vec::new();
+            let mut properties: Vec<PropOrSpread> = Vec::new();
             while parser.peek(0).kind != TokenKind::RightBrace {
-                let key = parser.next();
-                let key = match &key.kind {
-                    TokenKind::Identifier(id) => ObjectKey::Identifier(id.to_owned()),
-                    TokenKind::StrLit(s) => ObjectKey::String(s.to_owned()),
-                    TokenKind::NumLit(n) => ObjectKey::Number(n.to_owned()),
-                    TokenKind::LeftBracket => {
+                let next = parser.next();
+
+                let prop = match &next.kind {
+                    TokenKind::DotDotDot => {
                         let expr = parse_expr_with_precedence(parser, 0);
-                        assert_eq!(parser.next().kind, TokenKind::RightBracket);
-                        ObjectKey::Computed(Box::new(expr))
+                        PropOrSpread::Spread(expr)
                     }
-                    _ => panic!("Expected identifier or string literal, got {:?}", key),
+                    TokenKind::Identifier(id)
+                        if parser.peek(0).kind == TokenKind::Comma
+                            || parser.peek(0).kind == TokenKind::RightBrace =>
+                    {
+                        PropOrSpread::Prop(Prop::Shorthand { key: id.to_owned() })
+                    }
+                    _ => {
+                        let key = match &next.kind {
+                            TokenKind::Identifier(id) => ObjectKey::Identifier(id.to_owned()),
+                            TokenKind::StrLit(s) => ObjectKey::String(s.to_owned()),
+                            TokenKind::NumLit(n) => ObjectKey::Number(n.to_owned()),
+                            TokenKind::LeftBracket => {
+                                let expr = parse_expr_with_precedence(parser, 0);
+                                assert_eq!(parser.next().kind, TokenKind::RightBracket);
+                                ObjectKey::Computed(Box::new(expr))
+                            }
+                            _ => panic!("Expected identifier or string literal, got {:?}", next),
+                        };
+
+                        assert_eq!(parser.next().kind, TokenKind::Colon);
+
+                        let value = parse_expr(parser);
+
+                        PropOrSpread::Prop(Prop::Property { key, value })
+                    }
                 };
 
-                assert_eq!(parser.next().kind, TokenKind::Colon);
-
-                let value = parse_expr(parser);
-
-                properties.push((key, value));
+                properties.push(prop);
 
                 match parser.peek(0).kind {
                     TokenKind::RightBrace => break,
@@ -454,6 +482,8 @@ mod tests {
         insta::assert_debug_snapshot!(parse("[1, 2]"));
         insta::assert_debug_snapshot!(parse("[1, 2,]"));
         insta::assert_debug_snapshot!(parse(r#"[1, "two", [3]]"#));
+        insta::assert_debug_snapshot!(parse("[a, b, ...c]"));
+        insta::assert_debug_snapshot!(parse("[...a, ...b, ...c]"));
     }
 
     #[test]
@@ -475,6 +505,9 @@ mod tests {
         insta::assert_debug_snapshot!(parse("{ a: 1, b: 2 }"));
         insta::assert_debug_snapshot!(parse("{ a: 1, b: 2, }"));
         insta::assert_debug_snapshot!(parse(r#"{ "a": 1, [b]: 2, 0: "zero" }"#));
+        insta::assert_debug_snapshot!(parse("{ a: 1, b: 2, ...c }"));
+        insta::assert_debug_snapshot!(parse("{ ...a, ...b, ...c }"));
+        insta::assert_debug_snapshot!(parse("{ a, b }"));
     }
 
     #[test]
