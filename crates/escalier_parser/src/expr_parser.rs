@@ -141,10 +141,21 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
         }
         TokenKind::LeftBracket => {
             let start = next;
-            let mut elements = Vec::new();
+            let mut elements: Vec<ExprOrSpread> = Vec::new();
             while parser.peek(0).kind != TokenKind::RightBracket {
-                let expr = parse_expr_with_precedence(parser, 0);
-                elements.push(expr);
+                let elem = match parser.peek(0).kind {
+                    TokenKind::DotDotDot => {
+                        parser.next(); // skips `...`
+                        let expr = parse_expr_with_precedence(parser, 0);
+                        ExprOrSpread::Spread(expr)
+                    }
+                    _ => {
+                        let expr = parse_expr_with_precedence(parser, 0);
+                        ExprOrSpread::Expr(expr)
+                    }
+                };
+
+                elements.push(elem);
 
                 match parser.peek(0).kind {
                     TokenKind::RightBracket => break,
@@ -471,6 +482,8 @@ mod tests {
         insta::assert_debug_snapshot!(parse("[1, 2]"));
         insta::assert_debug_snapshot!(parse("[1, 2,]"));
         insta::assert_debug_snapshot!(parse(r#"[1, "two", [3]]"#));
+        insta::assert_debug_snapshot!(parse("[a, b, ...c]"));
+        insta::assert_debug_snapshot!(parse("[...a, ...b, ...c]"));
     }
 
     #[test]
@@ -493,6 +506,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse("{ a: 1, b: 2, }"));
         insta::assert_debug_snapshot!(parse(r#"{ "a": 1, [b]: 2, 0: "zero" }"#));
         insta::assert_debug_snapshot!(parse("{ a: 1, b: 2, ...c }"));
+        insta::assert_debug_snapshot!(parse("{ ...a, ...b, ...c }"));
         insta::assert_debug_snapshot!(parse("{ a, b }"));
     }
 

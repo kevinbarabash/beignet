@@ -5,73 +5,81 @@ expression: "parse(r#\"[1, \"two\", [3]]\"#)"
 Expr {
     kind: Tuple {
         elements: [
-            Expr {
-                kind: Literal(
-                    Number(
-                        "1",
+            Expr(
+                Expr {
+                    kind: Literal(
+                        Number(
+                            "1",
+                        ),
                     ),
-                ),
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 2,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 3,
-                    },
-                },
-            },
-            Expr {
-                kind: Literal(
-                    String(
-                        "two",
-                    ),
-                ),
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 5,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 10,
-                    },
-                },
-            },
-            Expr {
-                kind: Tuple {
-                    elements: [
-                        Expr {
-                            kind: Literal(
-                                Number(
-                                    "3",
-                                ),
-                            ),
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 13,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 14,
-                                },
-                            },
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 2,
                         },
-                    ],
-                },
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 12,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 15,
+                        end: Position {
+                            line: 1,
+                            column: 3,
+                        },
                     },
                 },
-            },
+            ),
+            Expr(
+                Expr {
+                    kind: Literal(
+                        String(
+                            "two",
+                        ),
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 5,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 10,
+                        },
+                    },
+                },
+            ),
+            Expr(
+                Expr {
+                    kind: Tuple {
+                        elements: [
+                            Expr(
+                                Expr {
+                                    kind: Literal(
+                                        Number(
+                                            "3",
+                                        ),
+                                    ),
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 1,
+                                            column: 13,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 14,
+                                        },
+                                    },
+                                },
+                            ),
+                        ],
+                    },
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 12,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 15,
+                        },
+                    },
+                },
+            ),
         ],
     },
     loc: SourceLocation {

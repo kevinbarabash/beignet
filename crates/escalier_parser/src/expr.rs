@@ -37,6 +37,12 @@ pub enum PropOrSpread {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub enum ExprOrSpread {
+    Expr(Expr),
+    Spread(Expr),
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ExprKind {
     Identifier(String),
     Literal(Literal),
@@ -48,8 +54,7 @@ pub enum ExprKind {
         properties: Vec<PropOrSpread>,
     },
     Tuple {
-        // TODO: handle spread
-        elements: Vec<Expr>,
+        elements: Vec<ExprOrSpread>,
     },
     Binary {
         left: Box<Expr>,

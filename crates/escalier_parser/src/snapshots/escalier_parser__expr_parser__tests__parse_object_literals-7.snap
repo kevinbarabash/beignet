@@ -1,18 +1,59 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(\"{ a, b }\")"
+expression: "parse(\"{ ...a, ...b, ...c }\")"
 ---
 Expr {
     kind: Object {
         properties: [
-            Prop(
-                Shorthand {
-                    key: "a",
+            Spread(
+                Expr {
+                    kind: Identifier(
+                        "a",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 6,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 7,
+                        },
+                    },
                 },
             ),
-            Prop(
-                Shorthand {
-                    key: "b",
+            Spread(
+                Expr {
+                    kind: Identifier(
+                        "b",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 12,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 13,
+                        },
+                    },
+                },
+            ),
+            Spread(
+                Expr {
+                    kind: Identifier(
+                        "c",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 18,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 19,
+                        },
+                    },
                 },
             ),
         ],
@@ -24,7 +65,7 @@ Expr {
         },
         end: Position {
             line: 1,
-            column: 9,
+            column: 21,
         },
     },
 }
