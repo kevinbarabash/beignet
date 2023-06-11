@@ -124,6 +124,10 @@ pub fn parse_pattern(parser: &mut Parser) -> Pattern {
                 optional: false,
             })
         }
+        // This code can be called when parsing rest patterns in function params.
+        TokenKind::DotDotDot => PatternKind::Rest(RestPat {
+            arg: Box::new(parse_pattern(parser)),
+        }),
         TokenKind::Underscore => PatternKind::Wildcard,
         token => {
             panic!("expected token to start type annotation, found {:?}", token)
