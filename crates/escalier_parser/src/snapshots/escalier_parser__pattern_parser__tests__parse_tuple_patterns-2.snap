@@ -1,0 +1,122 @@
+---
+source: crates/escalier_parser/src/pattern_parser.rs
+expression: "parse(\"[a, b, ...c]\")"
+---
+Pattern {
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 13,
+        },
+    },
+    kind: Tuple(
+        TuplePat {
+            elems: [
+                Some(
+                    TuplePatElem {
+                        pattern: Pattern {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 2,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 3,
+                                },
+                            },
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "a",
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 1,
+                                            column: 2,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 3,
+                                        },
+                                    },
+                                    mutable: false,
+                                },
+                            ),
+                        },
+                        init: None,
+                    },
+                ),
+                Some(
+                    TuplePatElem {
+                        pattern: Pattern {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 5,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 6,
+                                },
+                            },
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "b",
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 1,
+                                            column: 5,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 6,
+                                        },
+                                    },
+                                    mutable: false,
+                                },
+                            ),
+                        },
+                        init: None,
+                    },
+                ),
+                Some(
+                    TuplePatElem {
+                        pattern: Pattern {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 11,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 12,
+                                },
+                            },
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "c",
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 1,
+                                            column: 11,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 12,
+                                        },
+                                    },
+                                    mutable: false,
+                                },
+                            ),
+                        },
+                        init: None,
+                    },
+                ),
+            ],
+            optional: false,
+        },
+    ),
+}

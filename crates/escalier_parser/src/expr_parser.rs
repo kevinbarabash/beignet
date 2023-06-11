@@ -1,4 +1,5 @@
 use crate::expr::*;
+use crate::literal::Literal;
 use crate::parser::Parser;
 use crate::precedence::{Associativity, Operator, PRECEDENCE_TABLE};
 use crate::source_location::*;
@@ -91,8 +92,6 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
 
     let mut lhs = match &next.kind {
         // TODO:
-        // - arrays
-        // - objects
         // - do-expression
         // - if-else conditional
         // - try-catch

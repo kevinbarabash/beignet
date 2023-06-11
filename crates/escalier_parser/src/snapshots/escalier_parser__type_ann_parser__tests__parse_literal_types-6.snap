@@ -1,0 +1,19 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(r#\"\"hello\"\"#)"
+---
+TypeAnn {
+    kind: StrLit(
+        "hello",
+    ),
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 8,
+        },
+    },
+}

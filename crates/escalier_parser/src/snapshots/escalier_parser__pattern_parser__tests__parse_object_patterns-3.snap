@@ -1,0 +1,191 @@
+---
+source: crates/escalier_parser/src/pattern_parser.rs
+expression: "parse(\"{x: a, y: b, z: c}\")"
+---
+Pattern {
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 2,
+        },
+    },
+    kind: Object(
+        ObjectPat {
+            props: [
+                KeyValue(
+                    KeyValuePatProp {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 2,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 6,
+                            },
+                        },
+                        key: Ident {
+                            name: "x",
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 2,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 3,
+                                },
+                            },
+                        },
+                        value: Pattern {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 5,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 6,
+                                },
+                            },
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "a",
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 1,
+                                            column: 5,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 6,
+                                        },
+                                    },
+                                    mutable: false,
+                                },
+                            ),
+                        },
+                        init: None,
+                    },
+                ),
+                KeyValue(
+                    KeyValuePatProp {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 8,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 12,
+                            },
+                        },
+                        key: Ident {
+                            name: "y",
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 8,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 9,
+                                },
+                            },
+                        },
+                        value: Pattern {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 11,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 12,
+                                },
+                            },
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "b",
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 1,
+                                            column: 11,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 12,
+                                        },
+                                    },
+                                    mutable: false,
+                                },
+                            ),
+                        },
+                        init: None,
+                    },
+                ),
+                KeyValue(
+                    KeyValuePatProp {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 14,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 18,
+                            },
+                        },
+                        key: Ident {
+                            name: "z",
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 14,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 15,
+                                },
+                            },
+                        },
+                        value: Pattern {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 17,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 18,
+                                },
+                            },
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "c",
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 1,
+                                            column: 17,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 18,
+                                        },
+                                    },
+                                    mutable: false,
+                                },
+                            ),
+                        },
+                        init: None,
+                    },
+                ),
+            ],
+            optional: false,
+        },
+    ),
+}

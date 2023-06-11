@@ -30,6 +30,8 @@ pub enum TokenKind {
     Async,
     If,
     Else,
+    Mut, // denotes a binding to a mutable reference
+    Var, // denotes a re-assignable binding
 
     // Operators
     Assign,
@@ -62,6 +64,7 @@ pub enum TokenKind {
     LeftBracket,
     RightBracket,
     Arrow,
+    Underscore,
 
     Eof,
 }

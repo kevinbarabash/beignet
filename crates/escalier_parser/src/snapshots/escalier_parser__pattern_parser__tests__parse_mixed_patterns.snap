@@ -1,0 +1,224 @@
+---
+source: crates/escalier_parser/src/pattern_parser.rs
+expression: "parse(r#\"{type: \"foo\", bar: _, values: [head, ...tail]}\"#)"
+---
+Pattern {
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 2,
+        },
+    },
+    kind: Object(
+        ObjectPat {
+            props: [
+                KeyValue(
+                    KeyValuePatProp {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 2,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 13,
+                            },
+                        },
+                        key: Ident {
+                            name: "type",
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 2,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 6,
+                                },
+                            },
+                        },
+                        value: Pattern {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 8,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 13,
+                                },
+                            },
+                            kind: Lit(
+                                LitPat {
+                                    lit: String(
+                                        "foo",
+                                    ),
+                                },
+                            ),
+                        },
+                        init: None,
+                    },
+                ),
+                KeyValue(
+                    KeyValuePatProp {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 15,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 21,
+                            },
+                        },
+                        key: Ident {
+                            name: "bar",
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 15,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 18,
+                                },
+                            },
+                        },
+                        value: Pattern {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 20,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 21,
+                                },
+                            },
+                            kind: Wildcard,
+                        },
+                        init: None,
+                    },
+                ),
+                KeyValue(
+                    KeyValuePatProp {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 23,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 46,
+                            },
+                        },
+                        key: Ident {
+                            name: "values",
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 23,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 29,
+                                },
+                            },
+                        },
+                        value: Pattern {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 31,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 46,
+                                },
+                            },
+                            kind: Tuple(
+                                TuplePat {
+                                    elems: [
+                                        Some(
+                                            TuplePatElem {
+                                                pattern: Pattern {
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 1,
+                                                            column: 32,
+                                                        },
+                                                        end: Position {
+                                                            line: 1,
+                                                            column: 36,
+                                                        },
+                                                    },
+                                                    kind: Ident(
+                                                        BindingIdent {
+                                                            name: "head",
+                                                            loc: SourceLocation {
+                                                                start: Position {
+                                                                    line: 1,
+                                                                    column: 32,
+                                                                },
+                                                                end: Position {
+                                                                    line: 1,
+                                                                    column: 36,
+                                                                },
+                                                            },
+                                                            mutable: false,
+                                                        },
+                                                    ),
+                                                },
+                                                init: None,
+                                            },
+                                        ),
+                                        Some(
+                                            TuplePatElem {
+                                                pattern: Pattern {
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 1,
+                                                            column: 41,
+                                                        },
+                                                        end: Position {
+                                                            line: 1,
+                                                            column: 45,
+                                                        },
+                                                    },
+                                                    kind: Ident(
+                                                        BindingIdent {
+                                                            name: "tail",
+                                                            loc: SourceLocation {
+                                                                start: Position {
+                                                                    line: 1,
+                                                                    column: 41,
+                                                                },
+                                                                end: Position {
+                                                                    line: 1,
+                                                                    column: 45,
+                                                                },
+                                                            },
+                                                            mutable: false,
+                                                        },
+                                                    ),
+                                                },
+                                                init: None,
+                                            },
+                                        ),
+                                    ],
+                                    optional: false,
+                                },
+                            ),
+                        },
+                        init: None,
+                    },
+                ),
+            ],
+            optional: false,
+        },
+    ),
+}

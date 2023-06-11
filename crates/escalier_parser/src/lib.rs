@@ -1,7 +1,11 @@
 mod expr;
 mod expr_parser;
+mod identifier;
 mod lexer;
+mod literal;
 mod parser;
+mod pattern;
+mod pattern_parser;
 mod precedence;
 mod scanner;
 mod source_location;

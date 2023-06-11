@@ -1,0 +1,113 @@
+---
+source: crates/escalier_parser/src/pattern_parser.rs
+expression: "parse(\"{x, y, ...z}\")"
+---
+Pattern {
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 2,
+        },
+    },
+    kind: Object(
+        ObjectPat {
+            props: [
+                Shorthand(
+                    ShorthandPatProp {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 2,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 3,
+                            },
+                        },
+                        ident: BindingIdent {
+                            name: "x",
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 2,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 3,
+                                },
+                            },
+                            mutable: false,
+                        },
+                        init: None,
+                    },
+                ),
+                Shorthand(
+                    ShorthandPatProp {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 5,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 6,
+                            },
+                        },
+                        ident: BindingIdent {
+                            name: "y",
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 5,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 6,
+                                },
+                            },
+                            mutable: false,
+                        },
+                        init: None,
+                    },
+                ),
+                Rest(
+                    RestPat {
+                        arg: Pattern {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 11,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 12,
+                                },
+                            },
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "z",
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 1,
+                                            column: 11,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 12,
+                                        },
+                                    },
+                                    mutable: false,
+                                },
+                            ),
+                        },
+                    },
+                ),
+            ],
+            optional: false,
+        },
+    ),
+}

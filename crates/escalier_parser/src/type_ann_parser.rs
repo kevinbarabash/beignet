@@ -128,8 +128,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse("false"));
         insta::assert_debug_snapshot!(parse("null"));
         insta::assert_debug_snapshot!(parse("undefined"));
-        // TODO: update lexer to handle string literals
-        // insta::assert_debug_snapshot!(parse(r#""hello""#));
+        insta::assert_debug_snapshot!(parse(r#""hello""#));
     }
 
     #[test]
