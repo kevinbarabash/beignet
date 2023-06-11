@@ -188,6 +188,7 @@ impl<'a> Lexer<'a> {
             "string" => TokenKind::String,
             "boolean" => TokenKind::Boolean,
             "symbol" => TokenKind::Symbol,
+            "_" => TokenKind::Underscore,
             _ => TokenKind::Identifier(ident),
         };
         Token {

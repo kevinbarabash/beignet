@@ -64,6 +64,7 @@ pub enum TokenKind {
     LeftBracket,
     RightBracket,
     Arrow,
+    Underscore,
 
     Eof,
 }

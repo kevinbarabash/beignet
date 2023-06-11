@@ -1,0 +1,17 @@
+---
+source: crates/escalier_parser/src/pattern_parser.rs
+expression: "parse(\"_\")"
+---
+Pattern {
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 2,
+        },
+    },
+    kind: Wildcard,
+}

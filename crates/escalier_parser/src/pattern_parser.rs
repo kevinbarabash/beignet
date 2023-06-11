@@ -127,6 +127,7 @@ pub fn parse_pattern(parser: &mut Parser) -> Pattern {
         TokenKind::DotDotDot => PatternKind::Rest(RestPat {
             arg: Box::new(parse_pattern(parser)),
         }),
+        TokenKind::Underscore => PatternKind::Wildcard,
         token => {
             panic!("expected token to start type annotation, found {:?}", token)
         }
@@ -181,5 +182,15 @@ mod tests {
     #[should_panic]
     fn parse_object_patterns_multiple_rest() {
         insta::assert_debug_snapshot!(parse("{...x, ...y, ...z}"));
+    }
+
+    #[test]
+    fn parse_wildcare() {
+        insta::assert_debug_snapshot!(parse("_"));
+    }
+
+    #[test]
+    fn parse_mixed_patterns() {
+        insta::assert_debug_snapshot!(parse(r#"{type: "foo", bar: _, values: [head, ...tail]}"#));
     }
 }
