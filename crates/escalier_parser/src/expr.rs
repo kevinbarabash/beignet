@@ -1,14 +1,6 @@
+use crate::literal::Literal;
 use crate::source_location::SourceLocation;
 use crate::stmt::Stmt;
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum Literal {
-    Number(String),
-    String(String),
-    Boolean(bool),
-    Null,
-    Undefined,
-}
 
 // TODO: track source location
 #[derive(Debug, PartialEq, Eq, Clone)]

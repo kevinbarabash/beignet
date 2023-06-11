@@ -175,6 +175,8 @@ impl<'a> Lexer<'a> {
             "async" => TokenKind::Async,
             "await" => TokenKind::Await,
             "let" => TokenKind::Let,
+            "var" => TokenKind::Var,
+            "mut" => TokenKind::Mut,
             "return" => TokenKind::Return,
             "if" => TokenKind::If,
             "else" => TokenKind::Else,

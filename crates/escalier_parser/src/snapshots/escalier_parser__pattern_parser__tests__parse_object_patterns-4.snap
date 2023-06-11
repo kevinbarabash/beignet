@@ -1,0 +1,146 @@
+---
+source: crates/escalier_parser/src/pattern_parser.rs
+expression: "parse(\"{x: {y: {z}}}\")"
+---
+Pattern {
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 2,
+        },
+    },
+    kind: Object(
+        ObjectPat {
+            props: [
+                KeyValue(
+                    KeyValuePatProp {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 2,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 6,
+                            },
+                        },
+                        key: Ident {
+                            name: "x",
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 2,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 3,
+                                },
+                            },
+                        },
+                        value: Pattern {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 5,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 6,
+                                },
+                            },
+                            kind: Object(
+                                ObjectPat {
+                                    props: [
+                                        KeyValue(
+                                            KeyValuePatProp {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 1,
+                                                        column: 6,
+                                                    },
+                                                    end: Position {
+                                                        line: 1,
+                                                        column: 10,
+                                                    },
+                                                },
+                                                key: Ident {
+                                                    name: "y",
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 1,
+                                                            column: 6,
+                                                        },
+                                                        end: Position {
+                                                            line: 1,
+                                                            column: 7,
+                                                        },
+                                                    },
+                                                },
+                                                value: Pattern {
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 1,
+                                                            column: 9,
+                                                        },
+                                                        end: Position {
+                                                            line: 1,
+                                                            column: 10,
+                                                        },
+                                                    },
+                                                    kind: Object(
+                                                        ObjectPat {
+                                                            props: [
+                                                                Shorthand(
+                                                                    ShorthandPatProp {
+                                                                        loc: SourceLocation {
+                                                                            start: Position {
+                                                                                line: 1,
+                                                                                column: 10,
+                                                                            },
+                                                                            end: Position {
+                                                                                line: 1,
+                                                                                column: 11,
+                                                                            },
+                                                                        },
+                                                                        ident: BindingIdent {
+                                                                            name: "z",
+                                                                            loc: SourceLocation {
+                                                                                start: Position {
+                                                                                    line: 1,
+                                                                                    column: 10,
+                                                                                },
+                                                                                end: Position {
+                                                                                    line: 1,
+                                                                                    column: 11,
+                                                                                },
+                                                                            },
+                                                                            mutable: false,
+                                                                        },
+                                                                        init: None,
+                                                                    },
+                                                                ),
+                                                            ],
+                                                            optional: false,
+                                                        },
+                                                    ),
+                                                },
+                                                init: None,
+                                            },
+                                        ),
+                                    ],
+                                    optional: false,
+                                },
+                            ),
+                        },
+                        init: None,
+                    },
+                ),
+            ],
+            optional: false,
+        },
+    ),
+}
