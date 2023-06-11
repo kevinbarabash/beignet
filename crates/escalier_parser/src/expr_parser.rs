@@ -1,4 +1,4 @@
-use crate::expr::{BinaryOp, Expr, ExprKind, Literal, UnaryOp};
+use crate::expr::{BinaryOp, Expr, ExprKind, Literal, ObjectKey, UnaryOp};
 use crate::parser::Parser;
 use crate::precedence::{Associativity, Operator, PRECEDENCE_TABLE};
 use crate::source_location::*;
@@ -138,6 +138,70 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             let lhs = parse_expr_with_precedence(parser, 0);
             assert_eq!(parser.next().kind, TokenKind::RightParen);
             lhs
+        }
+        TokenKind::LeftBracket => {
+            let start = next;
+            let mut elements = Vec::new();
+            while parser.peek(0).kind != TokenKind::RightBracket {
+                let expr = parse_expr_with_precedence(parser, 0);
+                elements.push(expr);
+
+                match parser.peek(0).kind {
+                    TokenKind::RightBracket => break,
+                    TokenKind::Comma => {
+                        parser.next();
+                    }
+                    _ => panic!("Expected comma or right bracket, got {:?}", parser.peek(0)),
+                }
+            }
+
+            assert_eq!(parser.peek(0).kind, TokenKind::RightBracket);
+
+            let end = parser.next();
+
+            Expr {
+                kind: ExprKind::Tuple { elements },
+                loc: merge_locations(&start.loc, &end.loc),
+            }
+        }
+        TokenKind::LeftBrace => {
+            let start = next;
+            let mut properties = Vec::new();
+            while parser.peek(0).kind != TokenKind::RightBrace {
+                let key = parser.next();
+                let key = match &key.kind {
+                    TokenKind::Identifier(id) => ObjectKey::Identifier(id.to_owned()),
+                    TokenKind::StrLit(s) => ObjectKey::String(s.to_owned()),
+                    TokenKind::NumLit(n) => ObjectKey::Number(n.to_owned()),
+                    TokenKind::LeftBracket => {
+                        let expr = parse_expr_with_precedence(parser, 0);
+                        assert_eq!(parser.next().kind, TokenKind::RightBracket);
+                        ObjectKey::Computed(Box::new(expr))
+                    }
+                    _ => panic!("Expected identifier or string literal, got {:?}", key),
+                };
+
+                assert_eq!(parser.next().kind, TokenKind::Colon);
+
+                let value = parse_expr(parser);
+
+                properties.push((key, value));
+
+                match parser.peek(0).kind {
+                    TokenKind::RightBrace => break,
+                    TokenKind::Comma => {
+                        parser.next();
+                    }
+                    _ => panic!("Expected comma or right brace, got {:?}", parser.peek(0)),
+                }
+            }
+
+            let end = parser.next();
+
+            Expr {
+                kind: ExprKind::Object { properties },
+                loc: merge_locations(&start.loc, &end.loc),
+            }
         }
         TokenKind::Fn => {
             assert_eq!(parser.next().kind, TokenKind::LeftParen);
@@ -384,6 +448,24 @@ mod tests {
     }
 
     #[test]
+    fn parse_tuple_literals() {
+        insta::assert_debug_snapshot!(parse("[]"));
+        insta::assert_debug_snapshot!(parse("[1]"));
+        insta::assert_debug_snapshot!(parse("[1, 2]"));
+        insta::assert_debug_snapshot!(parse("[1, 2,]"));
+        insta::assert_debug_snapshot!(parse(r#"[1, "two", [3]]"#));
+    }
+
+    #[test]
+    fn parse_object_literals() {
+        insta::assert_debug_snapshot!(parse("{}"));
+        insta::assert_debug_snapshot!(parse("{ a: 1 }"));
+        insta::assert_debug_snapshot!(parse("{ a: 1, b: 2 }"));
+        insta::assert_debug_snapshot!(parse("{ a: 1, b: 2, }"));
+        insta::assert_debug_snapshot!(parse(r#"{ "a": 1, [b]: 2, 0: "zero" }"#));
+    }
+
+    #[test]
     fn parse_simple_addition() {
         insta::assert_debug_snapshot!(parse("1 + 2 + 3"));
     }
@@ -483,15 +565,14 @@ mod tests {
     fn parse_conditionals() {
         insta::assert_debug_snapshot!(parse(r#"if (cond) { x; }"#));
         insta::assert_debug_snapshot!(parse(r#"if (cond) { x; } else { y; }"#));
-        // TODO: enable this test case once we have object literals
-        // insta::assert_debug_snapshot!(parse(
-        //     r#"
-        //     if (cond) {
-        //         {x: 5, y: 10};
-        //     } else {
-        //         {a: 1, b: 2};
-        //     }
-        //     "#
-        // ));
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            if (cond) {
+                {x: 5, y: 10};
+            } else {
+                {a: 1, b: 2};
+            }
+            "#
+        ));
     }
 }

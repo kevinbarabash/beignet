@@ -1,0 +1,187 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(r#\"\n            if (cond) {\n                {x: 5, y: 10};\n            } else {\n                {a: 1, b: 2};\n            }\n            \"#)"
+---
+Expr {
+    kind: IfElse {
+        cond: Expr {
+            kind: Identifier(
+                "cond",
+            ),
+            loc: SourceLocation {
+                start: Position {
+                    line: 2,
+                    column: 17,
+                },
+                end: Position {
+                    line: 2,
+                    column: 21,
+                },
+            },
+        },
+        consequent: [
+            Stmt {
+                kind: Expr {
+                    expr: Expr {
+                        kind: Object {
+                            properties: [
+                                (
+                                    Identifier(
+                                        "x",
+                                    ),
+                                    Expr {
+                                        kind: Literal(
+                                            Number(
+                                                "5",
+                                            ),
+                                        ),
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 3,
+                                                column: 21,
+                                            },
+                                            end: Position {
+                                                line: 3,
+                                                column: 22,
+                                            },
+                                        },
+                                    },
+                                ),
+                                (
+                                    Identifier(
+                                        "y",
+                                    ),
+                                    Expr {
+                                        kind: Literal(
+                                            Number(
+                                                "10",
+                                            ),
+                                        ),
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 3,
+                                                column: 27,
+                                            },
+                                            end: Position {
+                                                line: 3,
+                                                column: 29,
+                                            },
+                                        },
+                                    },
+                                ),
+                            ],
+                        },
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 3,
+                                column: 17,
+                            },
+                            end: Position {
+                                line: 3,
+                                column: 30,
+                            },
+                        },
+                    },
+                },
+                loc: SourceLocation {
+                    start: Position {
+                        line: 3,
+                        column: 17,
+                    },
+                    end: Position {
+                        line: 3,
+                        column: 30,
+                    },
+                },
+            },
+        ],
+        alternate: Some(
+            [
+                Stmt {
+                    kind: Expr {
+                        expr: Expr {
+                            kind: Object {
+                                properties: [
+                                    (
+                                        Identifier(
+                                            "a",
+                                        ),
+                                        Expr {
+                                            kind: Literal(
+                                                Number(
+                                                    "1",
+                                                ),
+                                            ),
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 5,
+                                                    column: 21,
+                                                },
+                                                end: Position {
+                                                    line: 5,
+                                                    column: 22,
+                                                },
+                                            },
+                                        },
+                                    ),
+                                    (
+                                        Identifier(
+                                            "b",
+                                        ),
+                                        Expr {
+                                            kind: Literal(
+                                                Number(
+                                                    "2",
+                                                ),
+                                            ),
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 5,
+                                                    column: 27,
+                                                },
+                                                end: Position {
+                                                    line: 5,
+                                                    column: 28,
+                                                },
+                                            },
+                                        },
+                                    ),
+                                ],
+                            },
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 5,
+                                    column: 17,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 29,
+                                },
+                            },
+                        },
+                    },
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 5,
+                            column: 17,
+                        },
+                        end: Position {
+                            line: 5,
+                            column: 29,
+                        },
+                    },
+                },
+            ],
+        ),
+    },
+    loc: SourceLocation {
+        start: Position {
+            line: 2,
+            column: 13,
+        },
+        end: Position {
+            line: 6,
+            column: 14,
+        },
+    },
+}

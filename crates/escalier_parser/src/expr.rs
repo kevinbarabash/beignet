@@ -10,6 +10,15 @@ pub enum Literal {
     Undefined,
 }
 
+// TODO: track source location
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum ObjectKey {
+    Identifier(String),
+    String(String),
+    Number(String),
+    Computed(Box<Expr>),
+}
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ExprKind {
     Identifier(String),
@@ -17,6 +26,13 @@ pub enum ExprKind {
     TemplateLiteral {
         parts: Vec<Literal>,
         exprs: Vec<Expr>,
+    },
+    Object {
+        properties: Vec<(ObjectKey, Expr)>,
+    },
+    Tuple {
+        // TODO: handle spread
+        elements: Vec<Expr>,
     },
     Binary {
         left: Box<Expr>,
