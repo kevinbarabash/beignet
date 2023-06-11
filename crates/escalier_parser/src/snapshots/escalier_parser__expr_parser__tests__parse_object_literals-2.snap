@@ -5,24 +5,26 @@ expression: "parse(\"{ a: 1 }\")"
 Expr {
     kind: Object {
         properties: [
-            (
-                Identifier(
-                    "a",
-                ),
-                Expr {
-                    kind: Literal(
-                        Number(
-                            "1",
-                        ),
+            Prop(
+                Property {
+                    key: Identifier(
+                        "a",
                     ),
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 6,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 7,
+                    value: Expr {
+                        kind: Literal(
+                            Number(
+                                "1",
+                            ),
+                        ),
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 6,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 7,
+                            },
                         },
                     },
                 },

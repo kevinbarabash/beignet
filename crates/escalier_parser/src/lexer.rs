@@ -85,7 +85,20 @@ impl<'a> Lexer<'a> {
                 '[' => TokenKind::LeftBracket,
                 ']' => TokenKind::RightBracket,
                 ',' => TokenKind::Comma,
-                '.' => TokenKind::Dot,
+                '.' => {
+                    if self.scanner.peek(1) == Some('.') {
+                        if self.scanner.peek(2) == Some('.') {
+                            self.scanner.pop();
+                            self.scanner.pop();
+                            TokenKind::DotDotDot
+                        } else {
+                            self.scanner.pop();
+                            TokenKind::DotDot
+                        }
+                    } else {
+                        TokenKind::Dot
+                    }
+                }
                 ';' => TokenKind::Semicolon,
                 ':' => TokenKind::Colon,
                 '?' => TokenKind::Question,
@@ -499,5 +512,27 @@ mod tests {
         let tokens = lexer.lex();
 
         insta::assert_debug_snapshot!(tokens[0].kind);
+    }
+
+    #[test]
+    fn lex_dots() {
+        let mut lexer = Lexer::new(". .. ...");
+
+        let tokens = lexer.lex();
+
+        assert_eq!(tokens[0].kind, crate::token::TokenKind::Dot);
+        assert_eq!(tokens[1].kind, crate::token::TokenKind::DotDot);
+        assert_eq!(tokens[2].kind, crate::token::TokenKind::DotDotDot);
+    }
+
+    #[test]
+    fn lex_dots_reverse() {
+        let mut lexer = Lexer::new("... .. .");
+
+        let tokens = lexer.lex();
+
+        assert_eq!(tokens[0].kind, crate::token::TokenKind::DotDotDot);
+        assert_eq!(tokens[1].kind, crate::token::TokenKind::DotDot);
+        assert_eq!(tokens[2].kind, crate::token::TokenKind::Dot);
     }
 }

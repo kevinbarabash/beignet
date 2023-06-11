@@ -13,10 +13,27 @@ pub enum Literal {
 // TODO: track source location
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ObjectKey {
-    Identifier(String),
+    Identifier(String), // TODO: use Identifier
     String(String),
     Number(String),
     Computed(Box<Expr>),
+}
+
+// TODO: track source location
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum Prop {
+    Shorthand { key: String }, // TODO: use Identifier
+    Property { key: ObjectKey, value: Expr },
+    // TODO:
+    // - method
+    // - getter
+    // - setter
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum PropOrSpread {
+    Prop(Prop),
+    Spread(Expr),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -28,7 +45,7 @@ pub enum ExprKind {
         exprs: Vec<Expr>,
     },
     Object {
-        properties: Vec<(ObjectKey, Expr)>,
+        properties: Vec<PropOrSpread>,
     },
     Tuple {
         // TODO: handle spread
