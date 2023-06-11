@@ -457,12 +457,42 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
+    fn parse_tuple_literals_missing_comma() {
+        parse("[1 2]");
+    }
+
+    #[test]
+    #[should_panic]
+    fn parse_tuple_literals_missing_right_brace() {
+        parse("[1, 2");
+    }
+
+    #[test]
     fn parse_object_literals() {
         insta::assert_debug_snapshot!(parse("{}"));
         insta::assert_debug_snapshot!(parse("{ a: 1 }"));
         insta::assert_debug_snapshot!(parse("{ a: 1, b: 2 }"));
         insta::assert_debug_snapshot!(parse("{ a: 1, b: 2, }"));
         insta::assert_debug_snapshot!(parse(r#"{ "a": 1, [b]: 2, 0: "zero" }"#));
+    }
+
+    #[test]
+    #[should_panic]
+    fn parse_object_literals_missing_colon() {
+        parse("{ a 1 }");
+    }
+
+    #[test]
+    #[should_panic]
+    fn parse_object_literals_missing_comma() {
+        parse("{ a: 1 b: 2 }");
+    }
+
+    #[test]
+    #[should_panic]
+    fn parse_object_literals_missing_right_brace() {
+        parse("{ a: 1, b: 2");
     }
 
     #[test]
