@@ -1,6 +1,8 @@
 use crate::expr::*;
 use crate::literal::Literal;
 use crate::parser::Parser;
+use crate::pattern::Pattern;
+use crate::pattern_parser::parse_pattern;
 use crate::precedence::{Associativity, Operator, PRECEDENCE_TABLE};
 use crate::source_location::*;
 use crate::stmt::Stmt;
@@ -58,15 +60,10 @@ fn get_postfix_precedence(op: &Token) -> Option<(u8, Associativity)> {
     }
 }
 
-fn parse_params(parser: &mut Parser) -> Vec<String> {
-    let mut params = Vec::new();
+fn parse_params(parser: &mut Parser) -> Vec<Pattern> {
+    let mut params: Vec<Pattern> = Vec::new();
     while parser.peek(0).kind != TokenKind::RightParen {
-        let param = parser.next();
-        if let TokenKind::Identifier(name) = param.kind {
-            params.push(name.to_owned());
-        } else {
-            panic!("Expected identifier, got {:?}", param);
-        }
+        params.push(parse_pattern(parser));
 
         match parser.peek(0).kind {
             TokenKind::RightParen => break,
@@ -581,7 +578,7 @@ mod tests {
 
     #[test]
     fn parse_lambdas() {
-        insta::assert_debug_snapshot!(parse("fn (x, y) { return x + y; }"));
+        insta::assert_debug_snapshot!(parse("fn (x, y) => x + y;"));
         insta::assert_debug_snapshot!(parse("fn (x) => fn (y) => x + y;"));
     }
 
@@ -636,5 +633,11 @@ mod tests {
             }
             "#
         ));
+    }
+
+    #[test]
+    fn parse_param_destructuring() {
+        insta::assert_debug_snapshot!(parse("fn ({x, y}) { return x + y; }"));
+        insta::assert_debug_snapshot!(parse("fn ([head, ...tail]) => head"));
     }
 }

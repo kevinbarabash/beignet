@@ -1,4 +1,5 @@
 use crate::literal::Literal;
+use crate::pattern::Pattern;
 use crate::source_location::SourceLocation;
 use crate::stmt::Stmt;
 
@@ -62,11 +63,13 @@ pub enum ExprKind {
         right: Box<Expr>,
     },
     Function {
-        params: Vec<String>,
+        // TODO: add support for explicit type annotations
+        params: Vec<Pattern>,
         body: Vec<Stmt>,
     },
     Lambda {
-        params: Vec<String>,
+        // TODO: add support for explicit type annotations
+        params: Vec<Pattern>,
         expr: Box<Expr>,
     },
     Call {

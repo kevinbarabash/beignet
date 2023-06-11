@@ -8,7 +8,34 @@ Expr {
         body: [
             Stmt {
                 kind: Let {
-                    name: "x",
+                    pattern: Pattern {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 13,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 14,
+                            },
+                        },
+                        kind: Ident(
+                            BindingIdent {
+                                name: "x",
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 1,
+                                        column: 13,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 14,
+                                    },
+                                },
+                                mutable: false,
+                            },
+                        ),
+                    },
                     expr: Expr {
                         kind: Literal(
                             Number(
@@ -40,7 +67,34 @@ Expr {
             },
             Stmt {
                 kind: Let {
-                    name: "y",
+                    pattern: Pattern {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 24,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 25,
+                            },
+                        },
+                        kind: Ident(
+                            BindingIdent {
+                                name: "y",
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 1,
+                                        column: 24,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 25,
+                                    },
+                                },
+                                mutable: false,
+                            },
+                        ),
+                    },
                     expr: Expr {
                         kind: Literal(
                             Number(
