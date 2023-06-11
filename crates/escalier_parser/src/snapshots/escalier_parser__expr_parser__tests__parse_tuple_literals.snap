@@ -1,0 +1,19 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(\"[]\")"
+---
+Expr {
+    kind: Tuple {
+        elements: [],
+    },
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 3,
+        },
+    },
+}

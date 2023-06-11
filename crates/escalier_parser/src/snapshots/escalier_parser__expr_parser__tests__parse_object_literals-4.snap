@@ -1,0 +1,64 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(\"{ a: 1, b: 2, }\")"
+---
+Expr {
+    kind: Object {
+        properties: [
+            (
+                Identifier(
+                    "a",
+                ),
+                Expr {
+                    kind: Literal(
+                        Number(
+                            "1",
+                        ),
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 6,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 7,
+                        },
+                    },
+                },
+            ),
+            (
+                Identifier(
+                    "b",
+                ),
+                Expr {
+                    kind: Literal(
+                        Number(
+                            "2",
+                        ),
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 12,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 13,
+                        },
+                    },
+                },
+            ),
+        ],
+    },
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 16,
+        },
+    },
+}

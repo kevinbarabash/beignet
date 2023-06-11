@@ -1,0 +1,100 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(r#\"{ \"a\": 1, [b]: 2, 0: \"zero\" }\"#)"
+---
+Expr {
+    kind: Object {
+        properties: [
+            (
+                String(
+                    "a",
+                ),
+                Expr {
+                    kind: Literal(
+                        Number(
+                            "1",
+                        ),
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 8,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 9,
+                        },
+                    },
+                },
+            ),
+            (
+                Computed(
+                    Expr {
+                        kind: Identifier(
+                            "b",
+                        ),
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 12,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 13,
+                            },
+                        },
+                    },
+                ),
+                Expr {
+                    kind: Literal(
+                        Number(
+                            "2",
+                        ),
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 16,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 17,
+                        },
+                    },
+                },
+            ),
+            (
+                Number(
+                    "0",
+                ),
+                Expr {
+                    kind: Literal(
+                        String(
+                            "zero",
+                        ),
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 22,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 28,
+                        },
+                    },
+                },
+            ),
+        ],
+    },
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 30,
+        },
+    },
+}
