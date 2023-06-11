@@ -31,7 +31,34 @@ Expr {
                             Expr {
                                 kind: Lambda {
                                     params: [
-                                        "id",
+                                        Pattern {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 1,
+                                                    column: 13,
+                                                },
+                                                end: Position {
+                                                    line: 1,
+                                                    column: 15,
+                                                },
+                                            },
+                                            kind: Ident(
+                                                BindingIdent {
+                                                    name: "id",
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 1,
+                                                            column: 13,
+                                                        },
+                                                        end: Position {
+                                                            line: 1,
+                                                            column: 15,
+                                                        },
+                                                    },
+                                                    mutable: false,
+                                                },
+                                            ),
+                                        },
                                     ],
                                     expr: Expr {
                                         kind: Identifier(

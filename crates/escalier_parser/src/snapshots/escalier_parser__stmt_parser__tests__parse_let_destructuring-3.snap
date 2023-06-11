@@ -1,0 +1,120 @@
+---
+source: crates/escalier_parser/src/stmt_parser.rs
+expression: "parse(\"let [p1, p2] = line;\")"
+---
+[
+    Stmt {
+        kind: Let {
+            pattern: Pattern {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 5,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 13,
+                    },
+                },
+                kind: Tuple(
+                    TuplePat {
+                        elems: [
+                            Some(
+                                TuplePatElem {
+                                    pattern: Pattern {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 1,
+                                                column: 6,
+                                            },
+                                            end: Position {
+                                                line: 1,
+                                                column: 8,
+                                            },
+                                        },
+                                        kind: Ident(
+                                            BindingIdent {
+                                                name: "p1",
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 1,
+                                                        column: 6,
+                                                    },
+                                                    end: Position {
+                                                        line: 1,
+                                                        column: 8,
+                                                    },
+                                                },
+                                                mutable: false,
+                                            },
+                                        ),
+                                    },
+                                    init: None,
+                                },
+                            ),
+                            Some(
+                                TuplePatElem {
+                                    pattern: Pattern {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 1,
+                                                column: 10,
+                                            },
+                                            end: Position {
+                                                line: 1,
+                                                column: 12,
+                                            },
+                                        },
+                                        kind: Ident(
+                                            BindingIdent {
+                                                name: "p2",
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 1,
+                                                        column: 10,
+                                                    },
+                                                    end: Position {
+                                                        line: 1,
+                                                        column: 12,
+                                                    },
+                                                },
+                                                mutable: false,
+                                            },
+                                        ),
+                                    },
+                                    init: None,
+                                },
+                            ),
+                        ],
+                        optional: false,
+                    },
+                ),
+            },
+            expr: Expr {
+                kind: Identifier(
+                    "line",
+                ),
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 16,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 20,
+                    },
+                },
+            },
+        },
+        loc: SourceLocation {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 1,
+                column: 20,
+            },
+        },
+    },
+]

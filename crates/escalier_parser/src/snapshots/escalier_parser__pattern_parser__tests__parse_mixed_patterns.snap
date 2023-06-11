@@ -10,7 +10,7 @@ Pattern {
         },
         end: Position {
             line: 1,
-            column: 2,
+            column: 47,
         },
     },
     kind: Object(
@@ -182,27 +182,43 @@ Pattern {
                                                     loc: SourceLocation {
                                                         start: Position {
                                                             line: 1,
-                                                            column: 41,
+                                                            column: 38,
                                                         },
                                                         end: Position {
                                                             line: 1,
-                                                            column: 45,
+                                                            column: 41,
                                                         },
                                                     },
-                                                    kind: Ident(
-                                                        BindingIdent {
-                                                            name: "tail",
-                                                            loc: SourceLocation {
-                                                                start: Position {
-                                                                    line: 1,
-                                                                    column: 41,
+                                                    kind: Rest(
+                                                        RestPat {
+                                                            arg: Pattern {
+                                                                loc: SourceLocation {
+                                                                    start: Position {
+                                                                        line: 1,
+                                                                        column: 41,
+                                                                    },
+                                                                    end: Position {
+                                                                        line: 1,
+                                                                        column: 45,
+                                                                    },
                                                                 },
-                                                                end: Position {
-                                                                    line: 1,
-                                                                    column: 45,
-                                                                },
+                                                                kind: Ident(
+                                                                    BindingIdent {
+                                                                        name: "tail",
+                                                                        loc: SourceLocation {
+                                                                            start: Position {
+                                                                                line: 1,
+                                                                                column: 41,
+                                                                            },
+                                                                            end: Position {
+                                                                                line: 1,
+                                                                                column: 45,
+                                                                            },
+                                                                        },
+                                                                        mutable: false,
+                                                                    },
+                                                                ),
                                                             },
-                                                            mutable: false,
                                                         },
                                                     ),
                                                 },

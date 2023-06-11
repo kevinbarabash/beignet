@@ -5,12 +5,66 @@ expression: "parse(\"fn (x) => fn (y) => x + y;\")"
 Expr {
     kind: Lambda {
         params: [
-            "x",
+            Pattern {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 5,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 6,
+                    },
+                },
+                kind: Ident(
+                    BindingIdent {
+                        name: "x",
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 5,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 6,
+                            },
+                        },
+                        mutable: false,
+                    },
+                ),
+            },
         ],
         expr: Expr {
             kind: Lambda {
                 params: [
-                    "y",
+                    Pattern {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 15,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 16,
+                            },
+                        },
+                        kind: Ident(
+                            BindingIdent {
+                                name: "y",
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 1,
+                                        column: 15,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 16,
+                                    },
+                                },
+                                mutable: false,
+                            },
+                        ),
+                    },
                 ],
                 expr: Expr {
                     kind: Binary {

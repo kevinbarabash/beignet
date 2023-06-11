@@ -1,76 +1,112 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(\"fn (x, y) { return x + y; }\")"
+expression: "parse(\"fn (x, y) => x + y;\")"
 ---
 Expr {
-    kind: Function {
+    kind: Lambda {
         params: [
-            "x",
-            "y",
-        ],
-        body: [
-            Stmt {
-                kind: Return {
-                    arg: Some(
-                        Expr {
-                            kind: Binary {
-                                left: Expr {
-                                    kind: Identifier(
-                                        "x",
-                                    ),
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 20,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 21,
-                                        },
-                                    },
-                                },
-                                op: Plus,
-                                right: Expr {
-                                    kind: Identifier(
-                                        "y",
-                                    ),
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 24,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 25,
-                                        },
-                                    },
-                                },
-                            },
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 20,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 25,
-                                },
-                            },
-                        },
-                    ),
-                },
+            Pattern {
                 loc: SourceLocation {
                     start: Position {
                         line: 1,
-                        column: 20,
+                        column: 5,
                     },
                     end: Position {
                         line: 1,
-                        column: 25,
+                        column: 6,
+                    },
+                },
+                kind: Ident(
+                    BindingIdent {
+                        name: "x",
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 5,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 6,
+                            },
+                        },
+                        mutable: false,
+                    },
+                ),
+            },
+            Pattern {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 8,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 9,
+                    },
+                },
+                kind: Ident(
+                    BindingIdent {
+                        name: "y",
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 8,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 9,
+                            },
+                        },
+                        mutable: false,
+                    },
+                ),
+            },
+        ],
+        expr: Expr {
+            kind: Binary {
+                left: Expr {
+                    kind: Identifier(
+                        "x",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 14,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 15,
+                        },
+                    },
+                },
+                op: Plus,
+                right: Expr {
+                    kind: Identifier(
+                        "y",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 18,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 19,
+                        },
                     },
                 },
             },
-        ],
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 14,
+                },
+                end: Position {
+                    line: 1,
+                    column: 19,
+                },
+            },
+        },
     },
     loc: SourceLocation {
         start: Position {
@@ -79,7 +115,7 @@ Expr {
         },
         end: Position {
             line: 1,
-            column: 28,
+            column: 19,
         },
     },
 }

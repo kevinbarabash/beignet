@@ -5,8 +5,62 @@ expression: parse(src)
 Expr {
     kind: Function {
         params: [
-            "x",
-            "y",
+            Pattern {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 5,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 6,
+                    },
+                },
+                kind: Ident(
+                    BindingIdent {
+                        name: "x",
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 5,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 6,
+                            },
+                        },
+                        mutable: false,
+                    },
+                ),
+            },
+            Pattern {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 8,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 9,
+                    },
+                },
+                kind: Ident(
+                    BindingIdent {
+                        name: "y",
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 8,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 9,
+                            },
+                        },
+                        mutable: false,
+                    },
+                ),
+            },
         ],
         body: [
             Stmt {

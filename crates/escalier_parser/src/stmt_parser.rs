@@ -1,46 +1,50 @@
 use crate::expr_parser::parse_expr;
 use crate::lexer::Lexer;
 use crate::parser::Parser;
+use crate::pattern_parser::parse_pattern;
 use crate::source_location::merge_locations;
 use crate::stmt::{Stmt, StmtKind};
 use crate::token::TokenKind;
 
 pub fn parse_stmt(parser: &mut Parser) -> Stmt {
     let token = parser.peek(0);
-    let next = parser.peek(1);
+    // let next = parser.peek(1);
 
-    match (&token.kind, &next.kind) {
-        (TokenKind::Let, TokenKind::Identifier(id)) => {
+    match &token.kind {
+        TokenKind::Let => {
             parser.next();
-            let name = id.to_owned();
-            parser.next();
+            let pattern = parse_pattern(parser);
             assert_eq!(parser.next().kind, TokenKind::Assign);
             let expr = parse_expr(parser);
             assert_eq!(parser.next().kind, TokenKind::Semicolon);
 
             let loc = merge_locations(&token.loc, &expr.loc);
             Stmt {
-                kind: StmtKind::Let { name, expr },
+                kind: StmtKind::Let { pattern, expr },
                 loc,
             }
         }
-        (TokenKind::Return, TokenKind::Semicolon) => {
+        TokenKind::Return => {
             parser.next();
-            parser.next();
-            Stmt {
-                kind: StmtKind::Return { arg: None },
-                loc: merge_locations(&token.loc, &next.loc),
-            }
-        }
-        (TokenKind::Return, _) => {
-            parser.next();
-            let arg = parse_expr(parser);
-            assert_eq!(parser.next().kind, TokenKind::Semicolon);
+            let next = parser.peek(0);
+            match next.kind {
+                TokenKind::Semicolon => {
+                    parser.next();
+                    Stmt {
+                        kind: StmtKind::Return { arg: None },
+                        loc: merge_locations(&token.loc, &next.loc),
+                    }
+                }
+                _ => {
+                    let arg = parse_expr(parser);
+                    assert_eq!(parser.next().kind, TokenKind::Semicolon);
 
-            let loc = merge_locations(&next.loc, &arg.loc);
-            Stmt {
-                kind: StmtKind::Return { arg: Some(arg) },
-                loc,
+                    let loc = merge_locations(&next.loc, &arg.loc);
+                    Stmt {
+                        kind: StmtKind::Return { arg: Some(arg) },
+                        loc,
+                    }
+                }
             }
         }
         _ => {
@@ -118,5 +122,13 @@ mod tests {
     fn parse_lambda() {
         insta::assert_debug_snapshot!(parse("let add = fn (x, y) => x + y;"));
         insta::assert_debug_snapshot!(parse("let add = fn (x) => fn (y) => x + y;"));
+    }
+
+    #[test]
+    fn parse_let_destructuring() {
+        insta::assert_debug_snapshot!(parse("let {x, y} = point;"));
+        insta::assert_debug_snapshot!(parse("let {x: x1, y: y1} = p1;"));
+        insta::assert_debug_snapshot!(parse("let [p1, p2] = line;"));
+        insta::assert_debug_snapshot!(parse("let [head, ...tail] = polygon;"));
     }
 }

@@ -5,7 +5,34 @@ expression: parse(src)
 [
     Stmt {
         kind: Let {
-            name: "y",
+            pattern: Pattern {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 5,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 6,
+                    },
+                },
+                kind: Ident(
+                    BindingIdent {
+                        name: "y",
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 5,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 6,
+                            },
+                        },
+                        mutable: false,
+                    },
+                ),
+            },
             expr: Expr {
                 kind: Binary {
                     left: Expr {

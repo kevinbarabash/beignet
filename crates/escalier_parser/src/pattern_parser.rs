@@ -35,7 +35,6 @@ pub fn parse_pattern(parser: &mut Parser) -> Pattern {
                         if has_rest {
                             panic!("only one rest pattern is allowed per object pattern");
                         }
-                        parser.next();
                         elems.push(Some(TuplePatElem {
                             pattern: parse_pattern(parser),
                             init: None,
@@ -118,6 +117,9 @@ pub fn parse_pattern(parser: &mut Parser) -> Pattern {
                     _ => panic!("expected identifier or rest pattern"),
                 }
             }
+
+            loc = merge_locations(&loc, &parser.peek(0).loc);
+            assert_eq!(parser.next().kind, TokenKind::RightBrace);
 
             PatternKind::Object(ObjectPat {
                 props,
