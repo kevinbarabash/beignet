@@ -186,8 +186,13 @@ mod tests {
     }
 
     #[test]
-    fn parse_wildcare() {
+    fn parse_wildcard() {
         insta::assert_debug_snapshot!(parse("_"));
+    }
+
+    #[test]
+    fn parse_rest() {
+        insta::assert_debug_snapshot!(parse("...rest"));
     }
 
     #[test]
