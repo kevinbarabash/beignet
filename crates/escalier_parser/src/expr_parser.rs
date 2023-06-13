@@ -90,7 +90,6 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
     let mut lhs = match &next.kind {
         // TODO:
         // - do-expression
-        // - if-else conditional
         // - try-catch
         // - match
         TokenKind::NumLit(n) => Expr {
@@ -231,32 +230,31 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             assert_eq!(parser.next().kind, TokenKind::LeftParen);
             let params = parse_params(parser);
             assert_eq!(parser.next().kind, TokenKind::RightParen);
+            assert_eq!(parser.next().kind, TokenKind::Arrow);
 
-            match parser.next().kind {
+            match parser.peek(0).kind {
                 TokenKind::LeftBrace => {
-                    let body = parse_block(parser);
+                    parser.next(); // skips '{'
+                    let body = BlockOrExpr::Block(parse_block(parser));
                     let close_brace = parser.next();
                     assert_eq!(close_brace.kind, TokenKind::RightBrace);
-
                     let loc = merge_locations(&next.loc, &close_brace.loc);
+
                     Expr {
                         kind: ExprKind::Function { params, body },
                         loc,
                     }
                 }
-                TokenKind::Arrow => {
+                _ => {
                     let expr = parse_expr(parser);
                     let loc = merge_locations(&next.loc, &expr.loc);
+                    let body = BlockOrExpr::Expr(Box::new(expr));
 
                     Expr {
-                        kind: ExprKind::Lambda {
-                            params,
-                            expr: Box::new(expr),
-                        },
+                        kind: ExprKind::Function { params, body },
                         loc,
                     }
                 }
-                _ => panic!("Expected left brace or arrow, got {:?}", parser.peek(0)),
             }
         }
         TokenKind::If => {
@@ -296,6 +294,51 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                 }
             }
         }
+        TokenKind::Match => {
+            let expr = parse_expr(parser);
+            let mut loc = expr.loc.clone();
+            assert_eq!(parser.next().kind, TokenKind::LeftBrace);
+            let mut arms: Vec<MatchArm> = Vec::new();
+            while parser.peek(0).kind != TokenKind::RightBrace {
+                let pattern = parse_pattern(parser);
+                assert_eq!(parser.next().kind, TokenKind::Arrow);
+
+                let (body, end) = match parser.peek(0).kind {
+                    TokenKind::LeftBrace => {
+                        parser.next(); // skips '{'
+                        let block = parse_block(parser);
+                        let close_brace = parser.next();
+                        assert_eq!(close_brace.kind, TokenKind::RightBrace);
+                        (BlockOrExpr::Block(block), close_brace.loc)
+                    }
+                    _ => {
+                        let expr = parse_expr(parser);
+                        let loc = expr.loc.clone();
+                        (BlockOrExpr::Expr(Box::new(expr)), loc)
+                    }
+                };
+
+                assert_eq!(parser.next().kind, TokenKind::Comma);
+
+                arms.push(MatchArm {
+                    loc: merge_locations(&pattern.loc, &end),
+                    pattern,
+                    guard: None,
+                    body,
+                });
+                loc = merge_locations(&loc, &end);
+            }
+
+            assert_eq!(parser.next().kind, TokenKind::RightBrace);
+
+            Expr {
+                kind: ExprKind::Match {
+                    expr: Box::new(expr),
+                    arms,
+                },
+                loc,
+            }
+        }
         t => match get_prefix_precedence(&next) {
             Some(precendence) => {
                 let op = match t {
@@ -303,7 +346,6 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                     TokenKind::Minus => UnaryOp::Minus,
                     _ => panic!("unexpected token: {:?}", t),
                 };
-
                 let rhs = parse_expr_with_precedence(parser, precendence.0);
                 let loc = merge_locations(&next.loc, &rhs.loc);
                 Expr {
@@ -567,12 +609,12 @@ mod tests {
 
     #[test]
     fn parse_function() {
-        insta::assert_debug_snapshot!(parse("fn () { let x = 5; let y = 10; return x + y; }"));
+        insta::assert_debug_snapshot!(parse("fn () => { let x = 5; let y = 10; return x + y; }"));
     }
 
     #[test]
     fn parse_function_with_params() {
-        let src = r#"fn (x, y) { return x + y; }"#;
+        let src = r#"fn (x, y) => { return x + y; }"#;
         insta::assert_debug_snapshot!(parse(src));
     }
 
@@ -600,6 +642,7 @@ mod tests {
     fn parse_function_call() {
         insta::assert_debug_snapshot!(parse("add(5, 10)"));
         insta::assert_debug_snapshot!(parse("add(5)(10)"));
+        insta::assert_debug_snapshot!(parse("add(obj.x, obj.y)"));
     }
 
     #[test]
@@ -637,7 +680,22 @@ mod tests {
 
     #[test]
     fn parse_param_destructuring() {
-        insta::assert_debug_snapshot!(parse("fn ({x, y}) { return x + y; }"));
+        insta::assert_debug_snapshot!(parse("fn ({x, y}) => { return x + y; }"));
         insta::assert_debug_snapshot!(parse("fn ([head, ...tail]) => head"));
+    }
+
+    #[test]
+    fn parse_pattern_matching() {
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            match (obj.type) {
+                "foo" => obj.foo,
+                "bar" => {
+                    obj.bar;
+                },
+                _ => "default",
+            };
+            "#
+        ));
     }
 }

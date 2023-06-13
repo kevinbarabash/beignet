@@ -1,24 +1,16 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(\"fn (x, y) => x + y;\")"
+expression: "parse(\"add(obj.x, obj.y)\")"
 ---
 Expr {
-    kind: Function {
-        params: [
-            Pattern {
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 5,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 6,
-                    },
-                },
-                kind: Ident(
-                    BindingIdent {
-                        name: "x",
+    kind: Call {
+        args: [
+            Expr {
+                kind: Member {
+                    object: Expr {
+                        kind: Identifier(
+                            "obj",
+                        ),
                         loc: SourceLocation {
                             start: Position {
                                 line: 1,
@@ -26,53 +18,47 @@ Expr {
                             },
                             end: Position {
                                 line: 1,
-                                column: 6,
-                            },
-                        },
-                        mutable: false,
-                    },
-                ),
-            },
-            Pattern {
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 8,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 9,
-                    },
-                },
-                kind: Ident(
-                    BindingIdent {
-                        name: "y",
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
                                 column: 8,
                             },
-                            end: Position {
-                                line: 1,
-                                column: 9,
-                            },
                         },
-                        mutable: false,
                     },
-                ),
-            },
-        ],
-        body: Expr(
-            Expr {
-                kind: Binary {
-                    left: Expr {
+                    property: Expr {
                         kind: Identifier(
                             "x",
                         ),
                         loc: SourceLocation {
                             start: Position {
                                 line: 1,
-                                column: 14,
+                                column: 9,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 10,
+                            },
+                        },
+                    },
+                },
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 5,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 10,
+                    },
+                },
+            },
+            Expr {
+                kind: Member {
+                    object: Expr {
+                        kind: Identifier(
+                            "obj",
+                        ),
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 12,
                             },
                             end: Position {
                                 line: 1,
@@ -80,19 +66,18 @@ Expr {
                             },
                         },
                     },
-                    op: Plus,
-                    right: Expr {
+                    property: Expr {
                         kind: Identifier(
                             "y",
                         ),
                         loc: SourceLocation {
                             start: Position {
                                 line: 1,
-                                column: 18,
+                                column: 16,
                             },
                             end: Position {
                                 line: 1,
-                                column: 19,
+                                column: 17,
                             },
                         },
                     },
@@ -100,15 +85,30 @@ Expr {
                 loc: SourceLocation {
                     start: Position {
                         line: 1,
-                        column: 14,
+                        column: 12,
                     },
                     end: Position {
                         line: 1,
-                        column: 19,
+                        column: 17,
                     },
                 },
             },
-        ),
+        ],
+        callee: Expr {
+            kind: Identifier(
+                "add",
+            ),
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 4,
+                },
+            },
+        },
     },
     loc: SourceLocation {
         start: Position {
@@ -117,7 +117,7 @@ Expr {
         },
         end: Position {
             line: 1,
-            column: 19,
+            column: 18,
         },
     },
 }

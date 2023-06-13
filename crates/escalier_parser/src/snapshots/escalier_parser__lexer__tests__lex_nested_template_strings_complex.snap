@@ -40,7 +40,7 @@ StrTemplateLit {
             kind: Call {
                 args: [
                     Expr {
-                        kind: Lambda {
+                        kind: Function {
                             params: [
                                 Pattern {
                                     loc: SourceLocation {
@@ -71,45 +71,47 @@ StrTemplateLit {
                                     ),
                                 },
                             ],
-                            expr: Expr {
-                                kind: TemplateLiteral {
-                                    parts: [
-                                        String(
-                                            "x",
-                                        ),
-                                        String(
-                                            "",
-                                        ),
-                                    ],
-                                    exprs: [
-                                        Expr {
-                                            kind: Identifier(
-                                                "id",
+                            body: Expr(
+                                Expr {
+                                    kind: TemplateLiteral {
+                                        parts: [
+                                            String(
+                                                "x",
                                             ),
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 1,
-                                                    column: 33,
-                                                },
-                                                end: Position {
-                                                    line: 1,
-                                                    column: 35,
+                                            String(
+                                                "",
+                                            ),
+                                        ],
+                                        exprs: [
+                                            Expr {
+                                                kind: Identifier(
+                                                    "id",
+                                                ),
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 1,
+                                                        column: 33,
+                                                    },
+                                                    end: Position {
+                                                        line: 1,
+                                                        column: 35,
+                                                    },
                                                 },
                                             },
+                                        ],
+                                    },
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 1,
+                                            column: 29,
                                         },
-                                    ],
-                                },
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 1,
-                                        column: 29,
-                                    },
-                                    end: Position {
-                                        line: 1,
-                                        column: 37,
+                                        end: Position {
+                                            line: 1,
+                                            column: 37,
+                                        },
                                     },
                                 },
-                            },
+                            ),
                         },
                         loc: SourceLocation {
                             start: Position {

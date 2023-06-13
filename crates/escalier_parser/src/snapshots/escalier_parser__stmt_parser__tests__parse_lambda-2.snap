@@ -34,7 +34,7 @@ expression: "parse(\"let add = fn (x) => fn (y) => x + y;\")"
                 ),
             },
             expr: Expr {
-                kind: Lambda {
+                kind: Function {
                     params: [
                         Pattern {
                             loc: SourceLocation {
@@ -65,44 +65,74 @@ expression: "parse(\"let add = fn (x) => fn (y) => x + y;\")"
                             ),
                         },
                     ],
-                    expr: Expr {
-                        kind: Lambda {
-                            params: [
-                                Pattern {
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 25,
+                    body: Expr(
+                        Expr {
+                            kind: Function {
+                                params: [
+                                    Pattern {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 1,
+                                                column: 25,
+                                            },
+                                            end: Position {
+                                                line: 1,
+                                                column: 26,
+                                            },
                                         },
-                                        end: Position {
-                                            line: 1,
-                                            column: 26,
-                                        },
-                                    },
-                                    kind: Ident(
-                                        BindingIdent {
-                                            name: "y",
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 1,
-                                                    column: 25,
+                                        kind: Ident(
+                                            BindingIdent {
+                                                name: "y",
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 1,
+                                                        column: 25,
+                                                    },
+                                                    end: Position {
+                                                        line: 1,
+                                                        column: 26,
+                                                    },
                                                 },
-                                                end: Position {
-                                                    line: 1,
-                                                    column: 26,
+                                                mutable: false,
+                                            },
+                                        ),
+                                    },
+                                ],
+                                body: Expr(
+                                    Expr {
+                                        kind: Binary {
+                                            left: Expr {
+                                                kind: Identifier(
+                                                    "x",
+                                                ),
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 1,
+                                                        column: 31,
+                                                    },
+                                                    end: Position {
+                                                        line: 1,
+                                                        column: 32,
+                                                    },
                                                 },
                                             },
-                                            mutable: false,
+                                            op: Plus,
+                                            right: Expr {
+                                                kind: Identifier(
+                                                    "y",
+                                                ),
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 1,
+                                                        column: 35,
+                                                    },
+                                                    end: Position {
+                                                        line: 1,
+                                                        column: 36,
+                                                    },
+                                                },
+                                            },
                                         },
-                                    ),
-                                },
-                            ],
-                            expr: Expr {
-                                kind: Binary {
-                                    left: Expr {
-                                        kind: Identifier(
-                                            "x",
-                                        ),
                                         loc: SourceLocation {
                                             start: Position {
                                                 line: 1,
@@ -110,50 +140,24 @@ expression: "parse(\"let add = fn (x) => fn (y) => x + y;\")"
                                             },
                                             end: Position {
                                                 line: 1,
-                                                column: 32,
-                                            },
-                                        },
-                                    },
-                                    op: Plus,
-                                    right: Expr {
-                                        kind: Identifier(
-                                            "y",
-                                        ),
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 1,
-                                                column: 35,
-                                            },
-                                            end: Position {
-                                                line: 1,
                                                 column: 36,
                                             },
                                         },
                                     },
+                                ),
+                            },
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 21,
                                 },
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 1,
-                                        column: 31,
-                                    },
-                                    end: Position {
-                                        line: 1,
-                                        column: 36,
-                                    },
+                                end: Position {
+                                    line: 1,
+                                    column: 36,
                                 },
                             },
                         },
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 21,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 36,
-                            },
-                        },
-                    },
+                    ),
                 },
                 loc: SourceLocation {
                     start: Position {

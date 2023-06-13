@@ -32,6 +32,7 @@ pub enum TokenKind {
     Else,
     Mut, // denotes a binding to a mutable reference
     Var, // denotes a re-assignable binding
+    Match,
 
     // Operators
     Assign,

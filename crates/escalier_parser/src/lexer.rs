@@ -177,6 +177,7 @@ impl<'a> Lexer<'a> {
             "let" => TokenKind::Let,
             "var" => TokenKind::Var,
             "mut" => TokenKind::Mut,
+            "match" => TokenKind::Match,
             "return" => TokenKind::Return,
             "if" => TokenKind::If,
             "else" => TokenKind::Else,
