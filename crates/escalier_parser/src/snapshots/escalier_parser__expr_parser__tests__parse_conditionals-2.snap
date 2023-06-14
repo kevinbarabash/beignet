@@ -19,53 +19,32 @@ Expr {
                 },
             },
         },
-        consequent: [
-            Stmt {
-                kind: Expr {
-                    expr: Expr {
-                        kind: Identifier(
-                            "x",
-                        ),
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 13,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 14,
-                            },
-                        },
-                    },
+        consequent: Block {
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 11,
                 },
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 13,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 14,
-                    },
+                end: Position {
+                    line: 1,
+                    column: 17,
                 },
             },
-        ],
-        alternate: Some(
-            [
+            stmts: [
                 Stmt {
                     kind: Expr {
                         expr: Expr {
                             kind: Identifier(
-                                "y",
+                                "x",
                             ),
                             loc: SourceLocation {
                                 start: Position {
                                     line: 1,
-                                    column: 25,
+                                    column: 13,
                                 },
                                 end: Position {
                                     line: 1,
-                                    column: 26,
+                                    column: 14,
                                 },
                             },
                         },
@@ -73,15 +52,60 @@ Expr {
                     loc: SourceLocation {
                         start: Position {
                             line: 1,
-                            column: 25,
+                            column: 13,
                         },
                         end: Position {
                             line: 1,
-                            column: 26,
+                            column: 14,
                         },
                     },
                 },
             ],
+        },
+        alternate: Some(
+            Block {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 23,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 29,
+                    },
+                },
+                stmts: [
+                    Stmt {
+                        kind: Expr {
+                            expr: Expr {
+                                kind: Identifier(
+                                    "y",
+                                ),
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 1,
+                                        column: 25,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 26,
+                                    },
+                                },
+                            },
+                        },
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 25,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 26,
+                            },
+                        },
+                    },
+                ],
+            },
         ),
     },
     loc: SourceLocation {

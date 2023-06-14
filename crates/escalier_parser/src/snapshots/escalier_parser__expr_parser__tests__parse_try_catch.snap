@@ -4,52 +4,64 @@ expression: "parse(r#\"\n            try {\n                canThrow();\n       
 ---
 Expr {
     kind: Try {
-        body: [
-            Stmt {
-                kind: Expr {
-                    expr: Expr {
-                        kind: Call {
-                            args: [],
-                            callee: Expr {
-                                kind: Identifier(
-                                    "canThrow",
-                                ),
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 3,
-                                        column: 17,
-                                    },
-                                    end: Position {
-                                        line: 3,
-                                        column: 25,
+        body: Block {
+            loc: SourceLocation {
+                start: Position {
+                    line: 2,
+                    column: 17,
+                },
+                end: Position {
+                    line: 4,
+                    column: 14,
+                },
+            },
+            stmts: [
+                Stmt {
+                    kind: Expr {
+                        expr: Expr {
+                            kind: Call {
+                                args: [],
+                                callee: Expr {
+                                    kind: Identifier(
+                                        "canThrow",
+                                    ),
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 3,
+                                            column: 17,
+                                        },
+                                        end: Position {
+                                            line: 3,
+                                            column: 25,
+                                        },
                                     },
                                 },
                             },
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 3,
+                                    column: 17,
+                                },
+                                end: Position {
+                                    line: 3,
+                                    column: 27,
+                                },
+                            },
                         },
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 3,
-                                column: 17,
-                            },
-                            end: Position {
-                                line: 3,
-                                column: 27,
-                            },
+                    },
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 3,
+                            column: 17,
+                        },
+                        end: Position {
+                            line: 3,
+                            column: 27,
                         },
                     },
                 },
-                loc: SourceLocation {
-                    start: Position {
-                        line: 3,
-                        column: 17,
-                    },
-                    end: Position {
-                        line: 3,
-                        column: 27,
-                    },
-                },
-            },
-        ],
+            ],
+        },
         catch: CatchClause {
             param: Some(
                 Pattern {
@@ -81,44 +93,100 @@ Expr {
                     ),
                 },
             ),
-            body: [
-                Stmt {
-                    kind: Expr {
-                        expr: Expr {
-                            kind: Call {
-                                args: [
-                                    Expr {
-                                        kind: Binary {
-                                            left: Expr {
-                                                kind: Literal(
-                                                    String(
-                                                        "Error: ",
+            body: Block {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 4,
+                        column: 25,
+                    },
+                    end: Position {
+                        line: 6,
+                        column: 14,
+                    },
+                },
+                stmts: [
+                    Stmt {
+                        kind: Expr {
+                            expr: Expr {
+                                kind: Call {
+                                    args: [
+                                        Expr {
+                                            kind: Binary {
+                                                left: Expr {
+                                                    kind: Literal(
+                                                        String(
+                                                            "Error: ",
+                                                        ),
                                                     ),
-                                                ),
-                                                loc: SourceLocation {
-                                                    start: Position {
-                                                        line: 5,
-                                                        column: 29,
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 5,
+                                                            column: 29,
+                                                        },
+                                                        end: Position {
+                                                            line: 5,
+                                                            column: 38,
+                                                        },
                                                     },
-                                                    end: Position {
-                                                        line: 5,
-                                                        column: 38,
+                                                },
+                                                op: Plus,
+                                                right: Expr {
+                                                    kind: Identifier(
+                                                        "e",
+                                                    ),
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 5,
+                                                            column: 41,
+                                                        },
+                                                        end: Position {
+                                                            line: 5,
+                                                            column: 42,
+                                                        },
                                                     },
                                                 },
                                             },
-                                            op: Plus,
-                                            right: Expr {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 5,
+                                                    column: 29,
+                                                },
+                                                end: Position {
+                                                    line: 5,
+                                                    column: 42,
+                                                },
+                                            },
+                                        },
+                                    ],
+                                    callee: Expr {
+                                        kind: Member {
+                                            object: Expr {
                                                 kind: Identifier(
-                                                    "e",
+                                                    "console",
                                                 ),
                                                 loc: SourceLocation {
                                                     start: Position {
                                                         line: 5,
-                                                        column: 41,
+                                                        column: 17,
                                                     },
                                                     end: Position {
                                                         line: 5,
-                                                        column: 42,
+                                                        column: 24,
+                                                    },
+                                                },
+                                            },
+                                            property: Expr {
+                                                kind: Identifier(
+                                                    "log",
+                                                ),
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 5,
+                                                        column: 25,
+                                                    },
+                                                    end: Position {
+                                                        line: 5,
+                                                        column: 28,
                                                     },
                                                 },
                                             },
@@ -126,84 +194,40 @@ Expr {
                                         loc: SourceLocation {
                                             start: Position {
                                                 line: 5,
-                                                column: 29,
+                                                column: 17,
                                             },
                                             end: Position {
                                                 line: 5,
-                                                column: 42,
+                                                column: 28,
                                             },
                                         },
                                     },
-                                ],
-                                callee: Expr {
-                                    kind: Member {
-                                        object: Expr {
-                                            kind: Identifier(
-                                                "console",
-                                            ),
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 5,
-                                                    column: 17,
-                                                },
-                                                end: Position {
-                                                    line: 5,
-                                                    column: 24,
-                                                },
-                                            },
-                                        },
-                                        property: Expr {
-                                            kind: Identifier(
-                                                "log",
-                                            ),
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 5,
-                                                    column: 25,
-                                                },
-                                                end: Position {
-                                                    line: 5,
-                                                    column: 28,
-                                                },
-                                            },
-                                        },
+                                },
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 5,
+                                        column: 17,
                                     },
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 5,
-                                            column: 17,
-                                        },
-                                        end: Position {
-                                            line: 5,
-                                            column: 28,
-                                        },
+                                    end: Position {
+                                        line: 5,
+                                        column: 43,
                                     },
                                 },
                             },
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 5,
-                                    column: 17,
-                                },
-                                end: Position {
-                                    line: 5,
-                                    column: 43,
-                                },
+                        },
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 5,
+                                column: 17,
+                            },
+                            end: Position {
+                                line: 5,
+                                column: 43,
                             },
                         },
                     },
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 5,
-                            column: 17,
-                        },
-                        end: Position {
-                            line: 5,
-                            column: 43,
-                        },
-                    },
-                },
-            ],
+                ],
+            },
         },
         finally: None,
     },

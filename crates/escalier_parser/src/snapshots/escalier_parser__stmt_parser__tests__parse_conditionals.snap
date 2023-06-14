@@ -80,53 +80,32 @@ expression: "parse(\"let max = if (x > y) { x; } else { y; };\")"
                             },
                         },
                     },
-                    consequent: [
-                        Stmt {
-                            kind: Expr {
-                                expr: Expr {
-                                    kind: Identifier(
-                                        "x",
-                                    ),
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 24,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 25,
-                                        },
-                                    },
-                                },
+                    consequent: Block {
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 22,
                             },
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 24,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 25,
-                                },
+                            end: Position {
+                                line: 1,
+                                column: 28,
                             },
                         },
-                    ],
-                    alternate: Some(
-                        [
+                        stmts: [
                             Stmt {
                                 kind: Expr {
                                     expr: Expr {
                                         kind: Identifier(
-                                            "y",
+                                            "x",
                                         ),
                                         loc: SourceLocation {
                                             start: Position {
                                                 line: 1,
-                                                column: 36,
+                                                column: 24,
                                             },
                                             end: Position {
                                                 line: 1,
-                                                column: 37,
+                                                column: 25,
                                             },
                                         },
                                     },
@@ -134,15 +113,60 @@ expression: "parse(\"let max = if (x > y) { x; } else { y; };\")"
                                 loc: SourceLocation {
                                     start: Position {
                                         line: 1,
-                                        column: 36,
+                                        column: 24,
                                     },
                                     end: Position {
                                         line: 1,
-                                        column: 37,
+                                        column: 25,
                                     },
                                 },
                             },
                         ],
+                    },
+                    alternate: Some(
+                        Block {
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 34,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 40,
+                                },
+                            },
+                            stmts: [
+                                Stmt {
+                                    kind: Expr {
+                                        expr: Expr {
+                                            kind: Identifier(
+                                                "y",
+                                            ),
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 1,
+                                                    column: 36,
+                                                },
+                                                end: Position {
+                                                    line: 1,
+                                                    column: 37,
+                                                },
+                                            },
+                                        },
+                                    },
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 1,
+                                            column: 36,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 37,
+                                        },
+                                    },
+                                },
+                            ],
+                        },
                     ),
                 },
                 loc: SourceLocation {
