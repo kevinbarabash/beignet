@@ -65,12 +65,7 @@ pub enum ExprKind {
     Function {
         // TODO: add support for explicit type annotations
         params: Vec<Pattern>,
-        body: Vec<Stmt>,
-    },
-    Lambda {
-        // TODO: add support for explicit type annotations
-        params: Vec<Pattern>,
-        expr: Box<Expr>,
+        body: BlockOrExpr,
     },
     Call {
         args: Vec<Expr>,
@@ -85,6 +80,25 @@ pub enum ExprKind {
         consequent: Vec<Stmt>,
         alternate: Option<Vec<Stmt>>,
     },
+    Match {
+        expr: Box<Expr>,
+        arms: Vec<MatchArm>,
+    },
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct MatchArm {
+    pub loc: SourceLocation,
+    // pub span: Span,
+    pub pattern: Pattern,
+    pub guard: Option<Box<Expr>>,
+    pub body: BlockOrExpr,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum BlockOrExpr {
+    Block(Vec<Stmt>),
+    Expr(Box<Expr>),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

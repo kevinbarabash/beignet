@@ -62,69 +62,71 @@ Expr {
                 ),
             },
         ],
-        body: [
-            Stmt {
-                kind: Return {
-                    arg: Some(
-                        Expr {
-                            kind: Binary {
-                                left: Expr {
-                                    kind: Identifier(
-                                        "x",
-                                    ),
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 20,
+        body: Block(
+            [
+                Stmt {
+                    kind: Return {
+                        arg: Some(
+                            Expr {
+                                kind: Binary {
+                                    left: Expr {
+                                        kind: Identifier(
+                                            "x",
+                                        ),
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 1,
+                                                column: 23,
+                                            },
+                                            end: Position {
+                                                line: 1,
+                                                column: 24,
+                                            },
                                         },
-                                        end: Position {
-                                            line: 1,
-                                            column: 21,
+                                    },
+                                    op: Plus,
+                                    right: Expr {
+                                        kind: Identifier(
+                                            "y",
+                                        ),
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 1,
+                                                column: 27,
+                                            },
+                                            end: Position {
+                                                line: 1,
+                                                column: 28,
+                                            },
                                         },
                                     },
                                 },
-                                op: Plus,
-                                right: Expr {
-                                    kind: Identifier(
-                                        "y",
-                                    ),
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 24,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 25,
-                                        },
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 1,
+                                        column: 23,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 28,
                                     },
                                 },
                             },
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 20,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 25,
-                                },
-                            },
+                        ),
+                    },
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 23,
                         },
-                    ),
-                },
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 20,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 25,
+                        end: Position {
+                            line: 1,
+                            column: 28,
+                        },
                     },
                 },
-            },
-        ],
+            ],
+        ),
     },
     loc: SourceLocation {
         start: Position {
@@ -133,7 +135,7 @@ Expr {
         },
         end: Position {
             line: 1,
-            column: 28,
+            column: 31,
         },
     },
 }

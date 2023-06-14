@@ -1,0 +1,281 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(r#\"\n            match (obj.type) {\n                \"foo\" => obj.foo,\n                \"bar\" => {\n                    obj.bar;\n                },\n                _ => \"default\",\n            };\n            \"#)"
+---
+Expr {
+    kind: Match {
+        expr: Expr {
+            kind: Member {
+                object: Expr {
+                    kind: Identifier(
+                        "obj",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 2,
+                            column: 20,
+                        },
+                        end: Position {
+                            line: 2,
+                            column: 23,
+                        },
+                    },
+                },
+                property: Expr {
+                    kind: Identifier(
+                        "type",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 2,
+                            column: 24,
+                        },
+                        end: Position {
+                            line: 2,
+                            column: 28,
+                        },
+                    },
+                },
+            },
+            loc: SourceLocation {
+                start: Position {
+                    line: 2,
+                    column: 20,
+                },
+                end: Position {
+                    line: 2,
+                    column: 28,
+                },
+            },
+        },
+        arms: [
+            MatchArm {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 3,
+                        column: 17,
+                    },
+                    end: Position {
+                        line: 3,
+                        column: 33,
+                    },
+                },
+                pattern: Pattern {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 3,
+                            column: 17,
+                        },
+                        end: Position {
+                            line: 3,
+                            column: 22,
+                        },
+                    },
+                    kind: Lit(
+                        LitPat {
+                            lit: String(
+                                "foo",
+                            ),
+                        },
+                    ),
+                },
+                guard: None,
+                body: Expr(
+                    Expr {
+                        kind: Member {
+                            object: Expr {
+                                kind: Identifier(
+                                    "obj",
+                                ),
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 3,
+                                        column: 26,
+                                    },
+                                    end: Position {
+                                        line: 3,
+                                        column: 29,
+                                    },
+                                },
+                            },
+                            property: Expr {
+                                kind: Identifier(
+                                    "foo",
+                                ),
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 3,
+                                        column: 30,
+                                    },
+                                    end: Position {
+                                        line: 3,
+                                        column: 33,
+                                    },
+                                },
+                            },
+                        },
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 3,
+                                column: 26,
+                            },
+                            end: Position {
+                                line: 3,
+                                column: 33,
+                            },
+                        },
+                    },
+                ),
+            },
+            MatchArm {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 4,
+                        column: 17,
+                    },
+                    end: Position {
+                        line: 6,
+                        column: 18,
+                    },
+                },
+                pattern: Pattern {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 4,
+                            column: 17,
+                        },
+                        end: Position {
+                            line: 4,
+                            column: 22,
+                        },
+                    },
+                    kind: Lit(
+                        LitPat {
+                            lit: String(
+                                "bar",
+                            ),
+                        },
+                    ),
+                },
+                guard: None,
+                body: Block(
+                    [
+                        Stmt {
+                            kind: Expr {
+                                expr: Expr {
+                                    kind: Member {
+                                        object: Expr {
+                                            kind: Identifier(
+                                                "obj",
+                                            ),
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 5,
+                                                    column: 21,
+                                                },
+                                                end: Position {
+                                                    line: 5,
+                                                    column: 24,
+                                                },
+                                            },
+                                        },
+                                        property: Expr {
+                                            kind: Identifier(
+                                                "bar",
+                                            ),
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 5,
+                                                    column: 25,
+                                                },
+                                                end: Position {
+                                                    line: 5,
+                                                    column: 28,
+                                                },
+                                            },
+                                        },
+                                    },
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 5,
+                                            column: 21,
+                                        },
+                                        end: Position {
+                                            line: 5,
+                                            column: 28,
+                                        },
+                                    },
+                                },
+                            },
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 5,
+                                    column: 21,
+                                },
+                                end: Position {
+                                    line: 5,
+                                    column: 28,
+                                },
+                            },
+                        },
+                    ],
+                ),
+            },
+            MatchArm {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 7,
+                        column: 17,
+                    },
+                    end: Position {
+                        line: 7,
+                        column: 31,
+                    },
+                },
+                pattern: Pattern {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 7,
+                            column: 17,
+                        },
+                        end: Position {
+                            line: 7,
+                            column: 18,
+                        },
+                    },
+                    kind: Wildcard,
+                },
+                guard: None,
+                body: Expr(
+                    Expr {
+                        kind: Literal(
+                            String(
+                                "default",
+                            ),
+                        ),
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 7,
+                                column: 22,
+                            },
+                            end: Position {
+                                line: 7,
+                                column: 31,
+                            },
+                        },
+                    },
+                ),
+            },
+        ],
+    },
+    loc: SourceLocation {
+        start: Position {
+            line: 2,
+            column: 20,
+        },
+        end: Position {
+            line: 7,
+            column: 31,
+        },
+    },
+}
