@@ -339,6 +339,73 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                 loc,
             }
         }
+        TokenKind::Try => {
+            let try_token = next;
+            assert_eq!(parser.next().kind, TokenKind::LeftBrace);
+            let try_body = parse_block(parser);
+            assert_eq!(parser.next().kind, TokenKind::RightBrace);
+            assert_eq!(parser.next().kind, TokenKind::Catch);
+            assert_eq!(parser.next().kind, TokenKind::LeftParen);
+            let error = parse_pattern(parser);
+            assert_eq!(parser.next().kind, TokenKind::RightParen);
+            assert_eq!(parser.next().kind, TokenKind::LeftBrace);
+            let catch_body = parse_block(parser); // TODO: create a BlockStmt and include .loc in it
+            let close = parser.next();
+            assert_eq!(close.kind, TokenKind::RightBrace);
+
+            match parser.peek(0).kind {
+                TokenKind::Finally => {
+                    parser.next();
+                    assert_eq!(parser.next().kind, TokenKind::LeftBrace);
+                    let finally_body = parse_block(parser);
+                    let close = parser.next();
+                    assert_eq!(close.kind, TokenKind::RightBrace);
+
+                    let loc = merge_locations(&try_token.loc, &close.loc);
+
+                    Expr {
+                        kind: ExprKind::Try {
+                            body: try_body,
+                            catch: CatchClause {
+                                param: Some(error),
+                                body: catch_body,
+                            },
+                            finally: Some(finally_body),
+                        },
+                        loc,
+                    }
+                }
+                _ => {
+                    let loc = merge_locations(&try_token.loc, &close.loc);
+
+                    Expr {
+                        kind: ExprKind::Try {
+                            body: try_body,
+                            catch: CatchClause {
+                                param: Some(error),
+                                body: catch_body,
+                            },
+                            finally: None,
+                        },
+                        loc,
+                    }
+                }
+            }
+
+            // let loc = merge_locations(&next.loc, &close.loc);
+
+            // Expr {
+            //     kind: ExprKind::Try {
+            //         body: try_body,
+            //         catch: CatchClause {
+            //             param: Some(error),
+            //             body: catch_body,
+            //         },
+            //         finally: None,
+            //     },
+            //     loc,
+            // }
+        }
         t => match get_prefix_precedence(&next) {
             Some(precendence) => {
                 let op = match t {
@@ -695,6 +762,34 @@ mod tests {
                 },
                 _ => "default",
             };
+            "#
+        ));
+    }
+
+    #[test]
+    fn parse_try_catch() {
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            try {
+                canThrow();
+            } catch (e) {
+                console.log("Error: " + e);
+            }
+            "#
+        ));
+    }
+
+    #[test]
+    fn parse_try_catch_finally() {
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            try {
+                canThrow();
+            } catch (e) {
+                console.log("Error: " + e);
+            } finally {
+                cleanup();
+            }
             "#
         ));
     }

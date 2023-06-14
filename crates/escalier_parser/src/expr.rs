@@ -84,6 +84,17 @@ pub enum ExprKind {
         expr: Box<Expr>,
         arms: Vec<MatchArm>,
     },
+    Try {
+        body: Vec<Stmt>,
+        catch: CatchClause,
+        finally: Option<Vec<Stmt>>,
+    },
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct CatchClause {
+    pub param: Option<Pattern>,
+    pub body: Vec<Stmt>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
