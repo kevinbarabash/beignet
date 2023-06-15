@@ -19,88 +19,18 @@ Expr {
                 },
             },
         },
-        consequent: [
-            Stmt {
-                kind: Expr {
-                    expr: Expr {
-                        kind: Object {
-                            properties: [
-                                Prop(
-                                    Property {
-                                        key: Identifier(
-                                            "x",
-                                        ),
-                                        value: Expr {
-                                            kind: Literal(
-                                                Number(
-                                                    "5",
-                                                ),
-                                            ),
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 3,
-                                                    column: 21,
-                                                },
-                                                end: Position {
-                                                    line: 3,
-                                                    column: 22,
-                                                },
-                                            },
-                                        },
-                                    },
-                                ),
-                                Prop(
-                                    Property {
-                                        key: Identifier(
-                                            "y",
-                                        ),
-                                        value: Expr {
-                                            kind: Literal(
-                                                Number(
-                                                    "10",
-                                                ),
-                                            ),
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 3,
-                                                    column: 27,
-                                                },
-                                                end: Position {
-                                                    line: 3,
-                                                    column: 29,
-                                                },
-                                            },
-                                        },
-                                    },
-                                ),
-                            ],
-                        },
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 3,
-                                column: 17,
-                            },
-                            end: Position {
-                                line: 3,
-                                column: 30,
-                            },
-                        },
-                    },
+        consequent: Block {
+            loc: SourceLocation {
+                start: Position {
+                    line: 2,
+                    column: 23,
                 },
-                loc: SourceLocation {
-                    start: Position {
-                        line: 3,
-                        column: 17,
-                    },
-                    end: Position {
-                        line: 3,
-                        column: 30,
-                    },
+                end: Position {
+                    line: 4,
+                    column: 14,
                 },
             },
-        ],
-        alternate: Some(
-            [
+            stmts: [
                 Stmt {
                     kind: Expr {
                         expr: Expr {
@@ -109,21 +39,21 @@ Expr {
                                     Prop(
                                         Property {
                                             key: Identifier(
-                                                "a",
+                                                "x",
                                             ),
                                             value: Expr {
                                                 kind: Literal(
                                                     Number(
-                                                        "1",
+                                                        "5",
                                                     ),
                                                 ),
                                                 loc: SourceLocation {
                                                     start: Position {
-                                                        line: 5,
+                                                        line: 3,
                                                         column: 21,
                                                     },
                                                     end: Position {
-                                                        line: 5,
+                                                        line: 3,
                                                         column: 22,
                                                     },
                                                 },
@@ -133,22 +63,22 @@ Expr {
                                     Prop(
                                         Property {
                                             key: Identifier(
-                                                "b",
+                                                "y",
                                             ),
                                             value: Expr {
                                                 kind: Literal(
                                                     Number(
-                                                        "2",
+                                                        "10",
                                                     ),
                                                 ),
                                                 loc: SourceLocation {
                                                     start: Position {
-                                                        line: 5,
+                                                        line: 3,
                                                         column: 27,
                                                     },
                                                     end: Position {
-                                                        line: 5,
-                                                        column: 28,
+                                                        line: 3,
+                                                        column: 29,
                                                     },
                                                 },
                                             },
@@ -158,28 +88,122 @@ Expr {
                             },
                             loc: SourceLocation {
                                 start: Position {
-                                    line: 5,
+                                    line: 3,
                                     column: 17,
                                 },
                                 end: Position {
-                                    line: 5,
-                                    column: 29,
+                                    line: 3,
+                                    column: 30,
                                 },
                             },
                         },
                     },
                     loc: SourceLocation {
                         start: Position {
-                            line: 5,
+                            line: 3,
                             column: 17,
                         },
                         end: Position {
-                            line: 5,
-                            column: 29,
+                            line: 3,
+                            column: 30,
                         },
                     },
                 },
             ],
+        },
+        alternate: Some(
+            Block {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 4,
+                        column: 20,
+                    },
+                    end: Position {
+                        line: 6,
+                        column: 14,
+                    },
+                },
+                stmts: [
+                    Stmt {
+                        kind: Expr {
+                            expr: Expr {
+                                kind: Object {
+                                    properties: [
+                                        Prop(
+                                            Property {
+                                                key: Identifier(
+                                                    "a",
+                                                ),
+                                                value: Expr {
+                                                    kind: Literal(
+                                                        Number(
+                                                            "1",
+                                                        ),
+                                                    ),
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 5,
+                                                            column: 21,
+                                                        },
+                                                        end: Position {
+                                                            line: 5,
+                                                            column: 22,
+                                                        },
+                                                    },
+                                                },
+                                            },
+                                        ),
+                                        Prop(
+                                            Property {
+                                                key: Identifier(
+                                                    "b",
+                                                ),
+                                                value: Expr {
+                                                    kind: Literal(
+                                                        Number(
+                                                            "2",
+                                                        ),
+                                                    ),
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 5,
+                                                            column: 27,
+                                                        },
+                                                        end: Position {
+                                                            line: 5,
+                                                            column: 28,
+                                                        },
+                                                    },
+                                                },
+                                            },
+                                        ),
+                                    ],
+                                },
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 5,
+                                        column: 17,
+                                    },
+                                    end: Position {
+                                        line: 5,
+                                        column: 29,
+                                    },
+                                },
+                            },
+                        },
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 5,
+                                column: 17,
+                            },
+                            end: Position {
+                                line: 5,
+                                column: 29,
+                            },
+                        },
+                    },
+                ],
+            },
         ),
     },
     loc: SourceLocation {

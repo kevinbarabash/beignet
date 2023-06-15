@@ -5,7 +5,6 @@ use crate::pattern::Pattern;
 use crate::pattern_parser::parse_pattern;
 use crate::precedence::{Associativity, Operator, PRECEDENCE_TABLE};
 use crate::source_location::*;
-use crate::stmt::Stmt;
 use crate::stmt_parser::parse_stmt;
 use crate::token::{Token, TokenKind};
 
@@ -76,37 +75,40 @@ fn parse_params(parser: &mut Parser) -> Vec<Pattern> {
     params
 }
 
-fn parse_block(parser: &mut Parser) -> Vec<Stmt> {
+// consumes leading '{' and trailing '}' tokens
+fn parse_block(parser: &mut Parser) -> Block {
+    let open = parser.next();
+    assert_eq!(open.kind, TokenKind::LeftBrace);
     let mut stmts = Vec::new();
     while parser.peek(0).kind != TokenKind::RightBrace {
         stmts.push(parse_stmt(parser));
     }
-    stmts
+    let close = parser.next();
+    assert_eq!(close.kind, TokenKind::RightBrace);
+    let loc = merge_locations(&open.loc, &close.loc);
+
+    Block { loc, stmts }
 }
 
 fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
-    let next = parser.next();
+    let first = parser.next();
 
-    let mut lhs = match &next.kind {
-        // TODO:
-        // - do-expression
-        // - try-catch
-        // - match
+    let mut lhs = match &first.kind {
         TokenKind::NumLit(n) => Expr {
             kind: ExprKind::Literal(Literal::Number(n.to_owned())),
-            loc: next.loc.clone(),
+            loc: first.loc.clone(),
         },
         TokenKind::Identifier(id) => Expr {
             kind: ExprKind::Identifier(id.to_owned()),
-            loc: next.loc.clone(),
+            loc: first.loc.clone(),
         },
         TokenKind::BoolLit(b) => Expr {
             kind: ExprKind::Literal(Literal::Boolean(*b)),
-            loc: next.loc.clone(),
+            loc: first.loc.clone(),
         },
         TokenKind::StrLit(s) => Expr {
             kind: ExprKind::Literal(Literal::String(s.to_owned())),
-            loc: next.loc.clone(),
+            loc: first.loc.clone(),
         },
         TokenKind::StrTemplateLit { parts, exprs } => Expr {
             kind: ExprKind::TemplateLiteral {
@@ -119,15 +121,15 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                     .collect(),
                 exprs: exprs.to_owned(),
             },
-            loc: next.loc.clone(),
+            loc: first.loc.clone(),
         },
         TokenKind::Null => Expr {
             kind: ExprKind::Literal(Literal::Null),
-            loc: next.loc.clone(),
+            loc: first.loc.clone(),
         },
         TokenKind::Undefined => Expr {
             kind: ExprKind::Literal(Literal::Null),
-            loc: next.loc.clone(),
+            loc: first.loc.clone(),
         },
         TokenKind::LeftParen => {
             let lhs = parse_expr_with_precedence(parser, 0);
@@ -135,7 +137,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             lhs
         }
         TokenKind::LeftBracket => {
-            let start = next;
+            let start = first;
             let mut elements: Vec<ExprOrSpread> = Vec::new();
             while parser.peek(0).kind != TokenKind::RightBracket {
                 let elem = match parser.peek(0).kind {
@@ -171,7 +173,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             }
         }
         TokenKind::LeftBrace => {
-            let start = next;
+            let start = first;
             let mut properties: Vec<PropOrSpread> = Vec::new();
             while parser.peek(0).kind != TokenKind::RightBrace {
                 let next = parser.next();
@@ -234,11 +236,9 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
 
             match parser.peek(0).kind {
                 TokenKind::LeftBrace => {
-                    parser.next(); // skips '{'
-                    let body = BlockOrExpr::Block(parse_block(parser));
-                    let close_brace = parser.next();
-                    assert_eq!(close_brace.kind, TokenKind::RightBrace);
-                    let loc = merge_locations(&next.loc, &close_brace.loc);
+                    let block = parse_block(parser);
+                    let loc = merge_locations(&first.loc, &block.loc);
+                    let body = BlockOrExpr::Block(block);
 
                     Expr {
                         kind: ExprKind::Function { params, body },
@@ -247,7 +247,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                 }
                 _ => {
                     let expr = parse_expr(parser);
-                    let loc = merge_locations(&next.loc, &expr.loc);
+                    let loc = merge_locations(&first.loc, &expr.loc);
                     let body = BlockOrExpr::Expr(Box::new(expr));
 
                     Expr {
@@ -261,19 +261,12 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             assert_eq!(parser.next().kind, TokenKind::LeftParen);
             let cond = parse_expr(parser);
             assert_eq!(parser.next().kind, TokenKind::RightParen);
-            assert_eq!(parser.next().kind, TokenKind::LeftBrace);
             let consequent = parse_block(parser);
-            let close_brace = parser.next();
-            assert_eq!(close_brace.kind, TokenKind::RightBrace);
 
             if parser.peek(0).kind == TokenKind::Else {
                 parser.next();
-                assert_eq!(parser.next().kind, TokenKind::LeftBrace);
                 let alternate = parse_block(parser);
-                let close_brace = parser.next();
-                assert_eq!(close_brace.kind, TokenKind::RightBrace);
-
-                let loc = merge_locations(&next.loc, &close_brace.loc);
+                let loc = merge_locations(&first.loc, &alternate.loc);
                 Expr {
                     kind: ExprKind::IfElse {
                         cond: Box::new(cond),
@@ -283,7 +276,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                     loc,
                 }
             } else {
-                let loc = merge_locations(&next.loc, &close_brace.loc);
+                let loc = merge_locations(&first.loc, &consequent.loc);
                 Expr {
                     kind: ExprKind::IfElse {
                         cond: Box::new(cond),
@@ -305,11 +298,9 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
 
                 let (body, end) = match parser.peek(0).kind {
                     TokenKind::LeftBrace => {
-                        parser.next(); // skips '{'
                         let block = parse_block(parser);
-                        let close_brace = parser.next();
-                        assert_eq!(close_brace.kind, TokenKind::RightBrace);
-                        (BlockOrExpr::Block(block), close_brace.loc)
+                        let loc = block.loc.clone();
+                        (BlockOrExpr::Block(block), loc)
                     }
                     _ => {
                         let expr = parse_expr(parser);
@@ -339,7 +330,86 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                 loc,
             }
         }
-        t => match get_prefix_precedence(&next) {
+        TokenKind::Try => {
+            let try_body = parse_block(parser);
+
+            match parser.next().kind {
+                TokenKind::Catch => {
+                    assert_eq!(parser.next().kind, TokenKind::LeftParen);
+                    let error = parse_pattern(parser);
+                    assert_eq!(parser.next().kind, TokenKind::RightParen);
+
+                    let catch_body = parse_block(parser);
+
+                    match parser.peek(0).kind {
+                        TokenKind::Finally => {
+                            parser.next();
+                            let finally_body = parse_block(parser);
+                            let loc = merge_locations(&first.loc, &finally_body.loc);
+
+                            Expr {
+                                kind: ExprKind::Try {
+                                    body: try_body,
+                                    catch: Some(CatchClause {
+                                        param: Some(error),
+                                        body: catch_body,
+                                    }),
+                                    finally: Some(finally_body),
+                                },
+                                loc,
+                            }
+                        }
+                        _ => {
+                            let loc = merge_locations(&first.loc, &catch_body.loc);
+
+                            Expr {
+                                kind: ExprKind::Try {
+                                    body: try_body,
+                                    catch: Some(CatchClause {
+                                        param: Some(error),
+                                        body: catch_body,
+                                    }),
+                                    finally: None,
+                                },
+                                loc,
+                            }
+                        }
+                    }
+                }
+                TokenKind::Finally => {
+                    let finally_body = parse_block(parser);
+                    let loc = merge_locations(&first.loc, &finally_body.loc);
+
+                    Expr {
+                        kind: ExprKind::Try {
+                            body: try_body,
+                            catch: None,
+                            finally: Some(finally_body),
+                        },
+                        loc,
+                    }
+                }
+                _ => {
+                    panic!("expected catch or finally");
+                }
+            }
+
+            // assert_eq!(parser.next().kind, TokenKind::Catch);
+            // assert_eq!(parser.next().kind, TokenKind::LeftParen);
+            // let error = parse_pattern(parser);
+            // assert_eq!(parser.next().kind, TokenKind::RightParen);
+            // let catch_body = parse_block(parser); // TODO: create a BlockStmt and include .loc in it
+        }
+        TokenKind::Do => {
+            let body = parse_block(parser);
+            let loc = merge_locations(&first.loc, &body.loc);
+
+            Expr {
+                kind: ExprKind::Do { body },
+                loc,
+            }
+        }
+        t => match get_prefix_precedence(&first) {
             Some(precendence) => {
                 let op = match t {
                     TokenKind::Plus => UnaryOp::Plus,
@@ -347,7 +417,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                     _ => panic!("unexpected token: {:?}", t),
                 };
                 let rhs = parse_expr_with_precedence(parser, precendence.0);
-                let loc = merge_locations(&next.loc, &rhs.loc);
+                let loc = merge_locations(&first.loc, &rhs.loc);
                 Expr {
                     kind: ExprKind::Unary {
                         op,
@@ -356,7 +426,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                     loc,
                 }
             }
-            None => panic!("unexpected token: {:?}", next),
+            None => panic!("unexpected token: {:?}", first),
         },
     };
 
@@ -697,5 +767,59 @@ mod tests {
             };
             "#
         ));
+    }
+
+    #[test]
+    fn parse_try_catch() {
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            try {
+                canThrow();
+            } catch (e) {
+                console.log("Error: " + e);
+            }
+            "#
+        ));
+    }
+
+    #[test]
+    fn parse_try_finally() {
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            try {
+                canThrow();
+            } finally {
+                cleanup();
+            }
+            "#
+        ));
+    }
+
+    #[test]
+    fn parse_try_catch_finally() {
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            try {
+                canThrow();
+            } catch (e) {
+                console.log("Error: " + e);
+            } finally {
+                cleanup();
+            }
+            "#
+        ));
+    }
+
+    #[test]
+    fn parse_do_expr() {
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            do {
+                let x = 5;
+                let y = 10;
+                x + y;
+            }
+            "#
+        ))
     }
 }

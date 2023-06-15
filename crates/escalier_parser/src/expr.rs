@@ -77,13 +77,28 @@ pub enum ExprKind {
     },
     IfElse {
         cond: Box<Expr>,
-        consequent: Vec<Stmt>,
-        alternate: Option<Vec<Stmt>>,
+        consequent: Block,
+        alternate: Option<Block>,
     },
     Match {
         expr: Box<Expr>,
         arms: Vec<MatchArm>,
     },
+    Try {
+        body: Block,
+        // At least `catch` or `finally` must be present
+        catch: Option<CatchClause>,
+        finally: Option<Block>,
+    },
+    Do {
+        body: Block,
+    },
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct CatchClause {
+    pub param: Option<Pattern>,
+    pub body: Block,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -97,8 +112,14 @@ pub struct MatchArm {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum BlockOrExpr {
-    Block(Vec<Stmt>),
+    Block(Block),
     Expr(Box<Expr>),
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Block {
+    pub loc: SourceLocation,
+    pub stmts: Vec<Stmt>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
