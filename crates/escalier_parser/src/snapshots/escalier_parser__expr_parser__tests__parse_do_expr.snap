@@ -63,6 +63,7 @@ Expr {
                                 },
                             },
                         },
+                        type_ann: None,
                     },
                     loc: SourceLocation {
                         start: Position {
@@ -122,6 +123,7 @@ Expr {
                                 },
                             },
                         },
+                        type_ann: None,
                     },
                     loc: SourceLocation {
                         start: Position {

@@ -1,12 +1,13 @@
 use crate::expr::*;
+use crate::func_param::FuncParam;
 use crate::literal::Literal;
 use crate::parser::Parser;
-use crate::pattern::Pattern;
 use crate::pattern_parser::parse_pattern;
 use crate::precedence::{Associativity, Operator, PRECEDENCE_TABLE};
 use crate::source_location::*;
 use crate::stmt_parser::parse_stmt;
 use crate::token::{Token, TokenKind};
+use crate::type_ann_parser::parse_type_ann;
 
 fn get_prefix_precedence(op: &Token) -> Option<(u8, Associativity)> {
     match &op.kind {
@@ -59,10 +60,27 @@ fn get_postfix_precedence(op: &Token) -> Option<(u8, Associativity)> {
     }
 }
 
-fn parse_params(parser: &mut Parser) -> Vec<Pattern> {
-    let mut params: Vec<Pattern> = Vec::new();
+fn parse_params(parser: &mut Parser) -> Vec<FuncParam> {
+    let mut params: Vec<FuncParam> = Vec::new();
     while parser.peek(0).kind != TokenKind::RightParen {
-        params.push(parse_pattern(parser));
+        let pattern = parse_pattern(parser);
+
+        match parser.peek(0).kind {
+            TokenKind::Colon => {
+                parser.next();
+                let type_ann = parse_type_ann(parser);
+                params.push(FuncParam {
+                    pattern,
+                    type_ann: Some(type_ann),
+                    optional: false,
+                });
+            }
+            _ => params.push(FuncParam {
+                pattern,
+                type_ann: None,
+                optional: false,
+            }),
+        }
 
         match parser.peek(0).kind {
             TokenKind::RightParen => break,
@@ -232,6 +250,15 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             assert_eq!(parser.next().kind, TokenKind::LeftParen);
             let params = parse_params(parser);
             assert_eq!(parser.next().kind, TokenKind::RightParen);
+
+            let type_ann = match parser.peek(0).kind {
+                TokenKind::Colon => {
+                    parser.next();
+                    Some(parse_type_ann(parser))
+                }
+                _ => None,
+            };
+
             assert_eq!(parser.next().kind, TokenKind::Arrow);
 
             match parser.peek(0).kind {
@@ -241,7 +268,11 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                     let body = BlockOrExpr::Block(block);
 
                     Expr {
-                        kind: ExprKind::Function { params, body },
+                        kind: ExprKind::Function {
+                            params,
+                            body,
+                            type_ann,
+                        },
                         loc,
                     }
                 }
@@ -251,7 +282,11 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                     let body = BlockOrExpr::Expr(Box::new(expr));
 
                     Expr {
-                        kind: ExprKind::Function { params, body },
+                        kind: ExprKind::Function {
+                            params,
+                            body,
+                            type_ann,
+                        },
                         loc,
                     }
                 }
@@ -686,6 +721,13 @@ mod tests {
     fn parse_function_with_params() {
         let src = r#"fn (x, y) => { return x + y; }"#;
         insta::assert_debug_snapshot!(parse(src));
+    }
+
+    #[test]
+    fn parse_function_with_type_annotations() {
+        insta::assert_debug_snapshot!(parse(
+            r#"fn (x: number, y: number): number => { return x + y; }"#
+        ));
     }
 
     #[test]

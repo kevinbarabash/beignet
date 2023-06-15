@@ -97,6 +97,7 @@ expression: "parse(\"let {x, y} = point;\")"
                     },
                 },
             },
+            type_ann: None,
         },
         loc: SourceLocation {
             start: Position {

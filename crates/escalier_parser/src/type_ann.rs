@@ -33,6 +33,7 @@ pub enum TypeAnnKind {
     Tuple(Vec<TypeAnn>),
     Array(Box<TypeAnn>),
     TypeRef(String, Option<Vec<TypeAnn>>),
+    // TODO: Function(Vec<FuncParam>, Box<TypeAnn>),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

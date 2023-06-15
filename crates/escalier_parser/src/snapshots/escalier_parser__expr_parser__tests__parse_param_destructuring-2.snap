@@ -5,106 +5,110 @@ expression: "parse(\"fn ([head, ...tail]) => head\")"
 Expr {
     kind: Function {
         params: [
-            Pattern {
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 5,
+            FuncParam {
+                pattern: Pattern {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 5,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 20,
+                        },
                     },
-                    end: Position {
-                        line: 1,
-                        column: 20,
-                    },
-                },
-                kind: Tuple(
-                    TuplePat {
-                        elems: [
-                            Some(
-                                TuplePatElem {
-                                    pattern: Pattern {
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 1,
-                                                column: 6,
-                                            },
-                                            end: Position {
-                                                line: 1,
-                                                column: 10,
-                                            },
-                                        },
-                                        kind: Ident(
-                                            BindingIdent {
-                                                name: "head",
-                                                loc: SourceLocation {
-                                                    start: Position {
-                                                        line: 1,
-                                                        column: 6,
-                                                    },
-                                                    end: Position {
-                                                        line: 1,
-                                                        column: 10,
-                                                    },
+                    kind: Tuple(
+                        TuplePat {
+                            elems: [
+                                Some(
+                                    TuplePatElem {
+                                        pattern: Pattern {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 1,
+                                                    column: 6,
                                                 },
-                                                mutable: false,
+                                                end: Position {
+                                                    line: 1,
+                                                    column: 10,
+                                                },
                                             },
-                                        ),
-                                    },
-                                    init: None,
-                                },
-                            ),
-                            Some(
-                                TuplePatElem {
-                                    pattern: Pattern {
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 1,
-                                                column: 12,
-                                            },
-                                            end: Position {
-                                                line: 1,
-                                                column: 15,
-                                            },
-                                        },
-                                        kind: Rest(
-                                            RestPat {
-                                                arg: Pattern {
+                                            kind: Ident(
+                                                BindingIdent {
+                                                    name: "head",
                                                     loc: SourceLocation {
                                                         start: Position {
                                                             line: 1,
-                                                            column: 15,
+                                                            column: 6,
                                                         },
                                                         end: Position {
                                                             line: 1,
-                                                            column: 19,
+                                                            column: 10,
                                                         },
                                                     },
-                                                    kind: Ident(
-                                                        BindingIdent {
-                                                            name: "tail",
-                                                            loc: SourceLocation {
-                                                                start: Position {
-                                                                    line: 1,
-                                                                    column: 15,
-                                                                },
-                                                                end: Position {
-                                                                    line: 1,
-                                                                    column: 19,
-                                                                },
-                                                            },
-                                                            mutable: false,
-                                                        },
-                                                    ),
+                                                    mutable: false,
+                                                },
+                                            ),
+                                        },
+                                        init: None,
+                                    },
+                                ),
+                                Some(
+                                    TuplePatElem {
+                                        pattern: Pattern {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 1,
+                                                    column: 12,
+                                                },
+                                                end: Position {
+                                                    line: 1,
+                                                    column: 15,
                                                 },
                                             },
-                                        ),
+                                            kind: Rest(
+                                                RestPat {
+                                                    arg: Pattern {
+                                                        loc: SourceLocation {
+                                                            start: Position {
+                                                                line: 1,
+                                                                column: 15,
+                                                            },
+                                                            end: Position {
+                                                                line: 1,
+                                                                column: 19,
+                                                            },
+                                                        },
+                                                        kind: Ident(
+                                                            BindingIdent {
+                                                                name: "tail",
+                                                                loc: SourceLocation {
+                                                                    start: Position {
+                                                                        line: 1,
+                                                                        column: 15,
+                                                                    },
+                                                                    end: Position {
+                                                                        line: 1,
+                                                                        column: 19,
+                                                                    },
+                                                                },
+                                                                mutable: false,
+                                                            },
+                                                        ),
+                                                    },
+                                                },
+                                            ),
+                                        },
+                                        init: None,
                                     },
-                                    init: None,
-                                },
-                            ),
-                        ],
-                        optional: false,
-                    },
-                ),
+                                ),
+                            ],
+                            optional: false,
+                        },
+                    ),
+                },
+                type_ann: None,
+                optional: false,
             },
         ],
         body: Expr(
@@ -124,6 +128,7 @@ Expr {
                 },
             },
         ),
+        type_ann: None,
     },
     loc: SourceLocation {
         start: Position {

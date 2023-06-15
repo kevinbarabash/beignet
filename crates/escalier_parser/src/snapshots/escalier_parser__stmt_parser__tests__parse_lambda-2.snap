@@ -36,66 +36,74 @@ expression: "parse(\"let add = fn (x) => fn (y) => x + y;\")"
             expr: Expr {
                 kind: Function {
                     params: [
-                        Pattern {
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 15,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 16,
-                                },
-                            },
-                            kind: Ident(
-                                BindingIdent {
-                                    name: "x",
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 15,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 16,
-                                        },
+                        FuncParam {
+                            pattern: Pattern {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 1,
+                                        column: 15,
                                     },
-                                    mutable: false,
+                                    end: Position {
+                                        line: 1,
+                                        column: 16,
+                                    },
                                 },
-                            ),
+                                kind: Ident(
+                                    BindingIdent {
+                                        name: "x",
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 1,
+                                                column: 15,
+                                            },
+                                            end: Position {
+                                                line: 1,
+                                                column: 16,
+                                            },
+                                        },
+                                        mutable: false,
+                                    },
+                                ),
+                            },
+                            type_ann: None,
+                            optional: false,
                         },
                     ],
                     body: Expr(
                         Expr {
                             kind: Function {
                                 params: [
-                                    Pattern {
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 1,
-                                                column: 25,
-                                            },
-                                            end: Position {
-                                                line: 1,
-                                                column: 26,
-                                            },
-                                        },
-                                        kind: Ident(
-                                            BindingIdent {
-                                                name: "y",
-                                                loc: SourceLocation {
-                                                    start: Position {
-                                                        line: 1,
-                                                        column: 25,
-                                                    },
-                                                    end: Position {
-                                                        line: 1,
-                                                        column: 26,
-                                                    },
+                                    FuncParam {
+                                        pattern: Pattern {
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 1,
+                                                    column: 25,
                                                 },
-                                                mutable: false,
+                                                end: Position {
+                                                    line: 1,
+                                                    column: 26,
+                                                },
                                             },
-                                        ),
+                                            kind: Ident(
+                                                BindingIdent {
+                                                    name: "y",
+                                                    loc: SourceLocation {
+                                                        start: Position {
+                                                            line: 1,
+                                                            column: 25,
+                                                        },
+                                                        end: Position {
+                                                            line: 1,
+                                                            column: 26,
+                                                        },
+                                                    },
+                                                    mutable: false,
+                                                },
+                                            ),
+                                        },
+                                        type_ann: None,
+                                        optional: false,
                                     },
                                 ],
                                 body: Expr(
@@ -145,6 +153,7 @@ expression: "parse(\"let add = fn (x) => fn (y) => x + y;\")"
                                         },
                                     },
                                 ),
+                                type_ann: None,
                             },
                             loc: SourceLocation {
                                 start: Position {
@@ -158,6 +167,7 @@ expression: "parse(\"let add = fn (x) => fn (y) => x + y;\")"
                             },
                         },
                     ),
+                    type_ann: None,
                 },
                 loc: SourceLocation {
                     start: Position {
@@ -170,6 +180,7 @@ expression: "parse(\"let add = fn (x) => fn (y) => x + y;\")"
                     },
                 },
             },
+            type_ann: None,
         },
         loc: SourceLocation {
             start: Position {

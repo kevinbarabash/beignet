@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/stmt_parser.rs
-expression: parse(src)
+expression: "parse(r#\"let y: number = m*x + b;\"#)"
 ---
 [
     Stmt {
@@ -44,11 +44,11 @@ expression: parse(src)
                                 loc: SourceLocation {
                                     start: Position {
                                         line: 1,
-                                        column: 9,
+                                        column: 17,
                                     },
                                     end: Position {
                                         line: 1,
-                                        column: 10,
+                                        column: 18,
                                     },
                                 },
                             },
@@ -60,11 +60,11 @@ expression: parse(src)
                                 loc: SourceLocation {
                                     start: Position {
                                         line: 1,
-                                        column: 11,
+                                        column: 19,
                                     },
                                     end: Position {
                                         line: 1,
-                                        column: 12,
+                                        column: 20,
                                     },
                                 },
                             },
@@ -72,11 +72,11 @@ expression: parse(src)
                         loc: SourceLocation {
                             start: Position {
                                 line: 1,
-                                column: 9,
+                                column: 17,
                             },
                             end: Position {
                                 line: 1,
-                                column: 12,
+                                column: 20,
                             },
                         },
                     },
@@ -88,11 +88,11 @@ expression: parse(src)
                         loc: SourceLocation {
                             start: Position {
                                 line: 1,
-                                column: 15,
+                                column: 23,
                             },
                             end: Position {
                                 line: 1,
-                                column: 16,
+                                column: 24,
                             },
                         },
                     },
@@ -100,15 +100,29 @@ expression: parse(src)
                 loc: SourceLocation {
                     start: Position {
                         line: 1,
-                        column: 9,
+                        column: 17,
                     },
                     end: Position {
                         line: 1,
-                        column: 16,
+                        column: 24,
                     },
                 },
             },
-            type_ann: None,
+            type_ann: Some(
+                TypeAnn {
+                    kind: Number,
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 8,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 14,
+                        },
+                    },
+                },
+            ),
         },
         loc: SourceLocation {
             start: Position {
@@ -117,7 +131,7 @@ expression: parse(src)
             },
             end: Position {
                 line: 1,
-                column: 16,
+                column: 24,
             },
         },
     },
