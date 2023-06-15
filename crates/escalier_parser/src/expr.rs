@@ -86,8 +86,12 @@ pub enum ExprKind {
     },
     Try {
         body: Block,
-        catch: CatchClause,
+        // At least `catch` or `finally` must be present
+        catch: Option<CatchClause>,
         finally: Option<Block>,
+    },
+    Do {
+        body: Block,
     },
 }
 

@@ -36,6 +36,7 @@ pub enum TokenKind {
     Try,
     Catch,
     Finally,
+    Do,
 
     // Operators
     Assign,
