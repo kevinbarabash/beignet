@@ -1,0 +1,79 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(\"x = y = z\")"
+---
+Expr {
+    kind: Assign {
+        left: Expr {
+            kind: Identifier(
+                "x",
+            ),
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 2,
+                },
+            },
+        },
+        op: Assign,
+        right: Expr {
+            kind: Assign {
+                left: Expr {
+                    kind: Identifier(
+                        "y",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 5,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 6,
+                        },
+                    },
+                },
+                op: Assign,
+                right: Expr {
+                    kind: Identifier(
+                        "z",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 9,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 10,
+                        },
+                    },
+                },
+            },
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 5,
+                },
+                end: Position {
+                    line: 1,
+                    column: 10,
+                },
+            },
+        },
+    },
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 10,
+        },
+    },
+}

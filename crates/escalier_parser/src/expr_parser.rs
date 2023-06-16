@@ -44,6 +44,11 @@ fn get_infix_precedence(op: &Token) -> Option<(u8, Associativity)> {
 
         // assignment
         TokenKind::Assign => PRECEDENCE_TABLE.get(&Operator::Assignment).cloned(),
+        TokenKind::PlusAssign => PRECEDENCE_TABLE.get(&Operator::Assignment).cloned(),
+        TokenKind::MinusAssign => PRECEDENCE_TABLE.get(&Operator::Assignment).cloned(),
+        TokenKind::TimesAssign => PRECEDENCE_TABLE.get(&Operator::Assignment).cloned(),
+        TokenKind::DivideAssign => PRECEDENCE_TABLE.get(&Operator::Assignment).cloned(),
+        TokenKind::ModuloAssign => PRECEDENCE_TABLE.get(&Operator::Assignment).cloned(),
         _ => None,
     }
 }
@@ -513,6 +518,38 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
 
             parser.next();
 
+            let op: Option<AssignOp> = match &next.kind {
+                TokenKind::Assign => Some(AssignOp::Assign),
+                TokenKind::PlusAssign => Some(AssignOp::AddAssign),
+                TokenKind::MinusAssign => Some(AssignOp::SubAssign),
+                TokenKind::TimesAssign => Some(AssignOp::MulAssign),
+                TokenKind::DivideAssign => Some(AssignOp::DivAssign),
+                TokenKind::ModuloAssign => Some(AssignOp::ModAssign),
+                _ => None,
+            };
+
+            if let Some(op) = op {
+                let precedence = if next_precedence.1 == Associativity::Left {
+                    next_precedence.0
+                } else {
+                    next_precedence.0 - 1
+                };
+
+                let rhs = parse_expr_with_precedence(parser, precedence);
+                let loc = merge_locations(&lhs.loc, &rhs.loc);
+
+                lhs = Expr {
+                    kind: ExprKind::Assign {
+                        op,
+                        left: Box::new(lhs),
+                        right: Box::new(rhs),
+                    },
+                    loc,
+                };
+
+                continue;
+            }
+
             let op: BinaryOp = match &next.kind {
                 TokenKind::Plus => BinaryOp::Plus,
                 TokenKind::Minus => BinaryOp::Minus,
@@ -846,5 +883,17 @@ mod tests {
             }
             "#
         ))
+    }
+
+    #[test]
+    fn parse_assignment() {
+        insta::assert_debug_snapshot!(parse("x = y"));
+        insta::assert_debug_snapshot!(parse("x = y = z"));
+        insta::assert_debug_snapshot!(parse("x.a = y.b"));
+        insta::assert_debug_snapshot!(parse("x += 1"));
+        insta::assert_debug_snapshot!(parse("x -= 1"));
+        insta::assert_debug_snapshot!(parse("x *= 2"));
+        insta::assert_debug_snapshot!(parse("x /= 2"));
+        insta::assert_debug_snapshot!(parse("x %= 2"));
     }
 }

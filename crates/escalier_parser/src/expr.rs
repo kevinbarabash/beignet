@@ -51,6 +51,11 @@ pub enum ExprKind {
     Tuple {
         elements: Vec<ExprOrSpread>,
     },
+    Assign {
+        left: Box<Expr>,
+        op: AssignOp,
+        right: Box<Expr>,
+    },
     Binary {
         left: Box<Expr>,
         op: BinaryOp,
@@ -122,6 +127,16 @@ pub enum BlockOrExpr {
 pub struct Block {
     pub loc: SourceLocation,
     pub stmts: Vec<Stmt>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum AssignOp {
+    Assign,
+    AddAssign,
+    SubAssign,
+    MulAssign,
+    DivAssign,
+    ModAssign,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

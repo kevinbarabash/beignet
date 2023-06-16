@@ -67,11 +67,41 @@ impl<'a> Lexer<'a> {
                     }
                     _ => TokenKind::Assign,
                 },
-                '+' => TokenKind::Plus,
-                '-' => TokenKind::Minus,
-                '*' => TokenKind::Times,
-                '/' => TokenKind::Divide,
-                '%' => TokenKind::Modulo,
+                '+' => match self.scanner.peek(1) {
+                    Some('=') => {
+                        self.scanner.pop();
+                        TokenKind::PlusAssign
+                    }
+                    _ => TokenKind::Plus,
+                },
+                '-' => match self.scanner.peek(1) {
+                    Some('=') => {
+                        self.scanner.pop();
+                        TokenKind::MinusAssign
+                    }
+                    _ => TokenKind::Minus,
+                },
+                '*' => match self.scanner.peek(1) {
+                    Some('=') => {
+                        self.scanner.pop();
+                        TokenKind::TimesAssign
+                    }
+                    _ => TokenKind::Times,
+                },
+                '/' => match self.scanner.peek(1) {
+                    Some('=') => {
+                        self.scanner.pop();
+                        TokenKind::DivideAssign
+                    }
+                    _ => TokenKind::Divide,
+                },
+                '%' => match self.scanner.peek(1) {
+                    Some('=') => {
+                        self.scanner.pop();
+                        TokenKind::ModuloAssign
+                    }
+                    _ => TokenKind::Modulo,
+                },
                 '(' => TokenKind::LeftParen,
                 ')' => TokenKind::RightParen,
                 '{' => {
@@ -542,5 +572,19 @@ mod tests {
         assert_eq!(tokens[0].kind, crate::token::TokenKind::DotDotDot);
         assert_eq!(tokens[1].kind, crate::token::TokenKind::DotDot);
         assert_eq!(tokens[2].kind, crate::token::TokenKind::Dot);
+    }
+
+    #[test]
+    fn lex_assignment() {
+        let mut lexer = Lexer::new("= += -= *= /= %=");
+
+        let tokens = lexer.lex();
+
+        assert_eq!(tokens[0].kind, crate::token::TokenKind::Assign);
+        assert_eq!(tokens[1].kind, crate::token::TokenKind::PlusAssign);
+        assert_eq!(tokens[2].kind, crate::token::TokenKind::MinusAssign);
+        assert_eq!(tokens[3].kind, crate::token::TokenKind::TimesAssign);
+        assert_eq!(tokens[4].kind, crate::token::TokenKind::DivideAssign);
+        assert_eq!(tokens[5].kind, crate::token::TokenKind::ModuloAssign);
     }
 }
