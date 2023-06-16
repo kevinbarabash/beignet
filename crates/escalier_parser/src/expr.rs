@@ -1,7 +1,9 @@
+use crate::func_param::FuncParam;
 use crate::literal::Literal;
 use crate::pattern::Pattern;
 use crate::source_location::SourceLocation;
 use crate::stmt::Stmt;
+use crate::type_ann::TypeAnn;
 
 // TODO: track source location
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -63,9 +65,9 @@ pub enum ExprKind {
         right: Box<Expr>,
     },
     Function {
-        // TODO: add support for explicit type annotations
-        params: Vec<Pattern>,
+        params: Vec<FuncParam>,
         body: BlockOrExpr,
+        type_ann: Option<TypeAnn>, // return type
     },
     Call {
         args: Vec<Expr>,

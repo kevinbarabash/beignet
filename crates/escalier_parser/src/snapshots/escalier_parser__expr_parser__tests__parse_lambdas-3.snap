@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(\"fn (x, y) => x + y;\")"
+expression: "parse(r#\"fn (x: number, y: number): number => x + y;\"#)"
 ---
 Expr {
     kind: Function {
@@ -34,7 +34,21 @@ Expr {
                         },
                     ),
                 },
-                type_ann: None,
+                type_ann: Some(
+                    TypeAnn {
+                        kind: Number,
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 8,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 14,
+                            },
+                        },
+                    },
+                ),
                 optional: false,
             },
             FuncParam {
@@ -42,11 +56,11 @@ Expr {
                     loc: SourceLocation {
                         start: Position {
                             line: 1,
-                            column: 8,
+                            column: 16,
                         },
                         end: Position {
                             line: 1,
-                            column: 9,
+                            column: 17,
                         },
                     },
                     kind: Ident(
@@ -55,18 +69,32 @@ Expr {
                             loc: SourceLocation {
                                 start: Position {
                                     line: 1,
-                                    column: 8,
+                                    column: 16,
                                 },
                                 end: Position {
                                     line: 1,
-                                    column: 9,
+                                    column: 17,
                                 },
                             },
                             mutable: false,
                         },
                     ),
                 },
-                type_ann: None,
+                type_ann: Some(
+                    TypeAnn {
+                        kind: Number,
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 19,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 25,
+                            },
+                        },
+                    },
+                ),
                 optional: false,
             },
         ],
@@ -80,11 +108,11 @@ Expr {
                         loc: SourceLocation {
                             start: Position {
                                 line: 1,
-                                column: 14,
+                                column: 38,
                             },
                             end: Position {
                                 line: 1,
-                                column: 15,
+                                column: 39,
                             },
                         },
                     },
@@ -96,11 +124,11 @@ Expr {
                         loc: SourceLocation {
                             start: Position {
                                 line: 1,
-                                column: 18,
+                                column: 42,
                             },
                             end: Position {
                                 line: 1,
-                                column: 19,
+                                column: 43,
                             },
                         },
                     },
@@ -108,16 +136,30 @@ Expr {
                 loc: SourceLocation {
                     start: Position {
                         line: 1,
-                        column: 14,
+                        column: 38,
                     },
                     end: Position {
                         line: 1,
-                        column: 19,
+                        column: 43,
                     },
                 },
             },
         ),
-        type_ann: None,
+        type_ann: Some(
+            TypeAnn {
+                kind: Number,
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 28,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 34,
+                    },
+                },
+            },
+        ),
     },
     loc: SourceLocation {
         start: Position {
@@ -126,7 +168,7 @@ Expr {
         },
         end: Position {
             line: 1,
-            column: 19,
+            column: 43,
         },
     },
 }

@@ -5,6 +5,7 @@ use crate::pattern_parser::parse_pattern;
 use crate::source_location::merge_locations;
 use crate::stmt::{Stmt, StmtKind};
 use crate::token::TokenKind;
+use crate::type_ann_parser::parse_type_ann;
 
 pub fn parse_stmt(parser: &mut Parser) -> Stmt {
     let token = parser.peek(0);
@@ -14,13 +15,26 @@ pub fn parse_stmt(parser: &mut Parser) -> Stmt {
         TokenKind::Let => {
             parser.next();
             let pattern = parse_pattern(parser);
+
+            let type_ann = match parser.peek(0).kind {
+                TokenKind::Colon => {
+                    parser.next();
+                    Some(parse_type_ann(parser))
+                }
+                _ => None,
+            };
+
             assert_eq!(parser.next().kind, TokenKind::Assign);
             let expr = parse_expr(parser);
             assert_eq!(parser.next().kind, TokenKind::Semicolon);
 
             let loc = merge_locations(&token.loc, &expr.loc);
             Stmt {
-                kind: StmtKind::Let { pattern, expr },
+                kind: StmtKind::Let {
+                    pattern,
+                    expr,
+                    type_ann,
+                },
                 loc,
             }
         }
@@ -107,9 +121,30 @@ mod tests {
     }
 
     #[test]
+    fn parse_let() {
+        insta::assert_debug_snapshot!(parse(r#"let y = m*x + b;"#));
+    }
+
+    #[test]
+    fn parse_let_with_type_annotation() {
+        insta::assert_debug_snapshot!(parse(r#"let y: number = m*x + b;"#));
+    }
+
+    #[test]
+    fn parse_let_with_destructuring() {
+        insta::assert_debug_snapshot!(parse(r#"let {x, y} = point;"#));
+    }
+
+    #[test]
+    fn parse_let_with_destructuring_and_type_annotation() {
+        insta::assert_debug_snapshot!(parse(r#"let {x, y}: Point = point;"#));
+    }
+
+    // TODO: support assignment separate from let decls
+    #[test]
+    #[ignore]
     fn parse_assignment() {
-        let src = r#"let y = m*x + b;"#;
-        insta::assert_debug_snapshot!(parse(src));
+        insta::assert_debug_snapshot!(parse(r#"y = m*x + b;"#));
     }
 
     #[test]
@@ -130,5 +165,12 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let {x: x1, y: y1} = p1;"));
         insta::assert_debug_snapshot!(parse("let [p1, p2] = line;"));
         insta::assert_debug_snapshot!(parse("let [head, ...tail] = polygon;"));
+    }
+
+    #[test]
+    fn parse_let_fn_with_fn_type() {
+        insta::assert_debug_snapshot!(parse(
+            r#"let add: fn (a: number, b: number) => number = fn (a, b) => a + b;"#
+        ));
     }
 }

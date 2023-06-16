@@ -31,33 +31,37 @@ Expr {
                             Expr {
                                 kind: Function {
                                     params: [
-                                        Pattern {
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 1,
-                                                    column: 13,
-                                                },
-                                                end: Position {
-                                                    line: 1,
-                                                    column: 15,
-                                                },
-                                            },
-                                            kind: Ident(
-                                                BindingIdent {
-                                                    name: "id",
-                                                    loc: SourceLocation {
-                                                        start: Position {
-                                                            line: 1,
-                                                            column: 13,
-                                                        },
-                                                        end: Position {
-                                                            line: 1,
-                                                            column: 15,
-                                                        },
+                                        FuncParam {
+                                            pattern: Pattern {
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 1,
+                                                        column: 13,
                                                     },
-                                                    mutable: false,
+                                                    end: Position {
+                                                        line: 1,
+                                                        column: 15,
+                                                    },
                                                 },
-                                            ),
+                                                kind: Ident(
+                                                    BindingIdent {
+                                                        name: "id",
+                                                        loc: SourceLocation {
+                                                            start: Position {
+                                                                line: 1,
+                                                                column: 13,
+                                                            },
+                                                            end: Position {
+                                                                line: 1,
+                                                                column: 15,
+                                                            },
+                                                        },
+                                                        mutable: false,
+                                                    },
+                                                ),
+                                            },
+                                            type_ann: None,
+                                            optional: false,
                                         },
                                     ],
                                     body: Expr(
@@ -77,6 +81,7 @@ Expr {
                                             },
                                         },
                                     ),
+                                    type_ann: None,
                                 },
                                 loc: SourceLocation {
                                     start: Position {

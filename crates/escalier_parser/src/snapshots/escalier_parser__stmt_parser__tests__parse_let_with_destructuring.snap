@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/stmt_parser.rs
-expression: "parse(\"let {x, y} = point;\")"
+expression: "parse(r#\"let {x, y} = point;\"#)"
 ---
 [
     Stmt {

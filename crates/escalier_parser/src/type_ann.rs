@@ -1,13 +1,9 @@
 // TODO:
-// - keywords: number, string, null, undefined, etc.
-// - literals: 5, "hello", true, etc.
-// - tuples and objects
 // - methods, callables, indexers, mapped types
-// - function types
-// - type references (with type params)
 // - typeof, keyof, etc.
 // - conditional types
 
+use crate::func_param::FuncParam;
 use crate::source_location::SourceLocation;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -33,6 +29,7 @@ pub enum TypeAnnKind {
     Tuple(Vec<TypeAnn>),
     Array(Box<TypeAnn>),
     TypeRef(String, Option<Vec<TypeAnn>>),
+    Function(Vec<FuncParam>, Box<TypeAnn>),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

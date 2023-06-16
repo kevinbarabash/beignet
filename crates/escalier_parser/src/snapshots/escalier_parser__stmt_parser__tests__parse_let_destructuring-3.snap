@@ -105,6 +105,7 @@ expression: "parse(\"let [p1, p2] = line;\")"
                     },
                 },
             },
+            type_ann: None,
         },
         loc: SourceLocation {
             start: Position {

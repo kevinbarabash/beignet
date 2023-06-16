@@ -121,6 +121,7 @@ expression: "parse(\"let [head, ...tail] = polygon;\")"
                     },
                 },
             },
+            type_ann: None,
         },
         loc: SourceLocation {
             start: Position {

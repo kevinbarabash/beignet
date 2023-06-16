@@ -42,33 +42,37 @@ StrTemplateLit {
                     Expr {
                         kind: Function {
                             params: [
-                                Pattern {
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 22,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 24,
-                                        },
-                                    },
-                                    kind: Ident(
-                                        BindingIdent {
-                                            name: "id",
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 1,
-                                                    column: 22,
-                                                },
-                                                end: Position {
-                                                    line: 1,
-                                                    column: 24,
-                                                },
+                                FuncParam {
+                                    pattern: Pattern {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 1,
+                                                column: 22,
                                             },
-                                            mutable: false,
+                                            end: Position {
+                                                line: 1,
+                                                column: 24,
+                                            },
                                         },
-                                    ),
+                                        kind: Ident(
+                                            BindingIdent {
+                                                name: "id",
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 1,
+                                                        column: 22,
+                                                    },
+                                                    end: Position {
+                                                        line: 1,
+                                                        column: 24,
+                                                    },
+                                                },
+                                                mutable: false,
+                                            },
+                                        ),
+                                    },
+                                    type_ann: None,
+                                    optional: false,
                                 },
                             ],
                             body: Expr(
@@ -112,6 +116,7 @@ StrTemplateLit {
                                     },
                                 },
                             ),
+                            type_ann: None,
                         },
                         loc: SourceLocation {
                             start: Position {

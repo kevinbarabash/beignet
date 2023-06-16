@@ -1,5 +1,6 @@
 mod expr;
 mod expr_parser;
+mod func_param;
 mod identifier;
 mod lexer;
 mod literal;

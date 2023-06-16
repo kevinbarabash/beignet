@@ -1,12 +1,13 @@
 use crate::expr::*;
+use crate::func_param::parse_params;
 use crate::literal::Literal;
 use crate::parser::Parser;
-use crate::pattern::Pattern;
 use crate::pattern_parser::parse_pattern;
 use crate::precedence::{Associativity, Operator, PRECEDENCE_TABLE};
 use crate::source_location::*;
 use crate::stmt_parser::parse_stmt;
 use crate::token::{Token, TokenKind};
+use crate::type_ann_parser::parse_type_ann;
 
 fn get_prefix_precedence(op: &Token) -> Option<(u8, Associativity)> {
     match &op.kind {
@@ -57,22 +58,6 @@ fn get_postfix_precedence(op: &Token) -> Option<(u8, Associativity)> {
         TokenKind::Dot => PRECEDENCE_TABLE.get(&Operator::MemberAccess).cloned(),
         _ => None,
     }
-}
-
-fn parse_params(parser: &mut Parser) -> Vec<Pattern> {
-    let mut params: Vec<Pattern> = Vec::new();
-    while parser.peek(0).kind != TokenKind::RightParen {
-        params.push(parse_pattern(parser));
-
-        match parser.peek(0).kind {
-            TokenKind::RightParen => break,
-            TokenKind::Comma => {
-                parser.next();
-            }
-            _ => panic!("Expected comma or right paren, got {:?}", parser.peek(0)),
-        }
-    }
-    params
 }
 
 // consumes leading '{' and trailing '}' tokens
@@ -229,9 +214,16 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             }
         }
         TokenKind::Fn => {
-            assert_eq!(parser.next().kind, TokenKind::LeftParen);
             let params = parse_params(parser);
-            assert_eq!(parser.next().kind, TokenKind::RightParen);
+
+            let type_ann = match parser.peek(0).kind {
+                TokenKind::Colon => {
+                    parser.next();
+                    Some(parse_type_ann(parser))
+                }
+                _ => None,
+            };
+
             assert_eq!(parser.next().kind, TokenKind::Arrow);
 
             match parser.peek(0).kind {
@@ -241,7 +233,11 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                     let body = BlockOrExpr::Block(block);
 
                     Expr {
-                        kind: ExprKind::Function { params, body },
+                        kind: ExprKind::Function {
+                            params,
+                            body,
+                            type_ann,
+                        },
                         loc,
                     }
                 }
@@ -251,7 +247,11 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                     let body = BlockOrExpr::Expr(Box::new(expr));
 
                     Expr {
-                        kind: ExprKind::Function { params, body },
+                        kind: ExprKind::Function {
+                            params,
+                            body,
+                            type_ann,
+                        },
                         loc,
                     }
                 }
@@ -689,9 +689,34 @@ mod tests {
     }
 
     #[test]
+    fn parse_function_with_type_annotations() {
+        insta::assert_debug_snapshot!(parse(
+            r#"fn (x: number, y: number): number => { return x + y; }"#
+        ));
+    }
+
+    #[test]
+    fn parse_function_with_optional_params() {
+        insta::assert_debug_snapshot!(parse(
+            r#"fn (x: number, y: number, z?: number): number => { return x + y; }"#
+        ));
+    }
+
+    #[test]
+    fn parse_function_with_destructuring() {
+        insta::assert_debug_snapshot!(parse(r#"fn ({x, y}) => { return x + y; }"#));
+    }
+
+    #[test]
+    fn parse_function_with_destructuring_and_type_annotation() {
+        insta::assert_debug_snapshot!(parse(r#"fn ({x, y}: Point): number => { return x + y; }"#));
+    }
+
+    #[test]
     fn parse_lambdas() {
         insta::assert_debug_snapshot!(parse("fn (x, y) => x + y;"));
         insta::assert_debug_snapshot!(parse("fn (x) => fn (y) => x + y;"));
+        insta::assert_debug_snapshot!(parse(r#"fn (x: number, y: number): number => x + y;"#));
     }
 
     #[test]

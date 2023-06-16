@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: parse(src)
+expression: "parse(r#\"fn (x: number, y: number, z?: number): number => { return x + y; }\"#)"
 ---
 Expr {
     kind: Function {
@@ -34,7 +34,21 @@ Expr {
                         },
                     ),
                 },
-                type_ann: None,
+                type_ann: Some(
+                    TypeAnn {
+                        kind: Number,
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 8,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 14,
+                            },
+                        },
+                    },
+                ),
                 optional: false,
             },
             FuncParam {
@@ -42,11 +56,11 @@ Expr {
                     loc: SourceLocation {
                         start: Position {
                             line: 1,
-                            column: 8,
+                            column: 16,
                         },
                         end: Position {
                             line: 1,
-                            column: 9,
+                            column: 17,
                         },
                     },
                     kind: Ident(
@@ -55,19 +69,79 @@ Expr {
                             loc: SourceLocation {
                                 start: Position {
                                     line: 1,
-                                    column: 8,
+                                    column: 16,
                                 },
                                 end: Position {
                                     line: 1,
-                                    column: 9,
+                                    column: 17,
                                 },
                             },
                             mutable: false,
                         },
                     ),
                 },
-                type_ann: None,
+                type_ann: Some(
+                    TypeAnn {
+                        kind: Number,
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 19,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 25,
+                            },
+                        },
+                    },
+                ),
                 optional: false,
+            },
+            FuncParam {
+                pattern: Pattern {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 27,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 28,
+                        },
+                    },
+                    kind: Ident(
+                        BindingIdent {
+                            name: "z",
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 27,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 28,
+                                },
+                            },
+                            mutable: false,
+                        },
+                    ),
+                },
+                type_ann: Some(
+                    TypeAnn {
+                        kind: Number,
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 31,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 37,
+                            },
+                        },
+                    },
+                ),
+                optional: true,
             },
         ],
         body: Block(
@@ -75,11 +149,11 @@ Expr {
                 loc: SourceLocation {
                     start: Position {
                         line: 1,
-                        column: 14,
+                        column: 50,
                     },
                     end: Position {
                         line: 1,
-                        column: 31,
+                        column: 67,
                     },
                 },
                 stmts: [
@@ -95,11 +169,11 @@ Expr {
                                             loc: SourceLocation {
                                                 start: Position {
                                                     line: 1,
-                                                    column: 23,
+                                                    column: 59,
                                                 },
                                                 end: Position {
                                                     line: 1,
-                                                    column: 24,
+                                                    column: 60,
                                                 },
                                             },
                                         },
@@ -111,11 +185,11 @@ Expr {
                                             loc: SourceLocation {
                                                 start: Position {
                                                     line: 1,
-                                                    column: 27,
+                                                    column: 63,
                                                 },
                                                 end: Position {
                                                     line: 1,
-                                                    column: 28,
+                                                    column: 64,
                                                 },
                                             },
                                         },
@@ -123,11 +197,11 @@ Expr {
                                     loc: SourceLocation {
                                         start: Position {
                                             line: 1,
-                                            column: 23,
+                                            column: 59,
                                         },
                                         end: Position {
                                             line: 1,
-                                            column: 28,
+                                            column: 64,
                                         },
                                     },
                                 },
@@ -136,18 +210,32 @@ Expr {
                         loc: SourceLocation {
                             start: Position {
                                 line: 1,
-                                column: 23,
+                                column: 59,
                             },
                             end: Position {
                                 line: 1,
-                                column: 28,
+                                column: 64,
                             },
                         },
                     },
                 ],
             },
         ),
-        type_ann: None,
+        type_ann: Some(
+            TypeAnn {
+                kind: Number,
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 40,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 46,
+                    },
+                },
+            },
+        ),
     },
     loc: SourceLocation {
         start: Position {
@@ -156,7 +244,7 @@ Expr {
         },
         end: Position {
             line: 1,
-            column: 31,
+            column: 67,
         },
     },
 }

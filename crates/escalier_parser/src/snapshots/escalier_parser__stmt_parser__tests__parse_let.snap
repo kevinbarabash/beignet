@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/stmt_parser.rs
-expression: parse(src)
+expression: "parse(r#\"let y = m*x + b;\"#)"
 ---
 [
     Stmt {

@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/stmt_parser.rs
-expression: "parse(\"let {x, y} = point;\")"
+expression: "parse(r#\"let {x, y}: Point = point;\"#)"
 ---
 [
     Stmt {
@@ -89,15 +89,32 @@ expression: "parse(\"let {x, y} = point;\")"
                 loc: SourceLocation {
                     start: Position {
                         line: 1,
-                        column: 14,
+                        column: 21,
                     },
                     end: Position {
                         line: 1,
-                        column: 19,
+                        column: 26,
                     },
                 },
             },
-            type_ann: None,
+            type_ann: Some(
+                TypeAnn {
+                    kind: TypeRef(
+                        "Point",
+                        None,
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 13,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 18,
+                        },
+                    },
+                },
+            ),
         },
         loc: SourceLocation {
             start: Position {
@@ -106,7 +123,7 @@ expression: "parse(\"let {x, y} = point;\")"
             },
             end: Position {
                 line: 1,
-                column: 19,
+                column: 26,
             },
         },
     },

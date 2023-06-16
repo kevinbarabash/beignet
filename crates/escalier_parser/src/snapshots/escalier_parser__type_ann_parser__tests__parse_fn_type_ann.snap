@@ -1,10 +1,10 @@
 ---
-source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(\"fn (x, y) => x + y;\")"
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(\"fn (a: number, b: number) => number\")"
 ---
-Expr {
-    kind: Function {
-        params: [
+TypeAnn {
+    kind: Function(
+        [
             FuncParam {
                 pattern: Pattern {
                     loc: SourceLocation {
@@ -19,7 +19,7 @@ Expr {
                     },
                     kind: Ident(
                         BindingIdent {
-                            name: "x",
+                            name: "a",
                             loc: SourceLocation {
                                 start: Position {
                                     line: 1,
@@ -34,7 +34,21 @@ Expr {
                         },
                     ),
                 },
-                type_ann: None,
+                type_ann: Some(
+                    TypeAnn {
+                        kind: Number,
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 8,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 14,
+                            },
+                        },
+                    },
+                ),
                 optional: false,
             },
             FuncParam {
@@ -42,83 +56,62 @@ Expr {
                     loc: SourceLocation {
                         start: Position {
                             line: 1,
-                            column: 8,
+                            column: 16,
                         },
                         end: Position {
                             line: 1,
-                            column: 9,
+                            column: 17,
                         },
                     },
                     kind: Ident(
                         BindingIdent {
-                            name: "y",
+                            name: "b",
                             loc: SourceLocation {
                                 start: Position {
                                     line: 1,
-                                    column: 8,
+                                    column: 16,
                                 },
                                 end: Position {
                                     line: 1,
-                                    column: 9,
+                                    column: 17,
                                 },
                             },
                             mutable: false,
                         },
                     ),
                 },
-                type_ann: None,
-                optional: false,
-            },
-        ],
-        body: Expr(
-            Expr {
-                kind: Binary {
-                    left: Expr {
-                        kind: Identifier(
-                            "x",
-                        ),
+                type_ann: Some(
+                    TypeAnn {
+                        kind: Number,
                         loc: SourceLocation {
                             start: Position {
-                                line: 1,
-                                column: 14,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 15,
-                            },
-                        },
-                    },
-                    op: Plus,
-                    right: Expr {
-                        kind: Identifier(
-                            "y",
-                        ),
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 18,
-                            },
-                            end: Position {
                                 line: 1,
                                 column: 19,
                             },
+                            end: Position {
+                                line: 1,
+                                column: 25,
+                            },
                         },
                     },
+                ),
+                optional: false,
+            },
+        ],
+        TypeAnn {
+            kind: Number,
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 30,
                 },
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 14,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 19,
-                    },
+                end: Position {
+                    line: 1,
+                    column: 36,
                 },
             },
-        ),
-        type_ann: None,
-    },
+        },
+    ),
     loc: SourceLocation {
         start: Position {
             line: 1,
@@ -126,7 +119,7 @@ Expr {
         },
         end: Position {
             line: 1,
-            column: 19,
+            column: 3,
         },
     },
 }

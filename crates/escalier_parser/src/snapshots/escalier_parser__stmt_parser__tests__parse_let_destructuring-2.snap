@@ -151,6 +151,7 @@ expression: "parse(\"let {x: x1, y: y1} = p1;\")"
                     },
                 },
             },
+            type_ann: None,
         },
         loc: SourceLocation {
             start: Position {

@@ -180,6 +180,7 @@ expression: "parse(\"let max = if (x > y) { x; } else { y; };\")"
                     },
                 },
             },
+            type_ann: None,
         },
         loc: SourceLocation {
             start: Position {
