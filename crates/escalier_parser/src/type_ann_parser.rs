@@ -1,3 +1,4 @@
+use crate::func_param::parse_params;
 use crate::parser::Parser;
 use crate::source_location::merge_locations;
 use crate::token::TokenKind;
@@ -91,6 +92,13 @@ pub fn parse_type_ann(parser: &mut Parser) -> TypeAnn {
             } else {
                 TypeAnnKind::TypeRef(ident, None)
             }
+        }
+        TokenKind::Fn => {
+            let params = parse_params(parser);
+            assert_eq!(parser.next().kind, TokenKind::Arrow);
+            let return_type = Box::new(parse_type_ann(parser));
+
+            TypeAnnKind::Function(params, return_type)
         }
         token => {
             panic!("expected token to start type annotation, found {:?}", token)
@@ -189,5 +197,10 @@ mod tests {
         insta::assert_debug_snapshot!(parse("Map<K, V>"));
         insta::assert_debug_snapshot!(parse("Array<Array<T>>"));
         insta::assert_debug_snapshot!(parse("T"));
+    }
+
+    #[test]
+    fn parse_fn_type_ann() {
+        insta::assert_debug_snapshot!(parse("fn (a: number, b: number) => number"));
     }
 }

@@ -1,0 +1,125 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(\"fn (a: number, b: number) => number\")"
+---
+TypeAnn {
+    kind: Function(
+        [
+            FuncParam {
+                pattern: Pattern {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 5,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 6,
+                        },
+                    },
+                    kind: Ident(
+                        BindingIdent {
+                            name: "a",
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 5,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 6,
+                                },
+                            },
+                            mutable: false,
+                        },
+                    ),
+                },
+                type_ann: Some(
+                    TypeAnn {
+                        kind: Number,
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 8,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 14,
+                            },
+                        },
+                    },
+                ),
+                optional: false,
+            },
+            FuncParam {
+                pattern: Pattern {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 16,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 17,
+                        },
+                    },
+                    kind: Ident(
+                        BindingIdent {
+                            name: "b",
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 16,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 17,
+                                },
+                            },
+                            mutable: false,
+                        },
+                    ),
+                },
+                type_ann: Some(
+                    TypeAnn {
+                        kind: Number,
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 19,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 25,
+                            },
+                        },
+                    },
+                ),
+                optional: false,
+            },
+        ],
+        TypeAnn {
+            kind: Number,
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 30,
+                },
+                end: Position {
+                    line: 1,
+                    column: 36,
+                },
+            },
+        },
+    ),
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 3,
+        },
+    },
+}

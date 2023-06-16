@@ -130,6 +130,16 @@ mod tests {
         insta::assert_debug_snapshot!(parse(r#"let y: number = m*x + b;"#));
     }
 
+    #[test]
+    fn parse_let_with_destructuring() {
+        insta::assert_debug_snapshot!(parse(r#"let {x, y} = point;"#));
+    }
+
+    #[test]
+    fn parse_let_with_destructuring_and_type_annotation() {
+        insta::assert_debug_snapshot!(parse(r#"let {x, y}: Point = point;"#));
+    }
+
     // TODO: support assignment separate from let decls
     #[test]
     #[ignore]
@@ -155,5 +165,12 @@ mod tests {
         insta::assert_debug_snapshot!(parse("let {x: x1, y: y1} = p1;"));
         insta::assert_debug_snapshot!(parse("let [p1, p2] = line;"));
         insta::assert_debug_snapshot!(parse("let [head, ...tail] = polygon;"));
+    }
+
+    #[test]
+    fn parse_let_fn_with_fn_type() {
+        insta::assert_debug_snapshot!(parse(
+            r#"let add: fn (a: number, b: number) => number = fn (a, b) => a + b;"#
+        ));
     }
 }

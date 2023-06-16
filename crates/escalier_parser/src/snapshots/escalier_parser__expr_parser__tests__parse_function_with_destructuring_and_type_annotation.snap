@@ -1,0 +1,210 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(r#\"fn ({x, y}: Point): number => { return x + y; }\"#)"
+---
+Expr {
+    kind: Function {
+        params: [
+            FuncParam {
+                pattern: Pattern {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 5,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 11,
+                        },
+                    },
+                    kind: Object(
+                        ObjectPat {
+                            props: [
+                                Shorthand(
+                                    ShorthandPatProp {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 1,
+                                                column: 6,
+                                            },
+                                            end: Position {
+                                                line: 1,
+                                                column: 7,
+                                            },
+                                        },
+                                        ident: BindingIdent {
+                                            name: "x",
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 1,
+                                                    column: 6,
+                                                },
+                                                end: Position {
+                                                    line: 1,
+                                                    column: 7,
+                                                },
+                                            },
+                                            mutable: false,
+                                        },
+                                        init: None,
+                                    },
+                                ),
+                                Shorthand(
+                                    ShorthandPatProp {
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 1,
+                                                column: 9,
+                                            },
+                                            end: Position {
+                                                line: 1,
+                                                column: 10,
+                                            },
+                                        },
+                                        ident: BindingIdent {
+                                            name: "y",
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 1,
+                                                    column: 9,
+                                                },
+                                                end: Position {
+                                                    line: 1,
+                                                    column: 10,
+                                                },
+                                            },
+                                            mutable: false,
+                                        },
+                                        init: None,
+                                    },
+                                ),
+                            ],
+                            optional: false,
+                        },
+                    ),
+                },
+                type_ann: Some(
+                    TypeAnn {
+                        kind: TypeRef(
+                            "Point",
+                            None,
+                        ),
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 13,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 18,
+                            },
+                        },
+                    },
+                ),
+                optional: false,
+            },
+        ],
+        body: Block(
+            Block {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 31,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 48,
+                    },
+                },
+                stmts: [
+                    Stmt {
+                        kind: Return {
+                            arg: Some(
+                                Expr {
+                                    kind: Binary {
+                                        left: Expr {
+                                            kind: Identifier(
+                                                "x",
+                                            ),
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 1,
+                                                    column: 40,
+                                                },
+                                                end: Position {
+                                                    line: 1,
+                                                    column: 41,
+                                                },
+                                            },
+                                        },
+                                        op: Plus,
+                                        right: Expr {
+                                            kind: Identifier(
+                                                "y",
+                                            ),
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 1,
+                                                    column: 44,
+                                                },
+                                                end: Position {
+                                                    line: 1,
+                                                    column: 45,
+                                                },
+                                            },
+                                        },
+                                    },
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 1,
+                                            column: 40,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 45,
+                                        },
+                                    },
+                                },
+                            ),
+                        },
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 40,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 45,
+                            },
+                        },
+                    },
+                ],
+            },
+        ),
+        type_ann: Some(
+            TypeAnn {
+                kind: Number,
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 21,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 27,
+                    },
+                },
+            },
+        ),
+    },
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 48,
+        },
+    },
+}

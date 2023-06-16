@@ -1,0 +1,299 @@
+---
+source: crates/escalier_parser/src/stmt_parser.rs
+expression: "parse(r#\"let add: fn (a: number, b: number) => number = fn (a, b) => a + b;\"#)"
+---
+[
+    Stmt {
+        kind: Let {
+            pattern: Pattern {
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 5,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 8,
+                    },
+                },
+                kind: Ident(
+                    BindingIdent {
+                        name: "add",
+                        loc: SourceLocation {
+                            start: Position {
+                                line: 1,
+                                column: 5,
+                            },
+                            end: Position {
+                                line: 1,
+                                column: 8,
+                            },
+                        },
+                        mutable: false,
+                    },
+                ),
+            },
+            expr: Expr {
+                kind: Function {
+                    params: [
+                        FuncParam {
+                            pattern: Pattern {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 1,
+                                        column: 52,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 53,
+                                    },
+                                },
+                                kind: Ident(
+                                    BindingIdent {
+                                        name: "a",
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 1,
+                                                column: 52,
+                                            },
+                                            end: Position {
+                                                line: 1,
+                                                column: 53,
+                                            },
+                                        },
+                                        mutable: false,
+                                    },
+                                ),
+                            },
+                            type_ann: None,
+                            optional: false,
+                        },
+                        FuncParam {
+                            pattern: Pattern {
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 1,
+                                        column: 55,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 56,
+                                    },
+                                },
+                                kind: Ident(
+                                    BindingIdent {
+                                        name: "b",
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 1,
+                                                column: 55,
+                                            },
+                                            end: Position {
+                                                line: 1,
+                                                column: 56,
+                                            },
+                                        },
+                                        mutable: false,
+                                    },
+                                ),
+                            },
+                            type_ann: None,
+                            optional: false,
+                        },
+                    ],
+                    body: Expr(
+                        Expr {
+                            kind: Binary {
+                                left: Expr {
+                                    kind: Identifier(
+                                        "a",
+                                    ),
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 1,
+                                            column: 61,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 62,
+                                        },
+                                    },
+                                },
+                                op: Plus,
+                                right: Expr {
+                                    kind: Identifier(
+                                        "b",
+                                    ),
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 1,
+                                            column: 65,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 66,
+                                        },
+                                    },
+                                },
+                            },
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 61,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 66,
+                                },
+                            },
+                        },
+                    ),
+                    type_ann: None,
+                },
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 48,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 66,
+                    },
+                },
+            },
+            type_ann: Some(
+                TypeAnn {
+                    kind: Function(
+                        [
+                            FuncParam {
+                                pattern: Pattern {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 1,
+                                            column: 14,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 15,
+                                        },
+                                    },
+                                    kind: Ident(
+                                        BindingIdent {
+                                            name: "a",
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 1,
+                                                    column: 14,
+                                                },
+                                                end: Position {
+                                                    line: 1,
+                                                    column: 15,
+                                                },
+                                            },
+                                            mutable: false,
+                                        },
+                                    ),
+                                },
+                                type_ann: Some(
+                                    TypeAnn {
+                                        kind: Number,
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 1,
+                                                column: 17,
+                                            },
+                                            end: Position {
+                                                line: 1,
+                                                column: 23,
+                                            },
+                                        },
+                                    },
+                                ),
+                                optional: false,
+                            },
+                            FuncParam {
+                                pattern: Pattern {
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 1,
+                                            column: 25,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 26,
+                                        },
+                                    },
+                                    kind: Ident(
+                                        BindingIdent {
+                                            name: "b",
+                                            loc: SourceLocation {
+                                                start: Position {
+                                                    line: 1,
+                                                    column: 25,
+                                                },
+                                                end: Position {
+                                                    line: 1,
+                                                    column: 26,
+                                                },
+                                            },
+                                            mutable: false,
+                                        },
+                                    ),
+                                },
+                                type_ann: Some(
+                                    TypeAnn {
+                                        kind: Number,
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 1,
+                                                column: 28,
+                                            },
+                                            end: Position {
+                                                line: 1,
+                                                column: 34,
+                                            },
+                                        },
+                                    },
+                                ),
+                                optional: false,
+                            },
+                        ],
+                        TypeAnn {
+                            kind: Number,
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 39,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 45,
+                                },
+                            },
+                        },
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 10,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 12,
+                        },
+                    },
+                },
+            ),
+        },
+        loc: SourceLocation {
+            start: Position {
+                line: 1,
+                column: 1,
+            },
+            end: Position {
+                line: 1,
+                column: 66,
+            },
+        },
+    },
+]
