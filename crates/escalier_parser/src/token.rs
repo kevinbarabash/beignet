@@ -38,19 +38,12 @@ pub enum TokenKind {
     Finally,
     Do,
 
-    // Operators
-    Assign,
+    // Binary Operators
     Plus,
     Minus,
     Times,
     Divide,
     Modulo,
-    Dot,
-    QuestionDot, // used for optional chaining
-    DotDot,      // used for ranges
-    DotDotDot,   // used for rest/spread
-    Colon,
-    Question,
     Equals,
     NotEquals,
     LessThan,
@@ -59,6 +52,14 @@ pub enum TokenKind {
     GreaterThanOrEqual,
     Or,
     And,
+
+    // Assignment Operators
+    Assign,
+    PlusAssign,
+    MinusAssign,
+    TimesAssign,
+    DivideAssign,
+    ModuloAssign,
 
     // punctuation
     Semicolon,
@@ -71,6 +72,12 @@ pub enum TokenKind {
     RightBracket,
     Arrow,
     Underscore,
+    Question,
+    QuestionDot, // used for optional chaining
+    Dot,
+    DotDot,    // used for ranges
+    DotDotDot, // used for rest/spread
+    Colon,
 
     Eof,
 }
