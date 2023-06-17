@@ -30,4 +30,8 @@ impl Parser {
                 },
             })
     }
+
+    pub fn replace(&mut self, offset: usize, token: Token) {
+        self.tokens[self.cursor + offset] = token;
+    }
 }

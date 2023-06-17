@@ -131,7 +131,13 @@ impl<'a> Lexer<'a> {
                 }
                 ';' => TokenKind::Semicolon,
                 ':' => TokenKind::Colon,
-                '?' => TokenKind::Question,
+                '?' => match self.scanner.peek(1) {
+                    Some('.') => {
+                        self.scanner.pop();
+                        TokenKind::QuestionDot
+                    }
+                    _ => TokenKind::Question,
+                },
                 '<' => match self.scanner.peek(1) {
                     Some('=') => {
                         self.scanner.pop();

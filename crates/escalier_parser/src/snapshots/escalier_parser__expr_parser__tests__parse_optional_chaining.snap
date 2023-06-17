@@ -1,0 +1,105 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(\"a?.b?.c\")"
+---
+Expr {
+    kind: OptionalChain {
+        base: Expr {
+            kind: Member {
+                object: Expr {
+                    kind: OptionalChain {
+                        base: Expr {
+                            kind: Member {
+                                object: Expr {
+                                    kind: Identifier(
+                                        "a",
+                                    ),
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 1,
+                                            column: 1,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 2,
+                                        },
+                                    },
+                                },
+                                property: Expr {
+                                    kind: Identifier(
+                                        "b",
+                                    ),
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 1,
+                                            column: 4,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 5,
+                                        },
+                                    },
+                                },
+                            },
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 1,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 5,
+                                },
+                            },
+                        },
+                    },
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 1,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 5,
+                        },
+                    },
+                },
+                property: Expr {
+                    kind: Identifier(
+                        "c",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 7,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 8,
+                        },
+                    },
+                },
+            },
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 8,
+                },
+            },
+        },
+    },
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 8,
+        },
+    },
+}

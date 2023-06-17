@@ -72,11 +72,12 @@ pub enum TokenKind {
     RightBracket,
     Arrow,
     Underscore,
+    Question,
+    QuestionDot, // used for optional chaining
     Dot,
     DotDot,    // used for ranges
     DotDotDot, // used for rest/spread
     Colon,
-    Question,
 
     Eof,
 }
