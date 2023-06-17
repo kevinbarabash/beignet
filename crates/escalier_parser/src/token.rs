@@ -46,8 +46,9 @@ pub enum TokenKind {
     Divide,
     Modulo,
     Dot,
-    DotDot,    // used for ranges
-    DotDotDot, // used for rest/spread
+    QuestionDot, // used for optional chaining
+    DotDot,      // used for ranges
+    DotDotDot,   // used for rest/spread
     Colon,
     Question,
     Equals,

@@ -77,6 +77,9 @@ pub enum ExprKind {
         object: Box<Expr>,
         property: Box<Expr>,
     },
+    OptionalChain {
+        base: Box<Expr>,
+    },
     IfElse {
         cond: Box<Expr>,
         consequent: Block,

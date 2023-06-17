@@ -54,8 +54,8 @@ fn get_postfix_precedence(op: &Token) -> Option<(u8, Associativity)> {
             .get(&Operator::ComputedMemberAccess)
             .cloned(),
         TokenKind::LeftParen => PRECEDENCE_TABLE.get(&Operator::FunctionCall).cloned(),
-        // TODO: handle optional chaining
         TokenKind::Dot => PRECEDENCE_TABLE.get(&Operator::MemberAccess).cloned(),
+        TokenKind::QuestionDot => PRECEDENCE_TABLE.get(&Operator::OptionalChaining).cloned(),
         _ => None,
     }
 }
@@ -127,7 +127,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             while parser.peek(0).kind != TokenKind::RightBracket {
                 let elem = match parser.peek(0).kind {
                     TokenKind::DotDotDot => {
-                        parser.next(); // skips `...`
+                        parser.next(); // consumes `...`
                         let expr = parse_expr_with_precedence(parser, 0);
                         ExprOrSpread::Spread(expr)
                     }
@@ -431,7 +431,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
     };
 
     loop {
-        let next = parser.peek(0);
+        let mut next = parser.peek(0);
         if let TokenKind::Eof = next.kind {
             break;
         }
@@ -445,62 +445,32 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                 break;
             }
 
-            let precedence = if next_precedence.1 == Associativity::Left {
-                next_precedence.0
+            lhs = if next.kind == TokenKind::QuestionDot {
+                match parser.peek(1).kind {
+                    TokenKind::QuestionDot => panic!("unexpected token '?.'"),
+                    TokenKind::LeftParen | TokenKind::LeftBracket => {
+                        parser.next(); // consume '?.' token
+                    }
+                    _ => {
+                        // parse_postfix doesn't know how to deal with '?.' so
+                        // we need to replace it with '.' so that it can.
+                        next.kind = TokenKind::Dot;
+                        parser.replace(0, next);
+                    }
+                }
+
+                let lhs_loc = lhs.loc.clone();
+                let base = parse_postfix(parser, lhs, next_precedence);
+                let loc = merge_locations(&lhs_loc, &base.loc);
+
+                Expr {
+                    kind: ExprKind::OptionalChain {
+                        base: Box::new(base),
+                    },
+                    loc,
+                }
             } else {
-                next_precedence.0 - 1
-            };
-
-            parser.next();
-
-            lhs = match &next.kind {
-                TokenKind::LeftBracket => {
-                    let rhs = parse_expr(parser);
-                    let loc = merge_locations(&lhs.loc, &rhs.loc);
-                    assert_eq!(parser.next().kind, TokenKind::RightBracket);
-                    Expr {
-                        kind: ExprKind::Index {
-                            left: Box::new(lhs),
-                            right: Box::new(rhs),
-                        },
-                        loc,
-                    }
-                }
-                TokenKind::LeftParen => {
-                    let mut args = Vec::new();
-                    while parser.peek(0).kind != TokenKind::RightParen {
-                        args.push(parse_expr(parser));
-
-                        match parser.peek(0).kind {
-                            TokenKind::RightParen => break,
-                            TokenKind::Comma => {
-                                parser.next();
-                            }
-                            _ => panic!("Expected comma or right paren, got {:?}", parser.peek(0)),
-                        }
-                    }
-                    let loc = merge_locations(&lhs.loc, &parser.peek(0).loc);
-                    assert_eq!(parser.next().kind, TokenKind::RightParen);
-                    Expr {
-                        kind: ExprKind::Call {
-                            callee: Box::new(lhs),
-                            args,
-                        },
-                        loc,
-                    }
-                }
-                TokenKind::Dot => {
-                    let rhs = parse_expr_with_precedence(parser, precedence);
-                    let loc = merge_locations(&lhs.loc, &rhs.loc);
-                    Expr {
-                        kind: ExprKind::Member {
-                            object: Box::new(lhs),
-                            property: Box::new(rhs),
-                        },
-                        loc,
-                    }
-                }
-                _ => panic!("unexpected token: {:?}", next),
+                parse_postfix(parser, lhs, next_precedence)
             };
 
             continue;
@@ -555,6 +525,66 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
     }
 
     lhs
+}
+
+fn parse_postfix(parser: &mut Parser, lhs: Expr, next_precedence: (u8, Associativity)) -> Expr {
+    let precedence = if next_precedence.1 == Associativity::Left {
+        next_precedence.0
+    } else {
+        next_precedence.0 - 1
+    };
+
+    let next = parser.next();
+
+    match &next.kind {
+        TokenKind::LeftBracket => {
+            let rhs = parse_expr(parser);
+            let loc = merge_locations(&lhs.loc, &rhs.loc);
+            assert_eq!(parser.next().kind, TokenKind::RightBracket);
+            Expr {
+                kind: ExprKind::Index {
+                    left: Box::new(lhs),
+                    right: Box::new(rhs),
+                },
+                loc,
+            }
+        }
+        TokenKind::LeftParen => {
+            let mut args = Vec::new();
+            while parser.peek(0).kind != TokenKind::RightParen {
+                args.push(parse_expr(parser));
+
+                match parser.peek(0).kind {
+                    TokenKind::RightParen => break,
+                    TokenKind::Comma => {
+                        parser.next();
+                    }
+                    _ => panic!("Expected comma or right paren, got {:?}", parser.peek(0)),
+                }
+            }
+            let loc = merge_locations(&lhs.loc, &parser.peek(0).loc);
+            assert_eq!(parser.next().kind, TokenKind::RightParen);
+            Expr {
+                kind: ExprKind::Call {
+                    callee: Box::new(lhs),
+                    args,
+                },
+                loc,
+            }
+        }
+        TokenKind::Dot => {
+            let rhs = parse_expr_with_precedence(parser, precedence);
+            let loc = merge_locations(&lhs.loc, &rhs.loc);
+            Expr {
+                kind: ExprKind::Member {
+                    object: Box::new(lhs),
+                    property: Box::new(rhs),
+                },
+                loc,
+            }
+        }
+        _ => panic!("unexpected token: {:?}", next),
+    }
 }
 
 pub fn parse_expr(parser: &mut Parser) -> Expr {
@@ -751,6 +781,13 @@ mod tests {
         insta::assert_debug_snapshot!(parse("a.b.c"));
         insta::assert_debug_snapshot!(parse("a.b+c.d"));
         insta::assert_debug_snapshot!(parse("a[b][c]"));
+    }
+
+    #[test]
+    fn parse_optional_chaining() {
+        // insta::assert_debug_snapshot!(parse("a?.b?.c"));
+        // insta::assert_debug_snapshot!(parse("a?.[b]"));
+        insta::assert_debug_snapshot!(parse("foo?.()"));
     }
 
     #[test]
