@@ -835,8 +835,8 @@ mod tests {
 
     #[test]
     fn parse_optional_chaining() {
-        // insta::assert_debug_snapshot!(parse("a?.b?.c"));
-        // insta::assert_debug_snapshot!(parse("a?.[b]"));
+        insta::assert_debug_snapshot!(parse("a?.b?.c"));
+        insta::assert_debug_snapshot!(parse("a?.[b]"));
         insta::assert_debug_snapshot!(parse("foo?.()"));
     }
 
