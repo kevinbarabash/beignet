@@ -1,0 +1,107 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(\"x.a = y.b\")"
+---
+Expr {
+    kind: Assign {
+        left: Expr {
+            kind: Member {
+                object: Expr {
+                    kind: Identifier(
+                        "x",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 1,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 2,
+                        },
+                    },
+                },
+                property: Expr {
+                    kind: Identifier(
+                        "a",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 3,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 4,
+                        },
+                    },
+                },
+            },
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 1,
+                },
+                end: Position {
+                    line: 1,
+                    column: 4,
+                },
+            },
+        },
+        op: Assign,
+        right: Expr {
+            kind: Member {
+                object: Expr {
+                    kind: Identifier(
+                        "y",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 7,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 8,
+                        },
+                    },
+                },
+                property: Expr {
+                    kind: Identifier(
+                        "b",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 9,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 10,
+                        },
+                    },
+                },
+            },
+            loc: SourceLocation {
+                start: Position {
+                    line: 1,
+                    column: 7,
+                },
+                end: Position {
+                    line: 1,
+                    column: 10,
+                },
+            },
+        },
+    },
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 10,
+        },
+    },
+}
