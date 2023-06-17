@@ -529,6 +529,10 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             };
 
             if let Some(op) = op {
+                if !is_lvalue(&lhs) {
+                    panic!("expected lvalue");
+                }
+
                 let precedence = if next_precedence.1 == Associativity::Left {
                     next_precedence.0
                 } else {
@@ -592,6 +596,15 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
     }
 
     lhs
+}
+
+fn is_lvalue(expr: &Expr) -> bool {
+    match &expr.kind {
+        ExprKind::Identifier(_) => true,
+        ExprKind::Member { object, .. } => is_lvalue(object),
+        ExprKind::Index { left, .. } => is_lvalue(left),
+        _ => false,
+    }
 }
 
 pub fn parse_expr(parser: &mut Parser) -> Expr {
@@ -895,5 +908,17 @@ mod tests {
         insta::assert_debug_snapshot!(parse("x *= 2"));
         insta::assert_debug_snapshot!(parse("x /= 2"));
         insta::assert_debug_snapshot!(parse("x %= 2"));
+    }
+
+    #[test]
+    fn parse_valid_lvalues() {
+        insta::assert_debug_snapshot!(parse("a.b.c = x"));
+        insta::assert_debug_snapshot!(parse(r#"a["b"][c] = x""#));
+    }
+
+    #[test]
+    #[should_panic]
+    fn parse_invalid_lvalues_fail() {
+        insta::assert_debug_snapshot!(parse("a + b = x"));
     }
 }
