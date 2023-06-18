@@ -1,4 +1,5 @@
 use crate::expr::Expr;
+use crate::jsx::{JSXElement, JSXFragment};
 use crate::source_location::SourceLocation;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -15,6 +16,8 @@ pub enum TokenKind {
     },
     Null,
     Undefined,
+    JSXElement(JSXElement),
+    JSXFragment(JSXFragment),
 
     // Types
     Number,
