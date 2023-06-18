@@ -2,6 +2,8 @@ mod expr;
 mod expr_parser;
 mod func_param;
 mod identifier;
+mod jsx;
+mod jsx_parser;
 mod lexer;
 mod literal;
 mod parser;

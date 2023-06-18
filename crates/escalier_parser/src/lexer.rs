@@ -2,6 +2,8 @@ use core::panic;
 
 use crate::expr::Expr;
 use crate::expr_parser::parse_expr;
+use crate::identifier::Ident;
+use crate::jsx::*;
 use crate::parser::Parser;
 use crate::scanner::Scanner;
 use crate::source_location::*;
@@ -41,15 +43,15 @@ impl<'a> Lexer<'a> {
             let start = self.scanner.position();
             let kind = match character {
                 'a'..='z' | 'A'..='Z' | '_' => {
-                    tokens.push(self.lex_ident_or_keyword(start));
+                    tokens.push(self.lex_ident_or_keyword());
                     continue;
                 }
                 '0'..='9' => {
-                    tokens.push(self.lex_number(start));
+                    tokens.push(self.lex_number());
                     continue;
                 }
                 '"' => {
-                    tokens.push(self.lex_string(start));
+                    tokens.push(self.lex_string());
                     continue;
                 }
                 '`' => {
@@ -192,7 +194,8 @@ impl<'a> Lexer<'a> {
         tokens
     }
 
-    pub fn lex_ident_or_keyword(&mut self, start: Position) -> Token {
+    pub fn lex_ident_or_keyword(&mut self) -> Token {
+        let start = self.scanner.position();
         let mut ident = String::new();
         while !self.scanner.is_done() {
             let character = self.scanner.peek(0).unwrap();
@@ -241,9 +244,12 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn lex_number(&mut self, start: Position) -> Token {
+    pub fn lex_number(&mut self) -> Token {
+        let start = self.scanner.position();
+
         let mut number = String::new();
         let mut decimal = false;
+
         while !self.scanner.is_done() {
             let character = self.scanner.peek(0).unwrap();
             match character {
@@ -273,9 +279,12 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn lex_string(&mut self, start: Position) -> Token {
+    pub fn lex_string(&mut self) -> Token {
+        let start = self.scanner.position();
+
         let mut string = String::new();
         self.scanner.pop();
+
         while !self.scanner.is_done() {
             match self.scanner.peek(0).unwrap() {
                 '"' => {
@@ -372,8 +381,6 @@ impl<'a> Lexer<'a> {
                         self.scanner.pop();
                         let tokens = self.lex_to(Some('}'));
 
-                        eprintln!("tokens = {tokens:#?}");
-
                         let mut parser = Parser::new(tokens);
                         exprs.push(parse_expr(&mut parser));
 
@@ -404,6 +411,131 @@ impl<'a> Lexer<'a> {
                 start,
                 end: self.scanner.position(),
             },
+        }
+    }
+
+    pub fn lex_jsx_element(&mut self) -> JSXElement {
+        assert_eq!(self.scanner.pop(), Some('<'));
+        let name_token = self.lex_ident_or_keyword();
+        let name = match name_token.kind {
+            TokenKind::Identifier(name) => JSXElementName::Ident(Ident {
+                name,
+                loc: SourceLocation {
+                    start: name_token.loc.start,
+                    end: name_token.loc.end,
+                },
+            }),
+            _ => panic!("Expected identifier or keyword"),
+        };
+
+        let mut attrs = vec![];
+        let mut self_closing = false;
+
+        while !self.scanner.is_done() {
+            match self.scanner.peek(0).unwrap() {
+                '/' => {
+                    self.scanner.pop();
+                    assert_eq!(self.scanner.pop(), Some('>'));
+                    self_closing = true;
+                    break;
+                }
+                '>' => {
+                    self.scanner.pop();
+                    break;
+                }
+                ' ' => {
+                    self.scanner.pop();
+                }
+                _ => {
+                    attrs.push(self.lex_jsx_attribute());
+                }
+            }
+        }
+
+        let opening = JSXOpeningElement {
+            name,
+            attrs,
+            self_closing,
+        };
+
+        let children = vec![];
+
+        let closing = if self_closing {
+            None
+        } else {
+            // TODO: parse children
+            while self.scanner.peek(0) != Some('<') {
+                self.scanner.pop();
+            }
+
+            assert_eq!(self.scanner.pop(), Some('<'));
+            assert_eq!(self.scanner.pop(), Some('/'));
+            let end_name = self.lex_ident_or_keyword();
+            assert_eq!(self.scanner.pop(), Some('>'));
+
+            Some(JSXClosingElement {
+                name: match end_name.kind {
+                    TokenKind::Identifier(name) => JSXElementName::Ident(Ident {
+                        name,
+                        loc: SourceLocation {
+                            start: end_name.loc.start,
+                            end: end_name.loc.end,
+                        },
+                    }),
+                    _ => panic!("Expected identifier or keyword"),
+                },
+            })
+        };
+
+        JSXElement {
+            opening,
+            children,
+            closing,
+        }
+    }
+
+    pub fn lex_jsx_attribute(&mut self) -> JSXAttr {
+        let name = self.lex_ident_or_keyword();
+
+        let name = match name.kind {
+            TokenKind::Identifier(name) => name,
+            _ => panic!("Unexpected token"),
+        };
+
+        if let Some('=') = self.scanner.peek(0) {
+            self.scanner.pop();
+        } else {
+            return JSXAttr { name, value: None };
+        }
+
+        match self.scanner.peek(0).unwrap() {
+            '"' => {
+                let value = self.lex_string();
+                let value = match value.kind {
+                    TokenKind::StrLit(value) => value,
+                    _ => panic!("Unexpected token"),
+                };
+
+                JSXAttr {
+                    name,
+                    value: Some(JSXAttrValue::Str(value)),
+                }
+            }
+            '{' => {
+                self.scanner.pop();
+                let tokens = self.lex_to(Some('}'));
+
+                let mut parser = Parser::new(tokens);
+                let expr = parse_expr(&mut parser);
+
+                JSXAttr {
+                    name,
+                    value: Some(JSXAttrValue::ExprContainer(JSXExprContainer {
+                        expr: Box::new(expr),
+                    })),
+                }
+            }
+            _ => panic!("Unexpected character"),
         }
     }
 }
@@ -592,5 +724,23 @@ mod tests {
         assert_eq!(tokens[3].kind, crate::token::TokenKind::TimesAssign);
         assert_eq!(tokens[4].kind, crate::token::TokenKind::DivideAssign);
         assert_eq!(tokens[5].kind, crate::token::TokenKind::ModuloAssign);
+    }
+
+    #[test]
+    fn lex_jsx_element() {
+        let mut lexer = Lexer::new(r#"<Foo bar="baz" qux></Foo>"#);
+
+        let jsx_elem = lexer.lex_jsx_element();
+
+        insta::assert_debug_snapshot!(jsx_elem);
+    }
+
+    #[test]
+    fn lex_self_closing_jsx_element() {
+        let mut lexer = Lexer::new(r#"<Foo bar="baz" qux />"#);
+
+        let jsx_elem = lexer.lex_jsx_element();
+
+        insta::assert_debug_snapshot!(jsx_elem);
     }
 }
