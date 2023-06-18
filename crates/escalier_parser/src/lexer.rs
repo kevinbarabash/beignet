@@ -381,7 +381,7 @@ impl<'a> Lexer<'a> {
                         self.scanner.pop();
                         let tokens = self.lex_to(Some('}'));
 
-                        let mut parser = Parser::new(tokens);
+                        let mut parser = Parser::new(Box::new(tokens.into_iter()));
                         exprs.push(parse_expr(&mut parser));
 
                         string = String::new();
@@ -525,7 +525,7 @@ impl<'a> Lexer<'a> {
                 self.scanner.pop();
                 let tokens = self.lex_to(Some('}'));
 
-                let mut parser = Parser::new(tokens);
+                let mut parser = Parser::new(Box::new(tokens.into_iter()));
                 let expr = parse_expr(&mut parser);
 
                 JSXAttr {
