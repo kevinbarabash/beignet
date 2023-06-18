@@ -1,21 +1,23 @@
 use std::iter::{Iterator, Peekable};
 
+use crate::lexer::Lexer;
 use crate::source_location::*;
 use crate::token::{Token, TokenKind};
 
-pub struct Parser {
-    tokens: Peekable<Box<dyn Iterator<Item = Token>>>,
+pub struct Parser<'a> {
+    // tokens: Peekable<Box<dyn Iterator<Item = Token>>>,
+    lexer: Peekable<Lexer<'a>>,
 }
 
-impl Parser {
-    pub fn new(tokens: Box<dyn Iterator<Item = Token>>) -> Self {
+impl<'a> Parser<'a> {
+    pub fn new(lexer: Lexer<'a>) -> Self {
         Self {
-            tokens: tokens.peekable(),
+            lexer: lexer.peekable(),
         }
     }
 
     pub fn next(&mut self) -> Token {
-        self.tokens.next().unwrap_or(Token {
+        self.lexer.next().unwrap_or(Token {
             kind: TokenKind::Eof,
             loc: SourceLocation {
                 start: Position { line: 0, column: 0 },
@@ -25,7 +27,7 @@ impl Parser {
     }
 
     pub fn peek(&mut self) -> Token {
-        self.tokens.peek().cloned().unwrap_or(Token {
+        self.lexer.peek().cloned().unwrap_or(Token {
             kind: TokenKind::Eof,
             loc: SourceLocation {
                 start: Position { line: 0, column: 0 },

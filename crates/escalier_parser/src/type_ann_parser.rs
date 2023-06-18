@@ -124,8 +124,7 @@ mod tests {
 
     pub fn parse(input: &str) -> TypeAnn {
         let mut lexer = Lexer::new(input);
-        let tokens = lexer.lex();
-        let mut parser = Parser::new(Box::new(tokens.into_iter()));
+        let mut parser = Parser::new(lexer);
         parse_type_ann(&mut parser)
     }
 

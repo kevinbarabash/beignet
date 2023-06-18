@@ -88,7 +88,7 @@ Pattern {
                             loc: SourceLocation {
                                 start: Position {
                                     line: 1,
-                                    column: 8,
+                                    column: 7,
                                 },
                                 end: Position {
                                     line: 1,

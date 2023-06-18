@@ -1,5 +1,6 @@
 use crate::source_location::Position;
 
+#[derive(Clone)]
 pub struct Scanner<'a> {
     cursor: usize,
     column: usize,

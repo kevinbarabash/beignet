@@ -82,8 +82,8 @@ pub fn parse_program(parser: &mut Parser) -> Vec<Stmt> {
 }
 
 pub fn parse(input: &str) -> Vec<Stmt> {
-    let tokens = Lexer::new(input).lex();
-    let mut parser = Parser::new(Box::new(tokens.into_iter()));
+    let lexer = Lexer::new(input);
+    let mut parser = Parser::new(lexer);
     parse_program(&mut parser)
 }
 

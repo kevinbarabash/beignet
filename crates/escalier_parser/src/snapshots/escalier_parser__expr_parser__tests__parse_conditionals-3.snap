@@ -23,7 +23,7 @@ Expr {
             loc: SourceLocation {
                 start: Position {
                     line: 2,
-                    column: 23,
+                    column: 22,
                 },
                 end: Position {
                     line: 4,
@@ -88,8 +88,8 @@ Expr {
                             },
                             loc: SourceLocation {
                                 start: Position {
-                                    line: 3,
-                                    column: 17,
+                                    line: 2,
+                                    column: 24,
                                 },
                                 end: Position {
                                     line: 3,
@@ -100,8 +100,8 @@ Expr {
                     },
                     loc: SourceLocation {
                         start: Position {
-                            line: 3,
-                            column: 17,
+                            line: 2,
+                            column: 24,
                         },
                         end: Position {
                             line: 3,
@@ -116,7 +116,7 @@ Expr {
                 loc: SourceLocation {
                     start: Position {
                         line: 4,
-                        column: 20,
+                        column: 19,
                     },
                     end: Position {
                         line: 6,
@@ -181,8 +181,8 @@ Expr {
                                 },
                                 loc: SourceLocation {
                                     start: Position {
-                                        line: 5,
-                                        column: 17,
+                                        line: 4,
+                                        column: 21,
                                     },
                                     end: Position {
                                         line: 5,
@@ -193,8 +193,8 @@ Expr {
                         },
                         loc: SourceLocation {
                             start: Position {
-                                line: 5,
-                                column: 17,
+                                line: 4,
+                                column: 21,
                             },
                             end: Position {
                                 line: 5,

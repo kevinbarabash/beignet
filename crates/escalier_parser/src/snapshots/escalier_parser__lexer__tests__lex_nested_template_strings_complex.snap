@@ -21,16 +21,16 @@ StrTemplateLit {
         },
         Token {
             kind: StrLit(
-                "",
+                "ids.map(fn (id) => ",
             ),
             loc: SourceLocation {
                 start: Position {
                     line: 1,
-                    column: 51,
+                    column: 10,
                 },
                 end: Position {
                     line: 1,
-                    column: 52,
+                    column: 30,
                 },
             },
         },
@@ -83,7 +83,7 @@ StrTemplateLit {
                                                 "x",
                                             ),
                                             String(
-                                                "",
+                                                "id}",
                                             ),
                                         ],
                                         exprs: [
@@ -107,7 +107,7 @@ StrTemplateLit {
                                     loc: SourceLocation {
                                         start: Position {
                                             line: 1,
-                                            column: 29,
+                                            column: 28,
                                         },
                                         end: Position {
                                             line: 1,

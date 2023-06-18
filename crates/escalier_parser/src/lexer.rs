@@ -1,4 +1,5 @@
 use core::panic;
+use std::iter::Iterator;
 
 use crate::expr::Expr;
 use crate::expr_parser::parse_expr;
@@ -9,14 +10,200 @@ use crate::scanner::Scanner;
 use crate::source_location::*;
 use crate::token::*;
 
+#[derive(Clone)]
 pub struct Lexer<'a> {
     scanner: Scanner<'a>,
+    brace_count: usize,
+    end_delim: Option<char>,
+}
+
+impl<'a> Iterator for Lexer<'a> {
+    type Item = Token;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if !self.scanner.is_done() {
+            let mut character = match self.scanner.peek(0) {
+                Some(c) => c,
+                None => return None,
+            };
+
+            // TODO: handle closing brace in string interpolations
+            match self.end_delim {
+                Some(c) if character == c && self.brace_count == 0 => {
+                    self.scanner.pop();
+                    return None;
+                }
+                _ => (),
+            }
+
+            let start = self.scanner.position();
+
+            // skip whitespace
+            while character == ' ' || character == '\n' || character == '\t' {
+                self.scanner.pop();
+                match self.scanner.peek(0) {
+                    Some(c) => character = c,
+                    None => return None,
+                }
+            }
+
+            let kind = match character {
+                'a'..='z' | 'A'..='Z' | '_' => {
+                    // avoids an extra scanner.pop() call after the match
+                    return Some(self.lex_ident_or_keyword());
+                }
+                '0'..='9' => {
+                    // avoids an extra scanner.pop() call after the match
+                    return Some(self.lex_number());
+                }
+                '"' => {
+                    // avoids an extra scanner.pop() call after the match
+                    return Some(self.lex_string());
+                }
+                '`' => {
+                    // avoids an extra scanner.pop() call after the match
+                    return Some(self.lex_template_string(start));
+                }
+                '=' => match self.scanner.peek(1) {
+                    Some('=') => {
+                        self.scanner.pop();
+                        TokenKind::Equals
+                    }
+                    Some('>') => {
+                        self.scanner.pop();
+                        TokenKind::Arrow
+                    }
+                    _ => TokenKind::Assign,
+                },
+                '+' => match self.scanner.peek(1) {
+                    Some('=') => {
+                        self.scanner.pop();
+                        TokenKind::PlusAssign
+                    }
+                    _ => TokenKind::Plus,
+                },
+                '-' => match self.scanner.peek(1) {
+                    Some('=') => {
+                        self.scanner.pop();
+                        TokenKind::MinusAssign
+                    }
+                    _ => TokenKind::Minus,
+                },
+                '*' => match self.scanner.peek(1) {
+                    Some('=') => {
+                        self.scanner.pop();
+                        TokenKind::TimesAssign
+                    }
+                    _ => TokenKind::Times,
+                },
+                '/' => match self.scanner.peek(1) {
+                    Some('=') => {
+                        self.scanner.pop();
+                        TokenKind::DivideAssign
+                    }
+                    _ => TokenKind::Divide,
+                },
+                '%' => match self.scanner.peek(1) {
+                    Some('=') => {
+                        self.scanner.pop();
+                        TokenKind::ModuloAssign
+                    }
+                    _ => TokenKind::Modulo,
+                },
+                '(' => TokenKind::LeftParen,
+                ')' => TokenKind::RightParen,
+                '{' => {
+                    self.brace_count += 1;
+                    TokenKind::LeftBrace
+                }
+                '}' => {
+                    self.brace_count -= 1;
+                    TokenKind::RightBrace
+                }
+                '[' => TokenKind::LeftBracket,
+                ']' => TokenKind::RightBracket,
+                ',' => TokenKind::Comma,
+                '.' => {
+                    if self.scanner.peek(1) == Some('.') {
+                        if self.scanner.peek(2) == Some('.') {
+                            self.scanner.pop();
+                            self.scanner.pop();
+                            TokenKind::DotDotDot
+                        } else {
+                            self.scanner.pop();
+                            TokenKind::DotDot
+                        }
+                    } else {
+                        TokenKind::Dot
+                    }
+                }
+                ';' => TokenKind::Semicolon,
+                ':' => TokenKind::Colon,
+                '?' => match self.scanner.peek(1) {
+                    Some('.') => {
+                        self.scanner.pop();
+                        TokenKind::QuestionDot
+                    }
+                    _ => TokenKind::Question,
+                },
+                '<' => match self.scanner.peek(1) {
+                    Some('=') => {
+                        self.scanner.pop();
+                        TokenKind::LessThanOrEqual
+                    }
+                    _ => TokenKind::LessThan,
+                },
+                '>' => match self.scanner.peek(1) {
+                    Some('=') => {
+                        self.scanner.pop();
+                        TokenKind::GreaterThanOrEqual
+                    }
+                    _ => TokenKind::GreaterThan,
+                },
+                '!' => match self.scanner.peek(1) {
+                    Some('=') => {
+                        self.scanner.pop();
+                        TokenKind::NotEquals
+                    }
+                    _ => panic!("Unexpected character: '{}'", character),
+                },
+                '&' => match self.scanner.peek(1) {
+                    Some('&') => {
+                        self.scanner.pop();
+                        TokenKind::And
+                    }
+                    _ => panic!("Unexpected character: '{}'", character),
+                },
+                '|' => match self.scanner.peek(1) {
+                    Some('|') => {
+                        self.scanner.pop();
+                        TokenKind::Or
+                    }
+                    _ => panic!("Unexpected character: '{}'", character),
+                },
+                _ => panic!("Unexpected character: '{}'", character),
+            };
+            self.scanner.pop();
+
+            Some(Token {
+                kind,
+                loc: SourceLocation {
+                    start,
+                    end: self.scanner.position(),
+                },
+            })
+        } else {
+            None
+        }
+    }
 }
 
 impl<'a> Lexer<'a> {
     pub fn new(input: &'a str) -> Self {
         Self {
             scanner: Scanner::new(input),
+            brace_count: 0,
+            end_delim: None,
         }
     }
 
@@ -379,9 +566,11 @@ impl<'a> Lexer<'a> {
                             },
                         });
                         self.scanner.pop();
-                        let tokens = self.lex_to(Some('}'));
 
-                        let mut parser = Parser::new(Box::new(tokens.into_iter()));
+                        let mut lexer = self.clone();
+                        lexer.end_delim = Some('}');
+
+                        let mut parser = Parser::new(lexer);
                         exprs.push(parse_expr(&mut parser));
 
                         string = String::new();
@@ -523,9 +712,11 @@ impl<'a> Lexer<'a> {
             }
             '{' => {
                 self.scanner.pop();
-                let tokens = self.lex_to(Some('}'));
 
-                let mut parser = Parser::new(Box::new(tokens.into_iter()));
+                let mut lexer = self.clone();
+                lexer.end_delim = Some('}');
+
+                let mut parser = Parser::new(lexer);
                 let expr = parse_expr(&mut parser);
 
                 JSXAttr {

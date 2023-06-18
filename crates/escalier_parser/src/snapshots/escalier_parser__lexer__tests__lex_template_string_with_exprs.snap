@@ -21,12 +21,12 @@ StrTemplateLit {
         },
         Token {
             kind: StrLit(
-                "",
+                "x}",
             ),
             loc: SourceLocation {
                 start: Position {
                     line: 1,
-                    column: 9,
+                    column: 7,
                 },
                 end: Position {
                     line: 1,
