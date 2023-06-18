@@ -6,7 +6,7 @@ use crate::source_location::merge_locations;
 use crate::token::TokenKind;
 
 pub fn parse_pattern(parser: &mut Parser) -> Pattern {
-    let mut loc = parser.peek(0).loc;
+    let mut loc = parser.peek().loc;
     let kind = match parser.next().kind {
         TokenKind::Identifier(name) => PatternKind::Ident(BindingIdent {
             name,
@@ -29,8 +29,8 @@ pub fn parse_pattern(parser: &mut Parser) -> Pattern {
         TokenKind::LeftBracket => {
             let mut elems: Vec<Option<TuplePatElem>> = vec![];
             let mut has_rest = false;
-            while parser.peek(0).kind != TokenKind::RightBracket {
-                match &parser.peek(0).kind {
+            while parser.peek().kind != TokenKind::RightBracket {
+                match &parser.peek().kind {
                     TokenKind::DotDotDot => {
                         if has_rest {
                             panic!("only one rest pattern is allowed per object pattern");
@@ -50,14 +50,14 @@ pub fn parse_pattern(parser: &mut Parser) -> Pattern {
                 }
 
                 // TODO: don't allow commas after rest pattern
-                if parser.peek(0).kind == TokenKind::Comma {
+                if parser.peek().kind == TokenKind::Comma {
                     parser.next();
                 } else {
                     break;
                 }
             }
 
-            loc = merge_locations(&loc, &parser.peek(0).loc);
+            loc = merge_locations(&loc, &parser.peek().loc);
             assert_eq!(parser.next().kind, TokenKind::RightBracket);
 
             PatternKind::Tuple(TuplePat {
@@ -69,11 +69,11 @@ pub fn parse_pattern(parser: &mut Parser) -> Pattern {
             let mut props: Vec<ObjectPatProp> = vec![];
             let mut has_rest = false;
 
-            while parser.peek(0).kind != TokenKind::RightBrace {
-                let first = parser.peek(0);
+            while parser.peek().kind != TokenKind::RightBrace {
+                let first = parser.peek();
                 match &parser.next().kind {
                     TokenKind::Identifier(name) => {
-                        if parser.peek(0).kind == TokenKind::Colon {
+                        if parser.peek().kind == TokenKind::Colon {
                             parser.next();
 
                             let pattern = parse_pattern(parser);
@@ -101,7 +101,7 @@ pub fn parse_pattern(parser: &mut Parser) -> Pattern {
                             }))
                         }
 
-                        if parser.peek(0).kind == TokenKind::Comma {
+                        if parser.peek().kind == TokenKind::Comma {
                             parser.next();
                         }
                     }
@@ -118,7 +118,7 @@ pub fn parse_pattern(parser: &mut Parser) -> Pattern {
                 }
             }
 
-            loc = merge_locations(&loc, &parser.peek(0).loc);
+            loc = merge_locations(&loc, &parser.peek().loc);
             assert_eq!(parser.next().kind, TokenKind::RightBrace);
 
             PatternKind::Object(ObjectPat {

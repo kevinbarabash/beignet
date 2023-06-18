@@ -16,17 +16,17 @@ pub fn parse_params(parser: &mut Parser) -> Vec<FuncParam> {
     assert_eq!(parser.next().kind, TokenKind::LeftParen);
 
     let mut params: Vec<FuncParam> = Vec::new();
-    while parser.peek(0).kind != TokenKind::RightParen {
+    while parser.peek().kind != TokenKind::RightParen {
         let pattern = parse_pattern(parser);
 
-        let optional = if let TokenKind::Question = parser.peek(0).kind {
+        let optional = if let TokenKind::Question = parser.peek().kind {
             parser.next();
             true
         } else {
             false
         };
 
-        if let TokenKind::Colon = parser.peek(0).kind {
+        if let TokenKind::Colon = parser.peek().kind {
             parser.next();
             params.push(FuncParam {
                 pattern,
@@ -43,12 +43,12 @@ pub fn parse_params(parser: &mut Parser) -> Vec<FuncParam> {
 
         // TODO: param defaults
 
-        match parser.peek(0).kind {
+        match parser.peek().kind {
             TokenKind::RightParen => break,
             TokenKind::Comma => {
                 parser.next();
             }
-            _ => panic!("Expected comma or right paren, got {:?}", parser.peek(0)),
+            _ => panic!("Expected comma or right paren, got {:?}", parser.peek()),
         }
     }
 

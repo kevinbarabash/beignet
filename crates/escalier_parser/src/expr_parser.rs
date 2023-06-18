@@ -70,7 +70,7 @@ fn parse_block(parser: &mut Parser) -> Block {
     let open = parser.next();
     assert_eq!(open.kind, TokenKind::LeftBrace);
     let mut stmts = Vec::new();
-    while parser.peek(0).kind != TokenKind::RightBrace {
+    while parser.peek().kind != TokenKind::RightBrace {
         stmts.push(parse_stmt(parser));
     }
     let close = parser.next();
@@ -129,8 +129,8 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
         TokenKind::LeftBracket => {
             let start = first;
             let mut elements: Vec<ExprOrSpread> = Vec::new();
-            while parser.peek(0).kind != TokenKind::RightBracket {
-                let elem = match parser.peek(0).kind {
+            while parser.peek().kind != TokenKind::RightBracket {
+                let elem = match parser.peek().kind {
                     TokenKind::DotDotDot => {
                         parser.next(); // consumes `...`
                         let expr = parse_expr_with_precedence(parser, 0);
@@ -144,16 +144,16 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
 
                 elements.push(elem);
 
-                match parser.peek(0).kind {
+                match parser.peek().kind {
                     TokenKind::RightBracket => break,
                     TokenKind::Comma => {
                         parser.next();
                     }
-                    _ => panic!("Expected comma or right bracket, got {:?}", parser.peek(0)),
+                    _ => panic!("Expected comma or right bracket, got {:?}", parser.peek()),
                 }
             }
 
-            assert_eq!(parser.peek(0).kind, TokenKind::RightBracket);
+            assert_eq!(parser.peek().kind, TokenKind::RightBracket);
 
             let end = parser.next();
 
@@ -165,7 +165,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
         TokenKind::LeftBrace => {
             let start = first;
             let mut properties: Vec<PropOrSpread> = Vec::new();
-            while parser.peek(0).kind != TokenKind::RightBrace {
+            while parser.peek().kind != TokenKind::RightBrace {
                 let next = parser.next();
 
                 let prop = match &next.kind {
@@ -174,8 +174,8 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                         PropOrSpread::Spread(expr)
                     }
                     TokenKind::Identifier(id)
-                        if parser.peek(0).kind == TokenKind::Comma
-                            || parser.peek(0).kind == TokenKind::RightBrace =>
+                        if parser.peek().kind == TokenKind::Comma
+                            || parser.peek().kind == TokenKind::RightBrace =>
                     {
                         PropOrSpread::Prop(Prop::Shorthand { key: id.to_owned() })
                     }
@@ -202,12 +202,12 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
 
                 properties.push(prop);
 
-                match parser.peek(0).kind {
+                match parser.peek().kind {
                     TokenKind::RightBrace => break,
                     TokenKind::Comma => {
                         parser.next();
                     }
-                    _ => panic!("Expected comma or right brace, got {:?}", parser.peek(0)),
+                    _ => panic!("Expected comma or right brace, got {:?}", parser.peek()),
                 }
             }
 
@@ -221,7 +221,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
         TokenKind::Fn => {
             let params = parse_params(parser);
 
-            let type_ann = match parser.peek(0).kind {
+            let type_ann = match parser.peek().kind {
                 TokenKind::Colon => {
                     parser.next();
                     Some(parse_type_ann(parser))
@@ -231,7 +231,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
 
             assert_eq!(parser.next().kind, TokenKind::Arrow);
 
-            match parser.peek(0).kind {
+            match parser.peek().kind {
                 TokenKind::LeftBrace => {
                     let block = parse_block(parser);
                     let loc = merge_locations(&first.loc, &block.loc);
@@ -268,7 +268,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             assert_eq!(parser.next().kind, TokenKind::RightParen);
             let consequent = parse_block(parser);
 
-            if parser.peek(0).kind == TokenKind::Else {
+            if parser.peek().kind == TokenKind::Else {
                 parser.next();
                 let alternate = parse_block(parser);
                 let loc = merge_locations(&first.loc, &alternate.loc);
@@ -297,11 +297,11 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             let mut loc = expr.loc.clone();
             assert_eq!(parser.next().kind, TokenKind::LeftBrace);
             let mut arms: Vec<MatchArm> = Vec::new();
-            while parser.peek(0).kind != TokenKind::RightBrace {
+            while parser.peek().kind != TokenKind::RightBrace {
                 let pattern = parse_pattern(parser);
                 assert_eq!(parser.next().kind, TokenKind::Arrow);
 
-                let (body, end) = match parser.peek(0).kind {
+                let (body, end) = match parser.peek().kind {
                     TokenKind::LeftBrace => {
                         let block = parse_block(parser);
                         let loc = block.loc.clone();
@@ -346,7 +346,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
 
                     let catch_body = parse_block(parser);
 
-                    match parser.peek(0).kind {
+                    match parser.peek().kind {
                         TokenKind::Finally => {
                             parser.next();
                             let finally_body = parse_block(parser);
@@ -436,7 +436,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
     };
 
     loop {
-        let mut next = parser.peek(0);
+        let next = parser.peek();
         if let TokenKind::Eof = next.kind {
             break;
         }
@@ -450,33 +450,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                 break;
             }
 
-            lhs = if next.kind == TokenKind::QuestionDot {
-                match parser.peek(1).kind {
-                    TokenKind::QuestionDot => panic!("unexpected token '?.'"),
-                    TokenKind::LeftParen | TokenKind::LeftBracket => {
-                        parser.next(); // consume '?.' token
-                    }
-                    _ => {
-                        // parse_postfix doesn't know how to deal with '?.' so
-                        // we need to replace it with '.' so that it can.
-                        next.kind = TokenKind::Dot;
-                        parser.replace(0, next);
-                    }
-                }
-
-                let lhs_loc = lhs.loc.clone();
-                let base = parse_postfix(parser, lhs, next_precedence);
-                let loc = merge_locations(&lhs_loc, &base.loc);
-
-                Expr {
-                    kind: ExprKind::OptionalChain {
-                        base: Box::new(base),
-                    },
-                    loc,
-                }
-            } else {
-                parse_postfix(parser, lhs, next_precedence)
-            };
+            lhs = parse_postfix(parser, lhs, next_precedence);
 
             continue;
         }
@@ -592,18 +566,18 @@ fn parse_postfix(parser: &mut Parser, lhs: Expr, next_precedence: (u8, Associati
         }
         TokenKind::LeftParen => {
             let mut args = Vec::new();
-            while parser.peek(0).kind != TokenKind::RightParen {
+            while parser.peek().kind != TokenKind::RightParen {
                 args.push(parse_expr(parser));
 
-                match parser.peek(0).kind {
+                match parser.peek().kind {
                     TokenKind::RightParen => break,
                     TokenKind::Comma => {
                         parser.next();
                     }
-                    _ => panic!("Expected comma or right paren, got {:?}", parser.peek(0)),
+                    _ => panic!("Expected comma or right paren, got {:?}", parser.peek()),
                 }
             }
-            let loc = merge_locations(&lhs.loc, &parser.peek(0).loc);
+            let loc = merge_locations(&lhs.loc, &parser.peek().loc);
             assert_eq!(parser.next().kind, TokenKind::RightParen);
             Expr {
                 kind: ExprKind::Call {
@@ -620,6 +594,35 @@ fn parse_postfix(parser: &mut Parser, lhs: Expr, next_precedence: (u8, Associati
                 kind: ExprKind::Member {
                     object: Box::new(lhs),
                     property: Box::new(rhs),
+                },
+                loc,
+            }
+        }
+        TokenKind::QuestionDot => {
+            let lhs_loc = lhs.loc.clone();
+
+            let base = match parser.peek().kind {
+                TokenKind::LeftParen | TokenKind::LeftBracket => {
+                    parse_postfix(parser, lhs, next_precedence)
+                }
+                _ => {
+                    let rhs = parse_expr_with_precedence(parser, precedence);
+                    let loc = merge_locations(&lhs.loc, &rhs.loc);
+                    Expr {
+                        kind: ExprKind::Member {
+                            object: Box::new(lhs),
+                            property: Box::new(rhs),
+                        },
+                        loc,
+                    }
+                }
+            };
+
+            let loc = merge_locations(&lhs_loc, &base.loc);
+
+            Expr {
+                kind: ExprKind::OptionalChain {
+                    base: Box::new(base),
                 },
                 loc,
             }
@@ -838,6 +841,12 @@ mod tests {
         insta::assert_debug_snapshot!(parse("a?.b?.c"));
         insta::assert_debug_snapshot!(parse("a?.[b]"));
         insta::assert_debug_snapshot!(parse("foo?.()"));
+    }
+
+    #[test]
+    #[should_panic]
+    fn parse_invalid_optional_chaining() {
+        insta::assert_debug_snapshot!(parse("x?.?.y"));
     }
 
     #[test]
