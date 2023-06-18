@@ -8,15 +8,14 @@ use crate::token::TokenKind;
 use crate::type_ann_parser::parse_type_ann;
 
 pub fn parse_stmt(parser: &mut Parser) -> Stmt {
-    let token = parser.peek(0);
-    // let next = parser.peek(1);
+    let token = parser.peek();
 
     match &token.kind {
         TokenKind::Let => {
             parser.next();
             let pattern = parse_pattern(parser);
 
-            let type_ann = match parser.peek(0).kind {
+            let type_ann = match parser.peek().kind {
                 TokenKind::Colon => {
                     parser.next();
                     Some(parse_type_ann(parser))
@@ -40,7 +39,7 @@ pub fn parse_stmt(parser: &mut Parser) -> Stmt {
         }
         TokenKind::Return => {
             parser.next();
-            let next = parser.peek(0);
+            let next = parser.peek();
             match next.kind {
                 TokenKind::Semicolon => {
                     parser.next();
@@ -76,7 +75,7 @@ pub fn parse_stmt(parser: &mut Parser) -> Stmt {
 
 pub fn parse_program(parser: &mut Parser) -> Vec<Stmt> {
     let mut stmts = Vec::new();
-    while parser.peek(0).kind != TokenKind::Eof {
+    while parser.peek().kind != TokenKind::Eof {
         stmts.push(parse_stmt(parser));
     }
     stmts
