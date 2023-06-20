@@ -27,7 +27,7 @@ Expr {
                         "b ",
                     ),
                     String(
-                        "c} d",
+                        " d",
                     ),
                 ],
                 exprs: [

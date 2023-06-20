@@ -26,11 +26,11 @@ StrTemplateLit {
             loc: SourceLocation {
                 start: Position {
                     line: 1,
-                    column: 5,
+                    column: 13,
                 },
                 end: Position {
                     line: 1,
-                    column: 6,
+                    column: 14,
                 },
             },
         },
@@ -43,7 +43,7 @@ StrTemplateLit {
                         "b",
                     ),
                     String(
-                        "c}",
+                        "",
                     ),
                 ],
                 exprs: [

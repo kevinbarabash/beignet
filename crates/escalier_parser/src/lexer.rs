@@ -13,7 +13,7 @@ use crate::token::*;
 pub struct Lexer<'a> {
     scanner: Scanner<'a>,
     brace_count: usize,
-    end_delim: Option<char>,
+    end_delims: Vec<char>,
     peeked: Option<Token>,
 }
 
@@ -35,7 +35,7 @@ impl<'a> Lexer<'a> {
         Self {
             scanner: Scanner::new(input),
             brace_count: 0,
-            end_delim: None,
+            end_delims: vec![],
             peeked: None,
         }
     }
@@ -58,8 +58,8 @@ impl<'a> Lexer<'a> {
             };
 
             // TODO: handle closing brace in string interpolations
-            match self.end_delim {
-                Some(c) if character == c && self.brace_count == 0 => {
+            match self.end_delims.last() {
+                Some(c) if character == *c && self.brace_count == 0 => {
                     self.scanner.pop();
                     return None;
                 }
@@ -587,10 +587,13 @@ impl<'a> Lexer<'a> {
                         });
                         self.scanner.pop();
 
-                        let mut lexer = self.clone();
-                        lexer.end_delim = Some('}');
+                        // let mut lexer = self.clone();
+                        // TODO: end_delim really needs to be a stack
+                        self.end_delims.push('}');
 
-                        exprs.push(parse_expr(&mut lexer));
+                        exprs.push(parse_expr(self));
+
+                        self.end_delims.pop();
 
                         string = String::new();
                         string_start = self.scanner.position();
@@ -733,7 +736,7 @@ impl<'a> Lexer<'a> {
                 self.scanner.pop();
 
                 let mut lexer = self.clone();
-                lexer.end_delim = Some('}');
+                lexer.end_delims.push('}');
 
                 let expr = parse_expr(&mut lexer);
 
@@ -896,7 +899,7 @@ mod tests {
 
     #[test]
     fn lex_nested_template_strings_complex() {
-        let mut lexer = Lexer::new(r#"`ids = ${ids.map(fn (id) => `x${id}`)).join(", ")}`"#);
+        let mut lexer = Lexer::new(r#"`ids = ${ids.map(fn (id) => `x${id}`).join(", ")}`"#);
 
         let tokens = lexer.lex();
 
