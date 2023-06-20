@@ -1,18 +1,31 @@
-use crate::identifier::{BindingIdent, Ident};
-use crate::jsx::{JSXElement, JSXFragment};
-use crate::literal::Literal;
-use crate::parser::Parser;
-use crate::pattern::*;
-use crate::source_location::merge_locations;
-use crate::token::TokenKind;
+use std::iter::Peekable;
 
-pub fn parse_jsx_element(parser: &mut Parser) -> JSXElement {
+use crate::jsx::{JSXElement, JSXFragment};
+use crate::lexer::*;
+use crate::source_location::*;
+use crate::token::{Token, TokenKind};
+
+const EOF: Token = Token {
+    kind: TokenKind::Eof,
+    loc: SourceLocation {
+        start: Position { line: 0, column: 0 },
+        end: Position { line: 0, column: 0 },
+    },
+};
+
+pub fn parse_jsx_element(lexer: &mut Peekable<Lexer>) -> JSXElement {
     todo!();
 }
 
-pub fn parse_jsx_fragment(parser: &mut Parser) -> JSXFragment {
-    assert_eq!(parser.next().kind, TokenKind::LessThan);
-    assert_eq!(parser.next().kind, TokenKind::GreaterThan);
+pub fn parse_jsx_fragment(lexer: &mut Peekable<Lexer>) -> JSXFragment {
+    assert_eq!(
+        lexer.next().unwrap_or(EOF.clone()).kind,
+        TokenKind::LessThan
+    );
+    assert_eq!(
+        lexer.next().unwrap_or(EOF.clone()).kind,
+        TokenKind::GreaterThan
+    );
 
     todo!();
 }

@@ -5,7 +5,6 @@ use crate::expr::Expr;
 use crate::expr_parser::parse_expr;
 use crate::identifier::Ident;
 use crate::jsx::*;
-use crate::parser::Parser;
 use crate::scanner::Scanner;
 use crate::source_location::*;
 use crate::token::*;
@@ -570,8 +569,7 @@ impl<'a> Lexer<'a> {
                         let mut lexer = self.clone();
                         lexer.end_delim = Some('}');
 
-                        let mut parser = Parser::new(lexer);
-                        exprs.push(parse_expr(&mut parser));
+                        exprs.push(parse_expr(&mut lexer.peekable()));
 
                         string = String::new();
                         string_start = self.scanner.position();
@@ -716,8 +714,7 @@ impl<'a> Lexer<'a> {
                 let mut lexer = self.clone();
                 lexer.end_delim = Some('}');
 
-                let mut parser = Parser::new(lexer);
-                let expr = parse_expr(&mut parser);
+                let expr = parse_expr(&mut lexer.peekable());
 
                 JSXAttr {
                     name,

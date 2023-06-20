@@ -86,7 +86,6 @@ pub enum TokenKind {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-
 pub struct Token {
     pub kind: TokenKind,
     pub loc: SourceLocation,

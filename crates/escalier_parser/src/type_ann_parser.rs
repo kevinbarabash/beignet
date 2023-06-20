@@ -1,12 +1,22 @@
+use std::iter::Peekable;
+
 use crate::func_param::parse_params;
-use crate::parser::Parser;
-use crate::source_location::merge_locations;
-use crate::token::TokenKind;
+use crate::lexer::*;
+use crate::source_location::*;
+use crate::token::{Token, TokenKind};
 use crate::type_ann::{ObjectProp, TypeAnn, TypeAnnKind};
 
-pub fn parse_type_ann(parser: &mut Parser) -> TypeAnn {
-    let mut loc = parser.peek().loc;
-    let mut kind = match parser.next().kind {
+const EOF: Token = Token {
+    kind: TokenKind::Eof,
+    loc: SourceLocation {
+        start: Position { line: 0, column: 0 },
+        end: Position { line: 0, column: 0 },
+    },
+};
+
+pub fn parse_type_ann(lexer: &mut Peekable<Lexer>) -> TypeAnn {
+    let mut loc = lexer.peek().unwrap_or(&EOF).loc.clone();
+    let mut kind = match lexer.next().unwrap_or(EOF.clone()).kind {
         TokenKind::BoolLit(value) => TypeAnnKind::BoolLit(value),
         TokenKind::Boolean => TypeAnnKind::Boolean,
         TokenKind::NumLit(value) => TypeAnnKind::NumLit(value),
@@ -19,16 +29,16 @@ pub fn parse_type_ann(parser: &mut Parser) -> TypeAnn {
         TokenKind::LeftBrace => {
             let mut props: Vec<ObjectProp> = vec![];
 
-            while parser.peek().kind != TokenKind::RightBrace {
-                if let TokenKind::Identifier(name) = parser.next().kind {
-                    let optional = if parser.peek().kind == TokenKind::Question {
-                        parser.next();
+            while lexer.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
+                if let TokenKind::Identifier(name) = lexer.next().unwrap_or(EOF.clone()).kind {
+                    let optional = if lexer.peek().unwrap_or(&EOF).kind == TokenKind::Question {
+                        lexer.next().unwrap_or(EOF.clone());
                         true
                     } else {
                         false
                     };
-                    assert_eq!(parser.next().kind, TokenKind::Colon);
-                    let type_ann = parse_type_ann(parser);
+                    assert_eq!(lexer.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
+                    let type_ann = parse_type_ann(lexer);
 
                     props.push(ObjectProp {
                         name,
@@ -37,8 +47,8 @@ pub fn parse_type_ann(parser: &mut Parser) -> TypeAnn {
                         type_ann,
                     });
 
-                    if parser.peek().kind == TokenKind::Comma {
-                        parser.next();
+                    if lexer.peek().unwrap_or(&EOF).kind == TokenKind::Comma {
+                        lexer.next().unwrap_or(EOF.clone());
                     } else {
                         break;
                     }
@@ -47,46 +57,55 @@ pub fn parse_type_ann(parser: &mut Parser) -> TypeAnn {
                 }
             }
 
-            loc = merge_locations(&loc, &parser.peek().loc);
-            assert_eq!(parser.next().kind, TokenKind::RightBrace);
+            loc = merge_locations(&loc, &lexer.peek().unwrap_or(&EOF).loc);
+            assert_eq!(
+                lexer.next().unwrap_or(EOF.clone()).kind,
+                TokenKind::RightBrace
+            );
 
             TypeAnnKind::Object(props)
         }
         TokenKind::LeftBracket => {
             let mut elems: Vec<TypeAnn> = vec![];
 
-            while parser.peek().kind != TokenKind::RightBracket {
-                elems.push(parse_type_ann(parser));
+            while lexer.peek().unwrap_or(&EOF).kind != TokenKind::RightBracket {
+                elems.push(parse_type_ann(lexer));
 
-                if parser.peek().kind == TokenKind::Comma {
-                    parser.next();
+                if lexer.peek().unwrap_or(&EOF).kind == TokenKind::Comma {
+                    lexer.next().unwrap_or(EOF.clone());
                 } else {
                     break;
                 }
             }
 
-            loc = merge_locations(&loc, &parser.peek().loc);
-            assert_eq!(parser.next().kind, TokenKind::RightBracket);
+            loc = merge_locations(&loc, &lexer.peek().unwrap_or(&EOF).loc);
+            assert_eq!(
+                lexer.next().unwrap_or(EOF.clone()).kind,
+                TokenKind::RightBracket
+            );
 
             TypeAnnKind::Tuple(elems)
         }
         TokenKind::Identifier(ident) => {
-            if parser.peek().kind == TokenKind::LessThan {
-                parser.next();
+            if lexer.peek().unwrap_or(&EOF).kind == TokenKind::LessThan {
+                lexer.next().unwrap_or(EOF.clone());
                 let mut params: Vec<TypeAnn> = vec![];
 
-                while parser.peek().kind != TokenKind::GreaterThan {
-                    params.push(parse_type_ann(parser));
+                while lexer.peek().unwrap_or(&EOF).kind != TokenKind::GreaterThan {
+                    params.push(parse_type_ann(lexer));
 
-                    if parser.peek().kind == TokenKind::Comma {
-                        parser.next();
+                    if lexer.peek().unwrap_or(&EOF).kind == TokenKind::Comma {
+                        lexer.next().unwrap_or(EOF.clone());
                     } else {
                         break;
                     }
                 }
 
-                loc = merge_locations(&loc, &parser.peek().loc);
-                assert_eq!(parser.next().kind, TokenKind::GreaterThan);
+                loc = merge_locations(&loc, &lexer.peek().unwrap_or(&EOF).loc);
+                assert_eq!(
+                    lexer.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::GreaterThan
+                );
 
                 TypeAnnKind::TypeRef(ident, Some(params))
             } else {
@@ -94,9 +113,9 @@ pub fn parse_type_ann(parser: &mut Parser) -> TypeAnn {
             }
         }
         TokenKind::Fn => {
-            let params = parse_params(parser);
-            assert_eq!(parser.next().kind, TokenKind::Arrow);
-            let return_type = Box::new(parse_type_ann(parser));
+            let params = parse_params(lexer);
+            assert_eq!(lexer.next().unwrap_or(EOF.clone()).kind, TokenKind::Arrow);
+            let return_type = Box::new(parse_type_ann(lexer));
 
             TypeAnnKind::Function(params, return_type)
         }
@@ -105,11 +124,14 @@ pub fn parse_type_ann(parser: &mut Parser) -> TypeAnn {
         }
     };
 
-    while parser.peek().kind == TokenKind::LeftBracket {
-        parser.next();
-        let right = parser.peek().loc;
+    while lexer.peek().unwrap_or(&EOF).kind == TokenKind::LeftBracket {
+        lexer.next().unwrap_or(EOF.clone());
+        let right = lexer.peek().unwrap_or(&EOF).loc.clone();
         let merged_loc = merge_locations(&loc, &right);
-        assert_eq!(parser.next().kind, TokenKind::RightBracket);
+        assert_eq!(
+            lexer.next().unwrap_or(EOF.clone()).kind,
+            TokenKind::RightBracket
+        );
         kind = TypeAnnKind::Array(Box::new(TypeAnn { kind, loc }));
         loc = merged_loc;
     }
@@ -123,9 +145,8 @@ mod tests {
     use crate::lexer::Lexer;
 
     pub fn parse(input: &str) -> TypeAnn {
-        let mut lexer = Lexer::new(input);
-        let mut parser = Parser::new(lexer);
-        parse_type_ann(&mut parser)
+        let lexer = Lexer::new(input);
+        parse_type_ann(&mut lexer.peekable())
     }
 
     #[test]
