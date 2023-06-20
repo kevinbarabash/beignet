@@ -1,5 +1,3 @@
-use std::iter::Peekable;
-
 use crate::expr_parser::parse_expr;
 use crate::lexer::*;
 use crate::pattern_parser::parse_pattern;
@@ -17,7 +15,7 @@ const EOF: Token = Token {
     },
 };
 
-pub fn parse_stmt(lexer: &mut Peekable<Lexer>) -> Stmt {
+pub fn parse_stmt(lexer: &mut Lexer) -> Stmt {
     let token = lexer.peek().unwrap_or(&EOF).clone();
 
     match &token.kind {
@@ -77,11 +75,13 @@ pub fn parse_stmt(lexer: &mut Peekable<Lexer>) -> Stmt {
             }
         }
         _ => {
+            eprintln!("--- parse_stmt (expr) ---");
             let expr = parse_expr(lexer);
             assert_eq!(
                 lexer.next().unwrap_or(EOF.clone()).kind,
                 TokenKind::Semicolon
             );
+            eprintln!("--- parse_stmt (assert semicolon) ---");
 
             let loc = expr.loc.clone();
             Stmt {
@@ -92,7 +92,7 @@ pub fn parse_stmt(lexer: &mut Peekable<Lexer>) -> Stmt {
     }
 }
 
-pub fn parse_program(lexer: &mut Peekable<Lexer>) -> Vec<Stmt> {
+pub fn parse_program(lexer: &mut Lexer) -> Vec<Stmt> {
     let mut stmts = Vec::new();
     while lexer.peek().unwrap_or(&EOF).kind != TokenKind::Eof {
         stmts.push(parse_stmt(lexer));
@@ -101,8 +101,8 @@ pub fn parse_program(lexer: &mut Peekable<Lexer>) -> Vec<Stmt> {
 }
 
 pub fn parse(input: &str) -> Vec<Stmt> {
-    let lexer = Lexer::new(input);
-    parse_program(&mut lexer.peekable())
+    let mut lexer = Lexer::new(input);
+    parse_program(&mut lexer)
 }
 
 #[cfg(test)]

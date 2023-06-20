@@ -1,5 +1,3 @@
-use std::iter::Peekable;
-
 use crate::lexer::*;
 use crate::pattern::Pattern;
 use crate::pattern_parser::parse_pattern;
@@ -23,7 +21,7 @@ pub struct FuncParam {
     pub optional: bool,
 }
 
-pub fn parse_params(lexer: &mut Peekable<Lexer>) -> Vec<FuncParam> {
+pub fn parse_params(lexer: &mut Lexer) -> Vec<FuncParam> {
     assert_eq!(
         lexer.next().unwrap_or(EOF.clone()).kind,
         TokenKind::LeftParen

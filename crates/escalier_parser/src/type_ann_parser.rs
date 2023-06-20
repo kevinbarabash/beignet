@@ -1,5 +1,3 @@
-use std::iter::Peekable;
-
 use crate::func_param::parse_params;
 use crate::lexer::*;
 use crate::source_location::*;
@@ -14,7 +12,7 @@ const EOF: Token = Token {
     },
 };
 
-pub fn parse_type_ann(lexer: &mut Peekable<Lexer>) -> TypeAnn {
+pub fn parse_type_ann(lexer: &mut Lexer) -> TypeAnn {
     let mut loc = lexer.peek().unwrap_or(&EOF).loc.clone();
     let mut kind = match lexer.next().unwrap_or(EOF.clone()).kind {
         TokenKind::BoolLit(value) => TypeAnnKind::BoolLit(value),
@@ -145,8 +143,8 @@ mod tests {
     use crate::lexer::Lexer;
 
     pub fn parse(input: &str) -> TypeAnn {
-        let lexer = Lexer::new(input);
-        parse_type_ann(&mut lexer.peekable())
+        let mut lexer = Lexer::new(input);
+        parse_type_ann(&mut lexer)
     }
 
     #[test]

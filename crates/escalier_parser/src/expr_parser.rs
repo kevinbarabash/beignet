@@ -1,4 +1,4 @@
-use std::iter::Peekable;
+// use std::iter::Peekable;
 
 use crate::expr::*;
 use crate::func_param::parse_params;
@@ -76,7 +76,9 @@ fn get_postfix_precedence(op: &Token) -> Option<(u8, Associativity)> {
 }
 
 // consumes leading '{' and trailing '}' tokens
-fn parse_block(lexer: &mut Peekable<Lexer>) -> Block {
+fn parse_block(lexer: &mut Lexer) -> Block {
+    eprintln!("--- parse_block (start) ---");
+
     let open = lexer.next().unwrap_or(EOF.clone());
     assert_eq!(open.kind, TokenKind::LeftBrace);
     let mut stmts = Vec::new();
@@ -87,10 +89,12 @@ fn parse_block(lexer: &mut Peekable<Lexer>) -> Block {
     assert_eq!(close.kind, TokenKind::RightBrace);
     let loc = merge_locations(&open.loc, &close.loc);
 
+    eprintln!("--- parse_block (end) ---");
+
     Block { loc, stmts }
 }
 
-fn parse_expr_with_precedence(lexer: &mut Peekable<Lexer>, precedence: u8) -> Expr {
+fn parse_expr_with_precedence(lexer: &mut Lexer, precedence: u8) -> Expr {
     let first = lexer.next().unwrap_or(EOF.clone());
 
     let mut lhs = match &first.kind {
@@ -582,11 +586,7 @@ fn parse_expr_with_precedence(lexer: &mut Peekable<Lexer>, precedence: u8) -> Ex
     lhs
 }
 
-fn parse_postfix(
-    lexer: &mut Peekable<Lexer>,
-    lhs: Expr,
-    next_precedence: (u8, Associativity),
-) -> Expr {
+fn parse_postfix(lexer: &mut Lexer, lhs: Expr, next_precedence: (u8, Associativity)) -> Expr {
     let precedence = if next_precedence.1 == Associativity::Left {
         next_precedence.0
     } else {
@@ -693,7 +693,7 @@ fn is_lvalue(expr: &Expr) -> bool {
     }
 }
 
-pub fn parse_expr(lexer: &mut Peekable<Lexer>) -> Expr {
+pub fn parse_expr(lexer: &mut Lexer) -> Expr {
     parse_expr_with_precedence(lexer, 0)
 }
 
@@ -703,8 +703,8 @@ mod tests {
     use crate::lexer::Lexer;
 
     pub fn parse(input: &str) -> Expr {
-        let lexer = Lexer::new(input);
-        parse_expr(&mut lexer.peekable())
+        let mut lexer = Lexer::new(input);
+        parse_expr(&mut lexer)
     }
 
     #[test]

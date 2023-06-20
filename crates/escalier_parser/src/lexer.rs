@@ -14,12 +14,43 @@ pub struct Lexer<'a> {
     scanner: Scanner<'a>,
     brace_count: usize,
     end_delim: Option<char>,
+    peeked: Option<Token>,
 }
 
 impl<'a> Iterator for Lexer<'a> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
+        let result = match &self.peeked {
+            Some(token) => Some(token.to_owned()),
+            None => self.take(),
+        };
+        self.peeked = None;
+        result
+    }
+}
+
+impl<'a> Lexer<'a> {
+    pub fn new(input: &'a str) -> Self {
+        Self {
+            scanner: Scanner::new(input),
+            brace_count: 0,
+            end_delim: None,
+            peeked: None,
+        }
+    }
+
+    pub fn peek(&mut self) -> Option<&Token> {
+        if self.peeked.is_none() {
+            self.peeked = self.take();
+        }
+        match &self.peeked {
+            Some(value) => Some(value),
+            _ => None,
+        }
+    }
+
+    fn take(&mut self) -> Option<Token> {
         if !self.scanner.is_done() {
             let mut character = match self.scanner.peek(0) {
                 Some(c) => c,
@@ -193,16 +224,6 @@ impl<'a> Iterator for Lexer<'a> {
             })
         } else {
             None
-        }
-    }
-}
-
-impl<'a> Lexer<'a> {
-    pub fn new(input: &'a str) -> Self {
-        Self {
-            scanner: Scanner::new(input),
-            brace_count: 0,
-            end_delim: None,
         }
     }
 
@@ -569,7 +590,7 @@ impl<'a> Lexer<'a> {
                         let mut lexer = self.clone();
                         lexer.end_delim = Some('}');
 
-                        exprs.push(parse_expr(&mut lexer.peekable()));
+                        exprs.push(parse_expr(&mut lexer));
 
                         string = String::new();
                         string_start = self.scanner.position();
@@ -714,7 +735,7 @@ impl<'a> Lexer<'a> {
                 let mut lexer = self.clone();
                 lexer.end_delim = Some('}');
 
-                let expr = parse_expr(&mut lexer.peekable());
+                let expr = parse_expr(&mut lexer);
 
                 JSXAttr {
                     name,
@@ -745,6 +766,10 @@ mod tests {
         assert_eq!(
             tokens[1].kind,
             crate::token::TokenKind::Identifier("_a0".to_string())
+        );
+        assert_eq!(
+            tokens[2].kind,
+            crate::token::TokenKind::NumLit("123".to_string())
         );
     }
 

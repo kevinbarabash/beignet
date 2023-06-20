@@ -1,5 +1,3 @@
-use std::iter::Peekable;
-
 use crate::identifier::{BindingIdent, Ident};
 use crate::lexer::Lexer;
 use crate::literal::Literal;
@@ -16,7 +14,7 @@ const EOF: Token = Token {
     },
 };
 
-pub fn parse_pattern(lexer: &mut Peekable<Lexer>) -> Pattern {
+pub fn parse_pattern(lexer: &mut Lexer) -> Pattern {
     let mut loc = lexer.peek().unwrap_or(&EOF).loc.clone();
     let kind = match lexer.next().unwrap_or(EOF.clone()).kind {
         TokenKind::Identifier(name) => PatternKind::Ident(BindingIdent {
@@ -163,8 +161,8 @@ mod tests {
     use crate::lexer::Lexer;
 
     pub fn parse(input: &str) -> Pattern {
-        let lexer = Lexer::new(input);
-        parse_pattern(&mut lexer.peekable())
+        let mut lexer = Lexer::new(input);
+        parse_pattern(&mut lexer)
     }
 
     #[test]
