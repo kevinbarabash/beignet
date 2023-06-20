@@ -1,11 +1,11 @@
 ---
-source: crates/escalier_parser/src/lexer.rs
-expression: "tokens[0].kind"
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(\"a + `b ${c} d`\")"
 ---
-StrTemplateLit {
-    parts: [
-        Token {
-            kind: StrLit(
+Expr {
+    kind: Binary {
+        left: Expr {
+            kind: Identifier(
                 "a",
             ),
             loc: SourceLocation {
@@ -15,35 +15,19 @@ StrTemplateLit {
                 },
                 end: Position {
                     line: 1,
-                    column: 3,
+                    column: 2,
                 },
             },
         },
-        Token {
-            kind: StrLit(
-                "",
-            ),
-            loc: SourceLocation {
-                start: Position {
-                    line: 1,
-                    column: 13,
-                },
-                end: Position {
-                    line: 1,
-                    column: 14,
-                },
-            },
-        },
-    ],
-    exprs: [
-        Expr {
+        op: Plus,
+        right: Expr {
             kind: TemplateLiteral {
                 parts: [
                     String(
-                        "b",
+                        "b ",
                     ),
                     String(
-                        "",
+                        " d",
                     ),
                 ],
                 exprs: [
@@ -54,11 +38,11 @@ StrTemplateLit {
                         loc: SourceLocation {
                             start: Position {
                                 line: 1,
-                                column: 9,
+                                column: 10,
                             },
                             end: Position {
                                 line: 1,
-                                column: 10,
+                                column: 11,
                             },
                         },
                     },
@@ -67,13 +51,23 @@ StrTemplateLit {
             loc: SourceLocation {
                 start: Position {
                     line: 1,
-                    column: 5,
+                    column: 4,
                 },
                 end: Position {
                     line: 1,
-                    column: 12,
+                    column: 15,
                 },
             },
         },
-    ],
+    },
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 15,
+        },
+    },
 }

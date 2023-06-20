@@ -5,7 +5,6 @@ use crate::expr::Expr;
 use crate::expr_parser::parse_expr;
 use crate::identifier::Ident;
 use crate::jsx::*;
-use crate::parser::Parser;
 use crate::scanner::Scanner;
 use crate::source_location::*;
 use crate::token::*;
@@ -14,13 +13,44 @@ use crate::token::*;
 pub struct Lexer<'a> {
     scanner: Scanner<'a>,
     brace_count: usize,
-    end_delim: Option<char>,
+    end_delims: Vec<char>,
+    peeked: Option<Token>,
 }
 
 impl<'a> Iterator for Lexer<'a> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
+        let result = match &self.peeked {
+            Some(token) => Some(token.to_owned()),
+            None => self.take(),
+        };
+        self.peeked = None;
+        result
+    }
+}
+
+impl<'a> Lexer<'a> {
+    pub fn new(input: &'a str) -> Self {
+        Self {
+            scanner: Scanner::new(input),
+            brace_count: 0,
+            end_delims: vec![],
+            peeked: None,
+        }
+    }
+
+    pub fn peek(&mut self) -> Option<&Token> {
+        if self.peeked.is_none() {
+            self.peeked = self.take();
+        }
+        match &self.peeked {
+            Some(value) => Some(value),
+            _ => None,
+        }
+    }
+
+    fn take(&mut self) -> Option<Token> {
         if !self.scanner.is_done() {
             let mut character = match self.scanner.peek(0) {
                 Some(c) => c,
@@ -28,8 +58,8 @@ impl<'a> Iterator for Lexer<'a> {
             };
 
             // TODO: handle closing brace in string interpolations
-            match self.end_delim {
-                Some(c) if character == c && self.brace_count == 0 => {
+            match self.end_delims.last() {
+                Some(c) if character == *c && self.brace_count == 0 => {
                     self.scanner.pop();
                     return None;
                 }
@@ -194,16 +224,6 @@ impl<'a> Iterator for Lexer<'a> {
             })
         } else {
             None
-        }
-    }
-}
-
-impl<'a> Lexer<'a> {
-    pub fn new(input: &'a str) -> Self {
-        Self {
-            scanner: Scanner::new(input),
-            brace_count: 0,
-            end_delim: None,
         }
     }
 
@@ -567,11 +587,13 @@ impl<'a> Lexer<'a> {
                         });
                         self.scanner.pop();
 
-                        let mut lexer = self.clone();
-                        lexer.end_delim = Some('}');
+                        // let mut lexer = self.clone();
+                        // TODO: end_delim really needs to be a stack
+                        self.end_delims.push('}');
 
-                        let mut parser = Parser::new(lexer);
-                        exprs.push(parse_expr(&mut parser));
+                        exprs.push(parse_expr(self));
+
+                        self.end_delims.pop();
 
                         string = String::new();
                         string_start = self.scanner.position();
@@ -714,10 +736,9 @@ impl<'a> Lexer<'a> {
                 self.scanner.pop();
 
                 let mut lexer = self.clone();
-                lexer.end_delim = Some('}');
+                lexer.end_delims.push('}');
 
-                let mut parser = Parser::new(lexer);
-                let expr = parse_expr(&mut parser);
+                let expr = parse_expr(&mut lexer);
 
                 JSXAttr {
                     name,
@@ -748,6 +769,10 @@ mod tests {
         assert_eq!(
             tokens[1].kind,
             crate::token::TokenKind::Identifier("_a0".to_string())
+        );
+        assert_eq!(
+            tokens[2].kind,
+            crate::token::TokenKind::NumLit("123".to_string())
         );
     }
 
@@ -874,7 +899,7 @@ mod tests {
 
     #[test]
     fn lex_nested_template_strings_complex() {
-        let mut lexer = Lexer::new(r#"`ids = ${ids.map(fn (id) => `x${id}`)).join(", ")}`"#);
+        let mut lexer = Lexer::new(r#"`ids = ${ids.map(fn (id) => `x${id}`).join(", ")}`"#);
 
         let tokens = lexer.lex();
 
