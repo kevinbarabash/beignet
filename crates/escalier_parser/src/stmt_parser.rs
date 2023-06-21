@@ -1,31 +1,42 @@
 use crate::expr_parser::parse_expr;
-use crate::lexer::Lexer;
-use crate::parser::Parser;
+use crate::lexer::*;
 use crate::pattern_parser::parse_pattern;
 use crate::source_location::merge_locations;
+use crate::source_location::*;
 use crate::stmt::{Stmt, StmtKind};
-use crate::token::TokenKind;
+use crate::token::{Token, TokenKind};
 use crate::type_ann_parser::parse_type_ann;
 
-pub fn parse_stmt(parser: &mut Parser) -> Stmt {
-    let token = parser.peek();
+const EOF: Token = Token {
+    kind: TokenKind::Eof,
+    loc: SourceLocation {
+        start: Position { line: 0, column: 0 },
+        end: Position { line: 0, column: 0 },
+    },
+};
+
+pub fn parse_stmt(lexer: &mut Lexer) -> Stmt {
+    let token = lexer.peek().unwrap_or(&EOF).clone();
 
     match &token.kind {
         TokenKind::Let => {
-            parser.next();
-            let pattern = parse_pattern(parser);
+            lexer.next().unwrap_or(EOF.clone());
+            let pattern = parse_pattern(lexer);
 
-            let type_ann = match parser.peek().kind {
+            let type_ann = match lexer.peek().unwrap_or(&EOF).kind {
                 TokenKind::Colon => {
-                    parser.next();
-                    Some(parse_type_ann(parser))
+                    lexer.next().unwrap_or(EOF.clone());
+                    Some(parse_type_ann(lexer))
                 }
                 _ => None,
             };
 
-            assert_eq!(parser.next().kind, TokenKind::Assign);
-            let expr = parse_expr(parser);
-            assert_eq!(parser.next().kind, TokenKind::Semicolon);
+            assert_eq!(lexer.next().unwrap_or(EOF.clone()).kind, TokenKind::Assign);
+            let expr = parse_expr(lexer);
+            assert_eq!(
+                lexer.next().unwrap_or(EOF.clone()).kind,
+                TokenKind::Semicolon
+            );
 
             let loc = merge_locations(&token.loc, &expr.loc);
             Stmt {
@@ -38,19 +49,22 @@ pub fn parse_stmt(parser: &mut Parser) -> Stmt {
             }
         }
         TokenKind::Return => {
-            parser.next();
-            let next = parser.peek();
+            lexer.next().unwrap_or(EOF.clone());
+            let next = lexer.peek().unwrap_or(&EOF).clone();
             match next.kind {
                 TokenKind::Semicolon => {
-                    parser.next();
+                    lexer.next().unwrap_or(EOF.clone());
                     Stmt {
                         kind: StmtKind::Return { arg: None },
                         loc: merge_locations(&token.loc, &next.loc),
                     }
                 }
                 _ => {
-                    let arg = parse_expr(parser);
-                    assert_eq!(parser.next().kind, TokenKind::Semicolon);
+                    let arg = parse_expr(lexer);
+                    assert_eq!(
+                        lexer.next().unwrap_or(EOF.clone()).kind,
+                        TokenKind::Semicolon
+                    );
 
                     let loc = merge_locations(&next.loc, &arg.loc);
                     Stmt {
@@ -61,8 +75,13 @@ pub fn parse_stmt(parser: &mut Parser) -> Stmt {
             }
         }
         _ => {
-            let expr = parse_expr(parser);
-            assert_eq!(parser.next().kind, TokenKind::Semicolon);
+            eprintln!("--- parse_stmt (expr) ---");
+            let expr = parse_expr(lexer);
+            assert_eq!(
+                lexer.next().unwrap_or(EOF.clone()).kind,
+                TokenKind::Semicolon
+            );
+            eprintln!("--- parse_stmt (assert semicolon) ---");
 
             let loc = expr.loc.clone();
             Stmt {
@@ -73,18 +92,17 @@ pub fn parse_stmt(parser: &mut Parser) -> Stmt {
     }
 }
 
-pub fn parse_program(parser: &mut Parser) -> Vec<Stmt> {
+pub fn parse_program(lexer: &mut Lexer) -> Vec<Stmt> {
     let mut stmts = Vec::new();
-    while parser.peek().kind != TokenKind::Eof {
-        stmts.push(parse_stmt(parser));
+    while lexer.peek().unwrap_or(&EOF).kind != TokenKind::Eof {
+        stmts.push(parse_stmt(lexer));
     }
     stmts
 }
 
 pub fn parse(input: &str) -> Vec<Stmt> {
-    let tokens = Lexer::new(input).lex();
-    let mut parser = Parser::new(Box::new(tokens.into_iter()));
-    parse_program(&mut parser)
+    let mut lexer = Lexer::new(input);
+    parse_program(&mut lexer)
 }
 
 #[cfg(test)]

@@ -9,7 +9,7 @@ expression: "parse(\"let {x, y} = point;\")"
                 loc: SourceLocation {
                     start: Position {
                         line: 1,
-                        column: 5,
+                        column: 4,
                     },
                     end: Position {
                         line: 1,

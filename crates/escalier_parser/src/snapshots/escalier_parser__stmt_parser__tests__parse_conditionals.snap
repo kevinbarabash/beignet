@@ -84,7 +84,7 @@ expression: "parse(\"let max = if (x > y) { x; } else { y; };\")"
                         loc: SourceLocation {
                             start: Position {
                                 line: 1,
-                                column: 22,
+                                column: 21,
                             },
                             end: Position {
                                 line: 1,
@@ -128,7 +128,7 @@ expression: "parse(\"let max = if (x > y) { x; } else { y; };\")"
                             loc: SourceLocation {
                                 start: Position {
                                     line: 1,
-                                    column: 34,
+                                    column: 33,
                                 },
                                 end: Position {
                                     line: 1,

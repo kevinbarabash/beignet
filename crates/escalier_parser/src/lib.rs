@@ -6,7 +6,6 @@ mod jsx;
 mod jsx_parser;
 mod lexer;
 mod literal;
-mod parser;
 mod pattern;
 mod pattern_parser;
 mod precedence;

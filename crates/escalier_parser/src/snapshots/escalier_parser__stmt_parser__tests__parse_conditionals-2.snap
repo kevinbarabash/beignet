@@ -26,7 +26,7 @@ expression: "parse(\"if (foo) { console.log(foo); };\")"
                         loc: SourceLocation {
                             start: Position {
                                 line: 1,
-                                column: 10,
+                                column: 9,
                             },
                             end: Position {
                                 line: 1,

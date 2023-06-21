@@ -42,7 +42,7 @@ TypeAnn {
                                     loc: SourceLocation {
                                         start: Position {
                                             line: 1,
-                                            column: 9,
+                                            column: 8,
                                         },
                                         end: Position {
                                             line: 1,
@@ -56,7 +56,7 @@ TypeAnn {
                     loc: SourceLocation {
                         start: Position {
                             line: 1,
-                            column: 5,
+                            column: 4,
                         },
                         end: Position {
                             line: 1,

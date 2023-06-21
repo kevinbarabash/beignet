@@ -8,7 +8,7 @@ Expr {
             loc: SourceLocation {
                 start: Position {
                     line: 2,
-                    column: 16,
+                    column: 15,
                 },
                 end: Position {
                     line: 6,

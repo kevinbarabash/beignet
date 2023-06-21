@@ -133,7 +133,7 @@ Pattern {
                             loc: SourceLocation {
                                 start: Position {
                                     line: 1,
-                                    column: 31,
+                                    column: 30,
                                 },
                                 end: Position {
                                     line: 1,
@@ -182,7 +182,7 @@ Pattern {
                                                     loc: SourceLocation {
                                                         start: Position {
                                                             line: 1,
-                                                            column: 38,
+                                                            column: 37,
                                                         },
                                                         end: Position {
                                                             line: 1,

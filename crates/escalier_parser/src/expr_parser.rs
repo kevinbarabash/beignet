@@ -1,13 +1,23 @@
+// use std::iter::Peekable;
+
 use crate::expr::*;
 use crate::func_param::parse_params;
+use crate::lexer::*;
 use crate::literal::Literal;
-use crate::parser::Parser;
 use crate::pattern_parser::parse_pattern;
 use crate::precedence::{Associativity, Operator, PRECEDENCE_TABLE};
 use crate::source_location::*;
 use crate::stmt_parser::parse_stmt;
 use crate::token::{Token, TokenKind};
 use crate::type_ann_parser::parse_type_ann;
+
+const EOF: Token = Token {
+    kind: TokenKind::Eof,
+    loc: SourceLocation {
+        start: Position { line: 0, column: 0 },
+        end: Position { line: 0, column: 0 },
+    },
+};
 
 fn get_prefix_precedence(op: &Token) -> Option<(u8, Associativity)> {
     match &op.kind {
@@ -66,22 +76,26 @@ fn get_postfix_precedence(op: &Token) -> Option<(u8, Associativity)> {
 }
 
 // consumes leading '{' and trailing '}' tokens
-fn parse_block(parser: &mut Parser) -> Block {
-    let open = parser.next();
+fn parse_block(lexer: &mut Lexer) -> Block {
+    eprintln!("--- parse_block (start) ---");
+
+    let open = lexer.next().unwrap_or(EOF.clone());
     assert_eq!(open.kind, TokenKind::LeftBrace);
     let mut stmts = Vec::new();
-    while parser.peek().kind != TokenKind::RightBrace {
-        stmts.push(parse_stmt(parser));
+    while lexer.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
+        stmts.push(parse_stmt(lexer));
     }
-    let close = parser.next();
+    let close = lexer.next().unwrap_or(EOF.clone());
     assert_eq!(close.kind, TokenKind::RightBrace);
     let loc = merge_locations(&open.loc, &close.loc);
+
+    eprintln!("--- parse_block (end) ---");
 
     Block { loc, stmts }
 }
 
-fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
-    let first = parser.next();
+fn parse_expr_with_precedence(lexer: &mut Lexer, precedence: u8) -> Expr {
+    let first = lexer.next().unwrap_or(EOF.clone());
 
     let mut lhs = match &first.kind {
         TokenKind::NumLit(n) => Expr {
@@ -122,40 +136,46 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             loc: first.loc.clone(),
         },
         TokenKind::LeftParen => {
-            let lhs = parse_expr_with_precedence(parser, 0);
-            assert_eq!(parser.next().kind, TokenKind::RightParen);
+            let lhs = parse_expr_with_precedence(lexer, 0);
+            assert_eq!(
+                lexer.next().unwrap_or(EOF.clone()).kind,
+                TokenKind::RightParen
+            );
             lhs
         }
         TokenKind::LeftBracket => {
             let start = first;
             let mut elements: Vec<ExprOrSpread> = Vec::new();
-            while parser.peek().kind != TokenKind::RightBracket {
-                let elem = match parser.peek().kind {
+            while lexer.peek().unwrap_or(&EOF).kind != TokenKind::RightBracket {
+                let elem = match lexer.peek().unwrap_or(&EOF).kind {
                     TokenKind::DotDotDot => {
-                        parser.next(); // consumes `...`
-                        let expr = parse_expr_with_precedence(parser, 0);
+                        lexer.next().unwrap_or(EOF.clone()); // consumes `...`
+                        let expr = parse_expr_with_precedence(lexer, 0);
                         ExprOrSpread::Spread(expr)
                     }
                     _ => {
-                        let expr = parse_expr_with_precedence(parser, 0);
+                        let expr = parse_expr_with_precedence(lexer, 0);
                         ExprOrSpread::Expr(expr)
                     }
                 };
 
                 elements.push(elem);
 
-                match parser.peek().kind {
+                match lexer.peek().unwrap_or(&EOF).kind {
                     TokenKind::RightBracket => break,
                     TokenKind::Comma => {
-                        parser.next();
+                        lexer.next().unwrap_or(EOF.clone());
                     }
-                    _ => panic!("Expected comma or right bracket, got {:?}", parser.peek()),
+                    _ => panic!(
+                        "Expected comma or right bracket, got {:?}",
+                        lexer.peek().unwrap_or(&EOF)
+                    ),
                 }
             }
 
-            assert_eq!(parser.peek().kind, TokenKind::RightBracket);
+            assert_eq!(lexer.peek().unwrap_or(&EOF).kind, TokenKind::RightBracket);
 
-            let end = parser.next();
+            let end = lexer.next().unwrap_or(EOF.clone());
 
             Expr {
                 kind: ExprKind::Tuple { elements },
@@ -165,17 +185,17 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
         TokenKind::LeftBrace => {
             let start = first;
             let mut properties: Vec<PropOrSpread> = Vec::new();
-            while parser.peek().kind != TokenKind::RightBrace {
-                let next = parser.next();
+            while lexer.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
+                let next = lexer.next().unwrap_or(EOF.clone());
 
                 let prop = match &next.kind {
                     TokenKind::DotDotDot => {
-                        let expr = parse_expr_with_precedence(parser, 0);
+                        let expr = parse_expr_with_precedence(lexer, 0);
                         PropOrSpread::Spread(expr)
                     }
                     TokenKind::Identifier(id)
-                        if parser.peek().kind == TokenKind::Comma
-                            || parser.peek().kind == TokenKind::RightBrace =>
+                        if lexer.peek().unwrap_or(&EOF).kind == TokenKind::Comma
+                            || lexer.peek().unwrap_or(&EOF).kind == TokenKind::RightBrace =>
                     {
                         PropOrSpread::Prop(Prop::Shorthand { key: id.to_owned() })
                     }
@@ -185,16 +205,19 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                             TokenKind::StrLit(s) => ObjectKey::String(s.to_owned()),
                             TokenKind::NumLit(n) => ObjectKey::Number(n.to_owned()),
                             TokenKind::LeftBracket => {
-                                let expr = parse_expr_with_precedence(parser, 0);
-                                assert_eq!(parser.next().kind, TokenKind::RightBracket);
+                                let expr = parse_expr_with_precedence(lexer, 0);
+                                assert_eq!(
+                                    lexer.next().unwrap_or(EOF.clone()).kind,
+                                    TokenKind::RightBracket
+                                );
                                 ObjectKey::Computed(Box::new(expr))
                             }
                             _ => panic!("Expected identifier or string literal, got {:?}", next),
                         };
 
-                        assert_eq!(parser.next().kind, TokenKind::Colon);
+                        assert_eq!(lexer.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
 
-                        let value = parse_expr(parser);
+                        let value = parse_expr(lexer);
 
                         PropOrSpread::Prop(Prop::Property { key, value })
                     }
@@ -202,16 +225,19 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
 
                 properties.push(prop);
 
-                match parser.peek().kind {
+                match lexer.peek().unwrap_or(&EOF).kind {
                     TokenKind::RightBrace => break,
                     TokenKind::Comma => {
-                        parser.next();
+                        lexer.next().unwrap_or(EOF.clone());
                     }
-                    _ => panic!("Expected comma or right brace, got {:?}", parser.peek()),
+                    _ => panic!(
+                        "Expected comma or right brace, got {:?}",
+                        lexer.peek().unwrap_or(&EOF)
+                    ),
                 }
             }
 
-            let end = parser.next();
+            let end = lexer.next().unwrap_or(EOF.clone());
 
             Expr {
                 kind: ExprKind::Object { properties },
@@ -219,21 +245,21 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             }
         }
         TokenKind::Fn => {
-            let params = parse_params(parser);
+            let params = parse_params(lexer);
 
-            let type_ann = match parser.peek().kind {
+            let type_ann = match lexer.peek().unwrap_or(&EOF).kind {
                 TokenKind::Colon => {
-                    parser.next();
-                    Some(parse_type_ann(parser))
+                    lexer.next().unwrap_or(EOF.clone());
+                    Some(parse_type_ann(lexer))
                 }
                 _ => None,
             };
 
-            assert_eq!(parser.next().kind, TokenKind::Arrow);
+            assert_eq!(lexer.next().unwrap_or(EOF.clone()).kind, TokenKind::Arrow);
 
-            match parser.peek().kind {
+            match lexer.peek().unwrap_or(&EOF).kind {
                 TokenKind::LeftBrace => {
-                    let block = parse_block(parser);
+                    let block = parse_block(lexer);
                     let loc = merge_locations(&first.loc, &block.loc);
                     let body = BlockOrExpr::Block(block);
 
@@ -247,7 +273,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                     }
                 }
                 _ => {
-                    let expr = parse_expr(parser);
+                    let expr = parse_expr(lexer);
                     let loc = merge_locations(&first.loc, &expr.loc);
                     let body = BlockOrExpr::Expr(Box::new(expr));
 
@@ -263,14 +289,20 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             }
         }
         TokenKind::If => {
-            assert_eq!(parser.next().kind, TokenKind::LeftParen);
-            let cond = parse_expr(parser);
-            assert_eq!(parser.next().kind, TokenKind::RightParen);
-            let consequent = parse_block(parser);
+            assert_eq!(
+                lexer.next().unwrap_or(EOF.clone()).kind,
+                TokenKind::LeftParen
+            );
+            let cond = parse_expr(lexer);
+            assert_eq!(
+                lexer.next().unwrap_or(EOF.clone()).kind,
+                TokenKind::RightParen
+            );
+            let consequent = parse_block(lexer);
 
-            if parser.peek().kind == TokenKind::Else {
-                parser.next();
-                let alternate = parse_block(parser);
+            if lexer.peek().unwrap_or(&EOF).kind == TokenKind::Else {
+                lexer.next().unwrap_or(EOF.clone());
+                let alternate = parse_block(lexer);
                 let loc = merge_locations(&first.loc, &alternate.loc);
                 Expr {
                     kind: ExprKind::IfElse {
@@ -293,28 +325,31 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             }
         }
         TokenKind::Match => {
-            let expr = parse_expr(parser);
+            let expr = parse_expr(lexer);
             let mut loc = expr.loc.clone();
-            assert_eq!(parser.next().kind, TokenKind::LeftBrace);
+            assert_eq!(
+                lexer.next().unwrap_or(EOF.clone()).kind,
+                TokenKind::LeftBrace
+            );
             let mut arms: Vec<MatchArm> = Vec::new();
-            while parser.peek().kind != TokenKind::RightBrace {
-                let pattern = parse_pattern(parser);
-                assert_eq!(parser.next().kind, TokenKind::Arrow);
+            while lexer.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
+                let pattern = parse_pattern(lexer);
+                assert_eq!(lexer.next().unwrap_or(EOF.clone()).kind, TokenKind::Arrow);
 
-                let (body, end) = match parser.peek().kind {
+                let (body, end) = match lexer.peek().unwrap_or(&EOF).kind {
                     TokenKind::LeftBrace => {
-                        let block = parse_block(parser);
+                        let block = parse_block(lexer);
                         let loc = block.loc.clone();
                         (BlockOrExpr::Block(block), loc)
                     }
                     _ => {
-                        let expr = parse_expr(parser);
+                        let expr = parse_expr(lexer);
                         let loc = expr.loc.clone();
                         (BlockOrExpr::Expr(Box::new(expr)), loc)
                     }
                 };
 
-                assert_eq!(parser.next().kind, TokenKind::Comma);
+                assert_eq!(lexer.next().unwrap_or(EOF.clone()).kind, TokenKind::Comma);
 
                 arms.push(MatchArm {
                     loc: merge_locations(&pattern.loc, &end),
@@ -325,7 +360,10 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                 loc = merge_locations(&loc, &end);
             }
 
-            assert_eq!(parser.next().kind, TokenKind::RightBrace);
+            assert_eq!(
+                lexer.next().unwrap_or(EOF.clone()).kind,
+                TokenKind::RightBrace
+            );
 
             Expr {
                 kind: ExprKind::Match {
@@ -336,20 +374,26 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
             }
         }
         TokenKind::Try => {
-            let try_body = parse_block(parser);
+            let try_body = parse_block(lexer);
 
-            match parser.next().kind {
+            match lexer.next().unwrap_or(EOF.clone()).kind {
                 TokenKind::Catch => {
-                    assert_eq!(parser.next().kind, TokenKind::LeftParen);
-                    let error = parse_pattern(parser);
-                    assert_eq!(parser.next().kind, TokenKind::RightParen);
+                    assert_eq!(
+                        lexer.next().unwrap_or(EOF.clone()).kind,
+                        TokenKind::LeftParen
+                    );
+                    let error = parse_pattern(lexer);
+                    assert_eq!(
+                        lexer.next().unwrap_or(EOF.clone()).kind,
+                        TokenKind::RightParen
+                    );
 
-                    let catch_body = parse_block(parser);
+                    let catch_body = parse_block(lexer);
 
-                    match parser.peek().kind {
+                    match lexer.peek().unwrap_or(&EOF).kind {
                         TokenKind::Finally => {
-                            parser.next();
-                            let finally_body = parse_block(parser);
+                            lexer.next().unwrap_or(EOF.clone());
+                            let finally_body = parse_block(lexer);
                             let loc = merge_locations(&first.loc, &finally_body.loc);
 
                             Expr {
@@ -382,7 +426,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                     }
                 }
                 TokenKind::Finally => {
-                    let finally_body = parse_block(parser);
+                    let finally_body = parse_block(lexer);
                     let loc = merge_locations(&first.loc, &finally_body.loc);
 
                     Expr {
@@ -399,14 +443,14 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                 }
             }
 
-            // assert_eq!(parser.next().kind, TokenKind::Catch);
-            // assert_eq!(parser.next().kind, TokenKind::LeftParen);
+            // assert_eq!(lexer.next().unwrap_or(EOF.clone()).kind, TokenKind::Catch);
+            // assert_eq!(lexer.next().unwrap_or(EOF.clone()).kind, TokenKind::LeftParen);
             // let error = parse_pattern(parser);
-            // assert_eq!(parser.next().kind, TokenKind::RightParen);
+            // assert_eq!(lexer.next().unwrap_or(EOF.clone()).kind, TokenKind::RightParen);
             // let catch_body = parse_block(parser); // TODO: create a BlockStmt and include .loc in it
         }
         TokenKind::Do => {
-            let body = parse_block(parser);
+            let body = parse_block(lexer);
             let loc = merge_locations(&first.loc, &body.loc);
 
             Expr {
@@ -421,7 +465,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                     TokenKind::Minus => UnaryOp::Minus,
                     _ => panic!("unexpected token: {:?}", t),
                 };
-                let rhs = parse_expr_with_precedence(parser, precendence.0);
+                let rhs = parse_expr_with_precedence(lexer, precendence.0);
                 let loc = merge_locations(&first.loc, &rhs.loc);
                 Expr {
                     kind: ExprKind::Unary {
@@ -436,7 +480,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
     };
 
     loop {
-        let next = parser.peek();
+        let next = lexer.peek().unwrap_or(&EOF).clone();
         if let TokenKind::Eof = next.kind {
             break;
         }
@@ -450,7 +494,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                 break;
             }
 
-            lhs = parse_postfix(parser, lhs, next_precedence);
+            lhs = parse_postfix(lexer, lhs, next_precedence);
 
             continue;
         }
@@ -460,7 +504,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                 break;
             }
 
-            parser.next();
+            lexer.next().unwrap_or(EOF.clone());
 
             let op: Option<AssignOp> = match &next.kind {
                 TokenKind::Assign => Some(AssignOp::Assign),
@@ -483,7 +527,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                     next_precedence.0 - 1
                 };
 
-                let rhs = parse_expr_with_precedence(parser, precedence);
+                let rhs = parse_expr_with_precedence(lexer, precedence);
                 let loc = merge_locations(&lhs.loc, &rhs.loc);
 
                 lhs = Expr {
@@ -521,7 +565,7 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
                 next_precedence.0 - 1
             };
 
-            let rhs = parse_expr_with_precedence(parser, precedence);
+            let rhs = parse_expr_with_precedence(lexer, precedence);
             let loc = merge_locations(&lhs.loc, &rhs.loc);
 
             lhs = Expr {
@@ -542,20 +586,23 @@ fn parse_expr_with_precedence(parser: &mut Parser, precedence: u8) -> Expr {
     lhs
 }
 
-fn parse_postfix(parser: &mut Parser, lhs: Expr, next_precedence: (u8, Associativity)) -> Expr {
+fn parse_postfix(lexer: &mut Lexer, lhs: Expr, next_precedence: (u8, Associativity)) -> Expr {
     let precedence = if next_precedence.1 == Associativity::Left {
         next_precedence.0
     } else {
         next_precedence.0 - 1
     };
 
-    let next = parser.next();
+    let next = lexer.next().unwrap_or(EOF.clone());
 
     match &next.kind {
         TokenKind::LeftBracket => {
-            let rhs = parse_expr(parser);
+            let rhs = parse_expr(lexer);
             let loc = merge_locations(&lhs.loc, &rhs.loc);
-            assert_eq!(parser.next().kind, TokenKind::RightBracket);
+            assert_eq!(
+                lexer.next().unwrap_or(EOF.clone()).kind,
+                TokenKind::RightBracket
+            );
             Expr {
                 kind: ExprKind::Index {
                     left: Box::new(lhs),
@@ -566,19 +613,25 @@ fn parse_postfix(parser: &mut Parser, lhs: Expr, next_precedence: (u8, Associati
         }
         TokenKind::LeftParen => {
             let mut args = Vec::new();
-            while parser.peek().kind != TokenKind::RightParen {
-                args.push(parse_expr(parser));
+            while lexer.peek().unwrap_or(&EOF).kind != TokenKind::RightParen {
+                args.push(parse_expr(lexer));
 
-                match parser.peek().kind {
+                match lexer.peek().unwrap_or(&EOF).kind {
                     TokenKind::RightParen => break,
                     TokenKind::Comma => {
-                        parser.next();
+                        lexer.next().unwrap_or(EOF.clone());
                     }
-                    _ => panic!("Expected comma or right paren, got {:?}", parser.peek()),
+                    _ => panic!(
+                        "Expected comma or right paren, got {:?}",
+                        lexer.peek().unwrap_or(&EOF)
+                    ),
                 }
             }
-            let loc = merge_locations(&lhs.loc, &parser.peek().loc);
-            assert_eq!(parser.next().kind, TokenKind::RightParen);
+            let loc = merge_locations(&lhs.loc, &lexer.peek().unwrap_or(&EOF).loc);
+            assert_eq!(
+                lexer.next().unwrap_or(EOF.clone()).kind,
+                TokenKind::RightParen
+            );
             Expr {
                 kind: ExprKind::Call {
                     callee: Box::new(lhs),
@@ -588,7 +641,7 @@ fn parse_postfix(parser: &mut Parser, lhs: Expr, next_precedence: (u8, Associati
             }
         }
         TokenKind::Dot => {
-            let rhs = parse_expr_with_precedence(parser, precedence);
+            let rhs = parse_expr_with_precedence(lexer, precedence);
             let loc = merge_locations(&lhs.loc, &rhs.loc);
             Expr {
                 kind: ExprKind::Member {
@@ -601,12 +654,12 @@ fn parse_postfix(parser: &mut Parser, lhs: Expr, next_precedence: (u8, Associati
         TokenKind::QuestionDot => {
             let lhs_loc = lhs.loc.clone();
 
-            let base = match parser.peek().kind {
+            let base = match lexer.peek().unwrap_or(&EOF).kind {
                 TokenKind::LeftParen | TokenKind::LeftBracket => {
-                    parse_postfix(parser, lhs, next_precedence)
+                    parse_postfix(lexer, lhs, next_precedence)
                 }
                 _ => {
-                    let rhs = parse_expr_with_precedence(parser, precedence);
+                    let rhs = parse_expr_with_precedence(lexer, precedence);
                     let loc = merge_locations(&lhs.loc, &rhs.loc);
                     Expr {
                         kind: ExprKind::Member {
@@ -640,8 +693,8 @@ fn is_lvalue(expr: &Expr) -> bool {
     }
 }
 
-pub fn parse_expr(parser: &mut Parser) -> Expr {
-    parse_expr_with_precedence(parser, 0)
+pub fn parse_expr(lexer: &mut Lexer) -> Expr {
+    parse_expr_with_precedence(lexer, 0)
 }
 
 #[cfg(test)]
@@ -651,9 +704,7 @@ mod tests {
 
     pub fn parse(input: &str) -> Expr {
         let mut lexer = Lexer::new(input);
-        let tokens = lexer.lex();
-        let mut parser = Parser::new(Box::new(tokens.into_iter()));
-        parse_expr(&mut parser)
+        parse_expr(&mut lexer)
     }
 
     #[test]
@@ -966,5 +1017,10 @@ mod tests {
     #[should_panic]
     fn parse_invalid_lvalues_fail() {
         insta::assert_debug_snapshot!(parse("a + b = x"));
+    }
+
+    #[test]
+    fn parse_exprs_with_template_strings() {
+        insta::assert_debug_snapshot!(parse("a + `b ${c} d`"));
     }
 }

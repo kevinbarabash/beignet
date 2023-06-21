@@ -1,13 +1,22 @@
 use crate::identifier::{BindingIdent, Ident};
+use crate::lexer::Lexer;
 use crate::literal::Literal;
-use crate::parser::Parser;
 use crate::pattern::*;
-use crate::source_location::merge_locations;
+use crate::source_location::{merge_locations, Position, SourceLocation};
+use crate::token::Token;
 use crate::token::TokenKind;
 
-pub fn parse_pattern(parser: &mut Parser) -> Pattern {
-    let mut loc = parser.peek().loc;
-    let kind = match parser.next().kind {
+const EOF: Token = Token {
+    kind: TokenKind::Eof,
+    loc: SourceLocation {
+        start: Position { line: 0, column: 0 },
+        end: Position { line: 0, column: 0 },
+    },
+};
+
+pub fn parse_pattern(lexer: &mut Lexer) -> Pattern {
+    let mut loc = lexer.peek().unwrap_or(&EOF).loc.clone();
+    let kind = match lexer.next().unwrap_or(EOF.clone()).kind {
         TokenKind::Identifier(name) => PatternKind::Ident(BindingIdent {
             name,
             loc: loc.clone(),
@@ -29,36 +38,39 @@ pub fn parse_pattern(parser: &mut Parser) -> Pattern {
         TokenKind::LeftBracket => {
             let mut elems: Vec<Option<TuplePatElem>> = vec![];
             let mut has_rest = false;
-            while parser.peek().kind != TokenKind::RightBracket {
-                match &parser.peek().kind {
+            while lexer.peek().unwrap_or(&EOF).kind != TokenKind::RightBracket {
+                match &lexer.peek().unwrap_or(&EOF).kind {
                     TokenKind::DotDotDot => {
                         if has_rest {
                             panic!("only one rest pattern is allowed per object pattern");
                         }
                         elems.push(Some(TuplePatElem {
-                            pattern: parse_pattern(parser),
+                            pattern: parse_pattern(lexer),
                             init: None,
                         }));
                         has_rest = true;
                     }
                     _ => {
                         elems.push(Some(TuplePatElem {
-                            pattern: parse_pattern(parser),
+                            pattern: parse_pattern(lexer),
                             init: None,
                         }));
                     }
                 }
 
                 // TODO: don't allow commas after rest pattern
-                if parser.peek().kind == TokenKind::Comma {
-                    parser.next();
+                if lexer.peek().unwrap_or(&EOF).kind == TokenKind::Comma {
+                    lexer.next();
                 } else {
                     break;
                 }
             }
 
-            loc = merge_locations(&loc, &parser.peek().loc);
-            assert_eq!(parser.next().kind, TokenKind::RightBracket);
+            loc = merge_locations(&loc, &lexer.peek().unwrap_or(&EOF).loc);
+            assert_eq!(
+                lexer.next().unwrap_or(EOF.clone()).kind,
+                TokenKind::RightBracket
+            );
 
             PatternKind::Tuple(TuplePat {
                 elems,
@@ -69,21 +81,22 @@ pub fn parse_pattern(parser: &mut Parser) -> Pattern {
             let mut props: Vec<ObjectPatProp> = vec![];
             let mut has_rest = false;
 
-            while parser.peek().kind != TokenKind::RightBrace {
-                let first = parser.peek();
-                match &parser.next().kind {
+            while lexer.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
+                let first = lexer.peek().unwrap_or(&EOF);
+                let first_loc = first.loc.clone();
+                match &lexer.next().unwrap_or(EOF.clone()).kind {
                     TokenKind::Identifier(name) => {
-                        if parser.peek().kind == TokenKind::Colon {
-                            parser.next();
+                        if lexer.peek().unwrap_or(&EOF).kind == TokenKind::Colon {
+                            lexer.next();
 
-                            let pattern = parse_pattern(parser);
+                            let pattern = parse_pattern(lexer);
 
                             // TODO: handle `var` and `mut` modifiers
                             props.push(ObjectPatProp::KeyValue(KeyValuePatProp {
-                                loc: merge_locations(&first.loc, &pattern.loc),
+                                loc: merge_locations(&first_loc, &pattern.loc),
                                 key: Ident {
                                     name: name.clone(),
-                                    loc: first.loc,
+                                    loc: first_loc,
                                 },
                                 value: Box::new(pattern),
                                 init: None,
@@ -91,18 +104,18 @@ pub fn parse_pattern(parser: &mut Parser) -> Pattern {
                         } else {
                             // TODO: handle `var` and `mut` modifiers
                             props.push(ObjectPatProp::Shorthand(ShorthandPatProp {
-                                loc: first.loc.clone(),
+                                loc: first_loc.clone(),
                                 ident: BindingIdent {
                                     name: name.clone(),
-                                    loc: first.loc,
+                                    loc: first_loc,
                                     mutable: false,
                                 },
                                 init: None,
                             }))
                         }
 
-                        if parser.peek().kind == TokenKind::Comma {
-                            parser.next();
+                        if lexer.peek().unwrap_or(&EOF).kind == TokenKind::Comma {
+                            lexer.next();
                         }
                     }
                     TokenKind::DotDotDot => {
@@ -110,7 +123,7 @@ pub fn parse_pattern(parser: &mut Parser) -> Pattern {
                             panic!("only one rest pattern is allowed per object pattern");
                         }
                         props.push(ObjectPatProp::Rest(RestPat {
-                            arg: Box::new(parse_pattern(parser)),
+                            arg: Box::new(parse_pattern(lexer)),
                         }));
                         has_rest = true;
                     }
@@ -118,8 +131,11 @@ pub fn parse_pattern(parser: &mut Parser) -> Pattern {
                 }
             }
 
-            loc = merge_locations(&loc, &parser.peek().loc);
-            assert_eq!(parser.next().kind, TokenKind::RightBrace);
+            loc = merge_locations(&loc, &lexer.peek().unwrap_or(&EOF).loc);
+            assert_eq!(
+                lexer.next().unwrap_or(EOF.clone()).kind,
+                TokenKind::RightBrace
+            );
 
             PatternKind::Object(ObjectPat {
                 props,
@@ -128,7 +144,7 @@ pub fn parse_pattern(parser: &mut Parser) -> Pattern {
         }
         // This code can be called when parsing rest patterns in function params.
         TokenKind::DotDotDot => PatternKind::Rest(RestPat {
-            arg: Box::new(parse_pattern(parser)),
+            arg: Box::new(parse_pattern(lexer)),
         }),
         TokenKind::Underscore => PatternKind::Wildcard,
         token => {
@@ -146,9 +162,7 @@ mod tests {
 
     pub fn parse(input: &str) -> Pattern {
         let mut lexer = Lexer::new(input);
-        let tokens = lexer.lex();
-        let mut parser = Parser::new(Box::new(tokens.into_iter()));
-        parse_pattern(&mut parser)
+        parse_pattern(&mut lexer)
     }
 
     #[test]

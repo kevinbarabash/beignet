@@ -1,9 +1,18 @@
-use crate::parser::Parser;
+use crate::lexer::*;
 use crate::pattern::Pattern;
 use crate::pattern_parser::parse_pattern;
-use crate::token::TokenKind;
+use crate::source_location::*;
+use crate::token::{Token, TokenKind};
 use crate::type_ann::TypeAnn;
 use crate::type_ann_parser::parse_type_ann;
+
+const EOF: Token = Token {
+    kind: TokenKind::Eof,
+    loc: SourceLocation {
+        start: Position { line: 0, column: 0 },
+        end: Position { line: 0, column: 0 },
+    },
+};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct FuncParam {
@@ -12,25 +21,28 @@ pub struct FuncParam {
     pub optional: bool,
 }
 
-pub fn parse_params(parser: &mut Parser) -> Vec<FuncParam> {
-    assert_eq!(parser.next().kind, TokenKind::LeftParen);
+pub fn parse_params(lexer: &mut Lexer) -> Vec<FuncParam> {
+    assert_eq!(
+        lexer.next().unwrap_or(EOF.clone()).kind,
+        TokenKind::LeftParen
+    );
 
     let mut params: Vec<FuncParam> = Vec::new();
-    while parser.peek().kind != TokenKind::RightParen {
-        let pattern = parse_pattern(parser);
+    while lexer.peek().unwrap_or(&EOF).kind != TokenKind::RightParen {
+        let pattern = parse_pattern(lexer);
 
-        let optional = if let TokenKind::Question = parser.peek().kind {
-            parser.next();
+        let optional = if let TokenKind::Question = lexer.peek().unwrap_or(&EOF).kind {
+            lexer.next().unwrap_or(EOF.clone());
             true
         } else {
             false
         };
 
-        if let TokenKind::Colon = parser.peek().kind {
-            parser.next();
+        if let TokenKind::Colon = lexer.peek().unwrap_or(&EOF).kind {
+            lexer.next().unwrap_or(EOF.clone());
             params.push(FuncParam {
                 pattern,
-                type_ann: Some(parse_type_ann(parser)),
+                type_ann: Some(parse_type_ann(lexer)),
                 optional,
             });
         } else {
@@ -43,16 +55,22 @@ pub fn parse_params(parser: &mut Parser) -> Vec<FuncParam> {
 
         // TODO: param defaults
 
-        match parser.peek().kind {
+        match lexer.peek().unwrap_or(&EOF).kind {
             TokenKind::RightParen => break,
             TokenKind::Comma => {
-                parser.next();
+                lexer.next().unwrap_or(EOF.clone());
             }
-            _ => panic!("Expected comma or right paren, got {:?}", parser.peek()),
+            _ => panic!(
+                "Expected comma or right paren, got {:?}",
+                lexer.peek().unwrap_or(&EOF)
+            ),
         }
     }
 
-    assert_eq!(parser.next().kind, TokenKind::RightParen);
+    assert_eq!(
+        lexer.next().unwrap_or(EOF.clone()).kind,
+        TokenKind::RightParen
+    );
 
     params
 }
