@@ -9,11 +9,18 @@ use crate::scanner::Scanner;
 use crate::source_location::*;
 use crate::token::*;
 
-#[derive(Clone)]
+// #[derive(Clone)]
+pub enum LexerMode {
+    Normal,
+    Expression,
+    JSXText,
+}
+
+// #[derive(Clone)]
 pub struct Lexer<'a> {
     scanner: Scanner<'a>,
     brace_count: usize,
-    end_delims: Vec<char>,
+    modes: Vec<LexerMode>,
     peeked: Option<Token>,
 }
 
@@ -34,8 +41,8 @@ impl<'a> Lexer<'a> {
     pub fn new(input: &'a str) -> Self {
         Self {
             scanner: Scanner::new(input),
-            brace_count: 0,
-            end_delims: vec![],
+            brace_count: 0, // we need separate brace counts for each mode
+            modes: vec![LexerMode::Normal],
             peeked: None,
         }
     }
@@ -58,8 +65,8 @@ impl<'a> Lexer<'a> {
             };
 
             // TODO: handle closing brace in string interpolations
-            match self.end_delims.last() {
-                Some(c) if character == *c && self.brace_count == 0 => {
+            match self.modes.last() {
+                Some(LexerMode::Expression) if character == '}' && self.brace_count == 0 => {
                     self.scanner.pop();
                     return None;
                 }
@@ -225,180 +232,6 @@ impl<'a> Lexer<'a> {
         } else {
             None
         }
-    }
-
-    pub fn lex(&mut self) -> Vec<Token> {
-        self.lex_to(None)
-    }
-
-    pub fn lex_to(&mut self, delim: Option<char>) -> Vec<Token> {
-        let mut tokens = Vec::new();
-        let mut brace_count = 0;
-        // let mut bracket_count = 0;
-        // let mut paren_count = 0;
-        while !self.scanner.is_done() {
-            let character = self.scanner.peek(0).unwrap();
-
-            match delim {
-                Some(c) if character == c && brace_count == 0 => {
-                    self.scanner.pop();
-                    return tokens;
-                }
-                _ => (),
-            }
-
-            let start = self.scanner.position();
-            let kind = match character {
-                'a'..='z' | 'A'..='Z' | '_' => {
-                    tokens.push(self.lex_ident_or_keyword());
-                    continue;
-                }
-                '0'..='9' => {
-                    tokens.push(self.lex_number());
-                    continue;
-                }
-                '"' => {
-                    tokens.push(self.lex_string());
-                    continue;
-                }
-                '`' => {
-                    tokens.push(self.lex_template_string(start));
-                    continue;
-                }
-                '=' => match self.scanner.peek(1) {
-                    Some('=') => {
-                        self.scanner.pop();
-                        TokenKind::Equals
-                    }
-                    Some('>') => {
-                        self.scanner.pop();
-                        TokenKind::Arrow
-                    }
-                    _ => TokenKind::Assign,
-                },
-                '+' => match self.scanner.peek(1) {
-                    Some('=') => {
-                        self.scanner.pop();
-                        TokenKind::PlusAssign
-                    }
-                    _ => TokenKind::Plus,
-                },
-                '-' => match self.scanner.peek(1) {
-                    Some('=') => {
-                        self.scanner.pop();
-                        TokenKind::MinusAssign
-                    }
-                    _ => TokenKind::Minus,
-                },
-                '*' => match self.scanner.peek(1) {
-                    Some('=') => {
-                        self.scanner.pop();
-                        TokenKind::TimesAssign
-                    }
-                    _ => TokenKind::Times,
-                },
-                '/' => match self.scanner.peek(1) {
-                    Some('=') => {
-                        self.scanner.pop();
-                        TokenKind::DivideAssign
-                    }
-                    _ => TokenKind::Divide,
-                },
-                '%' => match self.scanner.peek(1) {
-                    Some('=') => {
-                        self.scanner.pop();
-                        TokenKind::ModuloAssign
-                    }
-                    _ => TokenKind::Modulo,
-                },
-                '(' => TokenKind::LeftParen,
-                ')' => TokenKind::RightParen,
-                '{' => {
-                    brace_count += 1;
-                    TokenKind::LeftBrace
-                }
-                '}' => {
-                    brace_count -= 1;
-                    TokenKind::RightBrace
-                }
-                '[' => TokenKind::LeftBracket,
-                ']' => TokenKind::RightBracket,
-                ',' => TokenKind::Comma,
-                '.' => {
-                    if self.scanner.peek(1) == Some('.') {
-                        if self.scanner.peek(2) == Some('.') {
-                            self.scanner.pop();
-                            self.scanner.pop();
-                            TokenKind::DotDotDot
-                        } else {
-                            self.scanner.pop();
-                            TokenKind::DotDot
-                        }
-                    } else {
-                        TokenKind::Dot
-                    }
-                }
-                ';' => TokenKind::Semicolon,
-                ':' => TokenKind::Colon,
-                '?' => match self.scanner.peek(1) {
-                    Some('.') => {
-                        self.scanner.pop();
-                        TokenKind::QuestionDot
-                    }
-                    _ => TokenKind::Question,
-                },
-                '<' => match self.scanner.peek(1) {
-                    Some('=') => {
-                        self.scanner.pop();
-                        TokenKind::LessThanOrEqual
-                    }
-                    _ => TokenKind::LessThan,
-                },
-                '>' => match self.scanner.peek(1) {
-                    Some('=') => {
-                        self.scanner.pop();
-                        TokenKind::GreaterThanOrEqual
-                    }
-                    _ => TokenKind::GreaterThan,
-                },
-                '!' => match self.scanner.peek(1) {
-                    Some('=') => {
-                        self.scanner.pop();
-                        TokenKind::NotEquals
-                    }
-                    _ => panic!("Unexpected character: '{}'", character),
-                },
-                '&' => match self.scanner.peek(1) {
-                    Some('&') => {
-                        self.scanner.pop();
-                        TokenKind::And
-                    }
-                    _ => panic!("Unexpected character: '{}'", character),
-                },
-                '|' => match self.scanner.peek(1) {
-                    Some('|') => {
-                        self.scanner.pop();
-                        TokenKind::Or
-                    }
-                    _ => panic!("Unexpected character: '{}'", character),
-                },
-                _ => {
-                    // It's okay fo
-                    // TODO: Error handling
-                    self.scanner.pop();
-                    continue;
-                }
-            };
-            self.scanner.pop();
-            tokens.push(Token {
-                kind,
-                loc: SourceLocation {
-                    start,
-                    end: self.scanner.position(),
-                },
-            });
-        }
-        tokens
     }
 
     pub fn lex_ident_or_keyword(&mut self) -> Token {
@@ -587,13 +420,11 @@ impl<'a> Lexer<'a> {
                         });
                         self.scanner.pop();
 
-                        // let mut lexer = self.clone();
-                        // TODO: end_delim really needs to be a stack
-                        self.end_delims.push('}');
+                        self.modes.push(LexerMode::Expression);
 
                         exprs.push(parse_expr(self));
 
-                        self.end_delims.pop();
+                        self.modes.pop();
 
                         string = String::new();
                         string_start = self.scanner.position();
@@ -735,10 +566,11 @@ impl<'a> Lexer<'a> {
             '{' => {
                 self.scanner.pop();
 
-                let mut lexer = self.clone();
-                lexer.end_delims.push('}');
+                self.modes.push(LexerMode::Expression);
 
-                let expr = parse_expr(&mut lexer);
+                let expr = parse_expr(self);
+
+                self.modes.pop();
 
                 JSXAttr {
                     name,
@@ -758,9 +590,9 @@ mod tests {
 
     #[test]
     fn lex_identifiers() {
-        let mut lexer = Lexer::new("abc _a0 123");
+        let lexer = Lexer::new("abc _a0 123");
 
-        let tokens = lexer.lex();
+        let tokens = lexer.collect::<Vec<_>>();
 
         assert_eq!(
             tokens[0].kind,
@@ -778,9 +610,9 @@ mod tests {
 
     #[test]
     fn lex_numbers() {
-        let mut lexer = Lexer::new("123 1.23");
+        let lexer = Lexer::new("123 1.23");
 
-        let tokens = lexer.lex();
+        let tokens = lexer.collect::<Vec<_>>();
 
         assert_eq!(
             tokens[0].kind,
@@ -795,16 +627,16 @@ mod tests {
     #[test]
     #[should_panic = "Unexpected character: '.'"]
     fn lex_number_multiple_decimals_error() {
-        let mut lexer = Lexer::new("1.2.3");
+        let lexer = Lexer::new("1.2.3");
 
-        lexer.lex();
+        lexer.collect::<Vec<_>>();
     }
 
     #[test]
     fn lex_comparison_ops() {
-        let mut lexer = Lexer::new("> >= < <= == !=");
+        let lexer = Lexer::new("> >= < <= == !=");
 
-        let tokens = lexer.lex();
+        let tokens = lexer.collect::<Vec<_>>();
 
         assert_eq!(tokens[0].kind, crate::token::TokenKind::GreaterThan);
         assert_eq!(tokens[1].kind, crate::token::TokenKind::GreaterThanOrEqual);
@@ -817,16 +649,16 @@ mod tests {
     #[test]
     #[should_panic = "Unexpected character: '!'"]
     fn lex_unexpected_exclamation() {
-        let mut lexer = Lexer::new("1 ! 2");
+        let lexer = Lexer::new("1 ! 2");
 
-        lexer.lex();
+        lexer.collect::<Vec<_>>();
     }
 
     #[test]
     fn lex_string() {
-        let mut lexer = Lexer::new("\"abc\"");
+        let lexer = Lexer::new("\"abc\"");
 
-        let tokens = lexer.lex();
+        let tokens = lexer.collect::<Vec<_>>();
 
         assert_eq!(
             tokens[0].kind,
@@ -836,9 +668,9 @@ mod tests {
 
     #[test]
     fn lex_string_escapes() {
-        let mut lexer = Lexer::new(r#""\"\\\/\b\f\n\r\t\u221E""#);
+        let lexer = Lexer::new(r#""\"\\\/\b\f\n\r\t\u221E""#);
 
-        let tokens = lexer.lex();
+        let tokens = lexer.collect::<Vec<_>>();
 
         assert_eq!(
             tokens[0].kind,
@@ -848,18 +680,18 @@ mod tests {
 
     #[test]
     fn lex_template_string() {
-        let mut lexer = Lexer::new("`abc`");
+        let lexer = Lexer::new("`abc`");
 
-        let tokens = lexer.lex();
+        let tokens = lexer.collect::<Vec<_>>();
 
         insta::assert_debug_snapshot!(tokens[0].kind);
     }
 
     #[test]
     fn lex_template_string_escapes() {
-        let mut lexer = Lexer::new(r#"`\`\/\b\f\n\r\t\u221E`"#);
+        let lexer = Lexer::new(r#"`\`\/\b\f\n\r\t\u221E`"#);
 
-        let tokens = lexer.lex();
+        let tokens = lexer.collect::<Vec<_>>();
 
         assert_eq!(
             tokens[0].kind,
@@ -881,36 +713,36 @@ mod tests {
 
     #[test]
     fn lex_template_string_with_exprs() {
-        let mut lexer = Lexer::new("`abc${x}`");
+        let lexer = Lexer::new("`abc${x}`");
 
-        let tokens = lexer.lex();
+        let tokens = lexer.collect::<Vec<_>>();
 
         insta::assert_debug_snapshot!(tokens[0].kind);
     }
 
     #[test]
     fn lex_nested_template_strings() {
-        let mut lexer = Lexer::new(r#"`a${`b${c}`}`"#);
+        let lexer = Lexer::new(r#"`a${`b${c}`}`"#);
 
-        let tokens = lexer.lex();
+        let tokens = lexer.collect::<Vec<_>>();
 
         insta::assert_debug_snapshot!(tokens[0].kind);
     }
 
     #[test]
     fn lex_nested_template_strings_complex() {
-        let mut lexer = Lexer::new(r#"`ids = ${ids.map(fn (id) => `x${id}`).join(", ")}`"#);
+        let lexer = Lexer::new(r#"`ids = ${ids.map(fn (id) => `x${id}`).join(", ")}`"#);
 
-        let tokens = lexer.lex();
+        let tokens = lexer.collect::<Vec<_>>();
 
         insta::assert_debug_snapshot!(tokens[0].kind);
     }
 
     #[test]
     fn lex_dots() {
-        let mut lexer = Lexer::new(". .. ...");
+        let lexer = Lexer::new(". .. ...");
 
-        let tokens = lexer.lex();
+        let tokens = lexer.collect::<Vec<_>>();
 
         assert_eq!(tokens[0].kind, crate::token::TokenKind::Dot);
         assert_eq!(tokens[1].kind, crate::token::TokenKind::DotDot);
@@ -919,9 +751,9 @@ mod tests {
 
     #[test]
     fn lex_dots_reverse() {
-        let mut lexer = Lexer::new("... .. .");
+        let lexer = Lexer::new("... .. .");
 
-        let tokens = lexer.lex();
+        let tokens = lexer.collect::<Vec<_>>();
 
         assert_eq!(tokens[0].kind, crate::token::TokenKind::DotDotDot);
         assert_eq!(tokens[1].kind, crate::token::TokenKind::DotDot);
@@ -930,9 +762,9 @@ mod tests {
 
     #[test]
     fn lex_assignment() {
-        let mut lexer = Lexer::new("= += -= *= /= %=");
+        let lexer = Lexer::new("= += -= *= /= %=");
 
-        let tokens = lexer.lex();
+        let tokens = lexer.collect::<Vec<_>>();
 
         assert_eq!(tokens[0].kind, crate::token::TokenKind::Assign);
         assert_eq!(tokens[1].kind, crate::token::TokenKind::PlusAssign);
