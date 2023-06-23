@@ -1,0 +1,144 @@
+---
+source: crates/escalier_parser/src/jsx_parser.rs
+expression: jsx_elem
+---
+JSXElement {
+    opening: JSXOpeningElement {
+        name: Ident(
+            Ident {
+                name: "",
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 2,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 2,
+                    },
+                },
+            },
+        ),
+        attrs: [],
+        self_closing: false,
+    },
+    children: [
+        Element(
+            JSXElement {
+                opening: JSXOpeningElement {
+                    name: Ident(
+                        Ident {
+                            name: "span",
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 4,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 8,
+                                },
+                            },
+                        },
+                    ),
+                    attrs: [],
+                    self_closing: false,
+                },
+                children: [
+                    Text(
+                        JSXText {
+                            value: "Hello, ",
+                        },
+                    ),
+                ],
+                closing: Some(
+                    JSXClosingElement {
+                        name: Ident(
+                            Ident {
+                                name: "span",
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 1,
+                                        column: 18,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 22,
+                                    },
+                                },
+                            },
+                        ),
+                    },
+                ),
+            },
+        ),
+        Element(
+            JSXElement {
+                opening: JSXOpeningElement {
+                    name: Ident(
+                        Ident {
+                            name: "span",
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 24,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 28,
+                                },
+                            },
+                        },
+                    ),
+                    attrs: [],
+                    self_closing: false,
+                },
+                children: [
+                    Text(
+                        JSXText {
+                            value: "world!",
+                        },
+                    ),
+                ],
+                closing: Some(
+                    JSXClosingElement {
+                        name: Ident(
+                            Ident {
+                                name: "span",
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 1,
+                                        column: 37,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 41,
+                                    },
+                                },
+                            },
+                        ),
+                    },
+                ),
+            },
+        ),
+    ],
+    closing: Some(
+        JSXClosingElement {
+            name: Ident(
+                Ident {
+                    name: "",
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 44,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 44,
+                        },
+                    },
+                },
+            ),
+        },
+    ),
+}

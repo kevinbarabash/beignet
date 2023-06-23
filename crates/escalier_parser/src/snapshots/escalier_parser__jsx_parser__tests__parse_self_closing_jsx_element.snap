@@ -1,0 +1,40 @@
+---
+source: crates/escalier_parser/src/jsx_parser.rs
+expression: jsx_elem
+---
+JSXElement {
+    opening: JSXOpeningElement {
+        name: Ident(
+            Ident {
+                name: "Foo",
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 2,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 5,
+                    },
+                },
+            },
+        ),
+        attrs: [
+            JSXAttr {
+                name: "bar",
+                value: Some(
+                    Str(
+                        "baz",
+                    ),
+                ),
+            },
+            JSXAttr {
+                name: "qux",
+                value: None,
+            },
+        ],
+        self_closing: true,
+    },
+    children: [],
+    closing: None,
+}

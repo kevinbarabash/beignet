@@ -1,6 +1,5 @@
 use crate::expr::Expr;
-use crate::jsx::{JSXElement, JSXFragment};
-use crate::source_location::SourceLocation;
+use crate::source_location::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TokenKind {
@@ -16,8 +15,6 @@ pub enum TokenKind {
     },
     Null,
     Undefined,
-    JSXElement(JSXElement),
-    JSXFragment(JSXFragment),
 
     // Types
     Number,
@@ -90,3 +87,11 @@ pub struct Token {
     pub kind: TokenKind,
     pub loc: SourceLocation,
 }
+
+pub const EOF: Token = Token {
+    kind: TokenKind::Eof,
+    loc: SourceLocation {
+        start: Position { line: 0, column: 0 },
+        end: Position { line: 0, column: 0 },
+    },
+};

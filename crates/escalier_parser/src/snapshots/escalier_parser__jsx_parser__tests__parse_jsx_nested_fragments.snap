@@ -1,0 +1,102 @@
+---
+source: crates/escalier_parser/src/jsx_parser.rs
+expression: jsx_elem
+---
+JSXElement {
+    opening: JSXOpeningElement {
+        name: Ident(
+            Ident {
+                name: "",
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 2,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 2,
+                    },
+                },
+            },
+        ),
+        attrs: [],
+        self_closing: false,
+    },
+    children: [
+        Text(
+            JSXText {
+                value: "a",
+            },
+        ),
+        Fragment(
+            JSXFragment {
+                opening: JSXOpeningFragment,
+                children: [
+                    ExprContainer(
+                        JSXExprContainer {
+                            expr: Expr {
+                                kind: Identifier(
+                                    "b",
+                                ),
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 1,
+                                        column: 7,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 8,
+                                    },
+                                },
+                            },
+                        },
+                    ),
+                    ExprContainer(
+                        JSXExprContainer {
+                            expr: Expr {
+                                kind: Identifier(
+                                    "c",
+                                ),
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 1,
+                                        column: 10,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 11,
+                                    },
+                                },
+                            },
+                        },
+                    ),
+                ],
+                closing: JSXClosingFragment,
+            },
+        ),
+        Text(
+            JSXText {
+                value: "d",
+            },
+        ),
+    ],
+    closing: Some(
+        JSXClosingElement {
+            name: Ident(
+                Ident {
+                    name: "",
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 18,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 18,
+                        },
+                    },
+                },
+            ),
+        },
+    ),
+}
