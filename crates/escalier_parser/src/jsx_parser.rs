@@ -2,7 +2,7 @@ use crate::identifier::Ident;
 use crate::jsx::*;
 use crate::parser::*;
 use crate::source_location::*;
-use crate::token::{Token, TokenKind};
+use crate::token::TokenKind;
 
 impl<'a> Parser<'a> {
     pub fn parse_jsx_element(&mut self) -> JSXElement {
@@ -90,8 +90,11 @@ impl<'a> Parser<'a> {
         assert_eq!(self.scanner.pop(), Some('/'));
         assert_eq!(self.scanner.pop(), Some('>'));
 
-        todo!();
-        // JSXFragment { children }
+        JSXFragment {
+            opening: JSXOpeningFragment {},
+            children,
+            closing: JSXClosingFragment {},
+        }
     }
 
     pub fn parse_jsx_attribute(&mut self) -> JSXAttr {
@@ -145,12 +148,14 @@ impl<'a> Parser<'a> {
         while !self.scanner.is_done() {
             match self.scanner.peek(0).unwrap() {
                 '<' => {
-                    // TODO: skip of whitespace
                     if self.scanner.peek(1) == Some('/') {
                         break;
+                    } else if self.scanner.peek(1) == Some('>') {
+                        let fragment = self.parse_jsx_fragment();
+                        children.push(JSXElementChild::Fragment(Box::new(fragment)));
                     } else {
-                        let elem = self.parse_jsx_element();
-                        children.push(JSXElementChild::Element(Box::new(elem)));
+                        let element = self.parse_jsx_element();
+                        children.push(JSXElementChild::Element(Box::new(element)));
                     }
                 }
                 '{' => {
@@ -246,6 +251,24 @@ mod tests {
     #[test]
     fn parse_jsx_element_with_children_elements() {
         let mut parser = Parser::new(r#"<ul><li>one</li><li>two</li></ul>"#);
+
+        let jsx_elem = parser.parse_jsx_element();
+
+        insta::assert_debug_snapshot!(jsx_elem);
+    }
+
+    #[test]
+    fn parse_jsx_fragment() {
+        let mut parser = Parser::new(r#"<><span>Hello, </span><span>world!</span></>"#);
+
+        let jsx_elem = parser.parse_jsx_element();
+
+        insta::assert_debug_snapshot!(jsx_elem);
+    }
+
+    #[test]
+    fn parse_jsx_nested_fragments() {
+        let mut parser = Parser::new(r#"<>a<>{b}{c}</>d</>"#);
 
         let jsx_elem = parser.parse_jsx_element();
 

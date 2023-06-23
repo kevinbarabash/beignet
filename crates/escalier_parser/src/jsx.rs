@@ -85,7 +85,7 @@ pub enum JSXElementChild {
     ExprContainer(JSXExprContainer),
     SpreadChild(JSXSpreadChild),
     Element(Box<JSXElement>),
-    JSXFragment(JSXFragment),
+    Fragment(Box<JSXFragment>),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
