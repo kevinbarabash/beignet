@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(\"fn (props) => <div>{props.children}</div>\")"
+expression: "parse(\"fn (props) => <>{props.children}</>\")"
 ---
 Expr {
     kind: Function {
@@ -40,27 +40,9 @@ Expr {
         ],
         body: Expr(
             Expr {
-                kind: JSXElement(
-                    JSXElement {
-                        opening: JSXOpeningElement {
-                            name: Ident(
-                                Ident {
-                                    name: "div",
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 16,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 19,
-                                        },
-                                    },
-                                },
-                            ),
-                            attrs: [],
-                            self_closing: false,
-                        },
+                kind: JSXFragment(
+                    JSXFragment {
+                        opening: JSXOpeningFragment,
                         children: [
                             ExprContainer(
                                 JSXExprContainer {
@@ -73,11 +55,11 @@ Expr {
                                                 loc: SourceLocation {
                                                     start: Position {
                                                         line: 1,
-                                                        column: 21,
+                                                        column: 18,
                                                     },
                                                     end: Position {
                                                         line: 1,
-                                                        column: 26,
+                                                        column: 23,
                                                     },
                                                 },
                                             },
@@ -88,11 +70,11 @@ Expr {
                                                 loc: SourceLocation {
                                                     start: Position {
                                                         line: 1,
-                                                        column: 27,
+                                                        column: 24,
                                                     },
                                                     end: Position {
                                                         line: 1,
-                                                        column: 35,
+                                                        column: 32,
                                                     },
                                                 },
                                             },
@@ -100,36 +82,18 @@ Expr {
                                         loc: SourceLocation {
                                             start: Position {
                                                 line: 1,
-                                                column: 21,
+                                                column: 18,
                                             },
                                             end: Position {
                                                 line: 1,
-                                                column: 35,
+                                                column: 32,
                                             },
                                         },
                                     },
                                 },
                             ),
                         ],
-                        closing: Some(
-                            JSXClosingElement {
-                                name: Ident(
-                                    Ident {
-                                        name: "div",
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 1,
-                                                column: 38,
-                                            },
-                                            end: Position {
-                                                line: 1,
-                                                column: 41,
-                                            },
-                                        },
-                                    },
-                                ),
-                            },
-                        ),
+                        closing: JSXClosingFragment,
                     },
                 ),
                 loc: SourceLocation {

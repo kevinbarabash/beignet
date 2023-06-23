@@ -476,13 +476,22 @@ impl<'a> Parser<'a> {
                 }
             }
             TokenKind::LessThan => {
-                // TODO: handle JSX fragments
-                let element = self.parse_jsx_element();
+                // TODO: this is wrong
+                let loc = first.loc.clone();
 
-                Expr {
-                    kind: ExprKind::JSXElement { element },
-                    // TODO: this is wrong
-                    loc: first.loc.clone(),
+                // HACK: We use self.scanner.peek() to lookahead further than
+                // self.peek() will allow.  The reason why this is scanner.peek(0)
+                // and not scanner.peek(1) is because the call to self.peek() at
+                // the top of the method has already advanced the scanner's position.
+                match self.scanner.peek(0) {
+                    Some('>') => Expr {
+                        kind: ExprKind::JSXFragment(self.parse_jsx_fragment()),
+                        loc,
+                    },
+                    _ => Expr {
+                        kind: ExprKind::JSXElement(self.parse_jsx_element()),
+                        loc,
+                    },
                 }
             }
             t => {
@@ -1064,6 +1073,11 @@ mod tests {
     #[test]
     fn parse_functional_component() {
         insta::assert_debug_snapshot!(parse("fn (props) => <div>{props.children}</div>"));
+    }
+
+    #[test]
+    fn parse_functional_component_with_fragment() {
+        insta::assert_debug_snapshot!(parse("fn (props) => <>{props.children}</>"));
     }
 
     #[test]

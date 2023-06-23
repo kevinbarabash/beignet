@@ -83,12 +83,20 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_jsx_fragment(&mut self) -> JSXFragment {
-        assert_eq!(self.scanner.pop(), Some('<'));
-        assert_eq!(self.scanner.pop(), Some('>'));
+        assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::LessThan);
+        assert_eq!(
+            self.next().unwrap_or(EOF.clone()).kind,
+            TokenKind::GreaterThan
+        );
+
         let children = self.parse_jsx_children();
-        assert_eq!(self.scanner.pop(), Some('<'));
-        assert_eq!(self.scanner.pop(), Some('/'));
-        assert_eq!(self.scanner.pop(), Some('>'));
+
+        assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::LessThan);
+        assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Divide);
+        assert_eq!(
+            self.next().unwrap_or(EOF.clone()).kind,
+            TokenKind::GreaterThan
+        );
 
         JSXFragment {
             opening: JSXOpeningFragment {},
