@@ -66,4 +66,6 @@ impl<'a> Scanner<'a> {
             None => None,
         }
     }
+
+    // pub fn backup(&mut self) ->
 }

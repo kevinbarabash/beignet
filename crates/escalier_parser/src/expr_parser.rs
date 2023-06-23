@@ -83,10 +83,10 @@ impl<'a> Parser<'a> {
         Block { loc, stmts }
     }
 
-    fn parse_expr_with_precedence(&mut self, precedence: u8) -> Expr {
+    fn parse_atom(&mut self) -> Expr {
         let first = self.next().unwrap_or(EOF.clone());
 
-        let mut lhs = match &first.kind {
+        let lhs = match &first.kind {
             TokenKind::NumLit(n) => Expr {
                 kind: ExprKind::Literal(Literal::Number(n.to_owned())),
                 loc: first.loc.clone(),
@@ -449,6 +449,16 @@ impl<'a> Parser<'a> {
                     loc,
                 }
             }
+            TokenKind::LessThan => {
+                // TODO: handle JSX fragments
+                let element = self.parse_jsx_element();
+
+                Expr {
+                    kind: ExprKind::JSXElement { element },
+                    // TODO: this is wrong
+                    loc: first.loc.clone(),
+                }
+            }
             t => match get_prefix_precedence(&first) {
                 Some(precendence) => {
                     let op = match t {
@@ -469,6 +479,12 @@ impl<'a> Parser<'a> {
                 None => panic!("unexpected token: {:?}", first),
             },
         };
+
+        lhs
+    }
+
+    fn parse_expr_with_precedence(&mut self, precedence: u8) -> Expr {
+        let mut lhs = self.parse_atom();
 
         loop {
             let next = self.peek().unwrap_or(&EOF).clone();
@@ -1014,5 +1030,17 @@ mod tests {
     #[test]
     fn parse_exprs_with_template_strings() {
         insta::assert_debug_snapshot!(parse("a + `b ${c} d`"));
+    }
+
+    #[test]
+    #[ignore]
+    fn parse_functional_component() {
+        insta::assert_debug_snapshot!(parse("fn (props) => <div>{props.children}</div>"));
+    }
+
+    #[test]
+    #[ignore]
+    fn parse_invalid_fn_should_error() {
+        insta::assert_debug_snapshot!(parse("(x) => x"));
     }
 }

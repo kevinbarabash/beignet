@@ -1,4 +1,5 @@
 use crate::func_param::FuncParam;
+use crate::jsx::JSXElement;
 use crate::literal::Literal;
 use crate::pattern::Pattern;
 use crate::source_location::SourceLocation;
@@ -102,6 +103,9 @@ pub enum ExprKind {
     },
     Do {
         body: Block,
+    },
+    JSXElement {
+        element: JSXElement,
     },
 }
 
