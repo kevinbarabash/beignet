@@ -1,5 +1,5 @@
 ---
-source: crates/escalier_parser/src/parser.rs
+source: crates/escalier_parser/src/jsx_parser.rs
 expression: jsx_elem
 ---
 JSXElement {
@@ -25,7 +25,31 @@ JSXElement {
     children: [
         Text(
             JSXText {
-                value: "Hello, world!",
+                value: "Hello, ",
+            },
+        ),
+        ExprContainer(
+            JSXExprContainer {
+                expr: Expr {
+                    kind: Identifier(
+                        "name",
+                    ),
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 13,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 17,
+                        },
+                    },
+                },
+            },
+        ),
+        Text(
+            JSXText {
+                value: "!",
             },
         ),
     ],
@@ -37,11 +61,11 @@ JSXElement {
                     loc: SourceLocation {
                         start: Position {
                             line: 1,
-                            column: 20,
+                            column: 21,
                         },
                         end: Position {
                             line: 1,
-                            column: 22,
+                            column: 23,
                         },
                     },
                 },

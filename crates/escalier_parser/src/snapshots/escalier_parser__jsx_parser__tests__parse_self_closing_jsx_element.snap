@@ -1,5 +1,5 @@
 ---
-source: crates/escalier_parser/src/parser.rs
+source: crates/escalier_parser/src/jsx_parser.rs
 expression: jsx_elem
 ---
 JSXElement {
@@ -33,26 +33,8 @@ JSXElement {
                 value: None,
             },
         ],
-        self_closing: false,
+        self_closing: true,
     },
     children: [],
-    closing: Some(
-        JSXClosingElement {
-            name: Ident(
-                Ident {
-                    name: "Foo",
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 22,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 25,
-                        },
-                    },
-                },
-            ),
-        },
-    ),
+    closing: None,
 }
