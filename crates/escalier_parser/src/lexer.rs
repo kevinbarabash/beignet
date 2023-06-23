@@ -13,7 +13,7 @@ use crate::token::*;
 pub enum LexerMode {
     Normal,
     Expression,
-    JSXText,
+    JSXChildren,
 }
 
 // #[derive(Clone)]
@@ -500,15 +500,20 @@ impl<'a> Lexer<'a> {
             self_closing,
         };
 
-        let children = vec![];
+        let mut children = vec![];
 
         let closing = if self_closing {
             None
         } else {
+            children = self.lex_jsx_children();
             // TODO: parse children
-            while self.scanner.peek(0) != Some('<') {
-                self.scanner.pop();
-            }
+            // - need to match opening and closing tags
+            // - need to parse text nodes
+            // - need to parse expressions
+            // - need to parse JSX elements
+            // while self.scanner.peek(0) != Some('<') {
+            //     self.scanner.pop();
+            // }
 
             assert_eq!(self.scanner.pop(), Some('<'));
             assert_eq!(self.scanner.pop(), Some('/'));
@@ -580,6 +585,71 @@ impl<'a> Lexer<'a> {
                 }
             }
             _ => panic!("Unexpected character"),
+        }
+    }
+
+    pub fn lex_jsx_children(&mut self) -> Vec<JSXElementChild> {
+        let mut children = vec![];
+
+        while !self.scanner.is_done() {
+            match self.scanner.peek(0).unwrap() {
+                '<' => {
+                    // TODO: skip of whitespace
+                    if self.scanner.peek(1) == Some('/') {
+                        break;
+                    } else {
+                        let elem = self.lex_jsx_element();
+                        children.push(JSXElementChild::Element(Box::new(elem)));
+                    }
+                }
+                '{' => {
+                    self.scanner.pop();
+
+                    self.modes.push(LexerMode::Expression);
+
+                    let expr = parse_expr(self);
+
+                    self.modes.pop();
+
+                    children.push(JSXElementChild::ExprContainer(JSXExprContainer {
+                        expr: Box::new(expr),
+                    }));
+                }
+                _ => {
+                    let text = self.lex_jsx_text();
+                    children.push(JSXElementChild::Text(text));
+                }
+            }
+        }
+
+        children
+    }
+
+    pub fn lex_jsx_text(&mut self) -> JSXText {
+        let start = self.scanner.position();
+
+        let mut value = String::new();
+
+        while !self.scanner.is_done() {
+            match self.scanner.peek(0).unwrap() {
+                '{' => {
+                    break;
+                }
+                '<' => {
+                    break;
+                }
+                _ => {
+                    value.push(self.scanner.pop().unwrap());
+                }
+            }
+        }
+
+        JSXText {
+            value,
+            // loc: SourceLocation {
+            //     start,
+            //     end: self.scanner.position(),
+            // },
         }
     }
 }
@@ -786,6 +856,33 @@ mod tests {
     #[test]
     fn lex_self_closing_jsx_element() {
         let mut lexer = Lexer::new(r#"<Foo bar="baz" qux />"#);
+
+        let jsx_elem = lexer.lex_jsx_element();
+
+        insta::assert_debug_snapshot!(jsx_elem);
+    }
+
+    #[test]
+    fn lex_jsx_element_with_children_text() {
+        let mut lexer = Lexer::new(r#"<h1>Hello, world!</h1>"#);
+
+        let jsx_elem = lexer.lex_jsx_element();
+
+        insta::assert_debug_snapshot!(jsx_elem);
+    }
+
+    #[test]
+    fn lex_jsx_element_with_text_and_exprs() {
+        let mut lexer = Lexer::new(r#"<h1>Hello, {name}!</h1>"#);
+
+        let jsx_elem = lexer.lex_jsx_element();
+
+        insta::assert_debug_snapshot!(jsx_elem);
+    }
+
+    #[test]
+    fn lex_jsx_element_with_children_elements() {
+        let mut lexer = Lexer::new(r#"<ul><li>one</li><li>two</li></ul>"#);
 
         let jsx_elem = lexer.lex_jsx_element();
 

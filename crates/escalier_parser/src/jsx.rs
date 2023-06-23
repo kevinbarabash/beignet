@@ -98,5 +98,5 @@ pub struct JSXSpreadChild {
 pub struct JSXText {
     // pub span: Span,
     pub value: String,
-    pub raw: String,
+    // pub raw: String,
 }
