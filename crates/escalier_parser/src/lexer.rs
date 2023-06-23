@@ -9,18 +9,9 @@ use crate::scanner::Scanner;
 use crate::source_location::*;
 use crate::token::*;
 
-// #[derive(Clone)]
-pub enum LexerMode {
-    Normal,
-    Expression,
-    JSXText,
-}
-
-// #[derive(Clone)]
 pub struct Lexer<'a> {
     scanner: Scanner<'a>,
-    brace_count: usize,
-    modes: Vec<LexerMode>,
+    brace_counts: Vec<usize>,
     peeked: Option<Token>,
 }
 
@@ -41,8 +32,7 @@ impl<'a> Lexer<'a> {
     pub fn new(input: &'a str) -> Self {
         Self {
             scanner: Scanner::new(input),
-            brace_count: 0, // we need separate brace counts for each mode
-            modes: vec![LexerMode::Normal],
+            brace_counts: vec![0], // we need separate brace counts for each mode
             peeked: None,
         }
     }
@@ -63,15 +53,6 @@ impl<'a> Lexer<'a> {
                 Some(c) => c,
                 None => return None,
             };
-
-            // TODO: handle closing brace in string interpolations
-            match self.modes.last() {
-                Some(LexerMode::Expression) if character == '}' && self.brace_count == 0 => {
-                    self.scanner.pop();
-                    return None;
-                }
-                _ => (),
-            }
 
             let start = self.scanner.position();
 
@@ -150,11 +131,21 @@ impl<'a> Lexer<'a> {
                 '(' => TokenKind::LeftParen,
                 ')' => TokenKind::RightParen,
                 '{' => {
-                    self.brace_count += 1;
+                    let brace_count = self.brace_counts.last_mut().unwrap();
+                    *brace_count += 1;
                     TokenKind::LeftBrace
                 }
                 '}' => {
-                    self.brace_count -= 1;
+                    let brace_count = self.brace_counts.last_mut().unwrap();
+                    // We've matched already matched all of the braces but have
+                    // encountered an extra closing brace.  We could be in a
+                    // template string or a JSX expression so we return and let
+                    // the caller handle it.
+                    if brace_count == &0 {
+                        self.scanner.pop();
+                        return None;
+                    }
+                    *brace_count -= 1;
                     TokenKind::RightBrace
                 }
                 '[' => TokenKind::LeftBracket,
@@ -420,11 +411,9 @@ impl<'a> Lexer<'a> {
                         });
                         self.scanner.pop();
 
-                        self.modes.push(LexerMode::Expression);
-
+                        self.brace_counts.push(0);
                         exprs.push(parse_expr(self));
-
-                        self.modes.pop();
+                        self.brace_counts.pop();
 
                         string = String::new();
                         string_start = self.scanner.position();
@@ -500,15 +489,12 @@ impl<'a> Lexer<'a> {
             self_closing,
         };
 
-        let children = vec![];
+        let mut children = vec![];
 
         let closing = if self_closing {
             None
         } else {
-            // TODO: parse children
-            while self.scanner.peek(0) != Some('<') {
-                self.scanner.pop();
-            }
+            children = self.lex_jsx_children();
 
             assert_eq!(self.scanner.pop(), Some('<'));
             assert_eq!(self.scanner.pop(), Some('/'));
@@ -566,11 +552,9 @@ impl<'a> Lexer<'a> {
             '{' => {
                 self.scanner.pop();
 
-                self.modes.push(LexerMode::Expression);
-
+                self.brace_counts.push(0);
                 let expr = parse_expr(self);
-
-                self.modes.pop();
+                self.brace_counts.pop();
 
                 JSXAttr {
                     name,
@@ -580,6 +564,69 @@ impl<'a> Lexer<'a> {
                 }
             }
             _ => panic!("Unexpected character"),
+        }
+    }
+
+    pub fn lex_jsx_children(&mut self) -> Vec<JSXElementChild> {
+        let mut children = vec![];
+
+        while !self.scanner.is_done() {
+            match self.scanner.peek(0).unwrap() {
+                '<' => {
+                    // TODO: skip of whitespace
+                    if self.scanner.peek(1) == Some('/') {
+                        break;
+                    } else {
+                        let elem = self.lex_jsx_element();
+                        children.push(JSXElementChild::Element(Box::new(elem)));
+                    }
+                }
+                '{' => {
+                    self.scanner.pop();
+
+                    self.brace_counts.push(0);
+                    let expr = parse_expr(self);
+                    self.brace_counts.pop();
+
+                    children.push(JSXElementChild::ExprContainer(JSXExprContainer {
+                        expr: Box::new(expr),
+                    }));
+                }
+                _ => {
+                    let text = self.lex_jsx_text();
+                    children.push(JSXElementChild::Text(text));
+                }
+            }
+        }
+
+        children
+    }
+
+    pub fn lex_jsx_text(&mut self) -> JSXText {
+        let start = self.scanner.position();
+
+        let mut value = String::new();
+
+        while !self.scanner.is_done() {
+            match self.scanner.peek(0).unwrap() {
+                '{' => {
+                    break;
+                }
+                '<' => {
+                    break;
+                }
+                _ => {
+                    value.push(self.scanner.pop().unwrap());
+                }
+            }
+        }
+
+        JSXText {
+            value,
+            // loc: SourceLocation {
+            //     start,
+            //     end: self.scanner.position(),
+            // },
         }
     }
 }
@@ -786,6 +833,33 @@ mod tests {
     #[test]
     fn lex_self_closing_jsx_element() {
         let mut lexer = Lexer::new(r#"<Foo bar="baz" qux />"#);
+
+        let jsx_elem = lexer.lex_jsx_element();
+
+        insta::assert_debug_snapshot!(jsx_elem);
+    }
+
+    #[test]
+    fn lex_jsx_element_with_children_text() {
+        let mut lexer = Lexer::new(r#"<h1>Hello, world!</h1>"#);
+
+        let jsx_elem = lexer.lex_jsx_element();
+
+        insta::assert_debug_snapshot!(jsx_elem);
+    }
+
+    #[test]
+    fn lex_jsx_element_with_text_and_exprs() {
+        let mut lexer = Lexer::new(r#"<h1>Hello, {name}!</h1>"#);
+
+        let jsx_elem = lexer.lex_jsx_element();
+
+        insta::assert_debug_snapshot!(jsx_elem);
+    }
+
+    #[test]
+    fn lex_jsx_element_with_children_elements() {
+        let mut lexer = Lexer::new(r#"<ul><li>one</li><li>two</li></ul>"#);
 
         let jsx_elem = lexer.lex_jsx_element();
 

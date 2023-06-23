@@ -1,0 +1,51 @@
+---
+source: crates/escalier_parser/src/lexer.rs
+expression: jsx_elem
+---
+JSXElement {
+    opening: JSXOpeningElement {
+        name: Ident(
+            Ident {
+                name: "h1",
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 2,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 4,
+                    },
+                },
+            },
+        ),
+        attrs: [],
+        self_closing: false,
+    },
+    children: [
+        Text(
+            JSXText {
+                value: "Hello, world!",
+            },
+        ),
+    ],
+    closing: Some(
+        JSXClosingElement {
+            name: Ident(
+                Ident {
+                    name: "h1",
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 20,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 22,
+                        },
+                    },
+                },
+            ),
+        },
+    ),
+}

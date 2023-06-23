@@ -1,0 +1,144 @@
+---
+source: crates/escalier_parser/src/lexer.rs
+expression: jsx_elem
+---
+JSXElement {
+    opening: JSXOpeningElement {
+        name: Ident(
+            Ident {
+                name: "ul",
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 2,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 4,
+                    },
+                },
+            },
+        ),
+        attrs: [],
+        self_closing: false,
+    },
+    children: [
+        Element(
+            JSXElement {
+                opening: JSXOpeningElement {
+                    name: Ident(
+                        Ident {
+                            name: "li",
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 6,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 8,
+                                },
+                            },
+                        },
+                    ),
+                    attrs: [],
+                    self_closing: false,
+                },
+                children: [
+                    Text(
+                        JSXText {
+                            value: "one",
+                        },
+                    ),
+                ],
+                closing: Some(
+                    JSXClosingElement {
+                        name: Ident(
+                            Ident {
+                                name: "li",
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 1,
+                                        column: 14,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 16,
+                                    },
+                                },
+                            },
+                        ),
+                    },
+                ),
+            },
+        ),
+        Element(
+            JSXElement {
+                opening: JSXOpeningElement {
+                    name: Ident(
+                        Ident {
+                            name: "li",
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 18,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 20,
+                                },
+                            },
+                        },
+                    ),
+                    attrs: [],
+                    self_closing: false,
+                },
+                children: [
+                    Text(
+                        JSXText {
+                            value: "two",
+                        },
+                    ),
+                ],
+                closing: Some(
+                    JSXClosingElement {
+                        name: Ident(
+                            Ident {
+                                name: "li",
+                                loc: SourceLocation {
+                                    start: Position {
+                                        line: 1,
+                                        column: 26,
+                                    },
+                                    end: Position {
+                                        line: 1,
+                                        column: 28,
+                                    },
+                                },
+                            },
+                        ),
+                    },
+                ),
+            },
+        ),
+    ],
+    closing: Some(
+        JSXClosingElement {
+            name: Ident(
+                Ident {
+                    name: "ul",
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 31,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 33,
+                        },
+                    },
+                },
+            ),
+        },
+    ),
+}
