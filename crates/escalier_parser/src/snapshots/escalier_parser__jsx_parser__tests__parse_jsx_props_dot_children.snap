@@ -1,0 +1,95 @@
+---
+source: crates/escalier_parser/src/jsx_parser.rs
+expression: jsx_elem
+---
+JSXElement {
+    opening: JSXOpeningElement {
+        name: Ident(
+            Ident {
+                name: "div",
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 2,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 5,
+                    },
+                },
+            },
+        ),
+        attrs: [],
+        self_closing: false,
+    },
+    children: [
+        ExprContainer(
+            JSXExprContainer {
+                expr: Expr {
+                    kind: Binary {
+                        left: Expr {
+                            kind: Identifier(
+                                "a",
+                            ),
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 7,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 8,
+                                },
+                            },
+                        },
+                        op: Plus,
+                        right: Expr {
+                            kind: Identifier(
+                                "b",
+                            ),
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 9,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 10,
+                                },
+                            },
+                        },
+                    },
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 7,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 10,
+                        },
+                    },
+                },
+            },
+        ),
+    ],
+    closing: Some(
+        JSXClosingElement {
+            name: Ident(
+                Ident {
+                    name: "div",
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 13,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 16,
+                        },
+                    },
+                },
+            ),
+        },
+    ),
+}

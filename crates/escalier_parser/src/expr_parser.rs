@@ -66,8 +66,6 @@ fn get_postfix_precedence(op: &Token) -> Option<(u8, Associativity)> {
 impl<'a> Parser<'a> {
     // consumes leading '{' and trailing '}' tokens
     fn parse_block(&mut self) -> Block {
-        eprintln!("--- parse_block (start) ---");
-
         let open = self.next().unwrap_or(EOF.clone());
         assert_eq!(open.kind, TokenKind::LeftBrace);
         let mut stmts = Vec::new();
@@ -78,53 +76,73 @@ impl<'a> Parser<'a> {
         assert_eq!(close.kind, TokenKind::RightBrace);
         let loc = merge_locations(&open.loc, &close.loc);
 
-        eprintln!("--- parse_block (end) ---");
-
         Block { loc, stmts }
     }
 
     fn parse_atom(&mut self) -> Expr {
-        let first = self.next().unwrap_or(EOF.clone());
+        let first = self.peek().unwrap_or(&EOF).clone();
 
         let lhs = match &first.kind {
-            TokenKind::NumLit(n) => Expr {
-                kind: ExprKind::Literal(Literal::Number(n.to_owned())),
-                loc: first.loc.clone(),
-            },
-            TokenKind::Identifier(id) => Expr {
-                kind: ExprKind::Identifier(id.to_owned()),
-                loc: first.loc.clone(),
-            },
-            TokenKind::BoolLit(b) => Expr {
-                kind: ExprKind::Literal(Literal::Boolean(*b)),
-                loc: first.loc.clone(),
-            },
-            TokenKind::StrLit(s) => Expr {
-                kind: ExprKind::Literal(Literal::String(s.to_owned())),
-                loc: first.loc.clone(),
-            },
-            TokenKind::StrTemplateLit { parts, exprs } => Expr {
-                kind: ExprKind::TemplateLiteral {
-                    parts: parts
-                        .iter()
-                        .map(|s| match &s.kind {
-                            TokenKind::StrLit(s) => Literal::String(s.to_owned()),
-                            _ => panic!("Expected string literal, got {:?}", s),
-                        })
-                        .collect(),
-                    exprs: exprs.to_owned(),
-                },
-                loc: first.loc.clone(),
-            },
-            TokenKind::Null => Expr {
-                kind: ExprKind::Literal(Literal::Null),
-                loc: first.loc.clone(),
-            },
-            TokenKind::Undefined => Expr {
-                kind: ExprKind::Literal(Literal::Null),
-                loc: first.loc.clone(),
-            },
+            TokenKind::NumLit(n) => {
+                self.next(); // consume number
+                Expr {
+                    kind: ExprKind::Literal(Literal::Number(n.to_owned())),
+                    loc: first.loc.clone(),
+                }
+            }
+            TokenKind::Identifier(id) => {
+                self.next(); // consume identifier
+                Expr {
+                    kind: ExprKind::Identifier(id.to_owned()),
+                    loc: first.loc.clone(),
+                }
+            }
+            TokenKind::BoolLit(b) => {
+                self.next(); // consume boolean
+                Expr {
+                    kind: ExprKind::Literal(Literal::Boolean(*b)),
+                    loc: first.loc.clone(),
+                }
+            }
+            TokenKind::StrLit(s) => {
+                self.next(); // consume string
+                Expr {
+                    kind: ExprKind::Literal(Literal::String(s.to_owned())),
+                    loc: first.loc.clone(),
+                }
+            }
+            TokenKind::StrTemplateLit { parts, exprs } => {
+                self.next(); // consume string template
+                Expr {
+                    kind: ExprKind::TemplateLiteral {
+                        parts: parts
+                            .iter()
+                            .map(|s| match &s.kind {
+                                TokenKind::StrLit(s) => Literal::String(s.to_owned()),
+                                _ => panic!("Expected string literal, got {:?}", s),
+                            })
+                            .collect(),
+                        exprs: exprs.to_owned(),
+                    },
+                    loc: first.loc.clone(),
+                }
+            }
+            TokenKind::Null => {
+                self.next(); // consume 'null'
+                Expr {
+                    kind: ExprKind::Literal(Literal::Null),
+                    loc: first.loc.clone(),
+                }
+            }
+            TokenKind::Undefined => {
+                self.next(); // consume 'undefined'
+                Expr {
+                    kind: ExprKind::Literal(Literal::Undefined),
+                    loc: first.loc.clone(),
+                }
+            }
             TokenKind::LeftParen => {
+                self.next(); // consume '('
                 let lhs = self.parse_expr_with_precedence(0);
                 assert_eq!(
                     self.next().unwrap_or(EOF.clone()).kind,
@@ -133,6 +151,7 @@ impl<'a> Parser<'a> {
                 lhs
             }
             TokenKind::LeftBracket => {
+                self.next(); // consumes '['
                 let start = first;
                 let mut elements: Vec<ExprOrSpread> = Vec::new();
                 while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBracket {
@@ -172,6 +191,7 @@ impl<'a> Parser<'a> {
                 }
             }
             TokenKind::LeftBrace => {
+                self.next(); // consumes '{'
                 let start = first;
                 let mut properties: Vec<PropOrSpread> = Vec::new();
                 while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
@@ -236,6 +256,7 @@ impl<'a> Parser<'a> {
                 }
             }
             TokenKind::Fn => {
+                self.next(); // consumes 'fn'
                 let params = self.parse_params();
 
                 let type_ann = match self.peek().unwrap_or(&EOF).kind {
@@ -280,6 +301,7 @@ impl<'a> Parser<'a> {
                 }
             }
             TokenKind::If => {
+                self.next(); // consumes 'if'
                 assert_eq!(
                     self.next().unwrap_or(EOF.clone()).kind,
                     TokenKind::LeftParen
@@ -316,6 +338,8 @@ impl<'a> Parser<'a> {
                 }
             }
             TokenKind::Match => {
+                // TODO: make 'match' use parens to align with 'if'
+                self.next(); // consumes 'match'
                 let expr = self.parse_expr();
                 let mut loc = expr.loc.clone();
                 assert_eq!(
@@ -365,6 +389,7 @@ impl<'a> Parser<'a> {
                 }
             }
             TokenKind::Try => {
+                self.next(); // consumes 'try'
                 let try_body = self.parse_block();
 
                 match self.next().unwrap_or(EOF.clone()).kind {
@@ -441,6 +466,7 @@ impl<'a> Parser<'a> {
                 // let catch_body = parse_block(parser); // TODO: create a BlockStmt and include .loc in it
             }
             TokenKind::Do => {
+                self.next(); // consumes 'do'
                 let body = self.parse_block();
                 let loc = merge_locations(&first.loc, &body.loc);
 
@@ -459,25 +485,28 @@ impl<'a> Parser<'a> {
                     loc: first.loc.clone(),
                 }
             }
-            t => match get_prefix_precedence(&first) {
-                Some(precendence) => {
-                    let op = match t {
-                        TokenKind::Plus => UnaryOp::Plus,
-                        TokenKind::Minus => UnaryOp::Minus,
-                        _ => panic!("unexpected token: {:?}", t),
-                    };
-                    let rhs = self.parse_expr_with_precedence(precendence.0);
-                    let loc = merge_locations(&first.loc, &rhs.loc);
-                    Expr {
-                        kind: ExprKind::Unary {
-                            op,
-                            right: Box::new(rhs),
-                        },
-                        loc,
+            t => {
+                self.next(); // consume the token
+                match get_prefix_precedence(&first) {
+                    Some(precendence) => {
+                        let op = match t {
+                            TokenKind::Plus => UnaryOp::Plus,
+                            TokenKind::Minus => UnaryOp::Minus,
+                            _ => panic!("unexpected token: {:?}", t),
+                        };
+                        let rhs = self.parse_expr_with_precedence(precendence.0);
+                        let loc = merge_locations(&first.loc, &rhs.loc);
+                        Expr {
+                            kind: ExprKind::Unary {
+                                op,
+                                right: Box::new(rhs),
+                            },
+                            loc,
+                        }
                     }
+                    None => panic!("unexpected token: {:?}", first),
                 }
-                None => panic!("unexpected token: {:?}", first),
-            },
+            }
         };
 
         lhs
@@ -489,16 +518,16 @@ impl<'a> Parser<'a> {
         loop {
             let next = self.peek().unwrap_or(&EOF).clone();
             if let TokenKind::Eof = next.kind {
-                break;
+                return lhs;
             }
 
             if let TokenKind::Semicolon = next.kind {
-                break;
+                return lhs;
             }
 
             if let Some(next_precedence) = get_postfix_precedence(&next) {
                 if precedence >= next_precedence.0 {
-                    break;
+                    return lhs;
                 }
 
                 lhs = self.parse_postfix(lhs, next_precedence);
@@ -508,7 +537,7 @@ impl<'a> Parser<'a> {
 
             if let Some(next_precedence) = get_infix_precedence(&next) {
                 if precedence >= next_precedence.0 {
-                    break;
+                    return lhs;
                 }
 
                 self.next().unwrap_or(EOF.clone());
@@ -587,7 +616,7 @@ impl<'a> Parser<'a> {
                 continue;
             }
 
-            break;
+            return lhs;
         }
 
         lhs
@@ -1033,7 +1062,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn parse_functional_component() {
         insta::assert_debug_snapshot!(parse("fn (props) => <div>{props.children}</div>"));
     }

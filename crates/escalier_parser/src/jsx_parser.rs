@@ -2,11 +2,11 @@ use crate::identifier::Ident;
 use crate::jsx::*;
 use crate::parser::*;
 use crate::source_location::*;
-use crate::token::TokenKind;
+use crate::token::{TokenKind, EOF};
 
 impl<'a> Parser<'a> {
     pub fn parse_jsx_element(&mut self) -> JSXElement {
-        assert_eq!(self.scanner.pop(), Some('<'));
+        assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::LessThan);
         let name_token = self.lex_ident_or_keyword();
         let name = match name_token.kind {
             TokenKind::Identifier(name) => JSXElementName::Ident(Ident {
@@ -159,11 +159,13 @@ impl<'a> Parser<'a> {
                     }
                 }
                 '{' => {
-                    self.scanner.pop();
+                    self.scanner.pop(); // consumes '{'
 
                     self.brace_counts.push(0);
                     let expr = self.parse_expr();
                     self.brace_counts.pop();
+
+                    self.scanner.pop(); // consumes '}'
 
                     children.push(JSXElementChild::ExprContainer(JSXExprContainer {
                         expr: Box::new(expr),
@@ -269,6 +271,15 @@ mod tests {
     #[test]
     fn parse_jsx_nested_fragments() {
         let mut parser = Parser::new(r#"<>a<>{b}{c}</>d</>"#);
+
+        let jsx_elem = parser.parse_jsx_element();
+
+        insta::assert_debug_snapshot!(jsx_elem);
+    }
+
+    #[test]
+    fn parse_jsx_props_dot_children() {
+        let mut parser = Parser::new(r#"<div>{a+b}</div>"#);
 
         let jsx_elem = parser.parse_jsx_element();
 

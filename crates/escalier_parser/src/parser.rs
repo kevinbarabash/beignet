@@ -137,9 +137,9 @@ impl<'a> Parser<'a> {
                     // We've matched already matched all of the braces but have
                     // encountered an extra closing brace.  We could be in a
                     // template string or a JSX expression so we return and let
-                    // the caller handle it.
+                    // the caller handle it.  The caller is responsible for
+                    // consuming this token.
                     if brace_count == &0 {
-                        self.scanner.pop();
                         return None;
                     }
                     *brace_count -= 1;
@@ -406,11 +406,13 @@ impl<'a> Parser<'a> {
                                 end: string_end,
                             },
                         });
-                        self.scanner.pop();
+                        self.scanner.pop(); // consumes '{'
 
                         self.brace_counts.push(0);
                         exprs.push(self.parse_expr());
                         self.brace_counts.pop();
+
+                        self.scanner.pop(); // consumes '}'
 
                         string = String::new();
                         string_start = self.scanner.position();
