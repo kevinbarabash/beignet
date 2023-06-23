@@ -2,17 +2,8 @@ use crate::identifier::{BindingIdent, Ident};
 use crate::literal::Literal;
 use crate::parser::Parser;
 use crate::pattern::*;
-use crate::source_location::{merge_locations, Position, SourceLocation};
-use crate::token::Token;
-use crate::token::TokenKind;
-
-const EOF: Token = Token {
-    kind: TokenKind::Eof,
-    loc: SourceLocation {
-        start: Position { line: 0, column: 0 },
-        end: Position { line: 0, column: 0 },
-    },
-};
+use crate::source_location::merge_locations;
+use crate::token::*;
 
 impl<'a> Parser<'a> {
     pub fn parse_pattern(&mut self) -> Pattern {

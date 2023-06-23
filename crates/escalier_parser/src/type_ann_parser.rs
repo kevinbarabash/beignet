@@ -1,15 +1,7 @@
 use crate::parser::*;
-use crate::source_location::*;
-use crate::token::{Token, TokenKind};
+use crate::source_location::merge_locations;
+use crate::token::*;
 use crate::type_ann::{ObjectProp, TypeAnn, TypeAnnKind};
-
-const EOF: Token = Token {
-    kind: TokenKind::Eof,
-    loc: SourceLocation {
-        start: Position { line: 0, column: 0 },
-        end: Position { line: 0, column: 0 },
-    },
-};
 
 impl<'a> Parser<'a> {
     pub fn parse_type_ann(&mut self) -> TypeAnn {

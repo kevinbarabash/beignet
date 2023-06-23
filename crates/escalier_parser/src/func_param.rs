@@ -1,16 +1,7 @@
 use crate::parser::*;
 use crate::pattern::Pattern;
-use crate::source_location::*;
-use crate::token::{Token, TokenKind};
+use crate::token::*;
 use crate::type_ann::TypeAnn;
-
-const EOF: Token = Token {
-    kind: TokenKind::Eof,
-    loc: SourceLocation {
-        start: Position { line: 0, column: 0 },
-        end: Position { line: 0, column: 0 },
-    },
-};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct FuncParam {

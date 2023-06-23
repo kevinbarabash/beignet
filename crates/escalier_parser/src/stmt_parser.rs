@@ -1,16 +1,7 @@
 use crate::parser::*;
 use crate::source_location::merge_locations;
-use crate::source_location::*;
 use crate::stmt::{Stmt, StmtKind};
-use crate::token::{Token, TokenKind};
-
-const EOF: Token = Token {
-    kind: TokenKind::Eof,
-    loc: SourceLocation {
-        start: Position { line: 0, column: 0 },
-        end: Position { line: 0, column: 0 },
-    },
-};
+use crate::token::*;
 
 impl<'a> Parser<'a> {
     pub fn parse_stmt(&mut self) -> Stmt {

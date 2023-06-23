@@ -5,15 +5,7 @@ use crate::literal::Literal;
 use crate::parser::*;
 use crate::precedence::{Associativity, Operator, PRECEDENCE_TABLE};
 use crate::source_location::*;
-use crate::token::{Token, TokenKind};
-
-const EOF: Token = Token {
-    kind: TokenKind::Eof,
-    loc: SourceLocation {
-        start: Position { line: 0, column: 0 },
-        end: Position { line: 0, column: 0 },
-    },
-};
+use crate::token::*;
 
 fn get_prefix_precedence(op: &Token) -> Option<(u8, Associativity)> {
     match &op.kind {
