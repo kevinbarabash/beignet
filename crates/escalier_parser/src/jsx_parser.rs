@@ -1,5 +1,5 @@
 use crate::jsx::{JSXElement, JSXFragment};
-use crate::lexer::*;
+use crate::parser::*;
 use crate::source_location::*;
 use crate::token::{Token, TokenKind};
 
@@ -11,11 +11,11 @@ const EOF: Token = Token {
     },
 };
 
-pub fn parse_jsx_element(lexer: &mut Lexer) -> JSXElement {
+pub fn parse_jsx_element(lexer: &mut Parser) -> JSXElement {
     todo!();
 }
 
-pub fn parse_jsx_fragment(lexer: &mut Lexer) -> JSXFragment {
+pub fn parse_jsx_fragment(lexer: &mut Parser) -> JSXFragment {
     assert_eq!(
         lexer.next().unwrap_or(EOF.clone()).kind,
         TokenKind::LessThan

@@ -2,20 +2,19 @@ use core::panic;
 use std::iter::Iterator;
 
 use crate::expr::Expr;
-use crate::expr_parser::parse_expr;
 use crate::identifier::Ident;
 use crate::jsx::*;
 use crate::scanner::Scanner;
 use crate::source_location::*;
 use crate::token::*;
 
-pub struct Lexer<'a> {
+pub struct Parser<'a> {
     scanner: Scanner<'a>,
     brace_counts: Vec<usize>,
     peeked: Option<Token>,
 }
 
-impl<'a> Iterator for Lexer<'a> {
+impl<'a> Iterator for Parser<'a> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -28,7 +27,7 @@ impl<'a> Iterator for Lexer<'a> {
     }
 }
 
-impl<'a> Lexer<'a> {
+impl<'a> Parser<'a> {
     pub fn new(input: &'a str) -> Self {
         Self {
             scanner: Scanner::new(input),
@@ -412,7 +411,7 @@ impl<'a> Lexer<'a> {
                         self.scanner.pop();
 
                         self.brace_counts.push(0);
-                        exprs.push(parse_expr(self));
+                        exprs.push(self.parse_expr());
                         self.brace_counts.pop();
 
                         string = String::new();
@@ -553,7 +552,7 @@ impl<'a> Lexer<'a> {
                 self.scanner.pop();
 
                 self.brace_counts.push(0);
-                let expr = parse_expr(self);
+                let expr = self.parse_expr();
                 self.brace_counts.pop();
 
                 JSXAttr {
@@ -585,7 +584,7 @@ impl<'a> Lexer<'a> {
                     self.scanner.pop();
 
                     self.brace_counts.push(0);
-                    let expr = parse_expr(self);
+                    let expr = self.parse_expr();
                     self.brace_counts.pop();
 
                     children.push(JSXElementChild::ExprContainer(JSXExprContainer {
@@ -637,7 +636,7 @@ mod tests {
 
     #[test]
     fn lex_identifiers() {
-        let lexer = Lexer::new("abc _a0 123");
+        let lexer = Parser::new("abc _a0 123");
 
         let tokens = lexer.collect::<Vec<_>>();
 
@@ -657,7 +656,7 @@ mod tests {
 
     #[test]
     fn lex_numbers() {
-        let lexer = Lexer::new("123 1.23");
+        let lexer = Parser::new("123 1.23");
 
         let tokens = lexer.collect::<Vec<_>>();
 
@@ -674,14 +673,14 @@ mod tests {
     #[test]
     #[should_panic = "Unexpected character: '.'"]
     fn lex_number_multiple_decimals_error() {
-        let lexer = Lexer::new("1.2.3");
+        let lexer = Parser::new("1.2.3");
 
         lexer.collect::<Vec<_>>();
     }
 
     #[test]
     fn lex_comparison_ops() {
-        let lexer = Lexer::new("> >= < <= == !=");
+        let lexer = Parser::new("> >= < <= == !=");
 
         let tokens = lexer.collect::<Vec<_>>();
 
@@ -696,14 +695,14 @@ mod tests {
     #[test]
     #[should_panic = "Unexpected character: '!'"]
     fn lex_unexpected_exclamation() {
-        let lexer = Lexer::new("1 ! 2");
+        let lexer = Parser::new("1 ! 2");
 
         lexer.collect::<Vec<_>>();
     }
 
     #[test]
     fn lex_string() {
-        let lexer = Lexer::new("\"abc\"");
+        let lexer = Parser::new("\"abc\"");
 
         let tokens = lexer.collect::<Vec<_>>();
 
@@ -715,7 +714,7 @@ mod tests {
 
     #[test]
     fn lex_string_escapes() {
-        let lexer = Lexer::new(r#""\"\\\/\b\f\n\r\t\u221E""#);
+        let lexer = Parser::new(r#""\"\\\/\b\f\n\r\t\u221E""#);
 
         let tokens = lexer.collect::<Vec<_>>();
 
@@ -727,7 +726,7 @@ mod tests {
 
     #[test]
     fn lex_template_string() {
-        let lexer = Lexer::new("`abc`");
+        let lexer = Parser::new("`abc`");
 
         let tokens = lexer.collect::<Vec<_>>();
 
@@ -736,7 +735,7 @@ mod tests {
 
     #[test]
     fn lex_template_string_escapes() {
-        let lexer = Lexer::new(r#"`\`\/\b\f\n\r\t\u221E`"#);
+        let lexer = Parser::new(r#"`\`\/\b\f\n\r\t\u221E`"#);
 
         let tokens = lexer.collect::<Vec<_>>();
 
@@ -760,7 +759,7 @@ mod tests {
 
     #[test]
     fn lex_template_string_with_exprs() {
-        let lexer = Lexer::new("`abc${x}`");
+        let lexer = Parser::new("`abc${x}`");
 
         let tokens = lexer.collect::<Vec<_>>();
 
@@ -769,7 +768,7 @@ mod tests {
 
     #[test]
     fn lex_nested_template_strings() {
-        let lexer = Lexer::new(r#"`a${`b${c}`}`"#);
+        let lexer = Parser::new(r#"`a${`b${c}`}`"#);
 
         let tokens = lexer.collect::<Vec<_>>();
 
@@ -778,7 +777,7 @@ mod tests {
 
     #[test]
     fn lex_nested_template_strings_complex() {
-        let lexer = Lexer::new(r#"`ids = ${ids.map(fn (id) => `x${id}`).join(", ")}`"#);
+        let lexer = Parser::new(r#"`ids = ${ids.map(fn (id) => `x${id}`).join(", ")}`"#);
 
         let tokens = lexer.collect::<Vec<_>>();
 
@@ -787,7 +786,7 @@ mod tests {
 
     #[test]
     fn lex_dots() {
-        let lexer = Lexer::new(". .. ...");
+        let lexer = Parser::new(". .. ...");
 
         let tokens = lexer.collect::<Vec<_>>();
 
@@ -798,7 +797,7 @@ mod tests {
 
     #[test]
     fn lex_dots_reverse() {
-        let lexer = Lexer::new("... .. .");
+        let lexer = Parser::new("... .. .");
 
         let tokens = lexer.collect::<Vec<_>>();
 
@@ -809,7 +808,7 @@ mod tests {
 
     #[test]
     fn lex_assignment() {
-        let lexer = Lexer::new("= += -= *= /= %=");
+        let lexer = Parser::new("= += -= *= /= %=");
 
         let tokens = lexer.collect::<Vec<_>>();
 
@@ -823,7 +822,7 @@ mod tests {
 
     #[test]
     fn lex_jsx_element() {
-        let mut lexer = Lexer::new(r#"<Foo bar="baz" qux></Foo>"#);
+        let mut lexer = Parser::new(r#"<Foo bar="baz" qux></Foo>"#);
 
         let jsx_elem = lexer.lex_jsx_element();
 
@@ -832,7 +831,7 @@ mod tests {
 
     #[test]
     fn lex_self_closing_jsx_element() {
-        let mut lexer = Lexer::new(r#"<Foo bar="baz" qux />"#);
+        let mut lexer = Parser::new(r#"<Foo bar="baz" qux />"#);
 
         let jsx_elem = lexer.lex_jsx_element();
 
@@ -841,7 +840,7 @@ mod tests {
 
     #[test]
     fn lex_jsx_element_with_children_text() {
-        let mut lexer = Lexer::new(r#"<h1>Hello, world!</h1>"#);
+        let mut lexer = Parser::new(r#"<h1>Hello, world!</h1>"#);
 
         let jsx_elem = lexer.lex_jsx_element();
 
@@ -850,7 +849,7 @@ mod tests {
 
     #[test]
     fn lex_jsx_element_with_text_and_exprs() {
-        let mut lexer = Lexer::new(r#"<h1>Hello, {name}!</h1>"#);
+        let mut lexer = Parser::new(r#"<h1>Hello, {name}!</h1>"#);
 
         let jsx_elem = lexer.lex_jsx_element();
 
@@ -859,7 +858,7 @@ mod tests {
 
     #[test]
     fn lex_jsx_element_with_children_elements() {
-        let mut lexer = Lexer::new(r#"<ul><li>one</li><li>two</li></ul>"#);
+        let mut lexer = Parser::new(r#"<ul><li>one</li><li>two</li></ul>"#);
 
         let jsx_elem = lexer.lex_jsx_element();
 

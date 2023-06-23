@@ -1,15 +1,11 @@
 // use std::iter::Peekable;
 
 use crate::expr::*;
-use crate::func_param::parse_params;
-use crate::lexer::*;
 use crate::literal::Literal;
-use crate::pattern_parser::parse_pattern;
+use crate::parser::*;
 use crate::precedence::{Associativity, Operator, PRECEDENCE_TABLE};
 use crate::source_location::*;
-use crate::stmt_parser::parse_stmt;
 use crate::token::{Token, TokenKind};
-use crate::type_ann_parser::parse_type_ann;
 
 const EOF: Token = Token {
     kind: TokenKind::Eof,
@@ -75,451 +71,492 @@ fn get_postfix_precedence(op: &Token) -> Option<(u8, Associativity)> {
     }
 }
 
-// consumes leading '{' and trailing '}' tokens
-fn parse_block(lexer: &mut Lexer) -> Block {
-    eprintln!("--- parse_block (start) ---");
+impl<'a> Parser<'a> {
+    // consumes leading '{' and trailing '}' tokens
+    fn parse_block(&mut self) -> Block {
+        eprintln!("--- parse_block (start) ---");
 
-    let open = lexer.next().unwrap_or(EOF.clone());
-    assert_eq!(open.kind, TokenKind::LeftBrace);
-    let mut stmts = Vec::new();
-    while lexer.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
-        stmts.push(parse_stmt(lexer));
+        let open = self.next().unwrap_or(EOF.clone());
+        assert_eq!(open.kind, TokenKind::LeftBrace);
+        let mut stmts = Vec::new();
+        while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
+            stmts.push(self.parse_stmt());
+        }
+        let close = self.next().unwrap_or(EOF.clone());
+        assert_eq!(close.kind, TokenKind::RightBrace);
+        let loc = merge_locations(&open.loc, &close.loc);
+
+        eprintln!("--- parse_block (end) ---");
+
+        Block { loc, stmts }
     }
-    let close = lexer.next().unwrap_or(EOF.clone());
-    assert_eq!(close.kind, TokenKind::RightBrace);
-    let loc = merge_locations(&open.loc, &close.loc);
 
-    eprintln!("--- parse_block (end) ---");
+    fn parse_expr_with_precedence(&mut self, precedence: u8) -> Expr {
+        let first = self.next().unwrap_or(EOF.clone());
 
-    Block { loc, stmts }
-}
-
-fn parse_expr_with_precedence(lexer: &mut Lexer, precedence: u8) -> Expr {
-    let first = lexer.next().unwrap_or(EOF.clone());
-
-    let mut lhs = match &first.kind {
-        TokenKind::NumLit(n) => Expr {
-            kind: ExprKind::Literal(Literal::Number(n.to_owned())),
-            loc: first.loc.clone(),
-        },
-        TokenKind::Identifier(id) => Expr {
-            kind: ExprKind::Identifier(id.to_owned()),
-            loc: first.loc.clone(),
-        },
-        TokenKind::BoolLit(b) => Expr {
-            kind: ExprKind::Literal(Literal::Boolean(*b)),
-            loc: first.loc.clone(),
-        },
-        TokenKind::StrLit(s) => Expr {
-            kind: ExprKind::Literal(Literal::String(s.to_owned())),
-            loc: first.loc.clone(),
-        },
-        TokenKind::StrTemplateLit { parts, exprs } => Expr {
-            kind: ExprKind::TemplateLiteral {
-                parts: parts
-                    .iter()
-                    .map(|s| match &s.kind {
-                        TokenKind::StrLit(s) => Literal::String(s.to_owned()),
-                        _ => panic!("Expected string literal, got {:?}", s),
-                    })
-                    .collect(),
-                exprs: exprs.to_owned(),
+        let mut lhs = match &first.kind {
+            TokenKind::NumLit(n) => Expr {
+                kind: ExprKind::Literal(Literal::Number(n.to_owned())),
+                loc: first.loc.clone(),
             },
-            loc: first.loc.clone(),
-        },
-        TokenKind::Null => Expr {
-            kind: ExprKind::Literal(Literal::Null),
-            loc: first.loc.clone(),
-        },
-        TokenKind::Undefined => Expr {
-            kind: ExprKind::Literal(Literal::Null),
-            loc: first.loc.clone(),
-        },
-        TokenKind::LeftParen => {
-            let lhs = parse_expr_with_precedence(lexer, 0);
-            assert_eq!(
-                lexer.next().unwrap_or(EOF.clone()).kind,
-                TokenKind::RightParen
-            );
-            lhs
-        }
-        TokenKind::LeftBracket => {
-            let start = first;
-            let mut elements: Vec<ExprOrSpread> = Vec::new();
-            while lexer.peek().unwrap_or(&EOF).kind != TokenKind::RightBracket {
-                let elem = match lexer.peek().unwrap_or(&EOF).kind {
-                    TokenKind::DotDotDot => {
-                        lexer.next().unwrap_or(EOF.clone()); // consumes `...`
-                        let expr = parse_expr_with_precedence(lexer, 0);
-                        ExprOrSpread::Spread(expr)
-                    }
-                    _ => {
-                        let expr = parse_expr_with_precedence(lexer, 0);
-                        ExprOrSpread::Expr(expr)
-                    }
-                };
-
-                elements.push(elem);
-
-                match lexer.peek().unwrap_or(&EOF).kind {
-                    TokenKind::RightBracket => break,
-                    TokenKind::Comma => {
-                        lexer.next().unwrap_or(EOF.clone());
-                    }
-                    _ => panic!(
-                        "Expected comma or right bracket, got {:?}",
-                        lexer.peek().unwrap_or(&EOF)
-                    ),
-                }
-            }
-
-            assert_eq!(lexer.peek().unwrap_or(&EOF).kind, TokenKind::RightBracket);
-
-            let end = lexer.next().unwrap_or(EOF.clone());
-
-            Expr {
-                kind: ExprKind::Tuple { elements },
-                loc: merge_locations(&start.loc, &end.loc),
-            }
-        }
-        TokenKind::LeftBrace => {
-            let start = first;
-            let mut properties: Vec<PropOrSpread> = Vec::new();
-            while lexer.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
-                let next = lexer.next().unwrap_or(EOF.clone());
-
-                let prop = match &next.kind {
-                    TokenKind::DotDotDot => {
-                        let expr = parse_expr_with_precedence(lexer, 0);
-                        PropOrSpread::Spread(expr)
-                    }
-                    TokenKind::Identifier(id)
-                        if lexer.peek().unwrap_or(&EOF).kind == TokenKind::Comma
-                            || lexer.peek().unwrap_or(&EOF).kind == TokenKind::RightBrace =>
-                    {
-                        PropOrSpread::Prop(Prop::Shorthand { key: id.to_owned() })
-                    }
-                    _ => {
-                        let key = match &next.kind {
-                            TokenKind::Identifier(id) => ObjectKey::Identifier(id.to_owned()),
-                            TokenKind::StrLit(s) => ObjectKey::String(s.to_owned()),
-                            TokenKind::NumLit(n) => ObjectKey::Number(n.to_owned()),
-                            TokenKind::LeftBracket => {
-                                let expr = parse_expr_with_precedence(lexer, 0);
-                                assert_eq!(
-                                    lexer.next().unwrap_or(EOF.clone()).kind,
-                                    TokenKind::RightBracket
-                                );
-                                ObjectKey::Computed(Box::new(expr))
-                            }
-                            _ => panic!("Expected identifier or string literal, got {:?}", next),
-                        };
-
-                        assert_eq!(lexer.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
-
-                        let value = parse_expr(lexer);
-
-                        PropOrSpread::Prop(Prop::Property { key, value })
-                    }
-                };
-
-                properties.push(prop);
-
-                match lexer.peek().unwrap_or(&EOF).kind {
-                    TokenKind::RightBrace => break,
-                    TokenKind::Comma => {
-                        lexer.next().unwrap_or(EOF.clone());
-                    }
-                    _ => panic!(
-                        "Expected comma or right brace, got {:?}",
-                        lexer.peek().unwrap_or(&EOF)
-                    ),
-                }
-            }
-
-            let end = lexer.next().unwrap_or(EOF.clone());
-
-            Expr {
-                kind: ExprKind::Object { properties },
-                loc: merge_locations(&start.loc, &end.loc),
-            }
-        }
-        TokenKind::Fn => {
-            let params = parse_params(lexer);
-
-            let type_ann = match lexer.peek().unwrap_or(&EOF).kind {
-                TokenKind::Colon => {
-                    lexer.next().unwrap_or(EOF.clone());
-                    Some(parse_type_ann(lexer))
-                }
-                _ => None,
-            };
-
-            assert_eq!(lexer.next().unwrap_or(EOF.clone()).kind, TokenKind::Arrow);
-
-            match lexer.peek().unwrap_or(&EOF).kind {
-                TokenKind::LeftBrace => {
-                    let block = parse_block(lexer);
-                    let loc = merge_locations(&first.loc, &block.loc);
-                    let body = BlockOrExpr::Block(block);
-
-                    Expr {
-                        kind: ExprKind::Function {
-                            params,
-                            body,
-                            type_ann,
-                        },
-                        loc,
-                    }
-                }
-                _ => {
-                    let expr = parse_expr(lexer);
-                    let loc = merge_locations(&first.loc, &expr.loc);
-                    let body = BlockOrExpr::Expr(Box::new(expr));
-
-                    Expr {
-                        kind: ExprKind::Function {
-                            params,
-                            body,
-                            type_ann,
-                        },
-                        loc,
-                    }
-                }
-            }
-        }
-        TokenKind::If => {
-            assert_eq!(
-                lexer.next().unwrap_or(EOF.clone()).kind,
-                TokenKind::LeftParen
-            );
-            let cond = parse_expr(lexer);
-            assert_eq!(
-                lexer.next().unwrap_or(EOF.clone()).kind,
-                TokenKind::RightParen
-            );
-            let consequent = parse_block(lexer);
-
-            if lexer.peek().unwrap_or(&EOF).kind == TokenKind::Else {
-                lexer.next().unwrap_or(EOF.clone());
-                let alternate = parse_block(lexer);
-                let loc = merge_locations(&first.loc, &alternate.loc);
-                Expr {
-                    kind: ExprKind::IfElse {
-                        cond: Box::new(cond),
-                        consequent,
-                        alternate: Some(alternate),
-                    },
-                    loc,
-                }
-            } else {
-                let loc = merge_locations(&first.loc, &consequent.loc);
-                Expr {
-                    kind: ExprKind::IfElse {
-                        cond: Box::new(cond),
-                        consequent,
-                        alternate: None,
-                    },
-                    loc,
-                }
-            }
-        }
-        TokenKind::Match => {
-            let expr = parse_expr(lexer);
-            let mut loc = expr.loc.clone();
-            assert_eq!(
-                lexer.next().unwrap_or(EOF.clone()).kind,
-                TokenKind::LeftBrace
-            );
-            let mut arms: Vec<MatchArm> = Vec::new();
-            while lexer.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
-                let pattern = parse_pattern(lexer);
-                assert_eq!(lexer.next().unwrap_or(EOF.clone()).kind, TokenKind::Arrow);
-
-                let (body, end) = match lexer.peek().unwrap_or(&EOF).kind {
-                    TokenKind::LeftBrace => {
-                        let block = parse_block(lexer);
-                        let loc = block.loc.clone();
-                        (BlockOrExpr::Block(block), loc)
-                    }
-                    _ => {
-                        let expr = parse_expr(lexer);
-                        let loc = expr.loc.clone();
-                        (BlockOrExpr::Expr(Box::new(expr)), loc)
-                    }
-                };
-
-                assert_eq!(lexer.next().unwrap_or(EOF.clone()).kind, TokenKind::Comma);
-
-                arms.push(MatchArm {
-                    loc: merge_locations(&pattern.loc, &end),
-                    pattern,
-                    guard: None,
-                    body,
-                });
-                loc = merge_locations(&loc, &end);
-            }
-
-            assert_eq!(
-                lexer.next().unwrap_or(EOF.clone()).kind,
-                TokenKind::RightBrace
-            );
-
-            Expr {
-                kind: ExprKind::Match {
-                    expr: Box::new(expr),
-                    arms,
+            TokenKind::Identifier(id) => Expr {
+                kind: ExprKind::Identifier(id.to_owned()),
+                loc: first.loc.clone(),
+            },
+            TokenKind::BoolLit(b) => Expr {
+                kind: ExprKind::Literal(Literal::Boolean(*b)),
+                loc: first.loc.clone(),
+            },
+            TokenKind::StrLit(s) => Expr {
+                kind: ExprKind::Literal(Literal::String(s.to_owned())),
+                loc: first.loc.clone(),
+            },
+            TokenKind::StrTemplateLit { parts, exprs } => Expr {
+                kind: ExprKind::TemplateLiteral {
+                    parts: parts
+                        .iter()
+                        .map(|s| match &s.kind {
+                            TokenKind::StrLit(s) => Literal::String(s.to_owned()),
+                            _ => panic!("Expected string literal, got {:?}", s),
+                        })
+                        .collect(),
+                    exprs: exprs.to_owned(),
                 },
-                loc,
+                loc: first.loc.clone(),
+            },
+            TokenKind::Null => Expr {
+                kind: ExprKind::Literal(Literal::Null),
+                loc: first.loc.clone(),
+            },
+            TokenKind::Undefined => Expr {
+                kind: ExprKind::Literal(Literal::Null),
+                loc: first.loc.clone(),
+            },
+            TokenKind::LeftParen => {
+                let lhs = self.parse_expr_with_precedence(0);
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::RightParen
+                );
+                lhs
             }
-        }
-        TokenKind::Try => {
-            let try_body = parse_block(lexer);
-
-            match lexer.next().unwrap_or(EOF.clone()).kind {
-                TokenKind::Catch => {
-                    assert_eq!(
-                        lexer.next().unwrap_or(EOF.clone()).kind,
-                        TokenKind::LeftParen
-                    );
-                    let error = parse_pattern(lexer);
-                    assert_eq!(
-                        lexer.next().unwrap_or(EOF.clone()).kind,
-                        TokenKind::RightParen
-                    );
-
-                    let catch_body = parse_block(lexer);
-
-                    match lexer.peek().unwrap_or(&EOF).kind {
-                        TokenKind::Finally => {
-                            lexer.next().unwrap_or(EOF.clone());
-                            let finally_body = parse_block(lexer);
-                            let loc = merge_locations(&first.loc, &finally_body.loc);
-
-                            Expr {
-                                kind: ExprKind::Try {
-                                    body: try_body,
-                                    catch: Some(CatchClause {
-                                        param: Some(error),
-                                        body: catch_body,
-                                    }),
-                                    finally: Some(finally_body),
-                                },
-                                loc,
-                            }
+            TokenKind::LeftBracket => {
+                let start = first;
+                let mut elements: Vec<ExprOrSpread> = Vec::new();
+                while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBracket {
+                    let elem = match self.peek().unwrap_or(&EOF).kind {
+                        TokenKind::DotDotDot => {
+                            self.next().unwrap_or(EOF.clone()); // consumes `...`
+                            let expr = self.parse_expr_with_precedence(0);
+                            ExprOrSpread::Spread(expr)
                         }
                         _ => {
-                            let loc = merge_locations(&first.loc, &catch_body.loc);
+                            let expr = self.parse_expr_with_precedence(0);
+                            ExprOrSpread::Expr(expr)
+                        }
+                    };
 
-                            Expr {
-                                kind: ExprKind::Try {
-                                    body: try_body,
-                                    catch: Some(CatchClause {
-                                        param: Some(error),
-                                        body: catch_body,
-                                    }),
-                                    finally: None,
-                                },
-                                loc,
-                            }
+                    elements.push(elem);
+
+                    match self.peek().unwrap_or(&EOF).kind {
+                        TokenKind::RightBracket => break,
+                        TokenKind::Comma => {
+                            self.next().unwrap_or(EOF.clone());
+                        }
+                        _ => panic!(
+                            "Expected comma or right bracket, got {:?}",
+                            self.peek().unwrap_or(&EOF)
+                        ),
+                    }
+                }
+
+                assert_eq!(self.peek().unwrap_or(&EOF).kind, TokenKind::RightBracket);
+
+                let end = self.next().unwrap_or(EOF.clone());
+
+                Expr {
+                    kind: ExprKind::Tuple { elements },
+                    loc: merge_locations(&start.loc, &end.loc),
+                }
+            }
+            TokenKind::LeftBrace => {
+                let start = first;
+                let mut properties: Vec<PropOrSpread> = Vec::new();
+                while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
+                    let next = self.next().unwrap_or(EOF.clone());
+
+                    let prop = match &next.kind {
+                        TokenKind::DotDotDot => {
+                            let expr = self.parse_expr_with_precedence(0);
+                            PropOrSpread::Spread(expr)
+                        }
+                        TokenKind::Identifier(id)
+                            if self.peek().unwrap_or(&EOF).kind == TokenKind::Comma
+                                || self.peek().unwrap_or(&EOF).kind == TokenKind::RightBrace =>
+                        {
+                            PropOrSpread::Prop(Prop::Shorthand { key: id.to_owned() })
+                        }
+                        _ => {
+                            let key = match &next.kind {
+                                TokenKind::Identifier(id) => ObjectKey::Identifier(id.to_owned()),
+                                TokenKind::StrLit(s) => ObjectKey::String(s.to_owned()),
+                                TokenKind::NumLit(n) => ObjectKey::Number(n.to_owned()),
+                                TokenKind::LeftBracket => {
+                                    let expr = self.parse_expr_with_precedence(0);
+                                    assert_eq!(
+                                        self.next().unwrap_or(EOF.clone()).kind,
+                                        TokenKind::RightBracket
+                                    );
+                                    ObjectKey::Computed(Box::new(expr))
+                                }
+                                _ => {
+                                    panic!("Expected identifier or string literal, got {:?}", next)
+                                }
+                            };
+
+                            assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
+
+                            let value = self.parse_expr();
+
+                            PropOrSpread::Prop(Prop::Property { key, value })
+                        }
+                    };
+
+                    properties.push(prop);
+
+                    match self.peek().unwrap_or(&EOF).kind {
+                        TokenKind::RightBrace => break,
+                        TokenKind::Comma => {
+                            self.next().unwrap_or(EOF.clone());
+                        }
+                        _ => panic!(
+                            "Expected comma or right brace, got {:?}",
+                            self.peek().unwrap_or(&EOF)
+                        ),
+                    }
+                }
+
+                let end = self.next().unwrap_or(EOF.clone());
+
+                Expr {
+                    kind: ExprKind::Object { properties },
+                    loc: merge_locations(&start.loc, &end.loc),
+                }
+            }
+            TokenKind::Fn => {
+                let params = self.parse_params();
+
+                let type_ann = match self.peek().unwrap_or(&EOF).kind {
+                    TokenKind::Colon => {
+                        self.next().unwrap_or(EOF.clone());
+                        Some(self.parse_type_ann())
+                    }
+                    _ => None,
+                };
+
+                assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Arrow);
+
+                match self.peek().unwrap_or(&EOF).kind {
+                    TokenKind::LeftBrace => {
+                        let block = self.parse_block();
+                        let loc = merge_locations(&first.loc, &block.loc);
+                        let body = BlockOrExpr::Block(block);
+
+                        Expr {
+                            kind: ExprKind::Function {
+                                params,
+                                body,
+                                type_ann,
+                            },
+                            loc,
+                        }
+                    }
+                    _ => {
+                        let expr = self.parse_expr();
+                        let loc = merge_locations(&first.loc, &expr.loc);
+                        let body = BlockOrExpr::Expr(Box::new(expr));
+
+                        Expr {
+                            kind: ExprKind::Function {
+                                params,
+                                body,
+                                type_ann,
+                            },
+                            loc,
                         }
                     }
                 }
-                TokenKind::Finally => {
-                    let finally_body = parse_block(lexer);
-                    let loc = merge_locations(&first.loc, &finally_body.loc);
+            }
+            TokenKind::If => {
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::LeftParen
+                );
+                let cond = self.parse_expr();
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::RightParen
+                );
+                let consequent = self.parse_block();
 
+                if self.peek().unwrap_or(&EOF).kind == TokenKind::Else {
+                    self.next().unwrap_or(EOF.clone());
+                    let alternate = self.parse_block();
+                    let loc = merge_locations(&first.loc, &alternate.loc);
                     Expr {
-                        kind: ExprKind::Try {
-                            body: try_body,
-                            catch: None,
-                            finally: Some(finally_body),
+                        kind: ExprKind::IfElse {
+                            cond: Box::new(cond),
+                            consequent,
+                            alternate: Some(alternate),
+                        },
+                        loc,
+                    }
+                } else {
+                    let loc = merge_locations(&first.loc, &consequent.loc);
+                    Expr {
+                        kind: ExprKind::IfElse {
+                            cond: Box::new(cond),
+                            consequent,
+                            alternate: None,
                         },
                         loc,
                     }
                 }
-                _ => {
-                    panic!("expected catch or finally");
+            }
+            TokenKind::Match => {
+                let expr = self.parse_expr();
+                let mut loc = expr.loc.clone();
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::LeftBrace
+                );
+                let mut arms: Vec<MatchArm> = Vec::new();
+                while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
+                    let pattern = self.parse_pattern();
+                    assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Arrow);
+
+                    let (body, end) = match self.peek().unwrap_or(&EOF).kind {
+                        TokenKind::LeftBrace => {
+                            let block = self.parse_block();
+                            let loc = block.loc.clone();
+                            (BlockOrExpr::Block(block), loc)
+                        }
+                        _ => {
+                            let expr = self.parse_expr();
+                            let loc = expr.loc.clone();
+                            (BlockOrExpr::Expr(Box::new(expr)), loc)
+                        }
+                    };
+
+                    assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Comma);
+
+                    arms.push(MatchArm {
+                        loc: merge_locations(&pattern.loc, &end),
+                        pattern,
+                        guard: None,
+                        body,
+                    });
+                    loc = merge_locations(&loc, &end);
                 }
-            }
 
-            // assert_eq!(lexer.next().unwrap_or(EOF.clone()).kind, TokenKind::Catch);
-            // assert_eq!(lexer.next().unwrap_or(EOF.clone()).kind, TokenKind::LeftParen);
-            // let error = parse_pattern(parser);
-            // assert_eq!(lexer.next().unwrap_or(EOF.clone()).kind, TokenKind::RightParen);
-            // let catch_body = parse_block(parser); // TODO: create a BlockStmt and include .loc in it
-        }
-        TokenKind::Do => {
-            let body = parse_block(lexer);
-            let loc = merge_locations(&first.loc, &body.loc);
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::RightBrace
+                );
 
-            Expr {
-                kind: ExprKind::Do { body },
-                loc,
-            }
-        }
-        t => match get_prefix_precedence(&first) {
-            Some(precendence) => {
-                let op = match t {
-                    TokenKind::Plus => UnaryOp::Plus,
-                    TokenKind::Minus => UnaryOp::Minus,
-                    _ => panic!("unexpected token: {:?}", t),
-                };
-                let rhs = parse_expr_with_precedence(lexer, precendence.0);
-                let loc = merge_locations(&first.loc, &rhs.loc);
                 Expr {
-                    kind: ExprKind::Unary {
-                        op,
-                        right: Box::new(rhs),
+                    kind: ExprKind::Match {
+                        expr: Box::new(expr),
+                        arms,
                     },
                     loc,
                 }
             }
-            None => panic!("unexpected token: {:?}", first),
-        },
-    };
+            TokenKind::Try => {
+                let try_body = self.parse_block();
 
-    loop {
-        let next = lexer.peek().unwrap_or(&EOF).clone();
-        if let TokenKind::Eof = next.kind {
-            break;
-        }
+                match self.next().unwrap_or(EOF.clone()).kind {
+                    TokenKind::Catch => {
+                        assert_eq!(
+                            self.next().unwrap_or(EOF.clone()).kind,
+                            TokenKind::LeftParen
+                        );
+                        let error = self.parse_pattern();
+                        assert_eq!(
+                            self.next().unwrap_or(EOF.clone()).kind,
+                            TokenKind::RightParen
+                        );
 
-        if let TokenKind::Semicolon = next.kind {
-            break;
-        }
+                        let catch_body = self.parse_block();
 
-        if let Some(next_precedence) = get_postfix_precedence(&next) {
-            if precedence >= next_precedence.0 {
-                break;
-            }
+                        match self.peek().unwrap_or(&EOF).kind {
+                            TokenKind::Finally => {
+                                self.next().unwrap_or(EOF.clone());
+                                let finally_body = self.parse_block();
+                                let loc = merge_locations(&first.loc, &finally_body.loc);
 
-            lhs = parse_postfix(lexer, lhs, next_precedence);
+                                Expr {
+                                    kind: ExprKind::Try {
+                                        body: try_body,
+                                        catch: Some(CatchClause {
+                                            param: Some(error),
+                                            body: catch_body,
+                                        }),
+                                        finally: Some(finally_body),
+                                    },
+                                    loc,
+                                }
+                            }
+                            _ => {
+                                let loc = merge_locations(&first.loc, &catch_body.loc);
 
-            continue;
-        }
+                                Expr {
+                                    kind: ExprKind::Try {
+                                        body: try_body,
+                                        catch: Some(CatchClause {
+                                            param: Some(error),
+                                            body: catch_body,
+                                        }),
+                                        finally: None,
+                                    },
+                                    loc,
+                                }
+                            }
+                        }
+                    }
+                    TokenKind::Finally => {
+                        let finally_body = self.parse_block();
+                        let loc = merge_locations(&first.loc, &finally_body.loc);
 
-        if let Some(next_precedence) = get_infix_precedence(&next) {
-            if precedence >= next_precedence.0 {
-                break;
-            }
-
-            lexer.next().unwrap_or(EOF.clone());
-
-            let op: Option<AssignOp> = match &next.kind {
-                TokenKind::Assign => Some(AssignOp::Assign),
-                TokenKind::PlusAssign => Some(AssignOp::AddAssign),
-                TokenKind::MinusAssign => Some(AssignOp::SubAssign),
-                TokenKind::TimesAssign => Some(AssignOp::MulAssign),
-                TokenKind::DivideAssign => Some(AssignOp::DivAssign),
-                TokenKind::ModuloAssign => Some(AssignOp::ModAssign),
-                _ => None,
-            };
-
-            if let Some(op) = op {
-                if !is_lvalue(&lhs) {
-                    panic!("expected lvalue");
+                        Expr {
+                            kind: ExprKind::Try {
+                                body: try_body,
+                                catch: None,
+                                finally: Some(finally_body),
+                            },
+                            loc,
+                        }
+                    }
+                    _ => {
+                        panic!("expected catch or finally");
+                    }
                 }
+
+                // assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Catch);
+                // assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::LeftParen);
+                // let error = parse_pattern(parser);
+                // assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::RightParen);
+                // let catch_body = parse_block(parser); // TODO: create a BlockStmt and include .loc in it
+            }
+            TokenKind::Do => {
+                let body = self.parse_block();
+                let loc = merge_locations(&first.loc, &body.loc);
+
+                Expr {
+                    kind: ExprKind::Do { body },
+                    loc,
+                }
+            }
+            t => match get_prefix_precedence(&first) {
+                Some(precendence) => {
+                    let op = match t {
+                        TokenKind::Plus => UnaryOp::Plus,
+                        TokenKind::Minus => UnaryOp::Minus,
+                        _ => panic!("unexpected token: {:?}", t),
+                    };
+                    let rhs = self.parse_expr_with_precedence(precendence.0);
+                    let loc = merge_locations(&first.loc, &rhs.loc);
+                    Expr {
+                        kind: ExprKind::Unary {
+                            op,
+                            right: Box::new(rhs),
+                        },
+                        loc,
+                    }
+                }
+                None => panic!("unexpected token: {:?}", first),
+            },
+        };
+
+        loop {
+            let next = self.peek().unwrap_or(&EOF).clone();
+            if let TokenKind::Eof = next.kind {
+                break;
+            }
+
+            if let TokenKind::Semicolon = next.kind {
+                break;
+            }
+
+            if let Some(next_precedence) = get_postfix_precedence(&next) {
+                if precedence >= next_precedence.0 {
+                    break;
+                }
+
+                lhs = self.parse_postfix(lhs, next_precedence);
+
+                continue;
+            }
+
+            if let Some(next_precedence) = get_infix_precedence(&next) {
+                if precedence >= next_precedence.0 {
+                    break;
+                }
+
+                self.next().unwrap_or(EOF.clone());
+
+                let op: Option<AssignOp> = match &next.kind {
+                    TokenKind::Assign => Some(AssignOp::Assign),
+                    TokenKind::PlusAssign => Some(AssignOp::AddAssign),
+                    TokenKind::MinusAssign => Some(AssignOp::SubAssign),
+                    TokenKind::TimesAssign => Some(AssignOp::MulAssign),
+                    TokenKind::DivideAssign => Some(AssignOp::DivAssign),
+                    TokenKind::ModuloAssign => Some(AssignOp::ModAssign),
+                    _ => None,
+                };
+
+                if let Some(op) = op {
+                    if !is_lvalue(&lhs) {
+                        panic!("expected lvalue");
+                    }
+
+                    let precedence = if next_precedence.1 == Associativity::Left {
+                        next_precedence.0
+                    } else {
+                        next_precedence.0 - 1
+                    };
+
+                    let rhs = self.parse_expr_with_precedence(precedence);
+                    let loc = merge_locations(&lhs.loc, &rhs.loc);
+
+                    lhs = Expr {
+                        kind: ExprKind::Assign {
+                            op,
+                            left: Box::new(lhs),
+                            right: Box::new(rhs),
+                        },
+                        loc,
+                    };
+
+                    continue;
+                }
+
+                let op: BinaryOp = match &next.kind {
+                    TokenKind::Plus => BinaryOp::Plus,
+                    TokenKind::Minus => BinaryOp::Minus,
+                    TokenKind::Times => BinaryOp::Times,
+                    TokenKind::Divide => BinaryOp::Divide,
+                    TokenKind::Modulo => BinaryOp::Modulo,
+                    TokenKind::Equals => BinaryOp::Equals,
+                    TokenKind::NotEquals => BinaryOp::NotEquals,
+                    TokenKind::LessThan => BinaryOp::LessThan,
+                    TokenKind::LessThanOrEqual => BinaryOp::LessThanOrEqual,
+                    TokenKind::GreaterThan => BinaryOp::GreaterThan,
+                    TokenKind::GreaterThanOrEqual => BinaryOp::GreaterThanOrEqual,
+                    TokenKind::And => BinaryOp::And,
+                    TokenKind::Or => BinaryOp::Or,
+                    _ => panic!("unexpected token: {:?}", next),
+                };
 
                 let precedence = if next_precedence.1 == Associativity::Left {
                     next_precedence.0
@@ -527,11 +564,11 @@ fn parse_expr_with_precedence(lexer: &mut Lexer, precedence: u8) -> Expr {
                     next_precedence.0 - 1
                 };
 
-                let rhs = parse_expr_with_precedence(lexer, precedence);
+                let rhs = self.parse_expr_with_precedence(precedence);
                 let loc = merge_locations(&lhs.loc, &rhs.loc);
 
                 lhs = Expr {
-                    kind: ExprKind::Assign {
+                    kind: ExprKind::Binary {
                         op,
                         left: Box::new(lhs),
                         right: Box::new(rhs),
@@ -542,145 +579,112 @@ fn parse_expr_with_precedence(lexer: &mut Lexer, precedence: u8) -> Expr {
                 continue;
             }
 
-            let op: BinaryOp = match &next.kind {
-                TokenKind::Plus => BinaryOp::Plus,
-                TokenKind::Minus => BinaryOp::Minus,
-                TokenKind::Times => BinaryOp::Times,
-                TokenKind::Divide => BinaryOp::Divide,
-                TokenKind::Modulo => BinaryOp::Modulo,
-                TokenKind::Equals => BinaryOp::Equals,
-                TokenKind::NotEquals => BinaryOp::NotEquals,
-                TokenKind::LessThan => BinaryOp::LessThan,
-                TokenKind::LessThanOrEqual => BinaryOp::LessThanOrEqual,
-                TokenKind::GreaterThan => BinaryOp::GreaterThan,
-                TokenKind::GreaterThanOrEqual => BinaryOp::GreaterThanOrEqual,
-                TokenKind::And => BinaryOp::And,
-                TokenKind::Or => BinaryOp::Or,
-                _ => panic!("unexpected token: {:?}", next),
-            };
-
-            let precedence = if next_precedence.1 == Associativity::Left {
-                next_precedence.0
-            } else {
-                next_precedence.0 - 1
-            };
-
-            let rhs = parse_expr_with_precedence(lexer, precedence);
-            let loc = merge_locations(&lhs.loc, &rhs.loc);
-
-            lhs = Expr {
-                kind: ExprKind::Binary {
-                    op,
-                    left: Box::new(lhs),
-                    right: Box::new(rhs),
-                },
-                loc,
-            };
-
-            continue;
+            break;
         }
 
-        break;
+        lhs
     }
 
-    lhs
-}
+    fn parse_postfix(&mut self, lhs: Expr, next_precedence: (u8, Associativity)) -> Expr {
+        let precedence = if next_precedence.1 == Associativity::Left {
+            next_precedence.0
+        } else {
+            next_precedence.0 - 1
+        };
 
-fn parse_postfix(lexer: &mut Lexer, lhs: Expr, next_precedence: (u8, Associativity)) -> Expr {
-    let precedence = if next_precedence.1 == Associativity::Left {
-        next_precedence.0
-    } else {
-        next_precedence.0 - 1
-    };
+        let next = self.next().unwrap_or(EOF.clone());
 
-    let next = lexer.next().unwrap_or(EOF.clone());
-
-    match &next.kind {
-        TokenKind::LeftBracket => {
-            let rhs = parse_expr(lexer);
-            let loc = merge_locations(&lhs.loc, &rhs.loc);
-            assert_eq!(
-                lexer.next().unwrap_or(EOF.clone()).kind,
-                TokenKind::RightBracket
-            );
-            Expr {
-                kind: ExprKind::Index {
-                    left: Box::new(lhs),
-                    right: Box::new(rhs),
-                },
-                loc,
-            }
-        }
-        TokenKind::LeftParen => {
-            let mut args = Vec::new();
-            while lexer.peek().unwrap_or(&EOF).kind != TokenKind::RightParen {
-                args.push(parse_expr(lexer));
-
-                match lexer.peek().unwrap_or(&EOF).kind {
-                    TokenKind::RightParen => break,
-                    TokenKind::Comma => {
-                        lexer.next().unwrap_or(EOF.clone());
-                    }
-                    _ => panic!(
-                        "Expected comma or right paren, got {:?}",
-                        lexer.peek().unwrap_or(&EOF)
-                    ),
+        match &next.kind {
+            TokenKind::LeftBracket => {
+                let rhs = self.parse_expr();
+                let loc = merge_locations(&lhs.loc, &rhs.loc);
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::RightBracket
+                );
+                Expr {
+                    kind: ExprKind::Index {
+                        left: Box::new(lhs),
+                        right: Box::new(rhs),
+                    },
+                    loc,
                 }
             }
-            let loc = merge_locations(&lhs.loc, &lexer.peek().unwrap_or(&EOF).loc);
-            assert_eq!(
-                lexer.next().unwrap_or(EOF.clone()).kind,
-                TokenKind::RightParen
-            );
-            Expr {
-                kind: ExprKind::Call {
-                    callee: Box::new(lhs),
-                    args,
-                },
-                loc,
-            }
-        }
-        TokenKind::Dot => {
-            let rhs = parse_expr_with_precedence(lexer, precedence);
-            let loc = merge_locations(&lhs.loc, &rhs.loc);
-            Expr {
-                kind: ExprKind::Member {
-                    object: Box::new(lhs),
-                    property: Box::new(rhs),
-                },
-                loc,
-            }
-        }
-        TokenKind::QuestionDot => {
-            let lhs_loc = lhs.loc.clone();
+            TokenKind::LeftParen => {
+                let mut args = Vec::new();
+                while self.peek().unwrap_or(&EOF).kind != TokenKind::RightParen {
+                    args.push(self.parse_expr());
 
-            let base = match lexer.peek().unwrap_or(&EOF).kind {
-                TokenKind::LeftParen | TokenKind::LeftBracket => {
-                    parse_postfix(lexer, lhs, next_precedence)
-                }
-                _ => {
-                    let rhs = parse_expr_with_precedence(lexer, precedence);
-                    let loc = merge_locations(&lhs.loc, &rhs.loc);
-                    Expr {
-                        kind: ExprKind::Member {
-                            object: Box::new(lhs),
-                            property: Box::new(rhs),
-                        },
-                        loc,
+                    match self.peek().unwrap_or(&EOF).kind {
+                        TokenKind::RightParen => break,
+                        TokenKind::Comma => {
+                            self.next().unwrap_or(EOF.clone());
+                        }
+                        _ => panic!(
+                            "Expected comma or right paren, got {:?}",
+                            self.peek().unwrap_or(&EOF)
+                        ),
                     }
                 }
-            };
-
-            let loc = merge_locations(&lhs_loc, &base.loc);
-
-            Expr {
-                kind: ExprKind::OptionalChain {
-                    base: Box::new(base),
-                },
-                loc,
+                let loc = merge_locations(&lhs.loc, &self.peek().unwrap_or(&EOF).loc);
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::RightParen
+                );
+                Expr {
+                    kind: ExprKind::Call {
+                        callee: Box::new(lhs),
+                        args,
+                    },
+                    loc,
+                }
             }
+            TokenKind::Dot => {
+                let rhs = self.parse_expr_with_precedence(precedence);
+                let loc = merge_locations(&lhs.loc, &rhs.loc);
+                Expr {
+                    kind: ExprKind::Member {
+                        object: Box::new(lhs),
+                        property: Box::new(rhs),
+                    },
+                    loc,
+                }
+            }
+            TokenKind::QuestionDot => {
+                let lhs_loc = lhs.loc.clone();
+
+                let base = match self.peek().unwrap_or(&EOF).kind {
+                    TokenKind::LeftParen | TokenKind::LeftBracket => {
+                        self.parse_postfix(lhs, next_precedence)
+                    }
+                    _ => {
+                        let rhs = self.parse_expr_with_precedence(precedence);
+                        let loc = merge_locations(&lhs.loc, &rhs.loc);
+                        Expr {
+                            kind: ExprKind::Member {
+                                object: Box::new(lhs),
+                                property: Box::new(rhs),
+                            },
+                            loc,
+                        }
+                    }
+                };
+
+                let loc = merge_locations(&lhs_loc, &base.loc);
+
+                Expr {
+                    kind: ExprKind::OptionalChain {
+                        base: Box::new(base),
+                    },
+                    loc,
+                }
+            }
+            _ => panic!("unexpected token: {:?}", next),
         }
-        _ => panic!("unexpected token: {:?}", next),
+    }
+
+    pub fn parse_expr(&mut self) -> Expr {
+        self.parse_expr_with_precedence(0)
     }
 }
 
@@ -693,18 +697,14 @@ fn is_lvalue(expr: &Expr) -> bool {
     }
 }
 
-pub fn parse_expr(lexer: &mut Lexer) -> Expr {
-    parse_expr_with_precedence(lexer, 0)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lexer::Lexer;
+    use crate::parser::Parser;
 
     pub fn parse(input: &str) -> Expr {
-        let mut lexer = Lexer::new(input);
-        parse_expr(&mut lexer)
+        let mut parser = Parser::new(input);
+        parser.parse_expr()
     }
 
     #[test]

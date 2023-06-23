@@ -1,10 +1,8 @@
-use crate::lexer::*;
+use crate::parser::*;
 use crate::pattern::Pattern;
-use crate::pattern_parser::parse_pattern;
 use crate::source_location::*;
 use crate::token::{Token, TokenKind};
 use crate::type_ann::TypeAnn;
-use crate::type_ann_parser::parse_type_ann;
 
 const EOF: Token = Token {
     kind: TokenKind::Eof,
@@ -21,56 +19,58 @@ pub struct FuncParam {
     pub optional: bool,
 }
 
-pub fn parse_params(lexer: &mut Lexer) -> Vec<FuncParam> {
-    assert_eq!(
-        lexer.next().unwrap_or(EOF.clone()).kind,
-        TokenKind::LeftParen
-    );
+impl<'a> Parser<'a> {
+    pub fn parse_params(&mut self) -> Vec<FuncParam> {
+        assert_eq!(
+            self.next().unwrap_or(EOF.clone()).kind,
+            TokenKind::LeftParen
+        );
 
-    let mut params: Vec<FuncParam> = Vec::new();
-    while lexer.peek().unwrap_or(&EOF).kind != TokenKind::RightParen {
-        let pattern = parse_pattern(lexer);
+        let mut params: Vec<FuncParam> = Vec::new();
+        while self.peek().unwrap_or(&EOF).kind != TokenKind::RightParen {
+            let pattern = self.parse_pattern();
 
-        let optional = if let TokenKind::Question = lexer.peek().unwrap_or(&EOF).kind {
-            lexer.next().unwrap_or(EOF.clone());
-            true
-        } else {
-            false
-        };
+            let optional = if let TokenKind::Question = self.peek().unwrap_or(&EOF).kind {
+                self.next().unwrap_or(EOF.clone());
+                true
+            } else {
+                false
+            };
 
-        if let TokenKind::Colon = lexer.peek().unwrap_or(&EOF).kind {
-            lexer.next().unwrap_or(EOF.clone());
-            params.push(FuncParam {
-                pattern,
-                type_ann: Some(parse_type_ann(lexer)),
-                optional,
-            });
-        } else {
-            params.push(FuncParam {
-                pattern,
-                type_ann: None,
-                optional: false, // Should `?` be supported when there's not type param?
-            });
-        }
-
-        // TODO: param defaults
-
-        match lexer.peek().unwrap_or(&EOF).kind {
-            TokenKind::RightParen => break,
-            TokenKind::Comma => {
-                lexer.next().unwrap_or(EOF.clone());
+            if let TokenKind::Colon = self.peek().unwrap_or(&EOF).kind {
+                self.next().unwrap_or(EOF.clone());
+                params.push(FuncParam {
+                    pattern,
+                    type_ann: Some(self.parse_type_ann()),
+                    optional,
+                });
+            } else {
+                params.push(FuncParam {
+                    pattern,
+                    type_ann: None,
+                    optional: false, // Should `?` be supported when there's not type param?
+                });
             }
-            _ => panic!(
-                "Expected comma or right paren, got {:?}",
-                lexer.peek().unwrap_or(&EOF)
-            ),
+
+            // TODO: param defaults
+
+            match self.peek().unwrap_or(&EOF).kind {
+                TokenKind::RightParen => break,
+                TokenKind::Comma => {
+                    self.next().unwrap_or(EOF.clone());
+                }
+                _ => panic!(
+                    "Expected comma or right paren, got {:?}",
+                    self.peek().unwrap_or(&EOF)
+                ),
+            }
         }
+
+        assert_eq!(
+            self.next().unwrap_or(EOF.clone()).kind,
+            TokenKind::RightParen
+        );
+
+        params
     }
-
-    assert_eq!(
-        lexer.next().unwrap_or(EOF.clone()).kind,
-        TokenKind::RightParen
-    );
-
-    params
 }

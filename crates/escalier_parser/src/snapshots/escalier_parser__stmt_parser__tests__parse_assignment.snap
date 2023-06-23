@@ -1,61 +1,79 @@
 ---
 source: crates/escalier_parser/src/stmt_parser.rs
-expression: parse(src)
+expression: "parse(r#\"y = m*x + b;\"#)"
 ---
 [
     Stmt {
-        kind: Let {
-            pattern: Pattern {
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 5,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 6,
-                    },
-                },
-                kind: Ident(
-                    BindingIdent {
-                        name: "y",
+        kind: Expr {
+            expr: Expr {
+                kind: Assign {
+                    left: Expr {
+                        kind: Identifier(
+                            "y",
+                        ),
                         loc: SourceLocation {
                             start: Position {
                                 line: 1,
-                                column: 5,
+                                column: 1,
                             },
                             end: Position {
                                 line: 1,
-                                column: 6,
+                                column: 2,
                             },
                         },
-                        mutable: false,
                     },
-                ),
-            },
-            expr: Expr {
-                kind: Binary {
-                    left: Expr {
+                    op: Assign,
+                    right: Expr {
                         kind: Binary {
                             left: Expr {
-                                kind: Identifier(
-                                    "m",
-                                ),
+                                kind: Binary {
+                                    left: Expr {
+                                        kind: Identifier(
+                                            "m",
+                                        ),
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 1,
+                                                column: 5,
+                                            },
+                                            end: Position {
+                                                line: 1,
+                                                column: 6,
+                                            },
+                                        },
+                                    },
+                                    op: Times,
+                                    right: Expr {
+                                        kind: Identifier(
+                                            "x",
+                                        ),
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 1,
+                                                column: 7,
+                                            },
+                                            end: Position {
+                                                line: 1,
+                                                column: 8,
+                                            },
+                                        },
+                                    },
+                                },
                                 loc: SourceLocation {
                                     start: Position {
                                         line: 1,
-                                        column: 9,
+                                        column: 5,
                                     },
                                     end: Position {
                                         line: 1,
-                                        column: 10,
+                                        column: 8,
                                     },
                                 },
                             },
-                            op: Times,
+                            op: Plus,
                             right: Expr {
                                 kind: Identifier(
-                                    "x",
+                                    "b",
                                 ),
                                 loc: SourceLocation {
                                     start: Position {
@@ -72,7 +90,7 @@ expression: parse(src)
                         loc: SourceLocation {
                             start: Position {
                                 line: 1,
-                                column: 9,
+                                column: 5,
                             },
                             end: Position {
                                 line: 1,
@@ -80,35 +98,18 @@ expression: parse(src)
                             },
                         },
                     },
-                    op: Plus,
-                    right: Expr {
-                        kind: Identifier(
-                            "b",
-                        ),
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 15,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 16,
-                            },
-                        },
-                    },
                 },
                 loc: SourceLocation {
                     start: Position {
                         line: 1,
-                        column: 9,
+                        column: 1,
                     },
                     end: Position {
                         line: 1,
-                        column: 16,
+                        column: 12,
                     },
                 },
             },
-            type_ann: None,
         },
         loc: SourceLocation {
             start: Position {
@@ -117,7 +118,7 @@ expression: parse(src)
             },
             end: Position {
                 line: 1,
-                column: 16,
+                column: 12,
             },
         },
     },

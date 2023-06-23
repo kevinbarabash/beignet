@@ -1,5 +1,5 @@
 ---
-source: crates/escalier_parser/src/lexer.rs
+source: crates/escalier_parser/src/parser.rs
 expression: jsx_elem
 ---
 JSXElement {
