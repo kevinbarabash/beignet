@@ -10,67 +10,22 @@ Expr {
                     kind: Identifier(
                         "obj",
                     ),
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 2,
-                            column: 20,
-                        },
-                        end: Position {
-                            line: 2,
-                            column: 23,
-                        },
-                    },
+                    span: 20..23,
                 },
                 property: Expr {
                     kind: Identifier(
                         "type",
                     ),
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 2,
-                            column: 24,
-                        },
-                        end: Position {
-                            line: 2,
-                            column: 28,
-                        },
-                    },
+                    span: 24..28,
                 },
             },
-            loc: SourceLocation {
-                start: Position {
-                    line: 2,
-                    column: 20,
-                },
-                end: Position {
-                    line: 2,
-                    column: 28,
-                },
-            },
+            span: 20..28,
         },
         arms: [
             MatchArm {
-                loc: SourceLocation {
-                    start: Position {
-                        line: 3,
-                        column: 17,
-                    },
-                    end: Position {
-                        line: 3,
-                        column: 33,
-                    },
-                },
+                span: 48..64,
                 pattern: Pattern {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 3,
-                            column: 17,
-                        },
-                        end: Position {
-                            line: 3,
-                            column: 22,
-                        },
-                    },
+                    span: 48..53,
                     kind: Lit(
                         LitPat {
                             lit: String(
@@ -87,68 +42,23 @@ Expr {
                                 kind: Identifier(
                                     "obj",
                                 ),
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 3,
-                                        column: 26,
-                                    },
-                                    end: Position {
-                                        line: 3,
-                                        column: 29,
-                                    },
-                                },
+                                span: 57..60,
                             },
                             property: Expr {
                                 kind: Identifier(
                                     "foo",
                                 ),
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 3,
-                                        column: 30,
-                                    },
-                                    end: Position {
-                                        line: 3,
-                                        column: 33,
-                                    },
-                                },
+                                span: 61..64,
                             },
                         },
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 3,
-                                column: 26,
-                            },
-                            end: Position {
-                                line: 3,
-                                column: 33,
-                            },
-                        },
+                        span: 57..64,
                     },
                 ),
             },
             MatchArm {
-                loc: SourceLocation {
-                    start: Position {
-                        line: 4,
-                        column: 17,
-                    },
-                    end: Position {
-                        line: 6,
-                        column: 18,
-                    },
-                },
+                span: 82..139,
                 pattern: Pattern {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 4,
-                            column: 17,
-                        },
-                        end: Position {
-                            line: 4,
-                            column: 22,
-                        },
-                    },
+                    span: 82..87,
                     kind: Lit(
                         LitPat {
                             lit: String(
@@ -160,16 +70,7 @@ Expr {
                 guard: None,
                 body: Block(
                     Block {
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 4,
-                                column: 25,
-                            },
-                            end: Position {
-                                line: 6,
-                                column: 18,
-                            },
-                        },
+                        span: 90..139,
                         stmts: [
                             Stmt {
                                 kind: Expr {
@@ -179,82 +80,28 @@ Expr {
                                                 kind: Identifier(
                                                     "obj",
                                                 ),
-                                                loc: SourceLocation {
-                                                    start: Position {
-                                                        line: 5,
-                                                        column: 21,
-                                                    },
-                                                    end: Position {
-                                                        line: 5,
-                                                        column: 24,
-                                                    },
-                                                },
+                                                span: 113..116,
                                             },
                                             property: Expr {
                                                 kind: Identifier(
                                                     "bar",
                                                 ),
-                                                loc: SourceLocation {
-                                                    start: Position {
-                                                        line: 5,
-                                                        column: 25,
-                                                    },
-                                                    end: Position {
-                                                        line: 5,
-                                                        column: 28,
-                                                    },
-                                                },
+                                                span: 117..120,
                                             },
                                         },
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 5,
-                                                column: 21,
-                                            },
-                                            end: Position {
-                                                line: 5,
-                                                column: 28,
-                                            },
-                                        },
+                                        span: 113..120,
                                     },
                                 },
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 5,
-                                        column: 21,
-                                    },
-                                    end: Position {
-                                        line: 5,
-                                        column: 28,
-                                    },
-                                },
+                                span: 113..120,
                             },
                         ],
                     },
                 ),
             },
             MatchArm {
-                loc: SourceLocation {
-                    start: Position {
-                        line: 7,
-                        column: 17,
-                    },
-                    end: Position {
-                        line: 7,
-                        column: 31,
-                    },
-                },
+                span: 157..171,
                 pattern: Pattern {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 7,
-                            column: 17,
-                        },
-                        end: Position {
-                            line: 7,
-                            column: 18,
-                        },
-                    },
+                    span: 157..158,
                     kind: Wildcard,
                 },
                 guard: None,
@@ -265,29 +112,11 @@ Expr {
                                 "default",
                             ),
                         ),
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 7,
-                                column: 22,
-                            },
-                            end: Position {
-                                line: 7,
-                                column: 31,
-                            },
-                        },
+                        span: 162..171,
                     },
                 ),
             },
         ],
     },
-    loc: SourceLocation {
-        start: Position {
-            line: 2,
-            column: 20,
-        },
-        end: Position {
-            line: 7,
-            column: 31,
-        },
-    },
+    span: 20..171,
 }

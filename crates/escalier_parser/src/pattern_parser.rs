@@ -2,16 +2,16 @@ use crate::identifier::{BindingIdent, Ident};
 use crate::literal::Literal;
 use crate::parser::Parser;
 use crate::pattern::*;
-use crate::source_location::merge_locations;
+use crate::source_location::*;
 use crate::token::*;
 
 impl<'a> Parser<'a> {
     pub fn parse_pattern(&mut self) -> Pattern {
-        let mut loc = self.peek().unwrap_or(&EOF).loc.clone();
+        let mut span = self.peek().unwrap_or(&EOF).span.clone();
         let kind = match self.next().unwrap_or(EOF.clone()).kind {
             TokenKind::Identifier(name) => PatternKind::Ident(BindingIdent {
                 name,
-                loc: loc.clone(),
+                span: span.clone(),
                 mutable: false,
             }),
             TokenKind::StrLit(value) => PatternKind::Lit(LitPat {
@@ -58,7 +58,7 @@ impl<'a> Parser<'a> {
                     }
                 }
 
-                loc = merge_locations(&loc, &self.peek().unwrap_or(&EOF).loc);
+                span = merge_spans(&span, &self.peek().unwrap_or(&EOF).span);
                 assert_eq!(
                     self.next().unwrap_or(EOF.clone()).kind,
                     TokenKind::RightBracket
@@ -75,7 +75,7 @@ impl<'a> Parser<'a> {
 
                 while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
                     let first = self.peek().unwrap_or(&EOF);
-                    let first_loc = first.loc.clone();
+                    let first_span = first.span.clone();
                     match &self.next().unwrap_or(EOF.clone()).kind {
                         TokenKind::Identifier(name) => {
                             if self.peek().unwrap_or(&EOF).kind == TokenKind::Colon {
@@ -85,10 +85,10 @@ impl<'a> Parser<'a> {
 
                                 // TODO: handle `var` and `mut` modifiers
                                 props.push(ObjectPatProp::KeyValue(KeyValuePatProp {
-                                    loc: merge_locations(&first_loc, &pattern.loc),
+                                    span: merge_spans(&first_span, &pattern.span),
                                     key: Ident {
                                         name: name.clone(),
-                                        loc: first_loc,
+                                        span: first_span,
                                     },
                                     value: Box::new(pattern),
                                     init: None,
@@ -96,10 +96,10 @@ impl<'a> Parser<'a> {
                             } else {
                                 // TODO: handle `var` and `mut` modifiers
                                 props.push(ObjectPatProp::Shorthand(ShorthandPatProp {
-                                    loc: first_loc.clone(),
+                                    span: first_span.clone(),
                                     ident: BindingIdent {
                                         name: name.clone(),
-                                        loc: first_loc,
+                                        span: first_span,
                                         mutable: false,
                                     },
                                     init: None,
@@ -123,7 +123,7 @@ impl<'a> Parser<'a> {
                     }
                 }
 
-                loc = merge_locations(&loc, &self.peek().unwrap_or(&EOF).loc);
+                span = merge_spans(&span, &self.peek().unwrap_or(&EOF).span);
                 assert_eq!(
                     self.next().unwrap_or(EOF.clone()).kind,
                     TokenKind::RightBrace
@@ -144,7 +144,7 @@ impl<'a> Parser<'a> {
             }
         };
 
-        Pattern { loc, kind }
+        Pattern { span, kind }
     }
 }
 

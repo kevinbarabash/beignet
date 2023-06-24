@@ -16,16 +16,7 @@ Expr {
                                 "1",
                             ),
                         ),
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 6,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 7,
-                            },
-                        },
+                        span: 5..6,
                     },
                 },
             ),
@@ -40,29 +31,11 @@ Expr {
                                 "2",
                             ),
                         ),
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 12,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 13,
-                            },
-                        },
+                        span: 11..12,
                     },
                 },
             ),
         ],
     },
-    loc: SourceLocation {
-        start: Position {
-            line: 1,
-            column: 1,
-        },
-        end: Position {
-            line: 1,
-            column: 15,
-        },
-    },
+    span: 0..14,
 }

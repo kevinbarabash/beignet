@@ -11,28 +11,10 @@ expression: "parse(\"if (foo) { console.log(foo); };\")"
                         kind: Identifier(
                             "foo",
                         ),
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 5,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 8,
-                            },
-                        },
+                        span: 4..7,
                     },
                     consequent: Block {
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 9,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 31,
-                            },
-                        },
+                        span: 8..30,
                         stmts: [
                             Stmt {
                                 kind: Expr {
@@ -43,16 +25,7 @@ expression: "parse(\"if (foo) { console.log(foo); };\")"
                                                     kind: Identifier(
                                                         "foo",
                                                     ),
-                                                    loc: SourceLocation {
-                                                        start: Position {
-                                                            line: 1,
-                                                            column: 24,
-                                                        },
-                                                        end: Position {
-                                                            line: 1,
-                                                            column: 27,
-                                                        },
-                                                    },
+                                                    span: 23..26,
                                                 },
                                             ],
                                             callee: Expr {
@@ -61,93 +34,30 @@ expression: "parse(\"if (foo) { console.log(foo); };\")"
                                                         kind: Identifier(
                                                             "console",
                                                         ),
-                                                        loc: SourceLocation {
-                                                            start: Position {
-                                                                line: 1,
-                                                                column: 12,
-                                                            },
-                                                            end: Position {
-                                                                line: 1,
-                                                                column: 19,
-                                                            },
-                                                        },
+                                                        span: 11..18,
                                                     },
                                                     property: Expr {
                                                         kind: Identifier(
                                                             "log",
                                                         ),
-                                                        loc: SourceLocation {
-                                                            start: Position {
-                                                                line: 1,
-                                                                column: 20,
-                                                            },
-                                                            end: Position {
-                                                                line: 1,
-                                                                column: 23,
-                                                            },
-                                                        },
+                                                        span: 19..22,
                                                     },
                                                 },
-                                                loc: SourceLocation {
-                                                    start: Position {
-                                                        line: 1,
-                                                        column: 12,
-                                                    },
-                                                    end: Position {
-                                                        line: 1,
-                                                        column: 23,
-                                                    },
-                                                },
+                                                span: 11..22,
                                             },
                                         },
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 1,
-                                                column: 12,
-                                            },
-                                            end: Position {
-                                                line: 1,
-                                                column: 28,
-                                            },
-                                        },
+                                        span: 11..27,
                                     },
                                 },
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 1,
-                                        column: 12,
-                                    },
-                                    end: Position {
-                                        line: 1,
-                                        column: 28,
-                                    },
-                                },
+                                span: 11..27,
                             },
                         ],
                     },
                     alternate: None,
                 },
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 1,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 31,
-                    },
-                },
+                span: 0..30,
             },
         },
-        loc: SourceLocation {
-            start: Position {
-                line: 1,
-                column: 1,
-            },
-            end: Position {
-                line: 1,
-                column: 31,
-            },
-        },
+        span: 0..30,
     },
 ]

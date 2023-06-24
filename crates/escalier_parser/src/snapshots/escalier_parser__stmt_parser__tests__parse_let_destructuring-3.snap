@@ -6,45 +6,18 @@ expression: "parse(\"let [p1, p2] = line;\")"
     Stmt {
         kind: Let {
             pattern: Pattern {
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 4,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 13,
-                    },
-                },
+                span: 3..12,
                 kind: Tuple(
                     TuplePat {
                         elems: [
                             Some(
                                 TuplePatElem {
                                     pattern: Pattern {
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 1,
-                                                column: 6,
-                                            },
-                                            end: Position {
-                                                line: 1,
-                                                column: 8,
-                                            },
-                                        },
+                                        span: 5..7,
                                         kind: Ident(
                                             BindingIdent {
                                                 name: "p1",
-                                                loc: SourceLocation {
-                                                    start: Position {
-                                                        line: 1,
-                                                        column: 6,
-                                                    },
-                                                    end: Position {
-                                                        line: 1,
-                                                        column: 8,
-                                                    },
-                                                },
+                                                span: 5..7,
                                                 mutable: false,
                                             },
                                         ),
@@ -55,29 +28,11 @@ expression: "parse(\"let [p1, p2] = line;\")"
                             Some(
                                 TuplePatElem {
                                     pattern: Pattern {
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 1,
-                                                column: 10,
-                                            },
-                                            end: Position {
-                                                line: 1,
-                                                column: 12,
-                                            },
-                                        },
+                                        span: 9..11,
                                         kind: Ident(
                                             BindingIdent {
                                                 name: "p2",
-                                                loc: SourceLocation {
-                                                    start: Position {
-                                                        line: 1,
-                                                        column: 10,
-                                                    },
-                                                    end: Position {
-                                                        line: 1,
-                                                        column: 12,
-                                                    },
-                                                },
+                                                span: 9..11,
                                                 mutable: false,
                                             },
                                         ),
@@ -94,28 +49,10 @@ expression: "parse(\"let [p1, p2] = line;\")"
                 kind: Identifier(
                     "line",
                 ),
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 16,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 20,
-                    },
-                },
+                span: 15..19,
             },
             type_ann: None,
         },
-        loc: SourceLocation {
-            start: Position {
-                line: 1,
-                column: 1,
-            },
-            end: Position {
-                line: 1,
-                column: 20,
-            },
-        },
+        span: 0..19,
     },
 ]

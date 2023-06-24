@@ -2,7 +2,7 @@ use crate::func_param::FuncParam;
 use crate::jsx::{JSXElement, JSXFragment};
 use crate::literal::Literal;
 use crate::pattern::Pattern;
-use crate::source_location::SourceLocation;
+use crate::source_location::*;
 use crate::stmt::Stmt;
 use crate::type_ann::TypeAnn;
 
@@ -116,8 +116,8 @@ pub struct CatchClause {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct MatchArm {
-    pub loc: SourceLocation,
-    // pub span: Span,
+    // pub loc: SourceLocation,
+    pub span: Span,
     pub pattern: Pattern,
     pub guard: Option<Box<Expr>>,
     pub body: BlockOrExpr,
@@ -131,7 +131,7 @@ pub enum BlockOrExpr {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Block {
-    pub loc: SourceLocation,
+    pub span: Span,
     pub stmts: Vec<Stmt>,
 }
 
@@ -171,5 +171,5 @@ pub enum UnaryOp {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Expr {
     pub kind: ExprKind,
-    pub loc: SourceLocation,
+    pub span: Span,
 }

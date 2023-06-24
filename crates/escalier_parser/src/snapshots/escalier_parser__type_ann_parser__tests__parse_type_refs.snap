@@ -12,28 +12,10 @@ TypeAnn {
                         "T",
                         None,
                     ),
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 7,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 8,
-                        },
-                    },
+                    span: 6..7,
                 },
             ],
         ),
     ),
-    loc: SourceLocation {
-        start: Position {
-            line: 1,
-            column: 1,
-        },
-        end: Position {
-            line: 1,
-            column: 9,
-        },
-    },
+    span: 0..8,
 }

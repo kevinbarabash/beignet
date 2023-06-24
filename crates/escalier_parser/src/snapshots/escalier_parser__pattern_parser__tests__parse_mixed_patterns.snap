@@ -3,55 +3,19 @@ source: crates/escalier_parser/src/pattern_parser.rs
 expression: "parse(r#\"{type: \"foo\", bar: _, values: [head, ...tail]}\"#)"
 ---
 Pattern {
-    loc: SourceLocation {
-        start: Position {
-            line: 1,
-            column: 1,
-        },
-        end: Position {
-            line: 1,
-            column: 47,
-        },
-    },
+    span: 0..46,
     kind: Object(
         ObjectPat {
             props: [
                 KeyValue(
                     KeyValuePatProp {
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 2,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 13,
-                            },
-                        },
+                        span: 1..12,
                         key: Ident {
                             name: "type",
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 2,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 6,
-                                },
-                            },
+                            span: 1..5,
                         },
                         value: Pattern {
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 8,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 13,
-                                },
-                            },
+                            span: 7..12,
                             kind: Lit(
                                 LitPat {
                                     lit: String(
@@ -65,40 +29,13 @@ Pattern {
                 ),
                 KeyValue(
                     KeyValuePatProp {
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 15,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 21,
-                            },
-                        },
+                        span: 14..20,
                         key: Ident {
                             name: "bar",
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 15,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 18,
-                                },
-                            },
+                            span: 14..17,
                         },
                         value: Pattern {
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 20,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 21,
-                                },
-                            },
+                            span: 19..20,
                             kind: Wildcard,
                         },
                         init: None,
@@ -106,69 +43,24 @@ Pattern {
                 ),
                 KeyValue(
                     KeyValuePatProp {
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 23,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 46,
-                            },
-                        },
+                        span: 22..45,
                         key: Ident {
                             name: "values",
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 23,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 29,
-                                },
-                            },
+                            span: 22..28,
                         },
                         value: Pattern {
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 30,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 46,
-                                },
-                            },
+                            span: 29..45,
                             kind: Tuple(
                                 TuplePat {
                                     elems: [
                                         Some(
                                             TuplePatElem {
                                                 pattern: Pattern {
-                                                    loc: SourceLocation {
-                                                        start: Position {
-                                                            line: 1,
-                                                            column: 32,
-                                                        },
-                                                        end: Position {
-                                                            line: 1,
-                                                            column: 36,
-                                                        },
-                                                    },
+                                                    span: 31..35,
                                                     kind: Ident(
                                                         BindingIdent {
                                                             name: "head",
-                                                            loc: SourceLocation {
-                                                                start: Position {
-                                                                    line: 1,
-                                                                    column: 32,
-                                                                },
-                                                                end: Position {
-                                                                    line: 1,
-                                                                    column: 36,
-                                                                },
-                                                            },
+                                                            span: 31..35,
                                                             mutable: false,
                                                         },
                                                     ),
@@ -179,42 +71,15 @@ Pattern {
                                         Some(
                                             TuplePatElem {
                                                 pattern: Pattern {
-                                                    loc: SourceLocation {
-                                                        start: Position {
-                                                            line: 1,
-                                                            column: 37,
-                                                        },
-                                                        end: Position {
-                                                            line: 1,
-                                                            column: 41,
-                                                        },
-                                                    },
+                                                    span: 36..40,
                                                     kind: Rest(
                                                         RestPat {
                                                             arg: Pattern {
-                                                                loc: SourceLocation {
-                                                                    start: Position {
-                                                                        line: 1,
-                                                                        column: 41,
-                                                                    },
-                                                                    end: Position {
-                                                                        line: 1,
-                                                                        column: 45,
-                                                                    },
-                                                                },
+                                                                span: 40..44,
                                                                 kind: Ident(
                                                                     BindingIdent {
                                                                         name: "tail",
-                                                                        loc: SourceLocation {
-                                                                            start: Position {
-                                                                                line: 1,
-                                                                                column: 41,
-                                                                            },
-                                                                            end: Position {
-                                                                                line: 1,
-                                                                                column: 45,
-                                                                            },
-                                                                        },
+                                                                        span: 40..44,
                                                                         mutable: false,
                                                                     },
                                                                 ),

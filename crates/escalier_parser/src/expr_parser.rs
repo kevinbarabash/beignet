@@ -74,9 +74,9 @@ impl<'a> Parser<'a> {
         }
         let close = self.next().unwrap_or(EOF.clone());
         assert_eq!(close.kind, TokenKind::RightBrace);
-        let loc = merge_locations(&open.loc, &close.loc);
+        let span = merge_spans(&open.span, &close.span);
 
-        Block { loc, stmts }
+        Block { span, stmts }
     }
 
     fn parse_atom(&mut self) -> Expr {
@@ -87,28 +87,28 @@ impl<'a> Parser<'a> {
                 self.next(); // consume number
                 Expr {
                     kind: ExprKind::Literal(Literal::Number(n.to_owned())),
-                    loc: first.loc.clone(),
+                    span: first.span.clone(),
                 }
             }
             TokenKind::Identifier(id) => {
                 self.next(); // consume identifier
                 Expr {
                     kind: ExprKind::Identifier(id.to_owned()),
-                    loc: first.loc.clone(),
+                    span: first.span.clone(),
                 }
             }
             TokenKind::BoolLit(b) => {
                 self.next(); // consume boolean
                 Expr {
                     kind: ExprKind::Literal(Literal::Boolean(*b)),
-                    loc: first.loc.clone(),
+                    span: first.span.clone(),
                 }
             }
             TokenKind::StrLit(s) => {
                 self.next(); // consume string
                 Expr {
                     kind: ExprKind::Literal(Literal::String(s.to_owned())),
-                    loc: first.loc.clone(),
+                    span: first.span.clone(),
                 }
             }
             TokenKind::StrTemplateLit { parts, exprs } => {
@@ -124,21 +124,21 @@ impl<'a> Parser<'a> {
                             .collect(),
                         exprs: exprs.to_owned(),
                     },
-                    loc: first.loc.clone(),
+                    span: first.span.clone(),
                 }
             }
             TokenKind::Null => {
                 self.next(); // consume 'null'
                 Expr {
                     kind: ExprKind::Literal(Literal::Null),
-                    loc: first.loc.clone(),
+                    span: first.span.clone(),
                 }
             }
             TokenKind::Undefined => {
                 self.next(); // consume 'undefined'
                 Expr {
                     kind: ExprKind::Literal(Literal::Undefined),
-                    loc: first.loc.clone(),
+                    span: first.span.clone(),
                 }
             }
             TokenKind::LeftParen => {
@@ -187,7 +187,7 @@ impl<'a> Parser<'a> {
 
                 Expr {
                     kind: ExprKind::Tuple { elements },
-                    loc: merge_locations(&start.loc, &end.loc),
+                    span: merge_spans(&start.span, &end.span),
                 }
             }
             TokenKind::LeftBrace => {
@@ -252,7 +252,7 @@ impl<'a> Parser<'a> {
 
                 Expr {
                     kind: ExprKind::Object { properties },
-                    loc: merge_locations(&start.loc, &end.loc),
+                    span: merge_spans(&start.span, &end.span),
                 }
             }
             TokenKind::Fn => {
@@ -272,7 +272,7 @@ impl<'a> Parser<'a> {
                 match self.peek().unwrap_or(&EOF).kind {
                     TokenKind::LeftBrace => {
                         let block = self.parse_block();
-                        let loc = merge_locations(&first.loc, &block.loc);
+                        let span = merge_spans(&first.span, &block.span);
                         let body = BlockOrExpr::Block(block);
 
                         Expr {
@@ -281,12 +281,12 @@ impl<'a> Parser<'a> {
                                 body,
                                 type_ann,
                             },
-                            loc,
+                            span,
                         }
                     }
                     _ => {
                         let expr = self.parse_expr();
-                        let loc = merge_locations(&first.loc, &expr.loc);
+                        let span = merge_spans(&first.span, &expr.span);
                         let body = BlockOrExpr::Expr(Box::new(expr));
 
                         Expr {
@@ -295,7 +295,7 @@ impl<'a> Parser<'a> {
                                 body,
                                 type_ann,
                             },
-                            loc,
+                            span,
                         }
                     }
                 }
@@ -316,24 +316,24 @@ impl<'a> Parser<'a> {
                 if self.peek().unwrap_or(&EOF).kind == TokenKind::Else {
                     self.next().unwrap_or(EOF.clone());
                     let alternate = self.parse_block();
-                    let loc = merge_locations(&first.loc, &alternate.loc);
+                    let span = merge_spans(&first.span, &alternate.span);
                     Expr {
                         kind: ExprKind::IfElse {
                             cond: Box::new(cond),
                             consequent,
                             alternate: Some(alternate),
                         },
-                        loc,
+                        span,
                     }
                 } else {
-                    let loc = merge_locations(&first.loc, &consequent.loc);
+                    let span = merge_spans(&first.span, &consequent.span);
                     Expr {
                         kind: ExprKind::IfElse {
                             cond: Box::new(cond),
                             consequent,
                             alternate: None,
                         },
-                        loc,
+                        span,
                     }
                 }
             }
@@ -341,7 +341,7 @@ impl<'a> Parser<'a> {
                 // TODO: make 'match' use parens to align with 'if'
                 self.next(); // consumes 'match'
                 let expr = self.parse_expr();
-                let mut loc = expr.loc.clone();
+                let mut span = expr.span.clone();
                 assert_eq!(
                     self.next().unwrap_or(EOF.clone()).kind,
                     TokenKind::LeftBrace
@@ -354,12 +354,12 @@ impl<'a> Parser<'a> {
                     let (body, end) = match self.peek().unwrap_or(&EOF).kind {
                         TokenKind::LeftBrace => {
                             let block = self.parse_block();
-                            let loc = block.loc.clone();
+                            let loc = block.span.clone();
                             (BlockOrExpr::Block(block), loc)
                         }
                         _ => {
                             let expr = self.parse_expr();
-                            let loc = expr.loc.clone();
+                            let loc = expr.span.clone();
                             (BlockOrExpr::Expr(Box::new(expr)), loc)
                         }
                     };
@@ -367,12 +367,12 @@ impl<'a> Parser<'a> {
                     assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Comma);
 
                     arms.push(MatchArm {
-                        loc: merge_locations(&pattern.loc, &end),
+                        span: merge_spans(&pattern.span, &end),
                         pattern,
                         guard: None,
                         body,
                     });
-                    loc = merge_locations(&loc, &end);
+                    span = merge_spans(&span, &end);
                 }
 
                 assert_eq!(
@@ -385,7 +385,7 @@ impl<'a> Parser<'a> {
                         expr: Box::new(expr),
                         arms,
                     },
-                    loc,
+                    span,
                 }
             }
             TokenKind::Try => {
@@ -410,7 +410,7 @@ impl<'a> Parser<'a> {
                             TokenKind::Finally => {
                                 self.next().unwrap_or(EOF.clone());
                                 let finally_body = self.parse_block();
-                                let loc = merge_locations(&first.loc, &finally_body.loc);
+                                let span = merge_spans(&first.span, &finally_body.span);
 
                                 Expr {
                                     kind: ExprKind::Try {
@@ -421,11 +421,11 @@ impl<'a> Parser<'a> {
                                         }),
                                         finally: Some(finally_body),
                                     },
-                                    loc,
+                                    span,
                                 }
                             }
                             _ => {
-                                let loc = merge_locations(&first.loc, &catch_body.loc);
+                                let span = merge_spans(&first.span, &catch_body.span);
 
                                 Expr {
                                     kind: ExprKind::Try {
@@ -436,14 +436,14 @@ impl<'a> Parser<'a> {
                                         }),
                                         finally: None,
                                     },
-                                    loc,
+                                    span,
                                 }
                             }
                         }
                     }
                     TokenKind::Finally => {
                         let finally_body = self.parse_block();
-                        let loc = merge_locations(&first.loc, &finally_body.loc);
+                        let span = merge_spans(&first.span, &finally_body.span);
 
                         Expr {
                             kind: ExprKind::Try {
@@ -451,7 +451,7 @@ impl<'a> Parser<'a> {
                                 catch: None,
                                 finally: Some(finally_body),
                             },
-                            loc,
+                            span,
                         }
                     }
                     _ => {
@@ -463,21 +463,21 @@ impl<'a> Parser<'a> {
                 // assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::LeftParen);
                 // let error = parse_pattern(parser);
                 // assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::RightParen);
-                // let catch_body = parse_block(parser); // TODO: create a BlockStmt and include .loc in it
+                // let catch_body = parse_block(parser); // TODO: create a BlockStmt and include .span in it
             }
             TokenKind::Do => {
                 self.next(); // consumes 'do'
                 let body = self.parse_block();
-                let loc = merge_locations(&first.loc, &body.loc);
+                let span = merge_spans(&first.span, &body.span);
 
                 Expr {
                     kind: ExprKind::Do { body },
-                    loc,
+                    span,
                 }
             }
             TokenKind::LessThan => {
                 // TODO: this is wrong
-                let loc = first.loc.clone();
+                let span = first.span.clone();
 
                 // HACK: We use self.scanner.peek() to lookahead further than
                 // self.peek() will allow.  The reason why this is scanner.peek(0)
@@ -486,11 +486,11 @@ impl<'a> Parser<'a> {
                 match self.scanner.peek(0) {
                     Some('>') => Expr {
                         kind: ExprKind::JSXFragment(self.parse_jsx_fragment()),
-                        loc,
+                        span,
                     },
                     _ => Expr {
                         kind: ExprKind::JSXElement(self.parse_jsx_element()),
-                        loc,
+                        span,
                     },
                 }
             }
@@ -504,13 +504,13 @@ impl<'a> Parser<'a> {
                             _ => panic!("unexpected token: {:?}", t),
                         };
                         let rhs = self.parse_expr_with_precedence(precendence.0);
-                        let loc = merge_locations(&first.loc, &rhs.loc);
+                        let span = merge_spans(&first.span, &rhs.span);
                         Expr {
                             kind: ExprKind::Unary {
                                 op,
                                 right: Box::new(rhs),
                             },
-                            loc,
+                            span,
                         }
                     }
                     None => panic!("unexpected token: {:?}", first),
@@ -573,7 +573,7 @@ impl<'a> Parser<'a> {
                     };
 
                     let rhs = self.parse_expr_with_precedence(precedence);
-                    let loc = merge_locations(&lhs.loc, &rhs.loc);
+                    let span = merge_spans(&lhs.span, &rhs.span);
 
                     lhs = Expr {
                         kind: ExprKind::Assign {
@@ -581,7 +581,7 @@ impl<'a> Parser<'a> {
                             left: Box::new(lhs),
                             right: Box::new(rhs),
                         },
-                        loc,
+                        span,
                     };
 
                     continue;
@@ -611,7 +611,7 @@ impl<'a> Parser<'a> {
                 };
 
                 let rhs = self.parse_expr_with_precedence(precedence);
-                let loc = merge_locations(&lhs.loc, &rhs.loc);
+                let span = merge_spans(&lhs.span, &rhs.span);
 
                 lhs = Expr {
                     kind: ExprKind::Binary {
@@ -619,7 +619,7 @@ impl<'a> Parser<'a> {
                         left: Box::new(lhs),
                         right: Box::new(rhs),
                     },
-                    loc,
+                    span,
                 };
 
                 continue;
@@ -627,8 +627,6 @@ impl<'a> Parser<'a> {
 
             return lhs;
         }
-
-        lhs
     }
 
     fn parse_postfix(&mut self, lhs: Expr, next_precedence: (u8, Associativity)) -> Expr {
@@ -643,7 +641,7 @@ impl<'a> Parser<'a> {
         match &next.kind {
             TokenKind::LeftBracket => {
                 let rhs = self.parse_expr();
-                let loc = merge_locations(&lhs.loc, &rhs.loc);
+                let span = merge_spans(&lhs.span, &rhs.span);
                 assert_eq!(
                     self.next().unwrap_or(EOF.clone()).kind,
                     TokenKind::RightBracket
@@ -653,7 +651,7 @@ impl<'a> Parser<'a> {
                         left: Box::new(lhs),
                         right: Box::new(rhs),
                     },
-                    loc,
+                    span,
                 }
             }
             TokenKind::LeftParen => {
@@ -672,7 +670,7 @@ impl<'a> Parser<'a> {
                         ),
                     }
                 }
-                let loc = merge_locations(&lhs.loc, &self.peek().unwrap_or(&EOF).loc);
+                let span = merge_spans(&lhs.span, &self.peek().unwrap_or(&EOF).span);
                 assert_eq!(
                     self.next().unwrap_or(EOF.clone()).kind,
                     TokenKind::RightParen
@@ -682,22 +680,22 @@ impl<'a> Parser<'a> {
                         callee: Box::new(lhs),
                         args,
                     },
-                    loc,
+                    span,
                 }
             }
             TokenKind::Dot => {
                 let rhs = self.parse_expr_with_precedence(precedence);
-                let loc = merge_locations(&lhs.loc, &rhs.loc);
+                let span = merge_spans(&lhs.span, &rhs.span);
                 Expr {
                     kind: ExprKind::Member {
                         object: Box::new(lhs),
                         property: Box::new(rhs),
                     },
-                    loc,
+                    span,
                 }
             }
             TokenKind::QuestionDot => {
-                let lhs_loc = lhs.loc.clone();
+                let lhs_span = lhs.span.clone();
 
                 let base = match self.peek().unwrap_or(&EOF).kind {
                     TokenKind::LeftParen | TokenKind::LeftBracket => {
@@ -705,24 +703,24 @@ impl<'a> Parser<'a> {
                     }
                     _ => {
                         let rhs = self.parse_expr_with_precedence(precedence);
-                        let loc = merge_locations(&lhs.loc, &rhs.loc);
+                        let span = merge_spans(&lhs.span, &rhs.span);
                         Expr {
                             kind: ExprKind::Member {
                                 object: Box::new(lhs),
                                 property: Box::new(rhs),
                             },
-                            loc,
+                            span,
                         }
                     }
                 };
 
-                let loc = merge_locations(&lhs_loc, &base.loc);
+                let span = merge_spans(&lhs_span, &base.span);
 
                 Expr {
                     kind: ExprKind::OptionalChain {
                         base: Box::new(base),
                     },
-                    loc,
+                    span,
                 }
             }
             _ => panic!("unexpected token: {:?}", next),

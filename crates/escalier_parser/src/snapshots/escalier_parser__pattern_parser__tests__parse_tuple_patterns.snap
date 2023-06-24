@@ -3,45 +3,18 @@ source: crates/escalier_parser/src/pattern_parser.rs
 expression: "parse(\"[a, b, c]\")"
 ---
 Pattern {
-    loc: SourceLocation {
-        start: Position {
-            line: 1,
-            column: 1,
-        },
-        end: Position {
-            line: 1,
-            column: 10,
-        },
-    },
+    span: 0..9,
     kind: Tuple(
         TuplePat {
             elems: [
                 Some(
                     TuplePatElem {
                         pattern: Pattern {
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 2,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 3,
-                                },
-                            },
+                            span: 1..2,
                             kind: Ident(
                                 BindingIdent {
                                     name: "a",
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 2,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 3,
-                                        },
-                                    },
+                                    span: 1..2,
                                     mutable: false,
                                 },
                             ),
@@ -52,29 +25,11 @@ Pattern {
                 Some(
                     TuplePatElem {
                         pattern: Pattern {
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 5,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 6,
-                                },
-                            },
+                            span: 4..5,
                             kind: Ident(
                                 BindingIdent {
                                     name: "b",
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 5,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 6,
-                                        },
-                                    },
+                                    span: 4..5,
                                     mutable: false,
                                 },
                             ),
@@ -85,29 +40,11 @@ Pattern {
                 Some(
                     TuplePatElem {
                         pattern: Pattern {
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 8,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 9,
-                                },
-                            },
+                            span: 7..8,
                             kind: Ident(
                                 BindingIdent {
                                     name: "c",
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 8,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 9,
-                                        },
-                                    },
+                                    span: 7..8,
                                     mutable: false,
                                 },
                             ),

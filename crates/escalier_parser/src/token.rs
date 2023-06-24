@@ -85,13 +85,10 @@ pub enum TokenKind {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Token {
     pub kind: TokenKind,
-    pub loc: SourceLocation,
+    pub span: Span,
 }
 
 pub const EOF: Token = Token {
     kind: TokenKind::Eof,
-    loc: SourceLocation {
-        start: Position { line: 0, column: 0 },
-        end: Position { line: 0, column: 0 },
-    },
+    span: DUMMY_SPAN,
 };

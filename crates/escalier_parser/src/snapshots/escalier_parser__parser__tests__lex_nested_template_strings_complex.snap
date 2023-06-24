@@ -8,31 +8,13 @@ StrTemplateLit {
             kind: StrLit(
                 "ids = ",
             ),
-            loc: SourceLocation {
-                start: Position {
-                    line: 1,
-                    column: 1,
-                },
-                end: Position {
-                    line: 1,
-                    column: 8,
-                },
-            },
+            span: 0..7,
         },
         Token {
             kind: StrLit(
                 "",
             ),
-            loc: SourceLocation {
-                start: Position {
-                    line: 1,
-                    column: 50,
-                },
-                end: Position {
-                    line: 1,
-                    column: 51,
-                },
-            },
+            span: 49..50,
         },
     ],
     exprs: [
@@ -45,16 +27,7 @@ StrTemplateLit {
                                 ", ",
                             ),
                         ),
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 44,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 48,
-                            },
-                        },
+                        span: 43..47,
                     },
                 ],
                 callee: Expr {
@@ -67,29 +40,11 @@ StrTemplateLit {
                                             params: [
                                                 FuncParam {
                                                     pattern: Pattern {
-                                                        loc: SourceLocation {
-                                                            start: Position {
-                                                                line: 1,
-                                                                column: 22,
-                                                            },
-                                                            end: Position {
-                                                                line: 1,
-                                                                column: 24,
-                                                            },
-                                                        },
+                                                        span: 21..23,
                                                         kind: Ident(
                                                             BindingIdent {
                                                                 name: "id",
-                                                                loc: SourceLocation {
-                                                                    start: Position {
-                                                                        line: 1,
-                                                                        column: 22,
-                                                                    },
-                                                                    end: Position {
-                                                                        line: 1,
-                                                                        column: 24,
-                                                                    },
-                                                                },
+                                                                span: 21..23,
                                                                 mutable: false,
                                                             },
                                                         ),
@@ -114,43 +69,16 @@ StrTemplateLit {
                                                                 kind: Identifier(
                                                                     "id",
                                                                 ),
-                                                                loc: SourceLocation {
-                                                                    start: Position {
-                                                                        line: 1,
-                                                                        column: 33,
-                                                                    },
-                                                                    end: Position {
-                                                                        line: 1,
-                                                                        column: 35,
-                                                                    },
-                                                                },
+                                                                span: 32..34,
                                                             },
                                                         ],
                                                     },
-                                                    loc: SourceLocation {
-                                                        start: Position {
-                                                            line: 1,
-                                                            column: 28,
-                                                        },
-                                                        end: Position {
-                                                            line: 1,
-                                                            column: 37,
-                                                        },
-                                                    },
+                                                    span: 27..36,
                                                 },
                                             ),
                                             type_ann: None,
                                         },
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 1,
-                                                column: 18,
-                                            },
-                                            end: Position {
-                                                line: 1,
-                                                column: 37,
-                                            },
-                                        },
+                                        span: 17..36,
                                     },
                                 ],
                                 callee: Expr {
@@ -159,94 +87,31 @@ StrTemplateLit {
                                             kind: Identifier(
                                                 "ids",
                                             ),
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 1,
-                                                    column: 10,
-                                                },
-                                                end: Position {
-                                                    line: 1,
-                                                    column: 13,
-                                                },
-                                            },
+                                            span: 9..12,
                                         },
                                         property: Expr {
                                             kind: Identifier(
                                                 "map",
                                             ),
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 1,
-                                                    column: 14,
-                                                },
-                                                end: Position {
-                                                    line: 1,
-                                                    column: 17,
-                                                },
-                                            },
+                                            span: 13..16,
                                         },
                                     },
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 10,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 17,
-                                        },
-                                    },
+                                    span: 9..16,
                                 },
                             },
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 10,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 38,
-                                },
-                            },
+                            span: 9..37,
                         },
                         property: Expr {
                             kind: Identifier(
                                 "join",
                             ),
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 39,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 43,
-                                },
-                            },
+                            span: 38..42,
                         },
                     },
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 10,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 43,
-                        },
-                    },
+                    span: 9..42,
                 },
             },
-            loc: SourceLocation {
-                start: Position {
-                    line: 1,
-                    column: 10,
-                },
-                end: Position {
-                    line: 1,
-                    column: 49,
-                },
-            },
+            span: 9..48,
         },
     ],
 }

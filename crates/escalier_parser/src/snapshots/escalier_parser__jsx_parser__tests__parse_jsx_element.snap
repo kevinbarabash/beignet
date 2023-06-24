@@ -7,16 +7,7 @@ JSXElement {
         name: Ident(
             Ident {
                 name: "Foo",
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 2,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 5,
-                    },
-                },
+                span: 1..4,
             },
         ),
         attrs: [
@@ -41,16 +32,7 @@ JSXElement {
             name: Ident(
                 Ident {
                     name: "Foo",
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 22,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 25,
-                        },
-                    },
+                    span: 19..25,
                 },
             ),
         },

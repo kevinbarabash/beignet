@@ -3,42 +3,15 @@ source: crates/escalier_parser/src/pattern_parser.rs
 expression: "parse(\"...rest\")"
 ---
 Pattern {
-    loc: SourceLocation {
-        start: Position {
-            line: 1,
-            column: 1,
-        },
-        end: Position {
-            line: 1,
-            column: 4,
-        },
-    },
+    span: 0..3,
     kind: Rest(
         RestPat {
             arg: Pattern {
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 4,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 8,
-                    },
-                },
+                span: 3..7,
                 kind: Ident(
                     BindingIdent {
                         name: "rest",
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 4,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 8,
-                            },
-                        },
+                        span: 3..7,
                         mutable: false,
                     },
                 ),

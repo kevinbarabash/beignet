@@ -13,16 +13,7 @@ TypeAnn {
                         mutable: false,
                         type_ann: TypeAnn {
                             kind: Number,
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 5,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 11,
-                                },
-                            },
+                            span: 4..10,
                         },
                     },
                     ObjectProp {
@@ -31,40 +22,13 @@ TypeAnn {
                         mutable: false,
                         type_ann: TypeAnn {
                             kind: Number,
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 16,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 22,
-                                },
-                            },
+                            span: 15..21,
                         },
                     },
                 ],
             ),
-            loc: SourceLocation {
-                start: Position {
-                    line: 1,
-                    column: 1,
-                },
-                end: Position {
-                    line: 1,
-                    column: 23,
-                },
-            },
+            span: 0..22,
         },
     ),
-    loc: SourceLocation {
-        start: Position {
-            line: 1,
-            column: 1,
-        },
-        end: Position {
-            line: 1,
-            column: 25,
-        },
-    },
+    span: 0..24,
 }

@@ -7,16 +7,7 @@ JSXElement {
         name: Ident(
             Ident {
                 name: "div",
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 2,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 5,
-                    },
-                },
+                span: 1..4,
             },
         ),
         attrs: [],
@@ -31,44 +22,17 @@ JSXElement {
                             kind: Identifier(
                                 "a",
                             ),
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 7,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 8,
-                                },
-                            },
+                            span: 6..7,
                         },
                         op: Plus,
                         right: Expr {
                             kind: Identifier(
                                 "b",
                             ),
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 9,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 10,
-                                },
-                            },
+                            span: 8..9,
                         },
                     },
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 7,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 10,
-                        },
-                    },
+                    span: 6..9,
                 },
             },
         ),
@@ -78,16 +42,7 @@ JSXElement {
             name: Ident(
                 Ident {
                     name: "div",
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 13,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 16,
-                        },
-                    },
+                    span: 10..16,
                 },
             ),
         },

@@ -13,16 +13,7 @@ expression: "parse(r#\"p[\"y\"] = 10;\"#)"
                                 kind: Identifier(
                                     "p",
                                 ),
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 1,
-                                        column: 1,
-                                    },
-                                    end: Position {
-                                        line: 1,
-                                        column: 2,
-                                    },
-                                },
+                                span: 0..1,
                             },
                             right: Expr {
                                 kind: Literal(
@@ -30,28 +21,10 @@ expression: "parse(r#\"p[\"y\"] = 10;\"#)"
                                         "y",
                                     ),
                                 ),
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 1,
-                                        column: 3,
-                                    },
-                                    end: Position {
-                                        line: 1,
-                                        column: 6,
-                                    },
-                                },
+                                span: 2..5,
                             },
                         },
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 1,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 6,
-                            },
-                        },
+                        span: 0..5,
                     },
                     op: Assign,
                     right: Expr {
@@ -60,39 +33,12 @@ expression: "parse(r#\"p[\"y\"] = 10;\"#)"
                                 "10",
                             ),
                         ),
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 10,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 12,
-                            },
-                        },
+                        span: 9..11,
                     },
                 },
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 1,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 12,
-                    },
-                },
+                span: 0..11,
             },
         },
-        loc: SourceLocation {
-            start: Position {
-                line: 1,
-                column: 1,
-            },
-            end: Position {
-                line: 1,
-                column: 12,
-            },
-        },
+        span: 0..11,
     },
 ]

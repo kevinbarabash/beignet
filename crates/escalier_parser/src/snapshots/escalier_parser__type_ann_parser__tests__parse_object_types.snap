@@ -11,16 +11,7 @@ TypeAnn {
                 mutable: false,
                 type_ann: TypeAnn {
                     kind: Number,
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 5,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 11,
-                        },
-                    },
+                    span: 4..10,
                 },
             },
             ObjectProp {
@@ -29,16 +20,7 @@ TypeAnn {
                 mutable: false,
                 type_ann: TypeAnn {
                     kind: String,
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 17,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 23,
-                        },
-                    },
+                    span: 16..22,
                 },
             },
             ObjectProp {
@@ -47,28 +29,10 @@ TypeAnn {
                 mutable: false,
                 type_ann: TypeAnn {
                     kind: Boolean,
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 28,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 35,
-                        },
-                    },
+                    span: 27..34,
                 },
             },
         ],
     ),
-    loc: SourceLocation {
-        start: Position {
-            line: 1,
-            column: 1,
-        },
-        end: Position {
-            line: 1,
-            column: 36,
-        },
-    },
+    span: 0..35,
 }

@@ -12,44 +12,17 @@ Expr {
                             kind: Identifier(
                                 "a",
                             ),
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 1,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 2,
-                                },
-                            },
+                            span: 0..1,
                         },
                         op: GreaterThan,
                         right: Expr {
                             kind: Identifier(
                                 "b",
                             ),
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 5,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 6,
-                                },
-                            },
+                            span: 4..5,
                         },
                     },
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 1,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 6,
-                        },
-                    },
+                    span: 0..5,
                 },
                 op: And,
                 right: Expr {
@@ -58,56 +31,20 @@ Expr {
                             kind: Identifier(
                                 "c",
                             ),
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 10,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 11,
-                                },
-                            },
+                            span: 9..10,
                         },
                         op: GreaterThanOrEqual,
                         right: Expr {
                             kind: Identifier(
                                 "d",
                             ),
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 15,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 16,
-                                },
-                            },
+                            span: 14..15,
                         },
                     },
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 10,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 16,
-                        },
-                    },
+                    span: 9..15,
                 },
             },
-            loc: SourceLocation {
-                start: Position {
-                    line: 1,
-                    column: 1,
-                },
-                end: Position {
-                    line: 1,
-                    column: 16,
-                },
-            },
+            span: 0..15,
         },
         op: Or,
         right: Expr {
@@ -118,44 +55,17 @@ Expr {
                             kind: Identifier(
                                 "e",
                             ),
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 20,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 21,
-                                },
-                            },
+                            span: 19..20,
                         },
                         op: LessThan,
                         right: Expr {
                             kind: Identifier(
                                 "f",
                             ),
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 24,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 25,
-                                },
-                            },
+                            span: 23..24,
                         },
                     },
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 20,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 25,
-                        },
-                    },
+                    span: 19..24,
                 },
                 op: And,
                 right: Expr {
@@ -164,66 +74,21 @@ Expr {
                             kind: Identifier(
                                 "g",
                             ),
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 29,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 30,
-                                },
-                            },
+                            span: 28..29,
                         },
                         op: LessThanOrEqual,
                         right: Expr {
                             kind: Identifier(
                                 "h",
                             ),
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 34,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 35,
-                                },
-                            },
+                            span: 33..34,
                         },
                     },
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 29,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 35,
-                        },
-                    },
+                    span: 28..34,
                 },
             },
-            loc: SourceLocation {
-                start: Position {
-                    line: 1,
-                    column: 20,
-                },
-                end: Position {
-                    line: 1,
-                    column: 35,
-                },
-            },
+            span: 19..34,
         },
     },
-    loc: SourceLocation {
-        start: Position {
-            line: 1,
-            column: 1,
-        },
-        end: Position {
-            line: 1,
-            column: 35,
-        },
-    },
+    span: 0..34,
 }

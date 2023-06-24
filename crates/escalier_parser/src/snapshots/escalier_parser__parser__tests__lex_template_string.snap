@@ -8,16 +8,7 @@ StrTemplateLit {
             kind: StrLit(
                 "abc",
             ),
-            loc: SourceLocation {
-                start: Position {
-                    line: 1,
-                    column: 1,
-                },
-                end: Position {
-                    line: 1,
-                    column: 6,
-                },
-            },
+            span: 0..5,
         },
     ],
     exprs: [],

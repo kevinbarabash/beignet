@@ -8,16 +8,7 @@ Expr {
             kind: Identifier(
                 "a",
             ),
-            loc: SourceLocation {
-                start: Position {
-                    line: 1,
-                    column: 1,
-                },
-                end: Position {
-                    line: 1,
-                    column: 2,
-                },
-            },
+            span: 0..1,
         },
         op: Plus,
         right: Expr {
@@ -35,39 +26,12 @@ Expr {
                         kind: Identifier(
                             "c",
                         ),
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 10,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 11,
-                            },
-                        },
+                        span: 9..10,
                     },
                 ],
             },
-            loc: SourceLocation {
-                start: Position {
-                    line: 1,
-                    column: 4,
-                },
-                end: Position {
-                    line: 1,
-                    column: 15,
-                },
-            },
+            span: 3..14,
         },
     },
-    loc: SourceLocation {
-        start: Position {
-            line: 1,
-            column: 1,
-        },
-        end: Position {
-            line: 1,
-            column: 15,
-        },
-    },
+    span: 0..14,
 }

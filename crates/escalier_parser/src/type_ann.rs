@@ -4,7 +4,7 @@
 // - conditional types
 
 use crate::func_param::FuncParam;
-use crate::source_location::SourceLocation;
+use crate::source_location::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ObjectProp {
@@ -35,5 +35,5 @@ pub enum TypeAnnKind {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct TypeAnn {
     pub kind: TypeAnnKind,
-    pub loc: SourceLocation,
+    pub span: Span,
 }

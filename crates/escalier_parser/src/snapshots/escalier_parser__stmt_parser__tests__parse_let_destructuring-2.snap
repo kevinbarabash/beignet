@@ -6,68 +6,23 @@ expression: "parse(\"let {x: x1, y: y1} = p1;\")"
     Stmt {
         kind: Let {
             pattern: Pattern {
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 4,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 19,
-                    },
-                },
+                span: 3..18,
                 kind: Object(
                     ObjectPat {
                         props: [
                             KeyValue(
                                 KeyValuePatProp {
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 6,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 11,
-                                        },
-                                    },
+                                    span: 5..10,
                                     key: Ident {
                                         name: "x",
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 1,
-                                                column: 6,
-                                            },
-                                            end: Position {
-                                                line: 1,
-                                                column: 7,
-                                            },
-                                        },
+                                        span: 5..6,
                                     },
                                     value: Pattern {
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 1,
-                                                column: 9,
-                                            },
-                                            end: Position {
-                                                line: 1,
-                                                column: 11,
-                                            },
-                                        },
+                                        span: 8..10,
                                         kind: Ident(
                                             BindingIdent {
                                                 name: "x1",
-                                                loc: SourceLocation {
-                                                    start: Position {
-                                                        line: 1,
-                                                        column: 9,
-                                                    },
-                                                    end: Position {
-                                                        line: 1,
-                                                        column: 11,
-                                                    },
-                                                },
+                                                span: 8..10,
                                                 mutable: false,
                                             },
                                         ),
@@ -77,53 +32,17 @@ expression: "parse(\"let {x: x1, y: y1} = p1;\")"
                             ),
                             KeyValue(
                                 KeyValuePatProp {
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 13,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 18,
-                                        },
-                                    },
+                                    span: 12..17,
                                     key: Ident {
                                         name: "y",
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 1,
-                                                column: 13,
-                                            },
-                                            end: Position {
-                                                line: 1,
-                                                column: 14,
-                                            },
-                                        },
+                                        span: 12..13,
                                     },
                                     value: Pattern {
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 1,
-                                                column: 16,
-                                            },
-                                            end: Position {
-                                                line: 1,
-                                                column: 18,
-                                            },
-                                        },
+                                        span: 15..17,
                                         kind: Ident(
                                             BindingIdent {
                                                 name: "y1",
-                                                loc: SourceLocation {
-                                                    start: Position {
-                                                        line: 1,
-                                                        column: 16,
-                                                    },
-                                                    end: Position {
-                                                        line: 1,
-                                                        column: 18,
-                                                    },
-                                                },
+                                                span: 15..17,
                                                 mutable: false,
                                             },
                                         ),
@@ -140,28 +59,10 @@ expression: "parse(\"let {x: x1, y: y1} = p1;\")"
                 kind: Identifier(
                     "p1",
                 ),
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 22,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 24,
-                    },
-                },
+                span: 21..23,
             },
             type_ann: None,
         },
-        loc: SourceLocation {
-            start: Position {
-                line: 1,
-                column: 1,
-            },
-            end: Position {
-                line: 1,
-                column: 24,
-            },
-        },
+        span: 0..23,
     },
 ]

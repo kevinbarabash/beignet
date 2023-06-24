@@ -16,16 +16,7 @@ Expr {
                                 "1",
                             ),
                         ),
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 8,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 9,
-                            },
-                        },
+                        span: 7..8,
                     },
                 },
             ),
@@ -36,16 +27,7 @@ Expr {
                             kind: Identifier(
                                 "b",
                             ),
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 12,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 13,
-                                },
-                            },
+                            span: 11..12,
                         },
                     ),
                     value: Expr {
@@ -54,16 +36,7 @@ Expr {
                                 "2",
                             ),
                         ),
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 16,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 17,
-                            },
-                        },
+                        span: 15..16,
                     },
                 },
             ),
@@ -78,29 +51,11 @@ Expr {
                                 "zero",
                             ),
                         ),
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 22,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 28,
-                            },
-                        },
+                        span: 21..27,
                     },
                 },
             ),
         ],
     },
-    loc: SourceLocation {
-        start: Position {
-            line: 1,
-            column: 1,
-        },
-        end: Position {
-            line: 1,
-            column: 30,
-        },
-    },
+    span: 0..29,
 }

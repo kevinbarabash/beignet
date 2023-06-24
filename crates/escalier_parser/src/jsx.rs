@@ -1,5 +1,6 @@
 use crate::expr::Expr;
 use crate::identifier::Ident;
+use crate::source_location::Span;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum JSXElementName {
@@ -96,7 +97,7 @@ pub struct JSXSpreadChild {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct JSXText {
-    // pub span: Span,
+    pub span: Span,
     pub value: String,
     // pub raw: String,
 }

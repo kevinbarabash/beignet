@@ -5,16 +5,7 @@ expression: "parse(r#\"\n            try {\n                canThrow();\n       
 Expr {
     kind: Try {
         body: Block {
-            loc: SourceLocation {
-                start: Position {
-                    line: 2,
-                    column: 16,
-                },
-                end: Position {
-                    line: 4,
-                    column: 14,
-                },
-            },
+            span: 16..60,
             stmts: [
                 Stmt {
                     kind: Expr {
@@ -25,56 +16,20 @@ Expr {
                                     kind: Identifier(
                                         "canThrow",
                                     ),
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 3,
-                                            column: 17,
-                                        },
-                                        end: Position {
-                                            line: 3,
-                                            column: 25,
-                                        },
-                                    },
+                                    span: 35..43,
                                 },
                             },
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 3,
-                                    column: 17,
-                                },
-                                end: Position {
-                                    line: 3,
-                                    column: 27,
-                                },
-                            },
+                            span: 35..45,
                         },
                     },
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 3,
-                            column: 17,
-                        },
-                        end: Position {
-                            line: 3,
-                            column: 27,
-                        },
-                    },
+                    span: 35..45,
                 },
             ],
         },
         catch: None,
         finally: Some(
             Block {
-                loc: SourceLocation {
-                    start: Position {
-                        line: 4,
-                        column: 22,
-                    },
-                    end: Position {
-                        line: 6,
-                        column: 14,
-                    },
-                },
+                span: 68..111,
                 stmts: [
                     Stmt {
                         kind: Expr {
@@ -85,53 +40,17 @@ Expr {
                                         kind: Identifier(
                                             "cleanup",
                                         ),
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 5,
-                                                column: 17,
-                                            },
-                                            end: Position {
-                                                line: 5,
-                                                column: 24,
-                                            },
-                                        },
+                                        span: 87..94,
                                     },
                                 },
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 5,
-                                        column: 17,
-                                    },
-                                    end: Position {
-                                        line: 5,
-                                        column: 26,
-                                    },
-                                },
+                                span: 87..96,
                             },
                         },
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 5,
-                                column: 17,
-                            },
-                            end: Position {
-                                line: 5,
-                                column: 26,
-                            },
-                        },
+                        span: 87..96,
                     },
                 ],
             },
         ),
     },
-    loc: SourceLocation {
-        start: Position {
-            line: 2,
-            column: 13,
-        },
-        end: Position {
-            line: 6,
-            column: 14,
-        },
-    },
+    span: 13..111,
 }

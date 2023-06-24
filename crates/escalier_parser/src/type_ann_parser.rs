@@ -1,11 +1,11 @@
 use crate::parser::*;
-use crate::source_location::merge_locations;
+use crate::source_location::merge_spans;
 use crate::token::*;
 use crate::type_ann::{ObjectProp, TypeAnn, TypeAnnKind};
 
 impl<'a> Parser<'a> {
     pub fn parse_type_ann(&mut self) -> TypeAnn {
-        let mut loc = self.peek().unwrap_or(&EOF).loc.clone();
+        let mut span = self.peek().unwrap_or(&EOF).span.clone();
         let mut kind = match self.next().unwrap_or(EOF.clone()).kind {
             TokenKind::BoolLit(value) => TypeAnnKind::BoolLit(value),
             TokenKind::Boolean => TypeAnnKind::Boolean,
@@ -47,7 +47,7 @@ impl<'a> Parser<'a> {
                     }
                 }
 
-                loc = merge_locations(&loc, &self.peek().unwrap_or(&EOF).loc);
+                span = merge_spans(&span, &self.peek().unwrap_or(&EOF).span);
                 assert_eq!(
                     self.next().unwrap_or(EOF.clone()).kind,
                     TokenKind::RightBrace
@@ -68,7 +68,7 @@ impl<'a> Parser<'a> {
                     }
                 }
 
-                loc = merge_locations(&loc, &self.peek().unwrap_or(&EOF).loc);
+                span = merge_spans(&span, &self.peek().unwrap_or(&EOF).span);
                 assert_eq!(
                     self.next().unwrap_or(EOF.clone()).kind,
                     TokenKind::RightBracket
@@ -91,7 +91,7 @@ impl<'a> Parser<'a> {
                         }
                     }
 
-                    loc = merge_locations(&loc, &self.peek().unwrap_or(&EOF).loc);
+                    span = merge_spans(&span, &self.peek().unwrap_or(&EOF).span);
                     assert_eq!(
                         self.next().unwrap_or(EOF.clone()).kind,
                         TokenKind::GreaterThan
@@ -116,17 +116,17 @@ impl<'a> Parser<'a> {
 
         while self.peek().unwrap_or(&EOF).kind == TokenKind::LeftBracket {
             self.next().unwrap_or(EOF.clone());
-            let right = self.peek().unwrap_or(&EOF).loc.clone();
-            let merged_loc = merge_locations(&loc, &right);
+            let right_span = self.peek().unwrap_or(&EOF).span.clone();
+            let merged_span = merge_spans(&span, &right_span);
             assert_eq!(
                 self.next().unwrap_or(EOF.clone()).kind,
                 TokenKind::RightBracket
             );
-            kind = TypeAnnKind::Array(Box::new(TypeAnn { kind, loc }));
-            loc = merged_loc;
+            kind = TypeAnnKind::Array(Box::new(TypeAnn { kind, span }));
+            span = merged_span;
         }
 
-        TypeAnn { kind, loc }
+        TypeAnn { kind, span }
     }
 }
 

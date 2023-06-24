@@ -13,43 +13,16 @@ expression: "parse(r#\"p.x = 5;\"#)"
                                 kind: Identifier(
                                     "p",
                                 ),
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 1,
-                                        column: 1,
-                                    },
-                                    end: Position {
-                                        line: 1,
-                                        column: 2,
-                                    },
-                                },
+                                span: 0..1,
                             },
                             property: Expr {
                                 kind: Identifier(
                                     "x",
                                 ),
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 1,
-                                        column: 3,
-                                    },
-                                    end: Position {
-                                        line: 1,
-                                        column: 4,
-                                    },
-                                },
+                                span: 2..3,
                             },
                         },
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 1,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 4,
-                            },
-                        },
+                        span: 0..3,
                     },
                     op: Assign,
                     right: Expr {
@@ -58,39 +31,12 @@ expression: "parse(r#\"p.x = 5;\"#)"
                                 "5",
                             ),
                         ),
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 7,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 8,
-                            },
-                        },
+                        span: 6..7,
                     },
                 },
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 1,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 8,
-                    },
-                },
+                span: 0..7,
             },
         },
-        loc: SourceLocation {
-            start: Position {
-                line: 1,
-                column: 1,
-            },
-            end: Position {
-                line: 1,
-                column: 8,
-            },
-        },
+        span: 0..7,
     },
 ]

@@ -8,31 +8,13 @@ StrTemplateLit {
             kind: StrLit(
                 "a",
             ),
-            loc: SourceLocation {
-                start: Position {
-                    line: 1,
-                    column: 1,
-                },
-                end: Position {
-                    line: 1,
-                    column: 3,
-                },
-            },
+            span: 0..2,
         },
         Token {
             kind: StrLit(
                 "",
             ),
-            loc: SourceLocation {
-                start: Position {
-                    line: 1,
-                    column: 13,
-                },
-                end: Position {
-                    line: 1,
-                    column: 14,
-                },
-            },
+            span: 12..13,
         },
     ],
     exprs: [
@@ -51,29 +33,11 @@ StrTemplateLit {
                         kind: Identifier(
                             "c",
                         ),
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 9,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 10,
-                            },
-                        },
+                        span: 8..9,
                     },
                 ],
             },
-            loc: SourceLocation {
-                start: Position {
-                    line: 1,
-                    column: 5,
-                },
-                end: Position {
-                    line: 1,
-                    column: 12,
-                },
-            },
+            span: 4..11,
         },
     ],
 }

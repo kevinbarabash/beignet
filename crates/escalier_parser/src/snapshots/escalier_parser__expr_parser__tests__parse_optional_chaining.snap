@@ -14,92 +14,29 @@ Expr {
                                     kind: Identifier(
                                         "a",
                                     ),
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 1,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 2,
-                                        },
-                                    },
+                                    span: 0..1,
                                 },
                                 property: Expr {
                                     kind: Identifier(
                                         "b",
                                     ),
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 4,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 5,
-                                        },
-                                    },
+                                    span: 3..4,
                                 },
                             },
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 1,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 5,
-                                },
-                            },
+                            span: 0..4,
                         },
                     },
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 1,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 5,
-                        },
-                    },
+                    span: 0..4,
                 },
                 property: Expr {
                     kind: Identifier(
                         "c",
                     ),
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 7,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 8,
-                        },
-                    },
+                    span: 6..7,
                 },
             },
-            loc: SourceLocation {
-                start: Position {
-                    line: 1,
-                    column: 1,
-                },
-                end: Position {
-                    line: 1,
-                    column: 8,
-                },
-            },
+            span: 0..7,
         },
     },
-    loc: SourceLocation {
-        start: Position {
-            line: 1,
-            column: 1,
-        },
-        end: Position {
-            line: 1,
-            column: 8,
-        },
-    },
+    span: 0..7,
 }

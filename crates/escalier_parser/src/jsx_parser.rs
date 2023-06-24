@@ -11,10 +11,7 @@ impl<'a> Parser<'a> {
         let name = match name_token.kind {
             TokenKind::Identifier(name) => JSXElementName::Ident(Ident {
                 name,
-                loc: SourceLocation {
-                    start: name_token.loc.start,
-                    end: name_token.loc.end,
-                },
+                span: name_token.span,
             }),
             _ => panic!("Expected identifier or keyword"),
         };
@@ -56,19 +53,20 @@ impl<'a> Parser<'a> {
         } else {
             children = self.parse_jsx_children();
 
+            let start = self.scanner.cursor();
+
             assert_eq!(self.scanner.pop(), Some('<'));
             assert_eq!(self.scanner.pop(), Some('/'));
             let end_name = self.lex_ident_or_keyword();
             assert_eq!(self.scanner.pop(), Some('>'));
 
+            let end = self.scanner.cursor();
+
             Some(JSXClosingElement {
                 name: match end_name.kind {
                     TokenKind::Identifier(name) => JSXElementName::Ident(Ident {
                         name,
-                        loc: SourceLocation {
-                            start: end_name.loc.start,
-                            end: end_name.loc.end,
-                        },
+                        span: Span { start, end },
                     }),
                     _ => panic!("Expected identifier or keyword"),
                 },
@@ -190,7 +188,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_jsx_text(&mut self) -> JSXText {
-        let start = self.scanner.position();
+        let start = self.scanner.cursor();
 
         let mut value = String::new();
 
@@ -210,10 +208,10 @@ impl<'a> Parser<'a> {
 
         JSXText {
             value,
-            // loc: SourceLocation {
-            //     start,
-            //     end: self.scanner.position(),
-            // },
+            span: Span {
+                start,
+                end: self.scanner.cursor(),
+            },
         }
     }
 }
