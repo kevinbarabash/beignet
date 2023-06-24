@@ -10,7 +10,7 @@ mod pattern;
 mod pattern_parser;
 mod precedence;
 mod scanner;
-mod source_location;
+mod span;
 mod stmt;
 mod stmt_parser;
 mod token;

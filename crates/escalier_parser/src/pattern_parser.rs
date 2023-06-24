@@ -2,7 +2,7 @@ use crate::identifier::{BindingIdent, Ident};
 use crate::literal::Literal;
 use crate::parser::Parser;
 use crate::pattern::*;
-use crate::source_location::*;
+use crate::span::*;
 use crate::token::*;
 
 impl<'a> Parser<'a> {

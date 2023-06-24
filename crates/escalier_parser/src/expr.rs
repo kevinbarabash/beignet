@@ -2,7 +2,7 @@ use crate::func_param::FuncParam;
 use crate::identifier::Ident;
 use crate::jsx::{JSXElement, JSXFragment};
 use crate::pattern::Pattern;
-use crate::source_location::*;
+use crate::span::*;
 use crate::stmt::Stmt;
 use crate::type_ann::TypeAnn;
 

@@ -1,4 +1,4 @@
-use crate::source_location::*;
+use crate::span::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Ident {

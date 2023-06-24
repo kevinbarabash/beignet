@@ -4,7 +4,7 @@ use crate::expr::*;
 use crate::identifier::Ident;
 use crate::parser::*;
 use crate::precedence::{Associativity, Operator, PRECEDENCE_TABLE};
-use crate::source_location::*;
+use crate::span::*;
 use crate::token::*;
 
 fn get_prefix_precedence(op: &Token) -> Option<(u8, Associativity)> {

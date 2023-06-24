@@ -1,7 +1,7 @@
 use crate::identifier::Ident;
 use crate::jsx::*;
 use crate::parser::*;
-use crate::source_location::*;
+use crate::span::*;
 use crate::token::{TokenKind, EOF};
 
 impl<'a> Parser<'a> {

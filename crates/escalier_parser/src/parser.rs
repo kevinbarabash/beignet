@@ -3,7 +3,7 @@ use std::iter::Iterator;
 
 use crate::expr::Expr;
 use crate::scanner::Scanner;
-use crate::source_location::*;
+use crate::span::*;
 use crate::token::*;
 
 pub struct Parser<'a> {

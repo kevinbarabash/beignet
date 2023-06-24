@@ -1,6 +1,6 @@
 use crate::expr::Expr;
 use crate::identifier::Ident;
-use crate::source_location::Span;
+use crate::span::Span;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum JSXElementName {

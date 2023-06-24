@@ -1,5 +1,5 @@
 use crate::expr::Expr;
-use crate::source_location::*;
+use crate::span::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TokenKind {

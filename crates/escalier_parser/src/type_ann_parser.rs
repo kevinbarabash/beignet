@@ -1,5 +1,5 @@
 use crate::parser::*;
-use crate::source_location::merge_spans;
+use crate::span::merge_spans;
 use crate::token::*;
 use crate::type_ann::{ObjectProp, TypeAnn, TypeAnnKind};
 

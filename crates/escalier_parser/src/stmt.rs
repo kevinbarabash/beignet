@@ -1,6 +1,6 @@
 use crate::expr::Expr;
 use crate::pattern::Pattern;
-use crate::source_location::Span;
+use crate::span::Span;
 use crate::type_ann::TypeAnn;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
