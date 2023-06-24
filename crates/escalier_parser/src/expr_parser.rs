@@ -136,15 +136,7 @@ impl<'a> Parser<'a> {
                 self.next(); // consume 'undefined'
                 Expr::Undefined(Undefined { span: token.span })
             }
-            TokenKind::LeftParen => {
-                self.next(); // consume '('
-                let lhs = self.parse_expr_with_precedence(0);
-                assert_eq!(
-                    self.next().unwrap_or(EOF.clone()).kind,
-                    TokenKind::RightParen
-                );
-                lhs
-            }
+            TokenKind::LeftParen => self.parse_inside_parens(|p| p.parse_expr()),
             TokenKind::LeftBracket => {
                 self.next(); // consumes '['
                 let start = token;
@@ -296,15 +288,7 @@ impl<'a> Parser<'a> {
             }
             TokenKind::If => {
                 self.next(); // consumes 'if'
-                assert_eq!(
-                    self.next().unwrap_or(EOF.clone()).kind,
-                    TokenKind::LeftParen
-                );
-                let cond = self.parse_expr();
-                assert_eq!(
-                    self.next().unwrap_or(EOF.clone()).kind,
-                    TokenKind::RightParen
-                );
+                let cond = self.parse_inside_parens(|p| p.parse_expr());
                 let consequent = self.parse_block();
 
                 if self.peek().unwrap_or(&EOF).kind == TokenKind::Else {
@@ -328,15 +312,17 @@ impl<'a> Parser<'a> {
                 }
             }
             TokenKind::Match => {
-                // TODO: make 'match' use parens to align with 'if'
+                let start = token;
                 self.next(); // consumes 'match'
-                let expr = self.parse_expr();
+                let expr = self.parse_inside_parens(|p| p.parse_expr());
+
                 let mut span = expr.get_span();
+                let mut arms: Vec<MatchArm> = Vec::new();
+
                 assert_eq!(
                     self.next().unwrap_or(EOF.clone()).kind,
                     TokenKind::LeftBrace
                 );
-                let mut arms: Vec<MatchArm> = Vec::new();
                 while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
                     let pattern = self.parse_pattern();
                     assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Arrow);
@@ -364,41 +350,30 @@ impl<'a> Parser<'a> {
                     });
                     span = merge_spans(&span, &end);
                 }
-
-                assert_eq!(
-                    self.next().unwrap_or(EOF.clone()).kind,
-                    TokenKind::RightBrace
-                );
+                let end = self.next().unwrap_or(EOF.clone());
+                assert_eq!(end.kind, TokenKind::RightBrace);
 
                 Expr::Match(Match {
-                    span,
+                    span: merge_spans(&start.span, &end.span),
                     expr: Box::new(expr),
                     arms,
                 })
             }
             TokenKind::Try => {
+                let start = token;
                 self.next(); // consumes 'try'
                 let try_body = self.parse_block();
 
                 match self.next().unwrap_or(EOF.clone()).kind {
                     TokenKind::Catch => {
-                        assert_eq!(
-                            self.next().unwrap_or(EOF.clone()).kind,
-                            TokenKind::LeftParen
-                        );
-                        let error = self.parse_pattern();
-                        assert_eq!(
-                            self.next().unwrap_or(EOF.clone()).kind,
-                            TokenKind::RightParen
-                        );
-
+                        let error = self.parse_inside_parens(|p| p.parse_pattern());
                         let catch_body = self.parse_block();
 
                         match self.peek().unwrap_or(&EOF).kind {
                             TokenKind::Finally => {
                                 self.next().unwrap_or(EOF.clone());
                                 let finally_body = self.parse_block();
-                                let span = merge_spans(&token.span, &finally_body.span);
+                                let span = merge_spans(&start.span, &finally_body.span);
 
                                 Expr::Try(Try {
                                     span,
@@ -411,7 +386,7 @@ impl<'a> Parser<'a> {
                                 })
                             }
                             _ => {
-                                let span = merge_spans(&token.span, &catch_body.span);
+                                let span = merge_spans(&start.span, &catch_body.span);
 
                                 Expr::Try(Try {
                                     span,
@@ -427,7 +402,7 @@ impl<'a> Parser<'a> {
                     }
                     TokenKind::Finally => {
                         let finally_body = self.parse_block();
-                        let span = merge_spans(&token.span, &finally_body.span);
+                        let span = merge_spans(&start.span, &finally_body.span);
 
                         Expr::Try(Try {
                             span,
@@ -440,12 +415,6 @@ impl<'a> Parser<'a> {
                         panic!("expected catch or finally");
                     }
                 }
-
-                // assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Catch);
-                // assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::LeftParen);
-                // let error = parse_pattern(parser);
-                // assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::RightParen);
-                // let catch_body = parse_block(parser); // TODO: create a BlockStmt and include .span in it
             }
             TokenKind::Do => {
                 self.next(); // consumes 'do'
@@ -600,10 +569,11 @@ impl<'a> Parser<'a> {
             next_precedence.0 - 1
         };
 
-        let next = self.next().unwrap_or(EOF.clone());
+        let token = self.peek().unwrap_or(&EOF).clone();
 
-        match &next.kind {
+        match &token.kind {
             TokenKind::LeftBracket => {
+                self.next(); // consumes '{'
                 let rhs = self.parse_expr();
                 let span = merge_spans(&lhs.get_span(), &rhs.get_span());
                 assert_eq!(
@@ -617,33 +587,38 @@ impl<'a> Parser<'a> {
                 })
             }
             TokenKind::LeftParen => {
-                let mut args = Vec::new();
-                while self.peek().unwrap_or(&EOF).kind != TokenKind::RightParen {
-                    args.push(self.parse_expr());
+                let args = self.parse_inside_parens(|p| {
+                    let mut args = Vec::new();
+                    while p.peek().unwrap_or(&EOF).kind != TokenKind::RightParen {
+                        args.push(p.parse_expr());
 
-                    match self.peek().unwrap_or(&EOF).kind {
-                        TokenKind::RightParen => break,
-                        TokenKind::Comma => {
-                            self.next().unwrap_or(EOF.clone());
+                        match p.peek().unwrap_or(&EOF).kind {
+                            TokenKind::RightParen => break,
+                            TokenKind::Comma => {
+                                p.next().unwrap_or(EOF.clone());
+                            }
+                            _ => panic!(
+                                "Expected comma or right paren, got {:?}",
+                                p.peek().unwrap_or(&EOF)
+                            ),
                         }
-                        _ => panic!(
-                            "Expected comma or right paren, got {:?}",
-                            self.peek().unwrap_or(&EOF)
-                        ),
                     }
-                }
-                let span = merge_spans(&lhs.get_span(), &self.peek().unwrap_or(&EOF).span);
-                assert_eq!(
-                    self.next().unwrap_or(EOF.clone()).kind,
-                    TokenKind::RightParen
-                );
+                    args
+                });
+
+                let end = self.scanner.cursor();
+
                 Expr::Call(Call {
-                    span,
+                    span: Span {
+                        start: lhs.get_span().start,
+                        end,
+                    },
                     callee: Box::new(lhs),
                     args,
                 })
             }
             TokenKind::Dot => {
+                self.next(); // consumes '.'
                 let rhs = self.parse_expr_with_precedence(precedence);
                 let span = merge_spans(&lhs.get_span(), &rhs.get_span());
                 Expr::Member(Member {
@@ -653,6 +628,7 @@ impl<'a> Parser<'a> {
                 })
             }
             TokenKind::QuestionDot => {
+                self.next(); // consumes '?.'
                 let lhs_span = lhs.get_span();
 
                 let base = match self.peek().unwrap_or(&EOF).kind {
@@ -677,8 +653,21 @@ impl<'a> Parser<'a> {
                     base: Box::new(base),
                 })
             }
-            _ => panic!("unexpected token: {:?}", next),
+            _ => panic!("unexpected token: {:?}", token),
         }
+    }
+
+    fn parse_inside_parens<T>(&mut self, callback: impl FnOnce(&mut Self) -> T) -> T {
+        assert_eq!(
+            self.next().unwrap_or(EOF.clone()).kind,
+            TokenKind::LeftParen
+        );
+        let result = callback(self);
+        assert_eq!(
+            self.next().unwrap_or(EOF.clone()).kind,
+            TokenKind::RightParen
+        );
+        result
     }
 
     pub fn parse_expr(&mut self) -> Expr {

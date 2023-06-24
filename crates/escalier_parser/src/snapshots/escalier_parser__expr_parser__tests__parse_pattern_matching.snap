@@ -4,7 +4,7 @@ expression: "parse(r#\"\n            match (obj.type) {\n                \"foo\"
 ---
 Match(
     Match {
-        span: 20..171,
+        span: 13..186,
         expr: Member(
             Member {
                 span: 20..28,
