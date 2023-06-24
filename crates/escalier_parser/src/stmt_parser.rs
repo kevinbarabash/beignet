@@ -37,12 +37,6 @@ impl<'a> Parser<'a> {
                 self.next(); // consumes 'return'
                 let next = self.peek().unwrap_or(&EOF).clone();
                 match next.kind {
-                    // NOTE: The caller is responsible for consuming the
-                    // semicolon.
-                    TokenKind::Semicolon => Stmt {
-                        kind: StmtKind::Return { arg: None },
-                        span: merge_spans(&token.span, &next.span),
-                    },
                     TokenKind::Eof => Stmt {
                         kind: StmtKind::Return { arg: None },
                         span: token.span,
