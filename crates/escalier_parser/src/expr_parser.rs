@@ -1037,4 +1037,9 @@ mod tests {
     fn parse_invalid_fn_should_error() {
         insta::assert_debug_snapshot!(parse("(x) => x"));
     }
+
+    #[test]
+    fn parse_multiple_application() {
+        insta::assert_debug_snapshot!(parse("foo()\n(3+4) * 5"));
+    }
 }
