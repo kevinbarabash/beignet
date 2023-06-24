@@ -1,12 +1,9 @@
-use crate::source_location::Position;
-
 #[derive(Clone)]
 pub struct Scanner<'a> {
     cursor: usize,
     column: usize,
     line: usize,
     input: &'a str,
-    // characters: Vec<char>,
 }
 
 impl<'a> Scanner<'a> {
@@ -16,20 +13,12 @@ impl<'a> Scanner<'a> {
             column: 1,
             line: 1,
             input,
-            // characters: string.chars().collect(),
         }
     }
 
     /// Returns the current cursor. Useful for reporting errors.
     pub fn cursor(&self) -> usize {
         self.cursor
-    }
-
-    pub fn position(&self) -> Position {
-        Position {
-            line: self.line,
-            column: self.column,
-        }
     }
 
     /// Returns the next character without advancing the cursor.
@@ -66,6 +55,4 @@ impl<'a> Scanner<'a> {
             None => None,
         }
     }
-
-    // pub fn backup(&mut self) ->
 }

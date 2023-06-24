@@ -10,44 +10,17 @@ Expr {
                     kind: Identifier(
                         "x",
                     ),
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 1,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 2,
-                        },
-                    },
+                    span: 0..1,
                 },
                 op: NotEquals,
                 right: Expr {
                     kind: Identifier(
                         "y",
                     ),
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 6,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 7,
-                        },
-                    },
+                    span: 5..6,
                 },
             },
-            loc: SourceLocation {
-                start: Position {
-                    line: 1,
-                    column: 1,
-                },
-                end: Position {
-                    line: 1,
-                    column: 7,
-                },
-            },
+            span: 0..6,
         },
         op: And,
         right: Expr {
@@ -56,54 +29,18 @@ Expr {
                     kind: Identifier(
                         "z",
                     ),
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 11,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 12,
-                        },
-                    },
+                    span: 10..11,
                 },
                 op: Equals,
                 right: Expr {
                     kind: Identifier(
                         "w",
                     ),
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 16,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 17,
-                        },
-                    },
+                    span: 15..16,
                 },
             },
-            loc: SourceLocation {
-                start: Position {
-                    line: 1,
-                    column: 11,
-                },
-                end: Position {
-                    line: 1,
-                    column: 17,
-                },
-            },
+            span: 10..16,
         },
     },
-    loc: SourceLocation {
-        start: Position {
-            line: 1,
-            column: 1,
-        },
-        end: Position {
-            line: 1,
-            column: 17,
-        },
-    },
+    span: 0..16,
 }

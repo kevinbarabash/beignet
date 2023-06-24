@@ -12,16 +12,7 @@ Expr {
                             "1",
                         ),
                     ),
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 2,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 3,
-                        },
-                    },
+                    span: 1..2,
                 },
             ),
             Expr(
@@ -31,16 +22,7 @@ Expr {
                             "two",
                         ),
                     ),
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 5,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 10,
-                        },
-                    },
+                    span: 4..9,
                 },
             ),
             Expr(
@@ -54,42 +36,15 @@ Expr {
                                             "3",
                                         ),
                                     ),
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 13,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 14,
-                                        },
-                                    },
+                                    span: 12..13,
                                 },
                             ),
                         ],
                     },
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 11,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 15,
-                        },
-                    },
+                    span: 10..14,
                 },
             ),
         ],
     },
-    loc: SourceLocation {
-        start: Position {
-            line: 1,
-            column: 1,
-        },
-        end: Position {
-            line: 1,
-            column: 16,
-        },
-    },
+    span: 0..15,
 }

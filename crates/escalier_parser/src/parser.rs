@@ -51,7 +51,7 @@ impl<'a> Parser<'a> {
                 None => return None,
             };
 
-            let start = self.scanner.position();
+            let start = self.scanner.cursor();
 
             // skip whitespace
             while character == ' ' || character == '\n' || character == '\t' {
@@ -212,9 +212,9 @@ impl<'a> Parser<'a> {
 
             Some(Token {
                 kind,
-                loc: SourceLocation {
+                span: Span {
                     start,
-                    end: self.scanner.position(),
+                    end: self.scanner.cursor(),
                 },
             })
         } else {
@@ -223,7 +223,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn lex_ident_or_keyword(&mut self) -> Token {
-        let start = self.scanner.position();
+        let start = self.scanner.cursor();
         let mut ident = String::new();
         while !self.scanner.is_done() {
             let character = self.scanner.peek(0).unwrap();
@@ -265,15 +265,15 @@ impl<'a> Parser<'a> {
         };
         Token {
             kind,
-            loc: SourceLocation {
+            span: Span {
                 start,
-                end: self.scanner.position(),
+                end: self.scanner.cursor(),
             },
         }
     }
 
     pub fn lex_number(&mut self) -> Token {
-        let start = self.scanner.position();
+        let start = self.scanner.cursor();
 
         let mut number = String::new();
         let mut decimal = false;
@@ -300,15 +300,15 @@ impl<'a> Parser<'a> {
         }
         Token {
             kind: TokenKind::NumLit(number),
-            loc: SourceLocation {
+            span: Span {
                 start,
-                end: self.scanner.position(),
+                end: self.scanner.cursor(),
             },
         }
     }
 
     pub fn lex_string(&mut self) -> Token {
-        let start = self.scanner.position();
+        let start = self.scanner.cursor();
 
         let mut string = String::new();
         self.scanner.pop();
@@ -352,18 +352,18 @@ impl<'a> Parser<'a> {
         }
         Token {
             kind: TokenKind::StrLit(string),
-            loc: SourceLocation {
+            span: Span {
                 start,
-                end: self.scanner.position(),
+                end: self.scanner.cursor(),
             },
         }
     }
 
-    pub fn lex_template_string(&mut self, start: Position) -> Token {
+    pub fn lex_template_string(&mut self, start: usize) -> Token {
         let mut string = String::new();
         let mut parts: Vec<Token> = vec![];
         let mut exprs: Vec<Expr> = vec![];
-        let mut string_start = start.clone();
+        let mut string_start = start;
         self.scanner.pop();
         while !self.scanner.is_done() {
             match self.scanner.peek(0).unwrap() {
@@ -396,12 +396,12 @@ impl<'a> Parser<'a> {
                     }
                 }
                 '$' => {
-                    let string_end = self.scanner.position();
+                    let string_end = self.scanner.cursor();
                     self.scanner.pop();
                     if self.scanner.peek(0).unwrap() == '{' {
                         parts.push(Token {
                             kind: TokenKind::StrLit(string),
-                            loc: SourceLocation {
+                            span: Span {
                                 start: string_start,
                                 end: string_end,
                             },
@@ -415,7 +415,7 @@ impl<'a> Parser<'a> {
                         self.scanner.pop(); // consumes '}'
 
                         string = String::new();
-                        string_start = self.scanner.position();
+                        string_start = self.scanner.cursor();
                     } else {
                         string.push('$');
                     }
@@ -429,17 +429,17 @@ impl<'a> Parser<'a> {
 
         parts.push(Token {
             kind: TokenKind::StrLit(string),
-            loc: SourceLocation {
+            span: Span {
                 start: string_start,
-                end: self.scanner.position(),
+                end: self.scanner.cursor(),
             },
         });
 
         Token {
             kind: TokenKind::StrTemplateLit { parts, exprs },
-            loc: SourceLocation {
+            span: Span {
                 start,
-                end: self.scanner.position(),
+                end: self.scanner.cursor(),
             },
         }
     }
@@ -559,13 +559,7 @@ mod tests {
             TokenKind::StrTemplateLit {
                 parts: vec![Token {
                     kind: TokenKind::StrLit("`/\u{8}\u{c}\n\r\t∞".to_string()),
-                    loc: SourceLocation {
-                        start: Position { line: 1, column: 1 },
-                        end: Position {
-                            line: 1,
-                            column: 23
-                        }
-                    }
+                    span: Span { start: 0, end: 22 },
                 }],
                 exprs: vec![]
             }

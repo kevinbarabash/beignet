@@ -6,26 +6,8 @@ TypeAnn {
     kind: Array(
         TypeAnn {
             kind: Number,
-            loc: SourceLocation {
-                start: Position {
-                    line: 1,
-                    column: 1,
-                },
-                end: Position {
-                    line: 1,
-                    column: 7,
-                },
-            },
+            span: 0..6,
         },
     ),
-    loc: SourceLocation {
-        start: Position {
-            line: 1,
-            column: 1,
-        },
-        end: Position {
-            line: 1,
-            column: 9,
-        },
-    },
+    span: 0..8,
 }

@@ -12,44 +12,17 @@ TypeAnn {
                         "K",
                         None,
                     ),
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 5,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 6,
-                        },
-                    },
+                    span: 4..5,
                 },
                 TypeAnn {
                     kind: TypeRef(
                         "V",
                         None,
                     ),
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 8,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 9,
-                        },
-                    },
+                    span: 7..8,
                 },
             ],
         ),
     ),
-    loc: SourceLocation {
-        start: Position {
-            line: 1,
-            column: 1,
-        },
-        end: Position {
-            line: 1,
-            column: 10,
-        },
-    },
+    span: 0..9,
 }

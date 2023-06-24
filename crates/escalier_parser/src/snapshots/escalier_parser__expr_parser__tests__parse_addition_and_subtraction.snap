@@ -14,16 +14,7 @@ Expr {
                                     "1",
                                 ),
                             ),
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 1,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 2,
-                                },
-                            },
+                            span: 0..1,
                         },
                         op: Plus,
                         right: Expr {
@@ -32,28 +23,10 @@ Expr {
                                     "2",
                                 ),
                             ),
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 5,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 6,
-                                },
-                            },
+                            span: 4..5,
                         },
                     },
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 1,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 6,
-                        },
-                    },
+                    span: 0..5,
                 },
                 op: Minus,
                 right: Expr {
@@ -62,28 +35,10 @@ Expr {
                             "3",
                         ),
                     ),
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 9,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 10,
-                        },
-                    },
+                    span: 8..9,
                 },
             },
-            loc: SourceLocation {
-                start: Position {
-                    line: 1,
-                    column: 1,
-                },
-                end: Position {
-                    line: 1,
-                    column: 10,
-                },
-            },
+            span: 0..9,
         },
         op: Plus,
         right: Expr {
@@ -92,26 +47,8 @@ Expr {
                     "4",
                 ),
             ),
-            loc: SourceLocation {
-                start: Position {
-                    line: 1,
-                    column: 13,
-                },
-                end: Position {
-                    line: 1,
-                    column: 14,
-                },
-            },
+            span: 12..13,
         },
     },
-    loc: SourceLocation {
-        start: Position {
-            line: 1,
-            column: 1,
-        },
-        end: Position {
-            line: 1,
-            column: 14,
-        },
-    },
+    span: 0..13,
 }

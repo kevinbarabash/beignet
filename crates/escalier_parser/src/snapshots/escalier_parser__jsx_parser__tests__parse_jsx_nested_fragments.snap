@@ -7,16 +7,7 @@ JSXElement {
         name: Ident(
             Ident {
                 name: "",
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 2,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 2,
-                    },
-                },
+                span: 1..1,
             },
         ),
         attrs: [],
@@ -25,6 +16,7 @@ JSXElement {
     children: [
         Text(
             JSXText {
+                span: 2..3,
                 value: "a",
             },
         ),
@@ -38,16 +30,7 @@ JSXElement {
                                 kind: Identifier(
                                     "b",
                                 ),
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 1,
-                                        column: 7,
-                                    },
-                                    end: Position {
-                                        line: 1,
-                                        column: 8,
-                                    },
-                                },
+                                span: 6..7,
                             },
                         },
                     ),
@@ -57,16 +40,7 @@ JSXElement {
                                 kind: Identifier(
                                     "c",
                                 ),
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 1,
-                                        column: 10,
-                                    },
-                                    end: Position {
-                                        line: 1,
-                                        column: 11,
-                                    },
-                                },
+                                span: 9..10,
                             },
                         },
                     ),
@@ -76,6 +50,7 @@ JSXElement {
         ),
         Text(
             JSXText {
+                span: 14..15,
                 value: "d",
             },
         ),
@@ -85,16 +60,7 @@ JSXElement {
             name: Ident(
                 Ident {
                     name: "",
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 18,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 18,
-                        },
-                    },
+                    span: 15..18,
                 },
             ),
         },

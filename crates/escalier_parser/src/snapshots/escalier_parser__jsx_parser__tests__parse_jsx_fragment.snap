@@ -7,16 +7,7 @@ JSXElement {
         name: Ident(
             Ident {
                 name: "",
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 2,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 2,
-                    },
-                },
+                span: 1..1,
             },
         ),
         attrs: [],
@@ -29,16 +20,7 @@ JSXElement {
                     name: Ident(
                         Ident {
                             name: "span",
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 4,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 8,
-                                },
-                            },
+                            span: 3..7,
                         },
                     ),
                     attrs: [],
@@ -47,6 +29,7 @@ JSXElement {
                 children: [
                     Text(
                         JSXText {
+                            span: 8..15,
                             value: "Hello, ",
                         },
                     ),
@@ -56,16 +39,7 @@ JSXElement {
                         name: Ident(
                             Ident {
                                 name: "span",
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 1,
-                                        column: 18,
-                                    },
-                                    end: Position {
-                                        line: 1,
-                                        column: 22,
-                                    },
-                                },
+                                span: 15..22,
                             },
                         ),
                     },
@@ -78,16 +52,7 @@ JSXElement {
                     name: Ident(
                         Ident {
                             name: "span",
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 24,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 28,
-                                },
-                            },
+                            span: 23..27,
                         },
                     ),
                     attrs: [],
@@ -96,6 +61,7 @@ JSXElement {
                 children: [
                     Text(
                         JSXText {
+                            span: 28..34,
                             value: "world!",
                         },
                     ),
@@ -105,16 +71,7 @@ JSXElement {
                         name: Ident(
                             Ident {
                                 name: "span",
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 1,
-                                        column: 37,
-                                    },
-                                    end: Position {
-                                        line: 1,
-                                        column: 41,
-                                    },
-                                },
+                                span: 34..41,
                             },
                         ),
                     },
@@ -127,16 +84,7 @@ JSXElement {
             name: Ident(
                 Ident {
                     name: "",
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 44,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 44,
-                        },
-                    },
+                    span: 41..44,
                 },
             ),
         },

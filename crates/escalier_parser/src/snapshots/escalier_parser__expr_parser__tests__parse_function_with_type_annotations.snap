@@ -7,29 +7,11 @@ Expr {
         params: [
             FuncParam {
                 pattern: Pattern {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 5,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 6,
-                        },
-                    },
+                    span: 4..5,
                     kind: Ident(
                         BindingIdent {
                             name: "x",
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 5,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 6,
-                                },
-                            },
+                            span: 4..5,
                             mutable: false,
                         },
                     ),
@@ -37,45 +19,18 @@ Expr {
                 type_ann: Some(
                     TypeAnn {
                         kind: Number,
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 8,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 14,
-                            },
-                        },
+                        span: 7..13,
                     },
                 ),
                 optional: false,
             },
             FuncParam {
                 pattern: Pattern {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 16,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 17,
-                        },
-                    },
+                    span: 15..16,
                     kind: Ident(
                         BindingIdent {
                             name: "y",
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 16,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 17,
-                                },
-                            },
+                            span: 15..16,
                             mutable: false,
                         },
                     ),
@@ -83,16 +38,7 @@ Expr {
                 type_ann: Some(
                     TypeAnn {
                         kind: Number,
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 19,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 25,
-                            },
-                        },
+                        span: 18..24,
                     },
                 ),
                 optional: false,
@@ -100,16 +46,7 @@ Expr {
         ],
         body: Block(
             Block {
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 37,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 55,
-                    },
-                },
+                span: 36..54,
                 stmts: [
                     Stmt {
                         kind: Return {
@@ -120,57 +57,21 @@ Expr {
                                             kind: Identifier(
                                                 "x",
                                             ),
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 1,
-                                                    column: 47,
-                                                },
-                                                end: Position {
-                                                    line: 1,
-                                                    column: 48,
-                                                },
-                                            },
+                                            span: 46..47,
                                         },
                                         op: Plus,
                                         right: Expr {
                                             kind: Identifier(
                                                 "y",
                                             ),
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 1,
-                                                    column: 51,
-                                                },
-                                                end: Position {
-                                                    line: 1,
-                                                    column: 52,
-                                                },
-                                            },
+                                            span: 50..51,
                                         },
                                     },
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 47,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 52,
-                                        },
-                                    },
+                                    span: 46..51,
                                 },
                             ),
                         },
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 47,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 52,
-                            },
-                        },
+                        span: 46..51,
                     },
                 ],
             },
@@ -178,27 +79,9 @@ Expr {
         type_ann: Some(
             TypeAnn {
                 kind: Number,
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 28,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 34,
-                    },
-                },
+                span: 27..33,
             },
         ),
     },
-    loc: SourceLocation {
-        start: Position {
-            line: 1,
-            column: 1,
-        },
-        end: Position {
-            line: 1,
-            column: 55,
-        },
-    },
+    span: 0..54,
 }

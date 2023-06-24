@@ -3,16 +3,7 @@ source: crates/escalier_parser/src/pattern_parser.rs
 expression: "parse(\"false\")"
 ---
 Pattern {
-    loc: SourceLocation {
-        start: Position {
-            line: 1,
-            column: 1,
-        },
-        end: Position {
-            line: 1,
-            column: 6,
-        },
-    },
+    span: 0..5,
     kind: Lit(
         LitPat {
             lit: Boolean(

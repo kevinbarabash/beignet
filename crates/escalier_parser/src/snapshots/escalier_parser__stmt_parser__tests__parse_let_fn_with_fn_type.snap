@@ -6,29 +6,11 @@ expression: "parse(r#\"let add: fn (a: number, b: number) => number = fn (a, b) 
     Stmt {
         kind: Let {
             pattern: Pattern {
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 5,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 8,
-                    },
-                },
+                span: 4..7,
                 kind: Ident(
                     BindingIdent {
                         name: "add",
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 5,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 8,
-                            },
-                        },
+                        span: 4..7,
                         mutable: false,
                     },
                 ),
@@ -38,29 +20,11 @@ expression: "parse(r#\"let add: fn (a: number, b: number) => number = fn (a, b) 
                     params: [
                         FuncParam {
                             pattern: Pattern {
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 1,
-                                        column: 52,
-                                    },
-                                    end: Position {
-                                        line: 1,
-                                        column: 53,
-                                    },
-                                },
+                                span: 51..52,
                                 kind: Ident(
                                     BindingIdent {
                                         name: "a",
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 1,
-                                                column: 52,
-                                            },
-                                            end: Position {
-                                                line: 1,
-                                                column: 53,
-                                            },
-                                        },
+                                        span: 51..52,
                                         mutable: false,
                                     },
                                 ),
@@ -70,29 +34,11 @@ expression: "parse(r#\"let add: fn (a: number, b: number) => number = fn (a, b) 
                         },
                         FuncParam {
                             pattern: Pattern {
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 1,
-                                        column: 55,
-                                    },
-                                    end: Position {
-                                        line: 1,
-                                        column: 56,
-                                    },
-                                },
+                                span: 54..55,
                                 kind: Ident(
                                     BindingIdent {
                                         name: "b",
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 1,
-                                                column: 55,
-                                            },
-                                            end: Position {
-                                                line: 1,
-                                                column: 56,
-                                            },
-                                        },
+                                        span: 54..55,
                                         mutable: false,
                                     },
                                 ),
@@ -108,58 +54,22 @@ expression: "parse(r#\"let add: fn (a: number, b: number) => number = fn (a, b) 
                                     kind: Identifier(
                                         "a",
                                     ),
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 61,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 62,
-                                        },
-                                    },
+                                    span: 60..61,
                                 },
                                 op: Plus,
                                 right: Expr {
                                     kind: Identifier(
                                         "b",
                                     ),
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 65,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 66,
-                                        },
-                                    },
+                                    span: 64..65,
                                 },
                             },
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 61,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 66,
-                                },
-                            },
+                            span: 60..65,
                         },
                     ),
                     type_ann: None,
                 },
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 48,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 66,
-                    },
-                },
+                span: 47..65,
             },
             type_ann: Some(
                 TypeAnn {
@@ -167,29 +77,11 @@ expression: "parse(r#\"let add: fn (a: number, b: number) => number = fn (a, b) 
                         [
                             FuncParam {
                                 pattern: Pattern {
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 14,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 15,
-                                        },
-                                    },
+                                    span: 13..14,
                                     kind: Ident(
                                         BindingIdent {
                                             name: "a",
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 1,
-                                                    column: 14,
-                                                },
-                                                end: Position {
-                                                    line: 1,
-                                                    column: 15,
-                                                },
-                                            },
+                                            span: 13..14,
                                             mutable: false,
                                         },
                                     ),
@@ -197,45 +89,18 @@ expression: "parse(r#\"let add: fn (a: number, b: number) => number = fn (a, b) 
                                 type_ann: Some(
                                     TypeAnn {
                                         kind: Number,
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 1,
-                                                column: 17,
-                                            },
-                                            end: Position {
-                                                line: 1,
-                                                column: 23,
-                                            },
-                                        },
+                                        span: 16..22,
                                     },
                                 ),
                                 optional: false,
                             },
                             FuncParam {
                                 pattern: Pattern {
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 25,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 26,
-                                        },
-                                    },
+                                    span: 24..25,
                                     kind: Ident(
                                         BindingIdent {
                                             name: "b",
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 1,
-                                                    column: 25,
-                                                },
-                                                end: Position {
-                                                    line: 1,
-                                                    column: 26,
-                                                },
-                                            },
+                                            span: 24..25,
                                             mutable: false,
                                         },
                                     ),
@@ -243,16 +108,7 @@ expression: "parse(r#\"let add: fn (a: number, b: number) => number = fn (a, b) 
                                 type_ann: Some(
                                     TypeAnn {
                                         kind: Number,
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 1,
-                                                column: 28,
-                                            },
-                                            end: Position {
-                                                line: 1,
-                                                column: 34,
-                                            },
-                                        },
+                                        span: 27..33,
                                     },
                                 ),
                                 optional: false,
@@ -260,40 +116,13 @@ expression: "parse(r#\"let add: fn (a: number, b: number) => number = fn (a, b) 
                         ],
                         TypeAnn {
                             kind: Number,
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 39,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 45,
-                                },
-                            },
+                            span: 38..44,
                         },
                     ),
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 10,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 12,
-                        },
-                    },
+                    span: 9..11,
                 },
             ),
         },
-        loc: SourceLocation {
-            start: Position {
-                line: 1,
-                column: 1,
-            },
-            end: Position {
-                line: 1,
-                column: 66,
-            },
-        },
+        span: 0..65,
     },
 ]

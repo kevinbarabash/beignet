@@ -16,16 +16,7 @@ Expr {
                                 "1",
                             ),
                         ),
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 6,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 7,
-                            },
-                        },
+                        span: 5..6,
                     },
                 },
             ),
@@ -40,16 +31,7 @@ Expr {
                                 "2",
                             ),
                         ),
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 12,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 13,
-                            },
-                        },
+                        span: 11..12,
                     },
                 },
             ),
@@ -58,28 +40,10 @@ Expr {
                     kind: Identifier(
                         "c",
                     ),
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 18,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 19,
-                        },
-                    },
+                    span: 17..18,
                 },
             ),
         ],
     },
-    loc: SourceLocation {
-        start: Position {
-            line: 1,
-            column: 1,
-        },
-        end: Position {
-            line: 1,
-            column: 21,
-        },
-    },
+    span: 0..20,
 }

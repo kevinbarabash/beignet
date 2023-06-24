@@ -6,43 +6,16 @@ expression: "parse(\"let {x, y} = point;\")"
     Stmt {
         kind: Let {
             pattern: Pattern {
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 4,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 11,
-                    },
-                },
+                span: 3..10,
                 kind: Object(
                     ObjectPat {
                         props: [
                             Shorthand(
                                 ShorthandPatProp {
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 6,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 7,
-                                        },
-                                    },
+                                    span: 5..6,
                                     ident: BindingIdent {
                                         name: "x",
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 1,
-                                                column: 6,
-                                            },
-                                            end: Position {
-                                                line: 1,
-                                                column: 7,
-                                            },
-                                        },
+                                        span: 5..6,
                                         mutable: false,
                                     },
                                     init: None,
@@ -50,28 +23,10 @@ expression: "parse(\"let {x, y} = point;\")"
                             ),
                             Shorthand(
                                 ShorthandPatProp {
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 9,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 10,
-                                        },
-                                    },
+                                    span: 8..9,
                                     ident: BindingIdent {
                                         name: "y",
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 1,
-                                                column: 9,
-                                            },
-                                            end: Position {
-                                                line: 1,
-                                                column: 10,
-                                            },
-                                        },
+                                        span: 8..9,
                                         mutable: false,
                                     },
                                     init: None,
@@ -86,28 +41,10 @@ expression: "parse(\"let {x, y} = point;\")"
                 kind: Identifier(
                     "point",
                 ),
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 14,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 19,
-                    },
-                },
+                span: 13..18,
             },
             type_ann: None,
         },
-        loc: SourceLocation {
-            start: Position {
-                line: 1,
-                column: 1,
-            },
-            end: Position {
-                line: 1,
-                column: 19,
-            },
-        },
+        span: 0..18,
     },
 ]

@@ -12,28 +12,10 @@ Expr {
                             "1",
                         ),
                     ),
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 2,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 3,
-                        },
-                    },
+                    span: 1..2,
                 },
             ),
         ],
     },
-    loc: SourceLocation {
-        start: Position {
-            line: 1,
-            column: 1,
-        },
-        end: Position {
-            line: 1,
-            column: 4,
-        },
-    },
+    span: 0..3,
 }

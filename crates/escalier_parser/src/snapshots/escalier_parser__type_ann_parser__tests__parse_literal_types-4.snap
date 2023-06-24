@@ -4,14 +4,5 @@ expression: "parse(\"null\")"
 ---
 TypeAnn {
     kind: Null,
-    loc: SourceLocation {
-        start: Position {
-            line: 1,
-            column: 1,
-        },
-        end: Position {
-            line: 1,
-            column: 5,
-        },
-    },
+    span: 0..4,
 }

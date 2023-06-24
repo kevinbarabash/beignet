@@ -3,43 +3,16 @@ source: crates/escalier_parser/src/pattern_parser.rs
 expression: "parse(\"{x, y, z}\")"
 ---
 Pattern {
-    loc: SourceLocation {
-        start: Position {
-            line: 1,
-            column: 1,
-        },
-        end: Position {
-            line: 1,
-            column: 10,
-        },
-    },
+    span: 0..9,
     kind: Object(
         ObjectPat {
             props: [
                 Shorthand(
                     ShorthandPatProp {
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 2,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 3,
-                            },
-                        },
+                        span: 1..2,
                         ident: BindingIdent {
                             name: "x",
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 2,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 3,
-                                },
-                            },
+                            span: 1..2,
                             mutable: false,
                         },
                         init: None,
@@ -47,28 +20,10 @@ Pattern {
                 ),
                 Shorthand(
                     ShorthandPatProp {
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 5,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 6,
-                            },
-                        },
+                        span: 4..5,
                         ident: BindingIdent {
                             name: "y",
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 5,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 6,
-                                },
-                            },
+                            span: 4..5,
                             mutable: false,
                         },
                         init: None,
@@ -76,28 +31,10 @@ Pattern {
                 ),
                 Shorthand(
                     ShorthandPatProp {
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 8,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 9,
-                            },
-                        },
+                        span: 7..8,
                         ident: BindingIdent {
                             name: "z",
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 8,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 9,
-                                },
-                            },
+                            span: 7..8,
                             mutable: false,
                         },
                         init: None,

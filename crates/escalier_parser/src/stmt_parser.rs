@@ -1,5 +1,5 @@
 use crate::parser::*;
-use crate::source_location::merge_locations;
+use crate::source_location::merge_spans;
 use crate::stmt::{Stmt, StmtKind};
 use crate::token::*;
 
@@ -27,14 +27,14 @@ impl<'a> Parser<'a> {
                     TokenKind::Semicolon
                 );
 
-                let loc = merge_locations(&token.loc, &expr.loc);
+                let span = merge_spans(&token.span, &expr.span);
                 Stmt {
                     kind: StmtKind::Let {
                         pattern,
                         expr,
                         type_ann,
                     },
-                    loc,
+                    span,
                 }
             }
             TokenKind::Return => {
@@ -45,7 +45,7 @@ impl<'a> Parser<'a> {
                         self.next().unwrap_or(EOF.clone());
                         Stmt {
                             kind: StmtKind::Return { arg: None },
-                            loc: merge_locations(&token.loc, &next.loc),
+                            span: merge_spans(&token.span, &next.span),
                         }
                     }
                     _ => {
@@ -55,10 +55,10 @@ impl<'a> Parser<'a> {
                             TokenKind::Semicolon
                         );
 
-                        let loc = merge_locations(&next.loc, &arg.loc);
+                        let span = merge_spans(&next.span, &arg.span);
                         Stmt {
                             kind: StmtKind::Return { arg: Some(arg) },
-                            loc,
+                            span,
                         }
                     }
                 }
@@ -72,10 +72,10 @@ impl<'a> Parser<'a> {
                 );
                 eprintln!("--- parse_stmt (assert semicolon) ---");
 
-                let loc = expr.loc.clone();
+                let span = expr.span.clone();
                 Stmt {
                     kind: StmtKind::Expr { expr },
-                    loc,
+                    span,
                 }
             }
         }

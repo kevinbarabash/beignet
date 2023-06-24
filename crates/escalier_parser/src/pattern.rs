@@ -1,7 +1,7 @@
 use crate::expr::Expr;
 use crate::identifier::{BindingIdent, Ident};
 use crate::literal::Literal;
-use crate::source_location::SourceLocation;
+use crate::source_location::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PatternKind {
@@ -18,8 +18,8 @@ pub enum PatternKind {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Pattern {
-    pub loc: SourceLocation,
-    // pub span: Span,
+    // pub loc: SourceLocation,
+    pub span: Span,
     pub kind: PatternKind,
     // pub inferred_type: Option<Index>,
 }
@@ -69,8 +69,8 @@ pub enum ObjectPatProp {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KeyValuePatProp {
-    pub loc: SourceLocation,
-    // pub span: Span,
+    // pub loc: SourceLocation,
+    pub span: Span,
     pub key: Ident,
     pub value: Box<Pattern>,
     pub init: Option<Box<Expr>>,
@@ -78,8 +78,8 @@ pub struct KeyValuePatProp {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ShorthandPatProp {
-    pub loc: SourceLocation,
-    // pub span: Span,
+    // pub loc: SourceLocation,
+    pub span: Span,
     pub ident: BindingIdent,
     pub init: Option<Box<Expr>>,
 }

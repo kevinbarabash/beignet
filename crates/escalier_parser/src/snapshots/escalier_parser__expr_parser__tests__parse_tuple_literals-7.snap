@@ -10,16 +10,7 @@ Expr {
                     kind: Identifier(
                         "a",
                     ),
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 5,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 6,
-                        },
-                    },
+                    span: 4..5,
                 },
             ),
             Spread(
@@ -27,16 +18,7 @@ Expr {
                     kind: Identifier(
                         "b",
                     ),
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 11,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 12,
-                        },
-                    },
+                    span: 10..11,
                 },
             ),
             Spread(
@@ -44,28 +26,10 @@ Expr {
                     kind: Identifier(
                         "c",
                     ),
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 17,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 18,
-                        },
-                    },
+                    span: 16..17,
                 },
             ),
         ],
     },
-    loc: SourceLocation {
-        start: Position {
-            line: 1,
-            column: 1,
-        },
-        end: Position {
-            line: 1,
-            column: 19,
-        },
-    },
+    span: 0..18,
 }

@@ -7,29 +7,11 @@ Expr {
         params: [
             FuncParam {
                 pattern: Pattern {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 5,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 10,
-                        },
-                    },
+                    span: 4..9,
                     kind: Ident(
                         BindingIdent {
                             name: "props",
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 5,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 10,
-                                },
-                            },
+                            span: 4..9,
                             mutable: false,
                         },
                     ),
@@ -46,16 +28,7 @@ Expr {
                             name: Ident(
                                 Ident {
                                     name: "div",
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 16,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 19,
-                                        },
-                                    },
+                                    span: 15..18,
                                 },
                             ),
                             attrs: [],
@@ -70,43 +43,16 @@ Expr {
                                                 kind: Identifier(
                                                     "props",
                                                 ),
-                                                loc: SourceLocation {
-                                                    start: Position {
-                                                        line: 1,
-                                                        column: 21,
-                                                    },
-                                                    end: Position {
-                                                        line: 1,
-                                                        column: 26,
-                                                    },
-                                                },
+                                                span: 20..25,
                                             },
                                             property: Expr {
                                                 kind: Identifier(
                                                     "children",
                                                 ),
-                                                loc: SourceLocation {
-                                                    start: Position {
-                                                        line: 1,
-                                                        column: 27,
-                                                    },
-                                                    end: Position {
-                                                        line: 1,
-                                                        column: 35,
-                                                    },
-                                                },
+                                                span: 26..34,
                                             },
                                         },
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 1,
-                                                column: 21,
-                                            },
-                                            end: Position {
-                                                line: 1,
-                                                column: 35,
-                                            },
-                                        },
+                                        span: 20..34,
                                     },
                                 },
                             ),
@@ -116,44 +62,17 @@ Expr {
                                 name: Ident(
                                     Ident {
                                         name: "div",
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 1,
-                                                column: 38,
-                                            },
-                                            end: Position {
-                                                line: 1,
-                                                column: 41,
-                                            },
-                                        },
+                                        span: 35..41,
                                     },
                                 ),
                             },
                         ),
                     },
                 ),
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 14,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 16,
-                    },
-                },
+                span: 13..15,
             },
         ),
         type_ann: None,
     },
-    loc: SourceLocation {
-        start: Position {
-            line: 1,
-            column: 1,
-        },
-        end: Position {
-            line: 1,
-            column: 16,
-        },
-    },
+    span: 0..15,
 }

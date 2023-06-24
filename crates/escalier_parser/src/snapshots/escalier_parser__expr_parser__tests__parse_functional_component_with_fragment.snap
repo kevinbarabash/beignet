@@ -7,29 +7,11 @@ Expr {
         params: [
             FuncParam {
                 pattern: Pattern {
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 5,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 10,
-                        },
-                    },
+                    span: 4..9,
                     kind: Ident(
                         BindingIdent {
                             name: "props",
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 5,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 10,
-                                },
-                            },
+                            span: 4..9,
                             mutable: false,
                         },
                     ),
@@ -52,43 +34,16 @@ Expr {
                                                 kind: Identifier(
                                                     "props",
                                                 ),
-                                                loc: SourceLocation {
-                                                    start: Position {
-                                                        line: 1,
-                                                        column: 18,
-                                                    },
-                                                    end: Position {
-                                                        line: 1,
-                                                        column: 23,
-                                                    },
-                                                },
+                                                span: 17..22,
                                             },
                                             property: Expr {
                                                 kind: Identifier(
                                                     "children",
                                                 ),
-                                                loc: SourceLocation {
-                                                    start: Position {
-                                                        line: 1,
-                                                        column: 24,
-                                                    },
-                                                    end: Position {
-                                                        line: 1,
-                                                        column: 32,
-                                                    },
-                                                },
+                                                span: 23..31,
                                             },
                                         },
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 1,
-                                                column: 18,
-                                            },
-                                            end: Position {
-                                                line: 1,
-                                                column: 32,
-                                            },
-                                        },
+                                        span: 17..31,
                                     },
                                 },
                             ),
@@ -96,28 +51,10 @@ Expr {
                         closing: JSXClosingFragment,
                     },
                 ),
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 14,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 16,
-                    },
-                },
+                span: 13..15,
             },
         ),
         type_ann: None,
     },
-    loc: SourceLocation {
-        start: Position {
-            line: 1,
-            column: 1,
-        },
-        end: Position {
-            line: 1,
-            column: 16,
-        },
-    },
+    span: 0..15,
 }

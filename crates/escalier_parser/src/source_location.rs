@@ -1,3 +1,6 @@
+use std::cmp::{max, min};
+use std::ops::Range;
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Position {
     pub line: usize,
@@ -10,9 +13,13 @@ pub struct SourceLocation {
     pub end: Position,
 }
 
-pub fn merge_locations(left: &SourceLocation, right: &SourceLocation) -> SourceLocation {
-    SourceLocation {
-        start: left.start.clone(),
-        end: right.end.clone(),
+pub type Span = Range<usize>;
+
+pub const DUMMY_SPAN: Span = Span { start: 0, end: 0 };
+
+pub fn merge_spans(left: &Span, right: &Span) -> Span {
+    Span {
+        start: min(left.start, right.start),
+        end: max(left.end, right.end),
     }
 }

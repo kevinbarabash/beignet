@@ -6,29 +6,11 @@ expression: "parse(\"let max = if (x > y) { x; } else { y; };\")"
     Stmt {
         kind: Let {
             pattern: Pattern {
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 5,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 8,
-                    },
-                },
+                span: 4..7,
                 kind: Ident(
                     BindingIdent {
                         name: "max",
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 5,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 8,
-                            },
-                        },
+                        span: 4..7,
                         mutable: false,
                     },
                 ),
@@ -41,56 +23,20 @@ expression: "parse(\"let max = if (x > y) { x; } else { y; };\")"
                                 kind: Identifier(
                                     "x",
                                 ),
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 1,
-                                        column: 15,
-                                    },
-                                    end: Position {
-                                        line: 1,
-                                        column: 16,
-                                    },
-                                },
+                                span: 14..15,
                             },
                             op: GreaterThan,
                             right: Expr {
                                 kind: Identifier(
                                     "y",
                                 ),
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 1,
-                                        column: 19,
-                                    },
-                                    end: Position {
-                                        line: 1,
-                                        column: 20,
-                                    },
-                                },
+                                span: 18..19,
                             },
                         },
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 15,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 20,
-                            },
-                        },
+                        span: 14..19,
                     },
                     consequent: Block {
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 21,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 28,
-                            },
-                        },
+                        span: 20..27,
                         stmts: [
                             Stmt {
                                 kind: Expr {
@@ -98,43 +44,16 @@ expression: "parse(\"let max = if (x > y) { x; } else { y; };\")"
                                         kind: Identifier(
                                             "x",
                                         ),
-                                        loc: SourceLocation {
-                                            start: Position {
-                                                line: 1,
-                                                column: 24,
-                                            },
-                                            end: Position {
-                                                line: 1,
-                                                column: 25,
-                                            },
-                                        },
+                                        span: 23..24,
                                     },
                                 },
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 1,
-                                        column: 24,
-                                    },
-                                    end: Position {
-                                        line: 1,
-                                        column: 25,
-                                    },
-                                },
+                                span: 23..24,
                             },
                         ],
                     },
                     alternate: Some(
                         Block {
-                            loc: SourceLocation {
-                                start: Position {
-                                    line: 1,
-                                    column: 33,
-                                },
-                                end: Position {
-                                    line: 1,
-                                    column: 40,
-                                },
-                            },
+                            span: 32..39,
                             stmts: [
                                 Stmt {
                                     kind: Expr {
@@ -142,55 +61,19 @@ expression: "parse(\"let max = if (x > y) { x; } else { y; };\")"
                                             kind: Identifier(
                                                 "y",
                                             ),
-                                            loc: SourceLocation {
-                                                start: Position {
-                                                    line: 1,
-                                                    column: 36,
-                                                },
-                                                end: Position {
-                                                    line: 1,
-                                                    column: 37,
-                                                },
-                                            },
+                                            span: 35..36,
                                         },
                                     },
-                                    loc: SourceLocation {
-                                        start: Position {
-                                            line: 1,
-                                            column: 36,
-                                        },
-                                        end: Position {
-                                            line: 1,
-                                            column: 37,
-                                        },
-                                    },
+                                    span: 35..36,
                                 },
                             ],
                         },
                     ),
                 },
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 11,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 40,
-                    },
-                },
+                span: 10..39,
             },
             type_ann: None,
         },
-        loc: SourceLocation {
-            start: Position {
-                line: 1,
-                column: 1,
-            },
-            end: Position {
-                line: 1,
-                column: 40,
-            },
-        },
+        span: 0..39,
     },
 ]

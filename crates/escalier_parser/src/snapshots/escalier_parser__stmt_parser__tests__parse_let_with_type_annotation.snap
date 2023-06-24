@@ -6,29 +6,11 @@ expression: "parse(r#\"let y: number = m*x + b;\"#)"
     Stmt {
         kind: Let {
             pattern: Pattern {
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 5,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 6,
-                    },
-                },
+                span: 4..5,
                 kind: Ident(
                     BindingIdent {
                         name: "y",
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 5,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 6,
-                            },
-                        },
+                        span: 4..5,
                         mutable: false,
                     },
                 ),
@@ -41,98 +23,35 @@ expression: "parse(r#\"let y: number = m*x + b;\"#)"
                                 kind: Identifier(
                                     "m",
                                 ),
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 1,
-                                        column: 17,
-                                    },
-                                    end: Position {
-                                        line: 1,
-                                        column: 18,
-                                    },
-                                },
+                                span: 16..17,
                             },
                             op: Times,
                             right: Expr {
                                 kind: Identifier(
                                     "x",
                                 ),
-                                loc: SourceLocation {
-                                    start: Position {
-                                        line: 1,
-                                        column: 19,
-                                    },
-                                    end: Position {
-                                        line: 1,
-                                        column: 20,
-                                    },
-                                },
+                                span: 18..19,
                             },
                         },
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 17,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 20,
-                            },
-                        },
+                        span: 16..19,
                     },
                     op: Plus,
                     right: Expr {
                         kind: Identifier(
                             "b",
                         ),
-                        loc: SourceLocation {
-                            start: Position {
-                                line: 1,
-                                column: 23,
-                            },
-                            end: Position {
-                                line: 1,
-                                column: 24,
-                            },
-                        },
+                        span: 22..23,
                     },
                 },
-                loc: SourceLocation {
-                    start: Position {
-                        line: 1,
-                        column: 17,
-                    },
-                    end: Position {
-                        line: 1,
-                        column: 24,
-                    },
-                },
+                span: 16..23,
             },
             type_ann: Some(
                 TypeAnn {
                     kind: Number,
-                    loc: SourceLocation {
-                        start: Position {
-                            line: 1,
-                            column: 8,
-                        },
-                        end: Position {
-                            line: 1,
-                            column: 14,
-                        },
-                    },
+                    span: 7..13,
                 },
             ),
         },
-        loc: SourceLocation {
-            start: Position {
-                line: 1,
-                column: 1,
-            },
-            end: Position {
-                line: 1,
-                column: 24,
-            },
-        },
+        span: 0..23,
     },
 ]
