@@ -1,14 +1,14 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(\"fn () => { let x = 5; let y = 10; return x + y; }\")"
+expression: "parse(\"fn () => { let x = 5 let y = 10 return x + y }\")"
 ---
 Function(
     Function {
-        span: 0..49,
+        span: 0..46,
         params: [],
         body: Block(
             Block {
-                span: 8..49,
+                span: 8..46,
                 stmts: [
                     Stmt {
                         kind: Let {
@@ -35,49 +35,49 @@ Function(
                     Stmt {
                         kind: Let {
                             pattern: Pattern {
-                                span: 26..27,
+                                span: 25..26,
                                 kind: Ident(
                                     BindingIdent {
                                         name: "y",
-                                        span: 26..27,
+                                        span: 25..26,
                                         mutable: false,
                                     },
                                 ),
                             },
                             expr: Num(
                                 Num {
-                                    span: 30..32,
+                                    span: 29..31,
                                     value: "10",
                                 },
                             ),
                             type_ann: None,
                         },
-                        span: 22..32,
+                        span: 21..31,
                     },
                     Stmt {
                         kind: Return {
                             arg: Some(
                                 Binary(
                                     Binary {
-                                        span: 41..46,
+                                        span: 39..44,
                                         left: Ident(
                                             Ident {
                                                 name: "x",
-                                                span: 41..42,
+                                                span: 39..40,
                                             },
                                         ),
                                         op: Plus,
                                         right: Ident(
                                             Ident {
                                                 name: "y",
-                                                span: 45..46,
+                                                span: 43..44,
                                             },
                                         ),
                                     },
                                 ),
                             ),
                         },
-                        span: 41..46,
+                        span: 39..44,
                     },
                 ],
             },

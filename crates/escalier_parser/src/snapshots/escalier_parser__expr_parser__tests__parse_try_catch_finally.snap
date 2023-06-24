@@ -1,10 +1,10 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(r#\"\n            try {\n                canThrow()\n            } catch (e) {\n                console.log(\"Error: \" + e);\n            } finally {\n                cleanup()\n            }\n            \"#)"
+expression: "parse(r#\"\n            try {\n                canThrow()\n            } catch (e) {\n                console.log(\"Error: \" + e)\n            } finally {\n                cleanup()\n            }\n            \"#)"
 ---
 Try(
     Try {
-        span: 13..179,
+        span: 13..178,
         body: Block {
             span: 16..59,
             stmts: [
@@ -42,7 +42,7 @@ Try(
                     },
                 ),
                 body: Block {
-                    span: 69..129,
+                    span: 69..128,
                     stmts: [
                         Stmt {
                             kind: Expr {
@@ -97,24 +97,24 @@ Try(
         ),
         finally: Some(
             Block {
-                span: 137..179,
+                span: 136..178,
                 stmts: [
                     Stmt {
                         kind: Expr {
                             expr: Call(
                                 Call {
-                                    span: 156..165,
+                                    span: 155..164,
                                     args: [],
                                     callee: Ident(
                                         Ident {
                                             name: "cleanup",
-                                            span: 156..163,
+                                            span: 155..162,
                                         },
                                     ),
                                 },
                             ),
                         },
-                        span: 156..165,
+                        span: 155..164,
                     },
                 ],
             },

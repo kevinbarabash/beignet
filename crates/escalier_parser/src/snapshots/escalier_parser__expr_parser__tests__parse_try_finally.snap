@@ -1,12 +1,12 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(r#\"\n            try {\n                canThrow();\n            } finally {\n                cleanup();\n            }\n            \"#)"
+expression: "parse(r#\"\n            try {\n                canThrow()\n            } finally {\n                cleanup()\n            }\n            \"#)"
 ---
 Try(
     Try {
-        span: 13..111,
+        span: 13..109,
         body: Block {
-            span: 16..60,
+            span: 16..59,
             stmts: [
                 Stmt {
                     kind: Expr {
@@ -30,24 +30,24 @@ Try(
         catch: None,
         finally: Some(
             Block {
-                span: 68..111,
+                span: 67..109,
                 stmts: [
                     Stmt {
                         kind: Expr {
                             expr: Call(
                                 Call {
-                                    span: 87..96,
+                                    span: 86..95,
                                     args: [],
                                     callee: Ident(
                                         Ident {
                                             name: "cleanup",
-                                            span: 87..94,
+                                            span: 86..93,
                                         },
                                     ),
                                 },
                             ),
                         },
-                        span: 87..96,
+                        span: 86..95,
                     },
                 ],
             },

@@ -1,10 +1,10 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(r#\"if (cond) { x } else { y; }\"#)"
+expression: "parse(r#\"if (cond) { x } else { y }\"#)"
 ---
 IfElse(
     IfElse {
-        span: 0..27,
+        span: 0..26,
         cond: Ident(
             Ident {
                 name: "cond",
@@ -29,7 +29,7 @@ IfElse(
         },
         alternate: Some(
             Block {
-                span: 20..27,
+                span: 20..26,
                 stmts: [
                     Stmt {
                         kind: Expr {

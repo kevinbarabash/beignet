@@ -1,0 +1,34 @@
+---
+source: crates/escalier_parser/src/stmt_parser.rs
+expression: "parse(\"foo\\n.bar()\")"
+---
+[
+    Stmt {
+        kind: Expr {
+            expr: Call(
+                Call {
+                    span: 0..10,
+                    args: [],
+                    callee: Member(
+                        Member {
+                            span: 0..8,
+                            object: Ident(
+                                Ident {
+                                    name: "foo",
+                                    span: 0..3,
+                                },
+                            ),
+                            property: Ident(
+                                Ident {
+                                    name: "bar",
+                                    span: 5..8,
+                                },
+                            ),
+                        },
+                    ),
+                },
+            ),
+        },
+        span: 0..10,
+    },
+]

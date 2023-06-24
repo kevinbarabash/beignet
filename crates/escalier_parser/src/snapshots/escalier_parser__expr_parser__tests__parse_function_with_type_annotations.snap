@@ -1,10 +1,10 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(r#\"fn (x: number, y: number): number => { return x + y; }\"#)"
+expression: "parse(r#\"fn (x: number, y: number): number => { return x + y }\"#)"
 ---
 Function(
     Function {
-        span: 0..54,
+        span: 0..53,
         params: [
             FuncParam {
                 pattern: Pattern {
@@ -47,7 +47,7 @@ Function(
         ],
         body: Block(
             Block {
-                span: 36..54,
+                span: 36..53,
                 stmts: [
                     Stmt {
                         kind: Return {

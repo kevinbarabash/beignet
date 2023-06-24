@@ -78,10 +78,10 @@ impl<'a> Parser<'a> {
                 break;
             }
 
-            assert_eq!(
-                self.next().unwrap_or(EOF.clone()).kind,
-                TokenKind::Semicolon
-            );
+            // assert_eq!(
+            //     self.next().unwrap_or(EOF.clone()).kind,
+            //     TokenKind::Semicolon
+            // );
         }
         let close = self.next().unwrap_or(EOF.clone());
         assert_eq!(close.kind, TokenKind::RightBrace);
@@ -811,57 +811,57 @@ mod tests {
 
     #[test]
     fn parse_function() {
-        insta::assert_debug_snapshot!(parse("fn () => { let x = 5; let y = 10; return x + y; }"));
+        insta::assert_debug_snapshot!(parse("fn () => { let x = 5 let y = 10 return x + y }"));
     }
 
     #[test]
     fn parse_function_with_params() {
-        let src = r#"fn (x, y) => { return x + y; }"#;
+        let src = r#"fn (x, y) => { return x + y }"#;
         insta::assert_debug_snapshot!(parse(src));
     }
 
     #[test]
     fn parse_function_with_type_annotations() {
         insta::assert_debug_snapshot!(parse(
-            r#"fn (x: number, y: number): number => { return x + y; }"#
+            r#"fn (x: number, y: number): number => { return x + y }"#
         ));
     }
 
     #[test]
     fn parse_function_with_optional_params() {
         insta::assert_debug_snapshot!(parse(
-            r#"fn (x: number, y: number, z?: number): number => { return x + y; }"#
+            r#"fn (x: number, y: number, z?: number): number => { return x + y }"#
         ));
     }
 
     #[test]
     fn parse_function_with_destructuring() {
-        insta::assert_debug_snapshot!(parse(r#"fn ({x, y}) => { return x + y; }"#));
+        insta::assert_debug_snapshot!(parse(r#"fn ({x, y}) => { return x + y }"#));
     }
 
     #[test]
     fn parse_function_with_destructuring_and_type_annotation() {
-        insta::assert_debug_snapshot!(parse(r#"fn ({x, y}: Point): number => { return x + y; }"#));
+        insta::assert_debug_snapshot!(parse(r#"fn ({x, y}: Point): number => { return x + y }"#));
     }
 
     #[test]
     fn parse_lambdas() {
-        insta::assert_debug_snapshot!(parse("fn (x, y) => x + y;"));
-        insta::assert_debug_snapshot!(parse("fn (x) => fn (y) => x + y;"));
-        insta::assert_debug_snapshot!(parse(r#"fn (x: number, y: number): number => x + y;"#));
+        insta::assert_debug_snapshot!(parse("fn (x, y) => x + y"));
+        insta::assert_debug_snapshot!(parse("fn (x) => fn (y) => x + y"));
+        insta::assert_debug_snapshot!(parse(r#"fn (x: number, y: number): number => x + y"#));
     }
 
     #[test]
     #[should_panic]
     fn parse_function_expected_comma_or_left_brace() {
-        let src = r#"fn (x, y { return x + y; }"#;
+        let src = r#"fn (x, y { return x + y }"#;
         parse(src);
     }
 
     #[test]
     #[should_panic]
     fn parse_function_expected_identifier() {
-        let src = r#"fn (, y) { return x + y; }"#;
+        let src = r#"fn (, y) { return x + y }"#;
         parse(src);
     }
 
@@ -906,11 +906,11 @@ mod tests {
     #[test]
     fn parse_conditionals() {
         insta::assert_debug_snapshot!(parse(r#"if (cond) { x }"#));
-        insta::assert_debug_snapshot!(parse(r#"if (cond) { x } else { y; }"#));
+        insta::assert_debug_snapshot!(parse(r#"if (cond) { x } else { y }"#));
         insta::assert_debug_snapshot!(parse(
             r#"
             if (cond) {
-                {x: 5, y: 10};
+                {x: 5, y: 10}
             } else {
                 {a: 1, b: 2}
             }
@@ -944,9 +944,9 @@ mod tests {
         insta::assert_debug_snapshot!(parse(
             r#"
             try {
-                canThrow();
+                canThrow()
             } catch (e) {
-                console.log("Error: " + e);
+                console.log("Error: " + e)
             }
             "#
         ));
@@ -957,9 +957,9 @@ mod tests {
         insta::assert_debug_snapshot!(parse(
             r#"
             try {
-                canThrow();
+                canThrow()
             } finally {
-                cleanup();
+                cleanup()
             }
             "#
         ));
@@ -972,7 +972,7 @@ mod tests {
             try {
                 canThrow()
             } catch (e) {
-                console.log("Error: " + e);
+                console.log("Error: " + e)
             } finally {
                 cleanup()
             }
@@ -985,8 +985,8 @@ mod tests {
         insta::assert_debug_snapshot!(parse(
             r#"
             do {
-                let x = 5;
-                let y = 10;
+                let x = 5
+                let y = 10
                 x + y
             }
             "#

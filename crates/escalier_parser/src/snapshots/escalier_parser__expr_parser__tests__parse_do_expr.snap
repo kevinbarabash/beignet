@@ -1,12 +1,12 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(r#\"\n            do {\n                let x = 5;\n                let y = 10;\n                x + y\n            }\n            \"#)"
+expression: "parse(r#\"\n            do {\n                let x = 5\n                let y = 10\n                x + y\n            }\n            \"#)"
 ---
 Do(
     Do {
-        span: 13..108,
+        span: 13..106,
         body: Block {
-            span: 15..108,
+            span: 15..106,
             stmts: [
                 Stmt {
                     kind: Let {
@@ -33,47 +33,47 @@ Do(
                 Stmt {
                     kind: Let {
                         pattern: Pattern {
-                            span: 65..66,
+                            span: 64..65,
                             kind: Ident(
                                 BindingIdent {
                                     name: "y",
-                                    span: 65..66,
+                                    span: 64..65,
                                     mutable: false,
                                 },
                             ),
                         },
                         expr: Num(
                             Num {
-                                span: 69..71,
+                                span: 68..70,
                                 value: "10",
                             },
                         ),
                         type_ann: None,
                     },
-                    span: 61..71,
+                    span: 60..70,
                 },
                 Stmt {
                     kind: Expr {
                         expr: Binary(
                             Binary {
-                                span: 89..94,
+                                span: 87..92,
                                 left: Ident(
                                     Ident {
                                         name: "x",
-                                        span: 89..90,
+                                        span: 87..88,
                                     },
                                 ),
                                 op: Plus,
                                 right: Ident(
                                     Ident {
                                         name: "y",
-                                        span: 93..94,
+                                        span: 91..92,
                                     },
                                 ),
                             },
                         ),
                     },
-                    span: 89..94,
+                    span: 87..92,
                 },
             ],
         },

@@ -1,13 +1,13 @@
 ---
 source: crates/escalier_parser/src/stmt_parser.rs
-expression: "parse(\"if (foo) { console.log(foo); };\")"
+expression: "parse(\"if (foo) { console.log(foo) }\")"
 ---
 [
     Stmt {
         kind: Expr {
             expr: IfElse(
                 IfElse {
-                    span: 0..30,
+                    span: 0..29,
                     cond: Ident(
                         Ident {
                             name: "foo",
@@ -15,7 +15,7 @@ expression: "parse(\"if (foo) { console.log(foo); };\")"
                         },
                     ),
                     consequent: Block {
-                        span: 8..30,
+                        span: 8..29,
                         stmts: [
                             Stmt {
                                 kind: Expr {
@@ -58,6 +58,6 @@ expression: "parse(\"if (foo) { console.log(foo); };\")"
                 },
             ),
         },
-        span: 0..30,
+        span: 0..29,
     },
 ]

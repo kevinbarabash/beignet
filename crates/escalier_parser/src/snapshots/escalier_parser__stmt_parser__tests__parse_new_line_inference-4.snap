@@ -1,0 +1,25 @@
+---
+source: crates/escalier_parser/src/stmt_parser.rs
+expression: "parse(\"return\\nfoo()\")"
+---
+[
+    Stmt {
+        kind: Return {
+            arg: Some(
+                Call(
+                    Call {
+                        span: 7..12,
+                        args: [],
+                        callee: Ident(
+                            Ident {
+                                name: "foo",
+                                span: 7..10,
+                            },
+                        ),
+                    },
+                ),
+            ),
+        },
+        span: 7..12,
+    },
+]
