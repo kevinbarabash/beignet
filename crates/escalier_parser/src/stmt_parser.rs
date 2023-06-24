@@ -9,7 +9,7 @@ impl<'a> Parser<'a> {
 
         match &token.kind {
             TokenKind::Let => {
-                self.next().unwrap_or(EOF.clone());
+                self.next(); // consumes 'let'
                 let pattern = self.parse_pattern();
 
                 let type_ann = match self.peek().unwrap_or(&EOF).kind {
@@ -22,10 +22,6 @@ impl<'a> Parser<'a> {
 
                 assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Assign);
                 let expr = self.parse_expr();
-                assert_eq!(
-                    self.next().unwrap_or(EOF.clone()).kind,
-                    TokenKind::Semicolon
-                );
 
                 let span = merge_spans(&token.span, &expr.get_span());
                 Stmt {
@@ -38,22 +34,17 @@ impl<'a> Parser<'a> {
                 }
             }
             TokenKind::Return => {
-                self.next().unwrap_or(EOF.clone());
+                self.next(); // consumes 'return'
                 let next = self.peek().unwrap_or(&EOF).clone();
                 match next.kind {
-                    TokenKind::Semicolon => {
-                        self.next().unwrap_or(EOF.clone());
-                        Stmt {
-                            kind: StmtKind::Return { arg: None },
-                            span: merge_spans(&token.span, &next.span),
-                        }
-                    }
+                    // NOTE: The caller is responsible for consuming the
+                    // semicolon.
+                    TokenKind::Semicolon => Stmt {
+                        kind: StmtKind::Return { arg: None },
+                        span: merge_spans(&token.span, &next.span),
+                    },
                     _ => {
                         let arg = self.parse_expr();
-                        assert_eq!(
-                            self.next().unwrap_or(EOF.clone()).kind,
-                            TokenKind::Semicolon
-                        );
 
                         let span = merge_spans(&next.span, &arg.get_span());
                         Stmt {
@@ -64,14 +55,7 @@ impl<'a> Parser<'a> {
                 }
             }
             _ => {
-                eprintln!("--- parse_stmt (expr) ---");
                 let expr = self.parse_expr();
-                assert_eq!(
-                    self.next().unwrap_or(EOF.clone()).kind,
-                    TokenKind::Semicolon
-                );
-                eprintln!("--- parse_stmt (assert semicolon) ---");
-
                 let span = expr.get_span();
                 Stmt {
                     kind: StmtKind::Expr { expr },
@@ -85,6 +69,10 @@ impl<'a> Parser<'a> {
         let mut stmts = Vec::new();
         while self.peek().unwrap_or(&EOF).kind != TokenKind::Eof {
             stmts.push(self.parse_stmt());
+            assert_eq!(
+                self.next().unwrap_or(EOF.clone()).kind,
+                TokenKind::Semicolon
+            );
         }
         stmts
     }

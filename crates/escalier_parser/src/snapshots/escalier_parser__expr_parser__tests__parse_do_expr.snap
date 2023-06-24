@@ -1,12 +1,12 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(r#\"\n            do {\n                let x = 5;\n                let y = 10;\n                x + y;\n            }\n            \"#)"
+expression: "parse(r#\"\n            do {\n                let x = 5;\n                let y = 10;\n                x + y\n            }\n            \"#)"
 ---
 Do(
     Do {
-        span: 13..109,
+        span: 13..108,
         body: Block {
-            span: 15..109,
+            span: 15..108,
             stmts: [
                 Stmt {
                     kind: Let {
