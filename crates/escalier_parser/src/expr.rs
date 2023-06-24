@@ -1,4 +1,5 @@
 use crate::func_param::FuncParam;
+use crate::jsx::{JSXElement, JSXFragment};
 use crate::literal::Literal;
 use crate::pattern::Pattern;
 use crate::source_location::SourceLocation;
@@ -103,6 +104,8 @@ pub enum ExprKind {
     Do {
         body: Block,
     },
+    JSXElement(JSXElement),
+    JSXFragment(JSXFragment),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

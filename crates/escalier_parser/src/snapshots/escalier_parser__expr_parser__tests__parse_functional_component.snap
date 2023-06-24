@@ -1,0 +1,159 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(\"fn (props) => <div>{props.children}</div>\")"
+---
+Expr {
+    kind: Function {
+        params: [
+            FuncParam {
+                pattern: Pattern {
+                    loc: SourceLocation {
+                        start: Position {
+                            line: 1,
+                            column: 5,
+                        },
+                        end: Position {
+                            line: 1,
+                            column: 10,
+                        },
+                    },
+                    kind: Ident(
+                        BindingIdent {
+                            name: "props",
+                            loc: SourceLocation {
+                                start: Position {
+                                    line: 1,
+                                    column: 5,
+                                },
+                                end: Position {
+                                    line: 1,
+                                    column: 10,
+                                },
+                            },
+                            mutable: false,
+                        },
+                    ),
+                },
+                type_ann: None,
+                optional: false,
+            },
+        ],
+        body: Expr(
+            Expr {
+                kind: JSXElement(
+                    JSXElement {
+                        opening: JSXOpeningElement {
+                            name: Ident(
+                                Ident {
+                                    name: "div",
+                                    loc: SourceLocation {
+                                        start: Position {
+                                            line: 1,
+                                            column: 16,
+                                        },
+                                        end: Position {
+                                            line: 1,
+                                            column: 19,
+                                        },
+                                    },
+                                },
+                            ),
+                            attrs: [],
+                            self_closing: false,
+                        },
+                        children: [
+                            ExprContainer(
+                                JSXExprContainer {
+                                    expr: Expr {
+                                        kind: Member {
+                                            object: Expr {
+                                                kind: Identifier(
+                                                    "props",
+                                                ),
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 1,
+                                                        column: 21,
+                                                    },
+                                                    end: Position {
+                                                        line: 1,
+                                                        column: 26,
+                                                    },
+                                                },
+                                            },
+                                            property: Expr {
+                                                kind: Identifier(
+                                                    "children",
+                                                ),
+                                                loc: SourceLocation {
+                                                    start: Position {
+                                                        line: 1,
+                                                        column: 27,
+                                                    },
+                                                    end: Position {
+                                                        line: 1,
+                                                        column: 35,
+                                                    },
+                                                },
+                                            },
+                                        },
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 1,
+                                                column: 21,
+                                            },
+                                            end: Position {
+                                                line: 1,
+                                                column: 35,
+                                            },
+                                        },
+                                    },
+                                },
+                            ),
+                        ],
+                        closing: Some(
+                            JSXClosingElement {
+                                name: Ident(
+                                    Ident {
+                                        name: "div",
+                                        loc: SourceLocation {
+                                            start: Position {
+                                                line: 1,
+                                                column: 38,
+                                            },
+                                            end: Position {
+                                                line: 1,
+                                                column: 41,
+                                            },
+                                        },
+                                    },
+                                ),
+                            },
+                        ),
+                    },
+                ),
+                loc: SourceLocation {
+                    start: Position {
+                        line: 1,
+                        column: 14,
+                    },
+                    end: Position {
+                        line: 1,
+                        column: 16,
+                    },
+                },
+            },
+        ),
+        type_ann: None,
+    },
+    loc: SourceLocation {
+        start: Position {
+            line: 1,
+            column: 1,
+        },
+        end: Position {
+            line: 1,
+            column: 16,
+        },
+    },
+}

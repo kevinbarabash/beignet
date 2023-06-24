@@ -4,7 +4,7 @@ expression: "parse(\"undefined\")"
 ---
 Expr {
     kind: Literal(
-        Null,
+        Undefined,
     ),
     loc: SourceLocation {
         start: Position {
