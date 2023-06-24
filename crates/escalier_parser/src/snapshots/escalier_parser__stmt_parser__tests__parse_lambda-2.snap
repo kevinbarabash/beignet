@@ -15,8 +15,9 @@ expression: "parse(\"let add = fn (x) => fn (y) => x + y;\")"
                     },
                 ),
             },
-            expr: Expr {
-                kind: Function {
+            expr: Function(
+                Function {
+                    span: 10..35,
                     params: [
                         FuncParam {
                             pattern: Pattern {
@@ -34,8 +35,9 @@ expression: "parse(\"let add = fn (x) => fn (y) => x + y;\")"
                         },
                     ],
                     body: Expr(
-                        Expr {
-                            kind: Function {
+                        Function(
+                            Function {
+                                span: 20..35,
                                 params: [
                                     FuncParam {
                                         pattern: Pattern {
@@ -53,34 +55,32 @@ expression: "parse(\"let add = fn (x) => fn (y) => x + y;\")"
                                     },
                                 ],
                                 body: Expr(
-                                    Expr {
-                                        kind: Binary {
-                                            left: Expr {
-                                                kind: Identifier(
-                                                    "x",
-                                                ),
-                                                span: 30..31,
-                                            },
+                                    Binary(
+                                        Binary {
+                                            span: 30..35,
+                                            left: Ident(
+                                                Ident {
+                                                    name: "x",
+                                                    span: 30..31,
+                                                },
+                                            ),
                                             op: Plus,
-                                            right: Expr {
-                                                kind: Identifier(
-                                                    "y",
-                                                ),
-                                                span: 34..35,
-                                            },
+                                            right: Ident(
+                                                Ident {
+                                                    name: "y",
+                                                    span: 34..35,
+                                                },
+                                            ),
                                         },
-                                        span: 30..35,
-                                    },
+                                    ),
                                 ),
                                 type_ann: None,
                             },
-                            span: 20..35,
-                        },
+                        ),
                     ),
                     type_ann: None,
                 },
-                span: 10..35,
-            },
+            ),
             type_ann: None,
         },
         span: 0..35,

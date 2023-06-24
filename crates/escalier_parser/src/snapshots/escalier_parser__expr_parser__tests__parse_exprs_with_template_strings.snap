@@ -2,36 +2,38 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"a + `b ${c} d`\")"
 ---
-Expr {
-    kind: Binary {
-        left: Expr {
-            kind: Identifier(
-                "a",
-            ),
-            span: 0..1,
-        },
+Binary(
+    Binary {
+        span: 0..14,
+        left: Ident(
+            Ident {
+                name: "a",
+                span: 0..1,
+            },
+        ),
         op: Plus,
-        right: Expr {
-            kind: TemplateLiteral {
+        right: TemplateLiteral(
+            TemplateLiteral {
+                span: 3..14,
                 parts: [
-                    String(
-                        "b ",
-                    ),
-                    String(
-                        " d",
-                    ),
-                ],
-                exprs: [
-                    Expr {
-                        kind: Identifier(
-                            "c",
-                        ),
-                        span: 9..10,
+                    Str {
+                        span: 3..7,
+                        value: "b ",
+                    },
+                    Str {
+                        span: 11..14,
+                        value: " d",
                     },
                 ],
+                exprs: [
+                    Ident(
+                        Ident {
+                            name: "c",
+                            span: 9..10,
+                        },
+                    ),
+                ],
             },
-            span: 3..14,
-        },
+        ),
     },
-    span: 0..14,
-}
+)

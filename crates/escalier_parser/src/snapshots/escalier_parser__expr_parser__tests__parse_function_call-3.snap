@@ -2,50 +2,50 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"add(obj.x, obj.y)\")"
 ---
-Expr {
-    kind: Call {
+Call(
+    Call {
+        span: 0..17,
         args: [
-            Expr {
-                kind: Member {
-                    object: Expr {
-                        kind: Identifier(
-                            "obj",
-                        ),
-                        span: 4..7,
-                    },
-                    property: Expr {
-                        kind: Identifier(
-                            "x",
-                        ),
-                        span: 8..9,
-                    },
+            Member(
+                Member {
+                    span: 4..9,
+                    object: Ident(
+                        Ident {
+                            name: "obj",
+                            span: 4..7,
+                        },
+                    ),
+                    property: Ident(
+                        Ident {
+                            name: "x",
+                            span: 8..9,
+                        },
+                    ),
                 },
-                span: 4..9,
-            },
-            Expr {
-                kind: Member {
-                    object: Expr {
-                        kind: Identifier(
-                            "obj",
-                        ),
-                        span: 11..14,
-                    },
-                    property: Expr {
-                        kind: Identifier(
-                            "y",
-                        ),
-                        span: 15..16,
-                    },
-                },
-                span: 11..16,
-            },
-        ],
-        callee: Expr {
-            kind: Identifier(
-                "add",
             ),
-            span: 0..3,
-        },
+            Member(
+                Member {
+                    span: 11..16,
+                    object: Ident(
+                        Ident {
+                            name: "obj",
+                            span: 11..14,
+                        },
+                    ),
+                    property: Ident(
+                        Ident {
+                            name: "y",
+                            span: 15..16,
+                        },
+                    ),
+                },
+            ),
+        ],
+        callee: Ident(
+            Ident {
+                name: "add",
+                span: 0..3,
+            },
+        ),
     },
-    span: 0..17,
-}
+)

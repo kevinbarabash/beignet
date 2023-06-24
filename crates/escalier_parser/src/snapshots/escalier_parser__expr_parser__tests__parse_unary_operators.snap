@@ -2,39 +2,39 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"--a - +b\")"
 ---
-Expr {
-    kind: Binary {
-        left: Expr {
-            kind: Unary {
+Binary(
+    Binary {
+        span: 0..8,
+        left: Unary(
+            Unary {
+                span: 0..3,
                 op: Minus,
-                right: Expr {
-                    kind: Unary {
+                right: Unary(
+                    Unary {
+                        span: 1..3,
                         op: Minus,
-                        right: Expr {
-                            kind: Identifier(
-                                "a",
-                            ),
-                            span: 2..3,
-                        },
+                        right: Ident(
+                            Ident {
+                                name: "a",
+                                span: 2..3,
+                            },
+                        ),
                     },
-                    span: 1..3,
-                },
+                ),
             },
-            span: 0..3,
-        },
+        ),
         op: Minus,
-        right: Expr {
-            kind: Unary {
+        right: Unary(
+            Unary {
+                span: 5..8,
                 op: Plus,
-                right: Expr {
-                    kind: Identifier(
-                        "b",
-                    ),
-                    span: 7..8,
-                },
+                right: Ident(
+                    Ident {
+                        name: "b",
+                        span: 7..8,
+                    },
+                ),
             },
-            span: 5..8,
-        },
+        ),
     },
-    span: 0..8,
-}
+)

@@ -6,6 +6,8 @@ use crate::token::{TokenKind, EOF};
 
 impl<'a> Parser<'a> {
     pub fn parse_jsx_element(&mut self) -> JSXElement {
+        let start = self.scanner.cursor();
+
         assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::LessThan);
         let name_token = self.lex_ident_or_keyword();
         let name = match name_token.kind {
@@ -73,7 +75,10 @@ impl<'a> Parser<'a> {
             })
         };
 
+        let end = self.scanner.cursor();
+
         JSXElement {
+            span: Span { start, end },
             opening,
             children,
             closing,
@@ -81,6 +86,8 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_jsx_fragment(&mut self) -> JSXFragment {
+        let start = self.scanner.cursor();
+
         assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::LessThan);
         assert_eq!(
             self.next().unwrap_or(EOF.clone()).kind,
@@ -96,7 +103,10 @@ impl<'a> Parser<'a> {
             TokenKind::GreaterThan
         );
 
+        let end = self.scanner.cursor();
+
         JSXFragment {
+            span: Span { start, end },
             opening: JSXOpeningFragment {},
             children,
             closing: JSXClosingFragment {},

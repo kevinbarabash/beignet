@@ -2,41 +2,41 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"a?.b?.c\")"
 ---
-Expr {
-    kind: OptionalChain {
-        base: Expr {
-            kind: Member {
-                object: Expr {
-                    kind: OptionalChain {
-                        base: Expr {
-                            kind: Member {
-                                object: Expr {
-                                    kind: Identifier(
-                                        "a",
-                                    ),
-                                    span: 0..1,
-                                },
-                                property: Expr {
-                                    kind: Identifier(
-                                        "b",
-                                    ),
-                                    span: 3..4,
-                                },
+OptionalChain(
+    OptionalChain {
+        span: 0..7,
+        base: Member(
+            Member {
+                span: 0..7,
+                object: OptionalChain(
+                    OptionalChain {
+                        span: 0..4,
+                        base: Member(
+                            Member {
+                                span: 0..4,
+                                object: Ident(
+                                    Ident {
+                                        name: "a",
+                                        span: 0..1,
+                                    },
+                                ),
+                                property: Ident(
+                                    Ident {
+                                        name: "b",
+                                        span: 3..4,
+                                    },
+                                ),
                             },
-                            span: 0..4,
-                        },
+                        ),
                     },
-                    span: 0..4,
-                },
-                property: Expr {
-                    kind: Identifier(
-                        "c",
-                    ),
-                    span: 6..7,
-                },
+                ),
+                property: Ident(
+                    Ident {
+                        name: "c",
+                        span: 6..7,
+                    },
+                ),
             },
-            span: 0..7,
-        },
+        ),
     },
-    span: 0..7,
-}
+)

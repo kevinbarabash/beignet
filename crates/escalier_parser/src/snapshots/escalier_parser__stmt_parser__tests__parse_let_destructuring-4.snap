@@ -52,12 +52,12 @@ expression: "parse(\"let [head, ...tail] = polygon;\")"
                     },
                 ),
             },
-            expr: Expr {
-                kind: Identifier(
-                    "polygon",
-                ),
-                span: 22..29,
-            },
+            expr: Ident(
+                Ident {
+                    name: "polygon",
+                    span: 22..29,
+                },
+            ),
             type_ann: None,
         },
         span: 0..29,

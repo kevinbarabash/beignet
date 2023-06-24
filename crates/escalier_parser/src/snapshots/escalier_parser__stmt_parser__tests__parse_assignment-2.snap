@@ -5,37 +5,35 @@ expression: "parse(r#\"p.x = 5;\"#)"
 [
     Stmt {
         kind: Expr {
-            expr: Expr {
-                kind: Assign {
-                    left: Expr {
-                        kind: Member {
-                            object: Expr {
-                                kind: Identifier(
-                                    "p",
-                                ),
-                                span: 0..1,
-                            },
-                            property: Expr {
-                                kind: Identifier(
-                                    "x",
-                                ),
-                                span: 2..3,
-                            },
-                        },
-                        span: 0..3,
-                    },
-                    op: Assign,
-                    right: Expr {
-                        kind: Literal(
-                            Number(
-                                "5",
+            expr: Assign(
+                Assign {
+                    span: 0..7,
+                    left: Member(
+                        Member {
+                            span: 0..3,
+                            object: Ident(
+                                Ident {
+                                    name: "p",
+                                    span: 0..1,
+                                },
                             ),
-                        ),
-                        span: 6..7,
-                    },
+                            property: Ident(
+                                Ident {
+                                    name: "x",
+                                    span: 2..3,
+                                },
+                            ),
+                        },
+                    ),
+                    op: Assign,
+                    right: Num(
+                        Num {
+                            span: 6..7,
+                            value: "5",
+                        },
+                    ),
                 },
-                span: 0..7,
-            },
+            ),
         },
         span: 0..7,
     },

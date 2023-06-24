@@ -2,23 +2,21 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"x /= 2\")"
 ---
-Expr {
-    kind: Assign {
-        left: Expr {
-            kind: Identifier(
-                "x",
-            ),
-            span: 0..1,
-        },
+Assign(
+    Assign {
+        span: 0..6,
+        left: Ident(
+            Ident {
+                name: "x",
+                span: 0..1,
+            },
+        ),
         op: DivAssign,
-        right: Expr {
-            kind: Literal(
-                Number(
-                    "2",
-                ),
-            ),
-            span: 5..6,
-        },
+        right: Num(
+            Num {
+                span: 5..6,
+                value: "2",
+            },
+        ),
     },
-    span: 0..6,
-}
+)

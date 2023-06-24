@@ -15,8 +15,9 @@ expression: "parse(r#\"let add: fn (a: number, b: number) => number = fn (a, b) 
                     },
                 ),
             },
-            expr: Expr {
-                kind: Function {
+            expr: Function(
+                Function {
+                    span: 47..65,
                     params: [
                         FuncParam {
                             pattern: Pattern {
@@ -48,29 +49,28 @@ expression: "parse(r#\"let add: fn (a: number, b: number) => number = fn (a, b) 
                         },
                     ],
                     body: Expr(
-                        Expr {
-                            kind: Binary {
-                                left: Expr {
-                                    kind: Identifier(
-                                        "a",
-                                    ),
-                                    span: 60..61,
-                                },
+                        Binary(
+                            Binary {
+                                span: 60..65,
+                                left: Ident(
+                                    Ident {
+                                        name: "a",
+                                        span: 60..61,
+                                    },
+                                ),
                                 op: Plus,
-                                right: Expr {
-                                    kind: Identifier(
-                                        "b",
-                                    ),
-                                    span: 64..65,
-                                },
+                                right: Ident(
+                                    Ident {
+                                        name: "b",
+                                        span: 64..65,
+                                    },
+                                ),
                             },
-                            span: 60..65,
-                        },
+                        ),
                     ),
                     type_ann: None,
                 },
-                span: 47..65,
-            },
+            ),
             type_ann: Some(
                 TypeAnn {
                     kind: Function(

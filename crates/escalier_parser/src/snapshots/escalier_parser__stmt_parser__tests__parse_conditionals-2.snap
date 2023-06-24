@@ -5,49 +5,50 @@ expression: "parse(\"if (foo) { console.log(foo); };\")"
 [
     Stmt {
         kind: Expr {
-            expr: Expr {
-                kind: IfElse {
-                    cond: Expr {
-                        kind: Identifier(
-                            "foo",
-                        ),
-                        span: 4..7,
-                    },
+            expr: IfElse(
+                IfElse {
+                    span: 0..30,
+                    cond: Ident(
+                        Ident {
+                            name: "foo",
+                            span: 4..7,
+                        },
+                    ),
                     consequent: Block {
                         span: 8..30,
                         stmts: [
                             Stmt {
                                 kind: Expr {
-                                    expr: Expr {
-                                        kind: Call {
+                                    expr: Call(
+                                        Call {
+                                            span: 11..27,
                                             args: [
-                                                Expr {
-                                                    kind: Identifier(
-                                                        "foo",
-                                                    ),
-                                                    span: 23..26,
-                                                },
+                                                Ident(
+                                                    Ident {
+                                                        name: "foo",
+                                                        span: 23..26,
+                                                    },
+                                                ),
                                             ],
-                                            callee: Expr {
-                                                kind: Member {
-                                                    object: Expr {
-                                                        kind: Identifier(
-                                                            "console",
-                                                        ),
-                                                        span: 11..18,
-                                                    },
-                                                    property: Expr {
-                                                        kind: Identifier(
-                                                            "log",
-                                                        ),
-                                                        span: 19..22,
-                                                    },
+                                            callee: Member(
+                                                Member {
+                                                    span: 11..22,
+                                                    object: Ident(
+                                                        Ident {
+                                                            name: "console",
+                                                            span: 11..18,
+                                                        },
+                                                    ),
+                                                    property: Ident(
+                                                        Ident {
+                                                            name: "log",
+                                                            span: 19..22,
+                                                        },
+                                                    ),
                                                 },
-                                                span: 11..22,
-                                            },
+                                            ),
                                         },
-                                        span: 11..27,
-                                    },
+                                    ),
                                 },
                                 span: 11..27,
                             },
@@ -55,8 +56,7 @@ expression: "parse(\"if (foo) { console.log(foo); };\")"
                     },
                     alternate: None,
                 },
-                span: 0..30,
-            },
+            ),
         },
         span: 0..30,
     },

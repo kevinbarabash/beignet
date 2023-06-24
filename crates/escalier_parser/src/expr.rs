@@ -1,6 +1,6 @@
 use crate::func_param::FuncParam;
+use crate::identifier::Ident;
 use crate::jsx::{JSXElement, JSXFragment};
-use crate::literal::Literal;
 use crate::pattern::Pattern;
 use crate::source_location::*;
 use crate::stmt::Stmt;
@@ -9,7 +9,7 @@ use crate::type_ann::TypeAnn;
 // TODO: track source location
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ObjectKey {
-    Identifier(String), // TODO: use Identifier
+    Ident(Ident),
     String(String),
     Number(String),
     Computed(Box<Expr>),
@@ -39,71 +39,163 @@ pub enum ExprOrSpread {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum ExprKind {
-    Identifier(String),
-    Literal(Literal),
-    TemplateLiteral {
-        parts: Vec<Literal>,
-        exprs: Vec<Expr>,
-    },
-    Object {
-        properties: Vec<PropOrSpread>,
-    },
-    Tuple {
-        elements: Vec<ExprOrSpread>,
-    },
-    Assign {
-        left: Box<Expr>,
-        op: AssignOp,
-        right: Box<Expr>,
-    },
-    Binary {
-        left: Box<Expr>,
-        op: BinaryOp,
-        right: Box<Expr>,
-    },
-    Unary {
-        op: UnaryOp,
-        right: Box<Expr>,
-    },
-    Index {
-        left: Box<Expr>,
-        right: Box<Expr>,
-    },
-    Function {
-        params: Vec<FuncParam>,
-        body: BlockOrExpr,
-        type_ann: Option<TypeAnn>, // return type
-    },
-    Call {
-        args: Vec<Expr>,
-        callee: Box<Expr>,
-    },
-    Member {
-        object: Box<Expr>,
-        property: Box<Expr>,
-    },
-    OptionalChain {
-        base: Box<Expr>,
-    },
-    IfElse {
-        cond: Box<Expr>,
-        consequent: Block,
-        alternate: Option<Block>,
-    },
-    Match {
-        expr: Box<Expr>,
-        arms: Vec<MatchArm>,
-    },
-    Try {
-        body: Block,
-        // At least `catch` or `finally` must be present
-        catch: Option<CatchClause>,
-        finally: Option<Block>,
-    },
-    Do {
-        body: Block,
-    },
+pub struct Num {
+    pub span: Span,
+    pub value: String,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Str {
+    pub span: Span,
+    pub value: String,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Bool {
+    pub span: Span,
+    pub value: bool,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Null {
+    pub span: Span,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Undefined {
+    pub span: Span,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct TemplateLiteral {
+    pub span: Span,
+    pub parts: Vec<Str>,
+    pub exprs: Vec<Expr>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Object {
+    pub span: Span,
+    pub properties: Vec<PropOrSpread>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Tuple {
+    pub span: Span,
+    pub elements: Vec<ExprOrSpread>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Assign {
+    pub span: Span,
+    pub left: Box<Expr>,
+    pub op: AssignOp,
+    pub right: Box<Expr>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Binary {
+    pub span: Span,
+    pub left: Box<Expr>,
+    pub op: BinaryOp,
+    pub right: Box<Expr>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Unary {
+    pub span: Span,
+    pub op: UnaryOp,
+    pub right: Box<Expr>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Function {
+    pub span: Span,
+    pub params: Vec<FuncParam>,
+    pub body: BlockOrExpr,
+    pub type_ann: Option<TypeAnn>, // return type
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Call {
+    pub span: Span,
+    pub args: Vec<Expr>,
+    pub callee: Box<Expr>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Member {
+    pub span: Span,
+    pub object: Box<Expr>,
+    pub property: Box<Expr>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Index {
+    pub span: Span,
+    pub left: Box<Expr>,
+    pub right: Box<Expr>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct OptionalChain {
+    pub span: Span,
+    pub base: Box<Expr>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct IfElse {
+    pub span: Span,
+    pub cond: Box<Expr>,
+    pub consequent: Block,
+    pub alternate: Option<Block>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Match {
+    pub span: Span,
+    pub expr: Box<Expr>,
+    pub arms: Vec<MatchArm>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Try {
+    pub span: Span,
+    pub body: Block,
+    // At least `catch` or `finally` must be present
+    pub catch: Option<CatchClause>,
+    pub finally: Option<Block>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Do {
+    pub span: Span,
+    pub body: Block,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum Expr {
+    Ident(Ident),
+    Num(Num),
+    Str(Str),
+    Bool(Bool),
+    Null(Null),
+    Undefined(Undefined),
+    TemplateLiteral(TemplateLiteral),
+    Object(Object),
+    Tuple(Tuple),
+    Assign(Assign),
+    Binary(Binary),
+    Unary(Unary),
+    Function(Function),
+    Call(Call),
+    Member(Member),
+    Index(Index),
+    OptionalChain(OptionalChain),
+    IfElse(IfElse),
+    Match(Match),
+    Try(Try),
+    Do(Do),
     JSXElement(JSXElement),
     JSXFragment(JSXFragment),
 }
@@ -168,8 +260,32 @@ pub enum UnaryOp {
     Minus,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Expr {
-    pub kind: ExprKind,
-    pub span: Span,
+impl Expr {
+    pub fn get_span(&self) -> Span {
+        match self {
+            Expr::Ident(Ident { span, .. }) => span.to_owned(),
+            Expr::Num(Num { span, .. }) => span.to_owned(),
+            Expr::Str(Str { span, .. }) => span.to_owned(),
+            Expr::Bool(Bool { span, .. }) => span.to_owned(),
+            Expr::Null(Null { span, .. }) => span.to_owned(),
+            Expr::Undefined(Undefined { span, .. }) => span.to_owned(),
+            Expr::TemplateLiteral(TemplateLiteral { span, .. }) => span.to_owned(),
+            Expr::Object(Object { span, .. }) => span.to_owned(),
+            Expr::Tuple(Tuple { span, .. }) => span.to_owned(),
+            Expr::Assign(Assign { span, .. }) => span.to_owned(),
+            Expr::Binary(Binary { span, .. }) => span.to_owned(),
+            Expr::Unary(Unary { span, .. }) => span.to_owned(),
+            Expr::Function(Function { span, .. }) => span.to_owned(),
+            Expr::Call(Call { span, .. }) => span.to_owned(),
+            Expr::Member(Member { span, .. }) => span.to_owned(),
+            Expr::Index(Index { span, .. }) => span.to_owned(),
+            Expr::OptionalChain(OptionalChain { span, .. }) => span.to_owned(),
+            Expr::IfElse(IfElse { span, .. }) => span.to_owned(),
+            Expr::Match(Match { span, .. }) => span.to_owned(),
+            Expr::Try(Try { span, .. }) => span.to_owned(),
+            Expr::Do(Do { span, .. }) => span.to_owned(),
+            Expr::JSXElement(JSXElement { span, .. }) => span.to_owned(),
+            Expr::JSXFragment(JSXFragment { span, .. }) => span.to_owned(),
+        }
+    }
 }

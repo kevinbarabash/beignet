@@ -5,48 +5,48 @@ expression: "parse(r#\"y = m*x + b;\"#)"
 [
     Stmt {
         kind: Expr {
-            expr: Expr {
-                kind: Assign {
-                    left: Expr {
-                        kind: Identifier(
-                            "y",
-                        ),
-                        span: 0..1,
-                    },
-                    op: Assign,
-                    right: Expr {
-                        kind: Binary {
-                            left: Expr {
-                                kind: Binary {
-                                    left: Expr {
-                                        kind: Identifier(
-                                            "m",
-                                        ),
-                                        span: 4..5,
-                                    },
-                                    op: Times,
-                                    right: Expr {
-                                        kind: Identifier(
-                                            "x",
-                                        ),
-                                        span: 6..7,
-                                    },
-                                },
-                                span: 4..7,
-                            },
-                            op: Plus,
-                            right: Expr {
-                                kind: Identifier(
-                                    "b",
-                                ),
-                                span: 10..11,
-                            },
+            expr: Assign(
+                Assign {
+                    span: 0..11,
+                    left: Ident(
+                        Ident {
+                            name: "y",
+                            span: 0..1,
                         },
-                        span: 4..11,
-                    },
+                    ),
+                    op: Assign,
+                    right: Binary(
+                        Binary {
+                            span: 4..11,
+                            left: Binary(
+                                Binary {
+                                    span: 4..7,
+                                    left: Ident(
+                                        Ident {
+                                            name: "m",
+                                            span: 4..5,
+                                        },
+                                    ),
+                                    op: Times,
+                                    right: Ident(
+                                        Ident {
+                                            name: "x",
+                                            span: 6..7,
+                                        },
+                                    ),
+                                },
+                            ),
+                            op: Plus,
+                            right: Ident(
+                                Ident {
+                                    name: "b",
+                                    span: 10..11,
+                                },
+                            ),
+                        },
+                    ),
                 },
-                span: 0..11,
-            },
+            ),
         },
         span: 0..11,
     },

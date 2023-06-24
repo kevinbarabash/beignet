@@ -2,45 +2,43 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(r#\"a[\"b\"][c] = x\"\"#)"
 ---
-Expr {
-    kind: Assign {
-        left: Expr {
-            kind: Index {
-                left: Expr {
-                    kind: Index {
-                        left: Expr {
-                            kind: Identifier(
-                                "a",
-                            ),
-                            span: 0..1,
-                        },
-                        right: Expr {
-                            kind: Literal(
-                                String(
-                                    "b",
-                                ),
-                            ),
-                            span: 2..5,
-                        },
+Assign(
+    Assign {
+        span: 0..13,
+        left: Index(
+            Index {
+                span: 0..8,
+                left: Index(
+                    Index {
+                        span: 0..5,
+                        left: Ident(
+                            Ident {
+                                name: "a",
+                                span: 0..1,
+                            },
+                        ),
+                        right: Str(
+                            Str {
+                                span: 2..5,
+                                value: "b",
+                            },
+                        ),
                     },
-                    span: 0..5,
-                },
-                right: Expr {
-                    kind: Identifier(
-                        "c",
-                    ),
-                    span: 7..8,
-                },
+                ),
+                right: Ident(
+                    Ident {
+                        name: "c",
+                        span: 7..8,
+                    },
+                ),
             },
-            span: 0..8,
-        },
+        ),
         op: Assign,
-        right: Expr {
-            kind: Identifier(
-                "x",
-            ),
-            span: 12..13,
-        },
+        right: Ident(
+            Ident {
+                name: "x",
+                span: 12..13,
+            },
+        ),
     },
-    span: 0..13,
-}
+)

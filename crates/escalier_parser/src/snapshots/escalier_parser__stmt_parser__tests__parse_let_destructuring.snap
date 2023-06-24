@@ -37,12 +37,12 @@ expression: "parse(\"let {x, y} = point;\")"
                     },
                 ),
             },
-            expr: Expr {
-                kind: Identifier(
-                    "point",
-                ),
-                span: 13..18,
-            },
+            expr: Ident(
+                Ident {
+                    name: "point",
+                    span: 13..18,
+                },
+            ),
             type_ann: None,
         },
         span: 0..18,

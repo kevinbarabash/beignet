@@ -2,25 +2,27 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(r#\"ids.map(fn (id) => id).join(\", \")\"#)"
 ---
-Expr {
-    kind: Call {
+Call(
+    Call {
+        span: 0..33,
         args: [
-            Expr {
-                kind: Literal(
-                    String(
-                        ", ",
-                    ),
-                ),
-                span: 28..32,
-            },
+            Str(
+                Str {
+                    span: 28..32,
+                    value: ", ",
+                },
+            ),
         ],
-        callee: Expr {
-            kind: Member {
-                object: Expr {
-                    kind: Call {
+        callee: Member(
+            Member {
+                span: 0..27,
+                object: Call(
+                    Call {
+                        span: 0..22,
                         args: [
-                            Expr {
-                                kind: Function {
+                            Function(
+                                Function {
+                                    span: 8..21,
                                     params: [
                                         FuncParam {
                                             pattern: Pattern {
@@ -38,47 +40,43 @@ Expr {
                                         },
                                     ],
                                     body: Expr(
-                                        Expr {
-                                            kind: Identifier(
-                                                "id",
-                                            ),
-                                            span: 19..21,
-                                        },
+                                        Ident(
+                                            Ident {
+                                                name: "id",
+                                                span: 19..21,
+                                            },
+                                        ),
                                     ),
                                     type_ann: None,
                                 },
-                                span: 8..21,
-                            },
+                            ),
                         ],
-                        callee: Expr {
-                            kind: Member {
-                                object: Expr {
-                                    kind: Identifier(
-                                        "ids",
-                                    ),
-                                    span: 0..3,
-                                },
-                                property: Expr {
-                                    kind: Identifier(
-                                        "map",
-                                    ),
-                                    span: 4..7,
-                                },
+                        callee: Member(
+                            Member {
+                                span: 0..7,
+                                object: Ident(
+                                    Ident {
+                                        name: "ids",
+                                        span: 0..3,
+                                    },
+                                ),
+                                property: Ident(
+                                    Ident {
+                                        name: "map",
+                                        span: 4..7,
+                                    },
+                                ),
                             },
-                            span: 0..7,
-                        },
+                        ),
                     },
-                    span: 0..22,
-                },
-                property: Expr {
-                    kind: Identifier(
-                        "join",
-                    ),
-                    span: 23..27,
-                },
+                ),
+                property: Ident(
+                    Ident {
+                        name: "join",
+                        span: 23..27,
+                    },
+                ),
             },
-            span: 0..27,
-        },
+        ),
     },
-    span: 0..33,
-}
+)

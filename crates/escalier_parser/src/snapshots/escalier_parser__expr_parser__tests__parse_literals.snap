@@ -2,11 +2,9 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"123\")"
 ---
-Expr {
-    kind: Literal(
-        Number(
-            "123",
-        ),
-    ),
-    span: 0..3,
-}
+Num(
+    Num {
+        span: 0..3,
+        value: "123",
+    },
+)

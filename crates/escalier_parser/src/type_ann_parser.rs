@@ -5,7 +5,7 @@ use crate::type_ann::{ObjectProp, TypeAnn, TypeAnnKind};
 
 impl<'a> Parser<'a> {
     pub fn parse_type_ann(&mut self) -> TypeAnn {
-        let mut span = self.peek().unwrap_or(&EOF).span.clone();
+        let mut span = self.peek().unwrap_or(&EOF).span;
         let mut kind = match self.next().unwrap_or(EOF.clone()).kind {
             TokenKind::BoolLit(value) => TypeAnnKind::BoolLit(value),
             TokenKind::Boolean => TypeAnnKind::Boolean,
@@ -116,7 +116,7 @@ impl<'a> Parser<'a> {
 
         while self.peek().unwrap_or(&EOF).kind == TokenKind::LeftBracket {
             self.next().unwrap_or(EOF.clone());
-            let right_span = self.peek().unwrap_or(&EOF).span.clone();
+            let right_span = self.peek().unwrap_or(&EOF).span;
             let merged_span = merge_spans(&span, &right_span);
             assert_eq!(
                 self.next().unwrap_or(EOF.clone()).kind,

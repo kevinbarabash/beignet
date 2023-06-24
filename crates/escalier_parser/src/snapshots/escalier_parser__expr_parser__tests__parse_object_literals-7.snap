@@ -2,34 +2,34 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"{ ...a, ...b, ...c }\")"
 ---
-Expr {
-    kind: Object {
+Object(
+    Object {
+        span: 0..20,
         properties: [
             Spread(
-                Expr {
-                    kind: Identifier(
-                        "a",
-                    ),
-                    span: 5..6,
-                },
+                Ident(
+                    Ident {
+                        name: "a",
+                        span: 5..6,
+                    },
+                ),
             ),
             Spread(
-                Expr {
-                    kind: Identifier(
-                        "b",
-                    ),
-                    span: 11..12,
-                },
+                Ident(
+                    Ident {
+                        name: "b",
+                        span: 11..12,
+                    },
+                ),
             ),
             Spread(
-                Expr {
-                    kind: Identifier(
-                        "c",
-                    ),
-                    span: 17..18,
-                },
+                Ident(
+                    Ident {
+                        name: "c",
+                        span: 17..18,
+                    },
+                ),
             ),
         ],
     },
-    span: 0..20,
-}
+)

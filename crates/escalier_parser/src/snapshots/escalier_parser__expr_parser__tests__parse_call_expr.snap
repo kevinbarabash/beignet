@@ -2,43 +2,39 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: parse(src)
 ---
-Expr {
-    kind: Call {
+Call(
+    Call {
+        span: 0..15,
         args: [
-            Expr {
-                kind: Literal(
-                    Number(
-                        "5",
-                    ),
-                ),
-                span: 9..10,
-            },
-            Expr {
-                kind: Literal(
-                    Number(
-                        "10",
-                    ),
-                ),
-                span: 12..14,
-            },
+            Num(
+                Num {
+                    span: 9..10,
+                    value: "5",
+                },
+            ),
+            Num(
+                Num {
+                    span: 12..14,
+                    value: "10",
+                },
+            ),
         ],
-        callee: Expr {
-            kind: Index {
-                left: Expr {
-                    kind: Identifier(
-                        "foo",
-                    ),
-                    span: 0..3,
-                },
-                right: Expr {
-                    kind: Identifier(
-                        "bar",
-                    ),
-                    span: 4..7,
-                },
+        callee: Index(
+            Index {
+                span: 0..7,
+                left: Ident(
+                    Ident {
+                        name: "foo",
+                        span: 0..3,
+                    },
+                ),
+                right: Ident(
+                    Ident {
+                        name: "bar",
+                        span: 4..7,
+                    },
+                ),
             },
-            span: 0..7,
-        },
+        ),
     },
-    span: 0..15,
-}
+)

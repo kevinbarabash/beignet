@@ -2,9 +2,8 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"undefined\")"
 ---
-Expr {
-    kind: Literal(
-        Undefined,
-    ),
-    span: 0..9,
-}
+Undefined(
+    Undefined {
+        span: 0..9,
+    },
+)

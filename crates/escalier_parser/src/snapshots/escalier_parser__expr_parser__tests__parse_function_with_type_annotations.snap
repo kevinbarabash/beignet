@@ -2,8 +2,9 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(r#\"fn (x: number, y: number): number => { return x + y; }\"#)"
 ---
-Expr {
-    kind: Function {
+Function(
+    Function {
+        span: 0..54,
         params: [
             FuncParam {
                 pattern: Pattern {
@@ -51,24 +52,24 @@ Expr {
                     Stmt {
                         kind: Return {
                             arg: Some(
-                                Expr {
-                                    kind: Binary {
-                                        left: Expr {
-                                            kind: Identifier(
-                                                "x",
-                                            ),
-                                            span: 46..47,
-                                        },
+                                Binary(
+                                    Binary {
+                                        span: 46..51,
+                                        left: Ident(
+                                            Ident {
+                                                name: "x",
+                                                span: 46..47,
+                                            },
+                                        ),
                                         op: Plus,
-                                        right: Expr {
-                                            kind: Identifier(
-                                                "y",
-                                            ),
-                                            span: 50..51,
-                                        },
+                                        right: Ident(
+                                            Ident {
+                                                name: "y",
+                                                span: 50..51,
+                                            },
+                                        ),
                                     },
-                                    span: 46..51,
-                                },
+                                ),
                             ),
                         },
                         span: 46..51,
@@ -83,5 +84,4 @@ Expr {
             },
         ),
     },
-    span: 0..54,
-}
+)

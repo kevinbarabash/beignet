@@ -15,37 +15,38 @@ expression: "parse(\"let max = if (x > y) { x; } else { y; };\")"
                     },
                 ),
             },
-            expr: Expr {
-                kind: IfElse {
-                    cond: Expr {
-                        kind: Binary {
-                            left: Expr {
-                                kind: Identifier(
-                                    "x",
-                                ),
-                                span: 14..15,
-                            },
+            expr: IfElse(
+                IfElse {
+                    span: 10..39,
+                    cond: Binary(
+                        Binary {
+                            span: 14..19,
+                            left: Ident(
+                                Ident {
+                                    name: "x",
+                                    span: 14..15,
+                                },
+                            ),
                             op: GreaterThan,
-                            right: Expr {
-                                kind: Identifier(
-                                    "y",
-                                ),
-                                span: 18..19,
-                            },
+                            right: Ident(
+                                Ident {
+                                    name: "y",
+                                    span: 18..19,
+                                },
+                            ),
                         },
-                        span: 14..19,
-                    },
+                    ),
                     consequent: Block {
                         span: 20..27,
                         stmts: [
                             Stmt {
                                 kind: Expr {
-                                    expr: Expr {
-                                        kind: Identifier(
-                                            "x",
-                                        ),
-                                        span: 23..24,
-                                    },
+                                    expr: Ident(
+                                        Ident {
+                                            name: "x",
+                                            span: 23..24,
+                                        },
+                                    ),
                                 },
                                 span: 23..24,
                             },
@@ -57,12 +58,12 @@ expression: "parse(\"let max = if (x > y) { x; } else { y; };\")"
                             stmts: [
                                 Stmt {
                                     kind: Expr {
-                                        expr: Expr {
-                                            kind: Identifier(
-                                                "y",
-                                            ),
-                                            span: 35..36,
-                                        },
+                                        expr: Ident(
+                                            Ident {
+                                                name: "y",
+                                                span: 35..36,
+                                            },
+                                        ),
                                     },
                                     span: 35..36,
                                 },
@@ -70,8 +71,7 @@ expression: "parse(\"let max = if (x > y) { x; } else { y; };\")"
                         },
                     ),
                 },
-                span: 10..39,
-            },
+            ),
             type_ann: None,
         },
         span: 0..39,

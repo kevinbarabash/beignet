@@ -2,9 +2,9 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"[]\")"
 ---
-Expr {
-    kind: Tuple {
+Tuple(
+    Tuple {
+        span: 0..2,
         elements: [],
     },
-    span: 0..2,
-}
+)

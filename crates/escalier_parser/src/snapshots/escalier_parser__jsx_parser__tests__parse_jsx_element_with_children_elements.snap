@@ -3,6 +3,7 @@ source: crates/escalier_parser/src/jsx_parser.rs
 expression: jsx_elem
 ---
 JSXElement {
+    span: 0..33,
     opening: JSXOpeningElement {
         name: Ident(
             Ident {
@@ -16,6 +17,7 @@ JSXElement {
     children: [
         Element(
             JSXElement {
+                span: 4..16,
                 opening: JSXOpeningElement {
                     name: Ident(
                         Ident {
@@ -48,6 +50,7 @@ JSXElement {
         ),
         Element(
             JSXElement {
+                span: 16..28,
                 opening: JSXOpeningElement {
                     name: Ident(
                         Ident {

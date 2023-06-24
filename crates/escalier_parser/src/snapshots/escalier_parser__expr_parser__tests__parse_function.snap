@@ -2,8 +2,9 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"fn () => { let x = 5; let y = 10; return x + y; }\")"
 ---
-Expr {
-    kind: Function {
+Function(
+    Function {
+        span: 0..49,
         params: [],
         body: Block(
             Block {
@@ -21,14 +22,12 @@ Expr {
                                     },
                                 ),
                             },
-                            expr: Expr {
-                                kind: Literal(
-                                    Number(
-                                        "5",
-                                    ),
-                                ),
-                                span: 19..20,
-                            },
+                            expr: Num(
+                                Num {
+                                    span: 19..20,
+                                    value: "5",
+                                },
+                            ),
                             type_ann: None,
                         },
                         span: 11..20,
@@ -45,14 +44,12 @@ Expr {
                                     },
                                 ),
                             },
-                            expr: Expr {
-                                kind: Literal(
-                                    Number(
-                                        "10",
-                                    ),
-                                ),
-                                span: 30..32,
-                            },
+                            expr: Num(
+                                Num {
+                                    span: 30..32,
+                                    value: "10",
+                                },
+                            ),
                             type_ann: None,
                         },
                         span: 22..32,
@@ -60,24 +57,24 @@ Expr {
                     Stmt {
                         kind: Return {
                             arg: Some(
-                                Expr {
-                                    kind: Binary {
-                                        left: Expr {
-                                            kind: Identifier(
-                                                "x",
-                                            ),
-                                            span: 41..42,
-                                        },
+                                Binary(
+                                    Binary {
+                                        span: 41..46,
+                                        left: Ident(
+                                            Ident {
+                                                name: "x",
+                                                span: 41..42,
+                                            },
+                                        ),
                                         op: Plus,
-                                        right: Expr {
-                                            kind: Identifier(
-                                                "y",
-                                            ),
-                                            span: 45..46,
-                                        },
+                                        right: Ident(
+                                            Ident {
+                                                name: "y",
+                                                span: 45..46,
+                                            },
+                                        ),
                                     },
-                                    span: 41..46,
-                                },
+                                ),
                             ),
                         },
                         span: 41..46,
@@ -87,5 +84,4 @@ Expr {
         ),
         type_ann: None,
     },
-    span: 0..49,
-}
+)

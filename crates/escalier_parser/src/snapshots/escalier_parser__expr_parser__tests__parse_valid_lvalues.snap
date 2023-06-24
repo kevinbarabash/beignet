@@ -2,43 +2,43 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"a.b.c = x\")"
 ---
-Expr {
-    kind: Assign {
-        left: Expr {
-            kind: Member {
-                object: Expr {
-                    kind: Member {
-                        object: Expr {
-                            kind: Identifier(
-                                "a",
-                            ),
-                            span: 0..1,
-                        },
-                        property: Expr {
-                            kind: Identifier(
-                                "b",
-                            ),
-                            span: 2..3,
-                        },
+Assign(
+    Assign {
+        span: 0..9,
+        left: Member(
+            Member {
+                span: 0..5,
+                object: Member(
+                    Member {
+                        span: 0..3,
+                        object: Ident(
+                            Ident {
+                                name: "a",
+                                span: 0..1,
+                            },
+                        ),
+                        property: Ident(
+                            Ident {
+                                name: "b",
+                                span: 2..3,
+                            },
+                        ),
                     },
-                    span: 0..3,
-                },
-                property: Expr {
-                    kind: Identifier(
-                        "c",
-                    ),
-                    span: 4..5,
-                },
+                ),
+                property: Ident(
+                    Ident {
+                        name: "c",
+                        span: 4..5,
+                    },
+                ),
             },
-            span: 0..5,
-        },
+        ),
         op: Assign,
-        right: Expr {
-            kind: Identifier(
-                "x",
-            ),
-            span: 8..9,
-        },
+        right: Ident(
+            Ident {
+                name: "x",
+                span: 8..9,
+            },
+        ),
     },
-    span: 0..9,
-}
+)

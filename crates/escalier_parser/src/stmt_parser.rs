@@ -27,7 +27,7 @@ impl<'a> Parser<'a> {
                     TokenKind::Semicolon
                 );
 
-                let span = merge_spans(&token.span, &expr.span);
+                let span = merge_spans(&token.span, &expr.get_span());
                 Stmt {
                     kind: StmtKind::Let {
                         pattern,
@@ -55,7 +55,7 @@ impl<'a> Parser<'a> {
                             TokenKind::Semicolon
                         );
 
-                        let span = merge_spans(&next.span, &arg.span);
+                        let span = merge_spans(&next.span, &arg.get_span());
                         Stmt {
                             kind: StmtKind::Return { arg: Some(arg) },
                             span,
@@ -72,7 +72,7 @@ impl<'a> Parser<'a> {
                 );
                 eprintln!("--- parse_stmt (assert semicolon) ---");
 
-                let span = expr.span.clone();
+                let span = expr.get_span();
                 Stmt {
                     kind: StmtKind::Expr { expr },
                     span,

@@ -2,8 +2,9 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"fn (x) => fn (y) => x + y;\")"
 ---
-Expr {
-    kind: Function {
+Function(
+    Function {
+        span: 0..25,
         params: [
             FuncParam {
                 pattern: Pattern {
@@ -21,8 +22,9 @@ Expr {
             },
         ],
         body: Expr(
-            Expr {
-                kind: Function {
+            Function(
+                Function {
+                    span: 10..25,
                     params: [
                         FuncParam {
                             pattern: Pattern {
@@ -40,31 +42,29 @@ Expr {
                         },
                     ],
                     body: Expr(
-                        Expr {
-                            kind: Binary {
-                                left: Expr {
-                                    kind: Identifier(
-                                        "x",
-                                    ),
-                                    span: 20..21,
-                                },
+                        Binary(
+                            Binary {
+                                span: 20..25,
+                                left: Ident(
+                                    Ident {
+                                        name: "x",
+                                        span: 20..21,
+                                    },
+                                ),
                                 op: Plus,
-                                right: Expr {
-                                    kind: Identifier(
-                                        "y",
-                                    ),
-                                    span: 24..25,
-                                },
+                                right: Ident(
+                                    Ident {
+                                        name: "y",
+                                        span: 24..25,
+                                    },
+                                ),
                             },
-                            span: 20..25,
-                        },
+                        ),
                     ),
                     type_ann: None,
                 },
-                span: 10..25,
-            },
+            ),
         ),
         type_ann: None,
     },
-    span: 0..25,
-}
+)
