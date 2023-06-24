@@ -1,0 +1,29 @@
+---
+source: crates/escalier_parser/src/stmt_parser.rs
+expression: "parse(\"1 \\n+ 2\")"
+---
+[
+    Stmt {
+        kind: Expr {
+            expr: Binary(
+                Binary {
+                    span: 0..6,
+                    left: Num(
+                        Num {
+                            span: 0..1,
+                            value: "1",
+                        },
+                    ),
+                    op: Plus,
+                    right: Num(
+                        Num {
+                            span: 5..6,
+                            value: "2",
+                        },
+                    ),
+                },
+            ),
+        },
+        span: 0..6,
+    },
+]

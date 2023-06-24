@@ -4,7 +4,7 @@ expression: parse(src)
 ---
 Function(
     Function {
-        span: 0..30,
+        span: 0..29,
         params: [
             FuncParam {
                 pattern: Pattern {
@@ -37,7 +37,7 @@ Function(
         ],
         body: Block(
             Block {
-                span: 12..30,
+                span: 12..29,
                 stmts: [
                     Stmt {
                         kind: Return {

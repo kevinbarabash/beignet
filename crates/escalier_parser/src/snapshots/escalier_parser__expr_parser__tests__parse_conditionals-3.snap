@@ -1,10 +1,10 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(r#\"\n            if (cond) {\n                {x: 5, y: 10};\n            } else {\n                {a: 1, b: 2};\n            }\n            \"#)"
+expression: "parse(r#\"\n            if (cond) {\n                {x: 5, y: 10}\n            } else {\n                {a: 1, b: 2}\n            }\n            \"#)"
 ---
 IfElse(
     IfElse {
-        span: 13..120,
+        span: 13..118,
         cond: Ident(
             Ident {
                 name: "cond",
@@ -12,7 +12,7 @@ IfElse(
             },
         ),
         consequent: Block {
-            span: 22..69,
+            span: 22..68,
             stmts: [
                 Stmt {
                     kind: Expr {
@@ -62,25 +62,25 @@ IfElse(
         },
         alternate: Some(
             Block {
-                span: 74..120,
+                span: 73..118,
                 stmts: [
                     Stmt {
                         kind: Expr {
                             expr: Object(
                                 Object {
-                                    span: 76..105,
+                                    span: 75..104,
                                     properties: [
                                         Prop(
                                             Property {
                                                 key: Ident(
                                                     Ident {
                                                         name: "a",
-                                                        span: 94..95,
+                                                        span: 93..94,
                                                     },
                                                 ),
                                                 value: Num(
                                                     Num {
-                                                        span: 97..98,
+                                                        span: 96..97,
                                                         value: "1",
                                                     },
                                                 ),
@@ -91,12 +91,12 @@ IfElse(
                                                 key: Ident(
                                                     Ident {
                                                         name: "b",
-                                                        span: 100..101,
+                                                        span: 99..100,
                                                     },
                                                 ),
                                                 value: Num(
                                                     Num {
-                                                        span: 103..104,
+                                                        span: 102..103,
                                                         value: "2",
                                                     },
                                                 ),
@@ -106,7 +106,7 @@ IfElse(
                                 },
                             ),
                         },
-                        span: 76..105,
+                        span: 75..104,
                     },
                 ],
             },

@@ -1,12 +1,12 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(r#\"\n            try {\n                canThrow();\n            } catch (e) {\n                console.log(\"Error: \" + e);\n            } finally {\n                cleanup();\n            }\n            \"#)"
+expression: "parse(r#\"\n            try {\n                canThrow()\n            } catch (e) {\n                console.log(\"Error: \" + e)\n            } finally {\n                cleanup()\n            }\n            \"#)"
 ---
 Try(
     Try {
-        span: 13..181,
+        span: 13..178,
         body: Block {
-            span: 16..60,
+            span: 16..59,
             stmts: [
                 Stmt {
                     kind: Expr {
@@ -31,31 +31,31 @@ Try(
             CatchClause {
                 param: Some(
                     Pattern {
-                        span: 68..69,
+                        span: 67..68,
                         kind: Ident(
                             BindingIdent {
                                 name: "e",
-                                span: 68..69,
+                                span: 67..68,
                                 mutable: false,
                             },
                         ),
                     },
                 ),
                 body: Block {
-                    span: 70..130,
+                    span: 69..128,
                     stmts: [
                         Stmt {
                             kind: Expr {
                                 expr: Call(
                                     Call {
-                                        span: 89..115,
+                                        span: 88..114,
                                         args: [
                                             Binary(
                                                 Binary {
-                                                    span: 101..114,
+                                                    span: 100..113,
                                                     left: Str(
                                                         Str {
-                                                            span: 101..110,
+                                                            span: 100..109,
                                                             value: "Error: ",
                                                         },
                                                     ),
@@ -63,7 +63,7 @@ Try(
                                                     right: Ident(
                                                         Ident {
                                                             name: "e",
-                                                            span: 113..114,
+                                                            span: 112..113,
                                                         },
                                                     ),
                                                 },
@@ -71,17 +71,17 @@ Try(
                                         ],
                                         callee: Member(
                                             Member {
-                                                span: 89..100,
+                                                span: 88..99,
                                                 object: Ident(
                                                     Ident {
                                                         name: "console",
-                                                        span: 89..96,
+                                                        span: 88..95,
                                                     },
                                                 ),
                                                 property: Ident(
                                                     Ident {
                                                         name: "log",
-                                                        span: 97..100,
+                                                        span: 96..99,
                                                     },
                                                 ),
                                             },
@@ -89,7 +89,7 @@ Try(
                                     },
                                 ),
                             },
-                            span: 89..115,
+                            span: 88..114,
                         },
                     ],
                 },
@@ -97,24 +97,24 @@ Try(
         ),
         finally: Some(
             Block {
-                span: 138..181,
+                span: 136..178,
                 stmts: [
                     Stmt {
                         kind: Expr {
                             expr: Call(
                                 Call {
-                                    span: 157..166,
+                                    span: 155..164,
                                     args: [],
                                     callee: Ident(
                                         Ident {
                                             name: "cleanup",
-                                            span: 157..164,
+                                            span: 155..162,
                                         },
                                     ),
                                 },
                             ),
                         },
-                        span: 157..166,
+                        span: 155..164,
                     },
                 ],
             },

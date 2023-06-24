@@ -1,0 +1,53 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(\"foo()\\n(3+4) * 5\")"
+---
+Binary(
+    Binary {
+        span: 0..15,
+        left: Call(
+            Call {
+                span: 0..11,
+                args: [
+                    Binary(
+                        Binary {
+                            span: 7..10,
+                            left: Num(
+                                Num {
+                                    span: 7..8,
+                                    value: "3",
+                                },
+                            ),
+                            op: Plus,
+                            right: Num(
+                                Num {
+                                    span: 9..10,
+                                    value: "4",
+                                },
+                            ),
+                        },
+                    ),
+                ],
+                callee: Call(
+                    Call {
+                        span: 0..5,
+                        args: [],
+                        callee: Ident(
+                            Ident {
+                                name: "foo",
+                                span: 0..3,
+                            },
+                        ),
+                    },
+                ),
+            },
+        ),
+        op: Times,
+        right: Num(
+            Num {
+                span: 14..15,
+                value: "5",
+            },
+        ),
+    },
+)

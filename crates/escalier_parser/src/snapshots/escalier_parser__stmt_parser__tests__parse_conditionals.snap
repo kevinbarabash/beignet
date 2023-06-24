@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/stmt_parser.rs
-expression: "parse(\"let max = if (x > y) { x; } else { y; };\")"
+expression: "parse(\"let max = if (x > y) { x } else { y }\")"
 ---
 [
     Stmt {
@@ -17,7 +17,7 @@ expression: "parse(\"let max = if (x > y) { x; } else { y; };\")"
             },
             expr: IfElse(
                 IfElse {
-                    span: 10..39,
+                    span: 10..37,
                     cond: Binary(
                         Binary {
                             span: 14..19,
@@ -37,7 +37,7 @@ expression: "parse(\"let max = if (x > y) { x; } else { y; };\")"
                         },
                     ),
                     consequent: Block {
-                        span: 20..27,
+                        span: 20..26,
                         stmts: [
                             Stmt {
                                 kind: Expr {
@@ -54,18 +54,18 @@ expression: "parse(\"let max = if (x > y) { x; } else { y; };\")"
                     },
                     alternate: Some(
                         Block {
-                            span: 32..39,
+                            span: 31..37,
                             stmts: [
                                 Stmt {
                                     kind: Expr {
                                         expr: Ident(
                                             Ident {
                                                 name: "y",
-                                                span: 35..36,
+                                                span: 34..35,
                                             },
                                         ),
                                     },
-                                    span: 35..36,
+                                    span: 34..35,
                                 },
                             ],
                         },
@@ -74,6 +74,6 @@ expression: "parse(\"let max = if (x > y) { x; } else { y; };\")"
             ),
             type_ann: None,
         },
-        span: 0..39,
+        span: 0..37,
     },
 ]
