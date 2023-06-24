@@ -2,25 +2,26 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(r#\"\n            try {\n                canThrow();\n            } finally {\n                cleanup();\n            }\n            \"#)"
 ---
-Expr {
-    kind: Try {
+Try(
+    Try {
+        span: 13..111,
         body: Block {
             span: 16..60,
             stmts: [
                 Stmt {
                     kind: Expr {
-                        expr: Expr {
-                            kind: Call {
+                        expr: Call(
+                            Call {
+                                span: 35..45,
                                 args: [],
-                                callee: Expr {
-                                    kind: Identifier(
-                                        "canThrow",
-                                    ),
-                                    span: 35..43,
-                                },
+                                callee: Ident(
+                                    Ident {
+                                        name: "canThrow",
+                                        span: 35..43,
+                                    },
+                                ),
                             },
-                            span: 35..45,
-                        },
+                        ),
                     },
                     span: 35..45,
                 },
@@ -33,18 +34,18 @@ Expr {
                 stmts: [
                     Stmt {
                         kind: Expr {
-                            expr: Expr {
-                                kind: Call {
+                            expr: Call(
+                                Call {
+                                    span: 87..96,
                                     args: [],
-                                    callee: Expr {
-                                        kind: Identifier(
-                                            "cleanup",
-                                        ),
-                                        span: 87..94,
-                                    },
+                                    callee: Ident(
+                                        Ident {
+                                            name: "cleanup",
+                                            span: 87..94,
+                                        },
+                                    ),
                                 },
-                                span: 87..96,
-                            },
+                            ),
                         },
                         span: 87..96,
                     },
@@ -52,5 +53,4 @@ Expr {
             },
         ),
     },
-    span: 13..111,
-}
+)

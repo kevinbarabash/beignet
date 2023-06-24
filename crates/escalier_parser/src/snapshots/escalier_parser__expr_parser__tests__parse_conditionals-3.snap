@@ -2,56 +2,59 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(r#\"\n            if (cond) {\n                {x: 5, y: 10};\n            } else {\n                {a: 1, b: 2};\n            }\n            \"#)"
 ---
-Expr {
-    kind: IfElse {
-        cond: Expr {
-            kind: Identifier(
-                "cond",
-            ),
-            span: 17..21,
-        },
+IfElse(
+    IfElse {
+        span: 13..120,
+        cond: Ident(
+            Ident {
+                name: "cond",
+                span: 17..21,
+            },
+        ),
         consequent: Block {
             span: 22..69,
             stmts: [
                 Stmt {
                     kind: Expr {
-                        expr: Expr {
-                            kind: Object {
+                        expr: Object(
+                            Object {
+                                span: 24..54,
                                 properties: [
                                     Prop(
                                         Property {
-                                            key: Identifier(
-                                                "x",
+                                            key: Ident(
+                                                Ident {
+                                                    name: "x",
+                                                    span: 42..43,
+                                                },
                                             ),
-                                            value: Expr {
-                                                kind: Literal(
-                                                    Number(
-                                                        "5",
-                                                    ),
-                                                ),
-                                                span: 45..46,
-                                            },
+                                            value: Num(
+                                                Num {
+                                                    span: 45..46,
+                                                    value: "5",
+                                                },
+                                            ),
                                         },
                                     ),
                                     Prop(
                                         Property {
-                                            key: Identifier(
-                                                "y",
+                                            key: Ident(
+                                                Ident {
+                                                    name: "y",
+                                                    span: 48..49,
+                                                },
                                             ),
-                                            value: Expr {
-                                                kind: Literal(
-                                                    Number(
-                                                        "10",
-                                                    ),
-                                                ),
-                                                span: 51..53,
-                                            },
+                                            value: Num(
+                                                Num {
+                                                    span: 51..53,
+                                                    value: "10",
+                                                },
+                                            ),
                                         },
                                     ),
                                 ],
                             },
-                            span: 24..54,
-                        },
+                        ),
                     },
                     span: 24..54,
                 },
@@ -63,43 +66,45 @@ Expr {
                 stmts: [
                     Stmt {
                         kind: Expr {
-                            expr: Expr {
-                                kind: Object {
+                            expr: Object(
+                                Object {
+                                    span: 76..105,
                                     properties: [
                                         Prop(
                                             Property {
-                                                key: Identifier(
-                                                    "a",
+                                                key: Ident(
+                                                    Ident {
+                                                        name: "a",
+                                                        span: 94..95,
+                                                    },
                                                 ),
-                                                value: Expr {
-                                                    kind: Literal(
-                                                        Number(
-                                                            "1",
-                                                        ),
-                                                    ),
-                                                    span: 97..98,
-                                                },
+                                                value: Num(
+                                                    Num {
+                                                        span: 97..98,
+                                                        value: "1",
+                                                    },
+                                                ),
                                             },
                                         ),
                                         Prop(
                                             Property {
-                                                key: Identifier(
-                                                    "b",
+                                                key: Ident(
+                                                    Ident {
+                                                        name: "b",
+                                                        span: 100..101,
+                                                    },
                                                 ),
-                                                value: Expr {
-                                                    kind: Literal(
-                                                        Number(
-                                                            "2",
-                                                        ),
-                                                    ),
-                                                    span: 103..104,
-                                                },
+                                                value: Num(
+                                                    Num {
+                                                        span: 103..104,
+                                                        value: "2",
+                                                    },
+                                                ),
                                             },
                                         ),
                                     ],
                                 },
-                                span: 76..105,
-                            },
+                            ),
                         },
                         span: 76..105,
                     },
@@ -107,5 +112,4 @@ Expr {
             },
         ),
     },
-    span: 13..120,
-}
+)

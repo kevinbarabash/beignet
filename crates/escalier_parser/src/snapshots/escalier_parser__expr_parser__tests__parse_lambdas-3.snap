@@ -2,8 +2,9 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(r#\"fn (x: number, y: number): number => x + y;\"#)"
 ---
-Expr {
-    kind: Function {
+Function(
+    Function {
+        span: 0..42,
         params: [
             FuncParam {
                 pattern: Pattern {
@@ -45,24 +46,24 @@ Expr {
             },
         ],
         body: Expr(
-            Expr {
-                kind: Binary {
-                    left: Expr {
-                        kind: Identifier(
-                            "x",
-                        ),
-                        span: 37..38,
-                    },
+            Binary(
+                Binary {
+                    span: 37..42,
+                    left: Ident(
+                        Ident {
+                            name: "x",
+                            span: 37..38,
+                        },
+                    ),
                     op: Plus,
-                    right: Expr {
-                        kind: Identifier(
-                            "y",
-                        ),
-                        span: 41..42,
-                    },
+                    right: Ident(
+                        Ident {
+                            name: "y",
+                            span: 41..42,
+                        },
+                    ),
                 },
-                span: 37..42,
-            },
+            ),
         ),
         type_ann: Some(
             TypeAnn {
@@ -71,5 +72,4 @@ Expr {
             },
         ),
     },
-    span: 0..42,
-}
+)

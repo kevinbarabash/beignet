@@ -15,8 +15,9 @@ expression: "parse(\"let add = fn (x, y) => x + y;\")"
                     },
                 ),
             },
-            expr: Expr {
-                kind: Function {
+            expr: Function(
+                Function {
+                    span: 10..28,
                     params: [
                         FuncParam {
                             pattern: Pattern {
@@ -48,29 +49,28 @@ expression: "parse(\"let add = fn (x, y) => x + y;\")"
                         },
                     ],
                     body: Expr(
-                        Expr {
-                            kind: Binary {
-                                left: Expr {
-                                    kind: Identifier(
-                                        "x",
-                                    ),
-                                    span: 23..24,
-                                },
+                        Binary(
+                            Binary {
+                                span: 23..28,
+                                left: Ident(
+                                    Ident {
+                                        name: "x",
+                                        span: 23..24,
+                                    },
+                                ),
                                 op: Plus,
-                                right: Expr {
-                                    kind: Identifier(
-                                        "y",
-                                    ),
-                                    span: 27..28,
-                                },
+                                right: Ident(
+                                    Ident {
+                                        name: "y",
+                                        span: 27..28,
+                                    },
+                                ),
                             },
-                            span: 23..28,
-                        },
+                        ),
                     ),
                     type_ann: None,
                 },
-                span: 10..28,
-            },
+            ),
             type_ann: None,
         },
         span: 0..28,

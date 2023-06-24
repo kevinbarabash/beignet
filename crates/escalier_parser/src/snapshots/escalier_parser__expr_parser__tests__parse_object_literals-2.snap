@@ -2,25 +2,26 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"{ a: 1 }\")"
 ---
-Expr {
-    kind: Object {
+Object(
+    Object {
+        span: 0..8,
         properties: [
             Prop(
                 Property {
-                    key: Identifier(
-                        "a",
+                    key: Ident(
+                        Ident {
+                            name: "a",
+                            span: 2..3,
+                        },
                     ),
-                    value: Expr {
-                        kind: Literal(
-                            Number(
-                                "1",
-                            ),
-                        ),
-                        span: 5..6,
-                    },
+                    value: Num(
+                        Num {
+                            span: 5..6,
+                            value: "1",
+                        },
+                    ),
                 },
             ),
         ],
     },
-    span: 0..8,
-}
+)

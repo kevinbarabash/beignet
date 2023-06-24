@@ -2,8 +2,9 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(r#\"\n            do {\n                let x = 5;\n                let y = 10;\n                x + y;\n            }\n            \"#)"
 ---
-Expr {
-    kind: Do {
+Do(
+    Do {
+        span: 13..109,
         body: Block {
             span: 15..109,
             stmts: [
@@ -19,14 +20,12 @@ Expr {
                                 },
                             ),
                         },
-                        expr: Expr {
-                            kind: Literal(
-                                Number(
-                                    "5",
-                                ),
-                            ),
-                            span: 42..43,
-                        },
+                        expr: Num(
+                            Num {
+                                span: 42..43,
+                                value: "5",
+                            },
+                        ),
                         type_ann: None,
                     },
                     span: 34..43,
@@ -43,43 +42,40 @@ Expr {
                                 },
                             ),
                         },
-                        expr: Expr {
-                            kind: Literal(
-                                Number(
-                                    "10",
-                                ),
-                            ),
-                            span: 69..71,
-                        },
+                        expr: Num(
+                            Num {
+                                span: 69..71,
+                                value: "10",
+                            },
+                        ),
                         type_ann: None,
                     },
                     span: 61..71,
                 },
                 Stmt {
                     kind: Expr {
-                        expr: Expr {
-                            kind: Binary {
-                                left: Expr {
-                                    kind: Identifier(
-                                        "x",
-                                    ),
-                                    span: 89..90,
-                                },
+                        expr: Binary(
+                            Binary {
+                                span: 89..94,
+                                left: Ident(
+                                    Ident {
+                                        name: "x",
+                                        span: 89..90,
+                                    },
+                                ),
                                 op: Plus,
-                                right: Expr {
-                                    kind: Identifier(
-                                        "y",
-                                    ),
-                                    span: 93..94,
-                                },
+                                right: Ident(
+                                    Ident {
+                                        name: "y",
+                                        span: 93..94,
+                                    },
+                                ),
                             },
-                            span: 89..94,
-                        },
+                        ),
                     },
                     span: 89..94,
                 },
             ],
         },
     },
-    span: 13..109,
-}
+)

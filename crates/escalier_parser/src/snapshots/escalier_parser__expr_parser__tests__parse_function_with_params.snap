@@ -2,8 +2,9 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: parse(src)
 ---
-Expr {
-    kind: Function {
+Function(
+    Function {
+        span: 0..30,
         params: [
             FuncParam {
                 pattern: Pattern {
@@ -41,24 +42,24 @@ Expr {
                     Stmt {
                         kind: Return {
                             arg: Some(
-                                Expr {
-                                    kind: Binary {
-                                        left: Expr {
-                                            kind: Identifier(
-                                                "x",
-                                            ),
-                                            span: 22..23,
-                                        },
+                                Binary(
+                                    Binary {
+                                        span: 22..27,
+                                        left: Ident(
+                                            Ident {
+                                                name: "x",
+                                                span: 22..23,
+                                            },
+                                        ),
                                         op: Plus,
-                                        right: Expr {
-                                            kind: Identifier(
-                                                "y",
-                                            ),
-                                            span: 26..27,
-                                        },
+                                        right: Ident(
+                                            Ident {
+                                                name: "y",
+                                                span: 26..27,
+                                            },
+                                        ),
                                     },
-                                    span: 22..27,
-                                },
+                                ),
                             ),
                         },
                         span: 22..27,
@@ -68,5 +69,4 @@ Expr {
         ),
         type_ann: None,
     },
-    span: 0..30,
-}
+)

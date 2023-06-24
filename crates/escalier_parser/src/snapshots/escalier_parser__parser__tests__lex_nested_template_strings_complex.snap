@@ -18,25 +18,27 @@ StrTemplateLit {
         },
     ],
     exprs: [
-        Expr {
-            kind: Call {
+        Call(
+            Call {
+                span: 9..48,
                 args: [
-                    Expr {
-                        kind: Literal(
-                            String(
-                                ", ",
-                            ),
-                        ),
-                        span: 43..47,
-                    },
+                    Str(
+                        Str {
+                            span: 43..47,
+                            value: ", ",
+                        },
+                    ),
                 ],
-                callee: Expr {
-                    kind: Member {
-                        object: Expr {
-                            kind: Call {
+                callee: Member(
+                    Member {
+                        span: 9..42,
+                        object: Call(
+                            Call {
+                                span: 9..37,
                                 args: [
-                                    Expr {
-                                        kind: Function {
+                                    Function(
+                                        Function {
+                                            span: 17..36,
                                             params: [
                                                 FuncParam {
                                                     pattern: Pattern {
@@ -54,64 +56,62 @@ StrTemplateLit {
                                                 },
                                             ],
                                             body: Expr(
-                                                Expr {
-                                                    kind: TemplateLiteral {
+                                                TemplateLiteral(
+                                                    TemplateLiteral {
+                                                        span: 27..36,
                                                         parts: [
-                                                            String(
-                                                                "x",
-                                                            ),
-                                                            String(
-                                                                "",
-                                                            ),
-                                                        ],
-                                                        exprs: [
-                                                            Expr {
-                                                                kind: Identifier(
-                                                                    "id",
-                                                                ),
-                                                                span: 32..34,
+                                                            Str {
+                                                                span: 27..30,
+                                                                value: "x",
+                                                            },
+                                                            Str {
+                                                                span: 35..36,
+                                                                value: "",
                                                             },
                                                         ],
+                                                        exprs: [
+                                                            Ident(
+                                                                Ident {
+                                                                    name: "id",
+                                                                    span: 32..34,
+                                                                },
+                                                            ),
+                                                        ],
                                                     },
-                                                    span: 27..36,
-                                                },
+                                                ),
                                             ),
                                             type_ann: None,
                                         },
-                                        span: 17..36,
-                                    },
+                                    ),
                                 ],
-                                callee: Expr {
-                                    kind: Member {
-                                        object: Expr {
-                                            kind: Identifier(
-                                                "ids",
-                                            ),
-                                            span: 9..12,
-                                        },
-                                        property: Expr {
-                                            kind: Identifier(
-                                                "map",
-                                            ),
-                                            span: 13..16,
-                                        },
+                                callee: Member(
+                                    Member {
+                                        span: 9..16,
+                                        object: Ident(
+                                            Ident {
+                                                name: "ids",
+                                                span: 9..12,
+                                            },
+                                        ),
+                                        property: Ident(
+                                            Ident {
+                                                name: "map",
+                                                span: 13..16,
+                                            },
+                                        ),
                                     },
-                                    span: 9..16,
-                                },
+                                ),
                             },
-                            span: 9..37,
-                        },
-                        property: Expr {
-                            kind: Identifier(
-                                "join",
-                            ),
-                            span: 38..42,
-                        },
+                        ),
+                        property: Ident(
+                            Ident {
+                                name: "join",
+                                span: 38..42,
+                            },
+                        ),
                     },
-                    span: 9..42,
-                },
+                ),
             },
-            span: 9..48,
-        },
+        ),
     ],
 }

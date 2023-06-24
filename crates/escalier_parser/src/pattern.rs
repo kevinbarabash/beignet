@@ -1,7 +1,7 @@
 use crate::expr::Expr;
 use crate::identifier::{BindingIdent, Ident};
 use crate::literal::Literal;
-use crate::source_location::*;
+use crate::span::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PatternKind {

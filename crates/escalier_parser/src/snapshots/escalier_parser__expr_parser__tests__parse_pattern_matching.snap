@@ -2,25 +2,26 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(r#\"\n            match (obj.type) {\n                \"foo\" => obj.foo,\n                \"bar\" => {\n                    obj.bar;\n                },\n                _ => \"default\",\n            };\n            \"#)"
 ---
-Expr {
-    kind: Match {
-        expr: Expr {
-            kind: Member {
-                object: Expr {
-                    kind: Identifier(
-                        "obj",
-                    ),
-                    span: 20..23,
-                },
-                property: Expr {
-                    kind: Identifier(
-                        "type",
-                    ),
-                    span: 24..28,
-                },
+Match(
+    Match {
+        span: 20..171,
+        expr: Member(
+            Member {
+                span: 20..28,
+                object: Ident(
+                    Ident {
+                        name: "obj",
+                        span: 20..23,
+                    },
+                ),
+                property: Ident(
+                    Ident {
+                        name: "type",
+                        span: 24..28,
+                    },
+                ),
             },
-            span: 20..28,
-        },
+        ),
         arms: [
             MatchArm {
                 span: 48..64,
@@ -36,23 +37,23 @@ Expr {
                 },
                 guard: None,
                 body: Expr(
-                    Expr {
-                        kind: Member {
-                            object: Expr {
-                                kind: Identifier(
-                                    "obj",
-                                ),
-                                span: 57..60,
-                            },
-                            property: Expr {
-                                kind: Identifier(
-                                    "foo",
-                                ),
-                                span: 61..64,
-                            },
+                    Member(
+                        Member {
+                            span: 57..64,
+                            object: Ident(
+                                Ident {
+                                    name: "obj",
+                                    span: 57..60,
+                                },
+                            ),
+                            property: Ident(
+                                Ident {
+                                    name: "foo",
+                                    span: 61..64,
+                                },
+                            ),
                         },
-                        span: 57..64,
-                    },
+                    ),
                 ),
             },
             MatchArm {
@@ -74,23 +75,23 @@ Expr {
                         stmts: [
                             Stmt {
                                 kind: Expr {
-                                    expr: Expr {
-                                        kind: Member {
-                                            object: Expr {
-                                                kind: Identifier(
-                                                    "obj",
-                                                ),
-                                                span: 113..116,
-                                            },
-                                            property: Expr {
-                                                kind: Identifier(
-                                                    "bar",
-                                                ),
-                                                span: 117..120,
-                                            },
+                                    expr: Member(
+                                        Member {
+                                            span: 113..120,
+                                            object: Ident(
+                                                Ident {
+                                                    name: "obj",
+                                                    span: 113..116,
+                                                },
+                                            ),
+                                            property: Ident(
+                                                Ident {
+                                                    name: "bar",
+                                                    span: 117..120,
+                                                },
+                                            ),
                                         },
-                                        span: 113..120,
-                                    },
+                                    ),
                                 },
                                 span: 113..120,
                             },
@@ -106,17 +107,14 @@ Expr {
                 },
                 guard: None,
                 body: Expr(
-                    Expr {
-                        kind: Literal(
-                            String(
-                                "default",
-                            ),
-                        ),
-                        span: 162..171,
-                    },
+                    Str(
+                        Str {
+                            span: 162..171,
+                            value: "default",
+                        },
+                    ),
                 ),
             },
         ],
     },
-    span: 20..171,
-}
+)

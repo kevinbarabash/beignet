@@ -1,6 +1,6 @@
 use crate::expr::Expr;
 use crate::identifier::Ident;
-use crate::source_location::Span;
+use crate::span::Span;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum JSXElementName {
@@ -56,7 +56,7 @@ pub struct JSXClosingElement {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct JSXElement {
-    // pub span: Span,
+    pub span: Span,
     pub opening: JSXOpeningElement,
     pub children: Vec<JSXElementChild>,
     pub closing: Option<JSXClosingElement>,
@@ -64,7 +64,7 @@ pub struct JSXElement {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct JSXFragment {
-    // pub span: Span,
+    pub span: Span,
     pub opening: JSXOpeningFragment,
     pub children: Vec<JSXElementChild>,
     pub closing: JSXClosingFragment,

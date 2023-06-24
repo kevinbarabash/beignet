@@ -45,12 +45,12 @@ expression: "parse(\"let [p1, p2] = line;\")"
                     },
                 ),
             },
-            expr: Expr {
-                kind: Identifier(
-                    "line",
-                ),
-                span: 15..19,
-            },
+            expr: Ident(
+                Ident {
+                    name: "line",
+                    span: 15..19,
+                },
+            ),
             type_ann: None,
         },
         span: 0..19,

@@ -15,36 +15,36 @@ expression: "parse(r#\"let y = m*x + b;\"#)"
                     },
                 ),
             },
-            expr: Expr {
-                kind: Binary {
-                    left: Expr {
-                        kind: Binary {
-                            left: Expr {
-                                kind: Identifier(
-                                    "m",
-                                ),
-                                span: 8..9,
-                            },
+            expr: Binary(
+                Binary {
+                    span: 8..15,
+                    left: Binary(
+                        Binary {
+                            span: 8..11,
+                            left: Ident(
+                                Ident {
+                                    name: "m",
+                                    span: 8..9,
+                                },
+                            ),
                             op: Times,
-                            right: Expr {
-                                kind: Identifier(
-                                    "x",
-                                ),
-                                span: 10..11,
-                            },
+                            right: Ident(
+                                Ident {
+                                    name: "x",
+                                    span: 10..11,
+                                },
+                            ),
                         },
-                        span: 8..11,
-                    },
+                    ),
                     op: Plus,
-                    right: Expr {
-                        kind: Identifier(
-                            "b",
-                        ),
-                        span: 14..15,
-                    },
+                    right: Ident(
+                        Ident {
+                            name: "b",
+                            span: 14..15,
+                        },
+                    ),
                 },
-                span: 8..15,
-            },
+            ),
             type_ann: None,
         },
         span: 0..15,

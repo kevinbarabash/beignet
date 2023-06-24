@@ -2,16 +2,16 @@ use crate::identifier::{BindingIdent, Ident};
 use crate::literal::Literal;
 use crate::parser::Parser;
 use crate::pattern::*;
-use crate::source_location::*;
+use crate::span::*;
 use crate::token::*;
 
 impl<'a> Parser<'a> {
     pub fn parse_pattern(&mut self) -> Pattern {
-        let mut span = self.peek().unwrap_or(&EOF).span.clone();
+        let mut span = self.peek().unwrap_or(&EOF).span;
         let kind = match self.next().unwrap_or(EOF.clone()).kind {
             TokenKind::Identifier(name) => PatternKind::Ident(BindingIdent {
                 name,
-                span: span.clone(),
+                span,
                 mutable: false,
             }),
             TokenKind::StrLit(value) => PatternKind::Lit(LitPat {
@@ -75,7 +75,7 @@ impl<'a> Parser<'a> {
 
                 while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
                     let first = self.peek().unwrap_or(&EOF);
-                    let first_span = first.span.clone();
+                    let first_span = first.span;
                     match &self.next().unwrap_or(EOF.clone()).kind {
                         TokenKind::Identifier(name) => {
                             if self.peek().unwrap_or(&EOF).kind == TokenKind::Colon {
@@ -96,7 +96,7 @@ impl<'a> Parser<'a> {
                             } else {
                                 // TODO: handle `var` and `mut` modifiers
                                 props.push(ObjectPatProp::Shorthand(ShorthandPatProp {
-                                    span: first_span.clone(),
+                                    span: first_span,
                                     ident: BindingIdent {
                                         name: name.clone(),
                                         span: first_span,

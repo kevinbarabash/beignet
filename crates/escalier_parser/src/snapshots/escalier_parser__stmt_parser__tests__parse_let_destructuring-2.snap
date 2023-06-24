@@ -55,12 +55,12 @@ expression: "parse(\"let {x: x1, y: y1} = p1;\")"
                     },
                 ),
             },
-            expr: Expr {
-                kind: Identifier(
-                    "p1",
-                ),
-                span: 21..23,
-            },
+            expr: Ident(
+                Ident {
+                    name: "p1",
+                    span: 21..23,
+                },
+            ),
             type_ann: None,
         },
         span: 0..23,

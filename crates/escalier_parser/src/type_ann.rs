@@ -4,7 +4,7 @@
 // - conditional types
 
 use crate::func_param::FuncParam;
-use crate::source_location::*;
+use crate::span::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ObjectProp {

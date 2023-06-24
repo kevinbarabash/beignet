@@ -2,93 +2,93 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"a > b && c >= d || e < f && g <= h\")"
 ---
-Expr {
-    kind: Binary {
-        left: Expr {
-            kind: Binary {
-                left: Expr {
-                    kind: Binary {
-                        left: Expr {
-                            kind: Identifier(
-                                "a",
-                            ),
-                            span: 0..1,
-                        },
+Binary(
+    Binary {
+        span: 0..34,
+        left: Binary(
+            Binary {
+                span: 0..15,
+                left: Binary(
+                    Binary {
+                        span: 0..5,
+                        left: Ident(
+                            Ident {
+                                name: "a",
+                                span: 0..1,
+                            },
+                        ),
                         op: GreaterThan,
-                        right: Expr {
-                            kind: Identifier(
-                                "b",
-                            ),
-                            span: 4..5,
-                        },
+                        right: Ident(
+                            Ident {
+                                name: "b",
+                                span: 4..5,
+                            },
+                        ),
                     },
-                    span: 0..5,
-                },
+                ),
                 op: And,
-                right: Expr {
-                    kind: Binary {
-                        left: Expr {
-                            kind: Identifier(
-                                "c",
-                            ),
-                            span: 9..10,
-                        },
+                right: Binary(
+                    Binary {
+                        span: 9..15,
+                        left: Ident(
+                            Ident {
+                                name: "c",
+                                span: 9..10,
+                            },
+                        ),
                         op: GreaterThanOrEqual,
-                        right: Expr {
-                            kind: Identifier(
-                                "d",
-                            ),
-                            span: 14..15,
-                        },
+                        right: Ident(
+                            Ident {
+                                name: "d",
+                                span: 14..15,
+                            },
+                        ),
                     },
-                    span: 9..15,
-                },
+                ),
             },
-            span: 0..15,
-        },
+        ),
         op: Or,
-        right: Expr {
-            kind: Binary {
-                left: Expr {
-                    kind: Binary {
-                        left: Expr {
-                            kind: Identifier(
-                                "e",
-                            ),
-                            span: 19..20,
-                        },
+        right: Binary(
+            Binary {
+                span: 19..34,
+                left: Binary(
+                    Binary {
+                        span: 19..24,
+                        left: Ident(
+                            Ident {
+                                name: "e",
+                                span: 19..20,
+                            },
+                        ),
                         op: LessThan,
-                        right: Expr {
-                            kind: Identifier(
-                                "f",
-                            ),
-                            span: 23..24,
-                        },
+                        right: Ident(
+                            Ident {
+                                name: "f",
+                                span: 23..24,
+                            },
+                        ),
                     },
-                    span: 19..24,
-                },
+                ),
                 op: And,
-                right: Expr {
-                    kind: Binary {
-                        left: Expr {
-                            kind: Identifier(
-                                "g",
-                            ),
-                            span: 28..29,
-                        },
+                right: Binary(
+                    Binary {
+                        span: 28..34,
+                        left: Ident(
+                            Ident {
+                                name: "g",
+                                span: 28..29,
+                            },
+                        ),
                         op: LessThanOrEqual,
-                        right: Expr {
-                            kind: Identifier(
-                                "h",
-                            ),
-                            span: 33..34,
-                        },
+                        right: Ident(
+                            Ident {
+                                name: "h",
+                                span: 33..34,
+                            },
+                        ),
                     },
-                    span: 28..34,
-                },
+                ),
             },
-            span: 19..34,
-        },
+        ),
     },
-    span: 0..34,
-}
+)

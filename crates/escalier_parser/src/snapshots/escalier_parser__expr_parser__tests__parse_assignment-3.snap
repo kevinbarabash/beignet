@@ -2,43 +2,43 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"x.a = y.b\")"
 ---
-Expr {
-    kind: Assign {
-        left: Expr {
-            kind: Member {
-                object: Expr {
-                    kind: Identifier(
-                        "x",
-                    ),
-                    span: 0..1,
-                },
-                property: Expr {
-                    kind: Identifier(
-                        "a",
-                    ),
-                    span: 2..3,
-                },
+Assign(
+    Assign {
+        span: 0..9,
+        left: Member(
+            Member {
+                span: 0..3,
+                object: Ident(
+                    Ident {
+                        name: "x",
+                        span: 0..1,
+                    },
+                ),
+                property: Ident(
+                    Ident {
+                        name: "a",
+                        span: 2..3,
+                    },
+                ),
             },
-            span: 0..3,
-        },
+        ),
         op: Assign,
-        right: Expr {
-            kind: Member {
-                object: Expr {
-                    kind: Identifier(
-                        "y",
-                    ),
-                    span: 6..7,
-                },
-                property: Expr {
-                    kind: Identifier(
-                        "b",
-                    ),
-                    span: 8..9,
-                },
+        right: Member(
+            Member {
+                span: 6..9,
+                object: Ident(
+                    Ident {
+                        name: "y",
+                        span: 6..7,
+                    },
+                ),
+                property: Ident(
+                    Ident {
+                        name: "b",
+                        span: 8..9,
+                    },
+                ),
             },
-            span: 6..9,
-        },
+        ),
     },
-    span: 0..9,
-}
+)

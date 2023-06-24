@@ -5,39 +5,35 @@ expression: "parse(r#\"p[\"y\"] = 10;\"#)"
 [
     Stmt {
         kind: Expr {
-            expr: Expr {
-                kind: Assign {
-                    left: Expr {
-                        kind: Index {
-                            left: Expr {
-                                kind: Identifier(
-                                    "p",
-                                ),
-                                span: 0..1,
-                            },
-                            right: Expr {
-                                kind: Literal(
-                                    String(
-                                        "y",
-                                    ),
-                                ),
-                                span: 2..5,
-                            },
-                        },
-                        span: 0..5,
-                    },
-                    op: Assign,
-                    right: Expr {
-                        kind: Literal(
-                            Number(
-                                "10",
+            expr: Assign(
+                Assign {
+                    span: 0..11,
+                    left: Index(
+                        Index {
+                            span: 0..5,
+                            left: Ident(
+                                Ident {
+                                    name: "p",
+                                    span: 0..1,
+                                },
                             ),
-                        ),
-                        span: 9..11,
-                    },
+                            right: Str(
+                                Str {
+                                    span: 2..5,
+                                    value: "y",
+                                },
+                            ),
+                        },
+                    ),
+                    op: Assign,
+                    right: Num(
+                        Num {
+                            span: 9..11,
+                            value: "10",
+                        },
+                    ),
                 },
-                span: 0..11,
-            },
+            ),
         },
         span: 0..11,
     },

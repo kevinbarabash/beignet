@@ -2,37 +2,33 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"5 * (x + 1)\")"
 ---
-Expr {
-    kind: Binary {
-        left: Expr {
-            kind: Literal(
-                Number(
-                    "5",
-                ),
-            ),
-            span: 0..1,
-        },
-        op: Times,
-        right: Expr {
-            kind: Binary {
-                left: Expr {
-                    kind: Identifier(
-                        "x",
-                    ),
-                    span: 5..6,
-                },
-                op: Plus,
-                right: Expr {
-                    kind: Literal(
-                        Number(
-                            "1",
-                        ),
-                    ),
-                    span: 9..10,
-                },
+Binary(
+    Binary {
+        span: 0..10,
+        left: Num(
+            Num {
+                span: 0..1,
+                value: "5",
             },
-            span: 5..10,
-        },
+        ),
+        op: Times,
+        right: Binary(
+            Binary {
+                span: 5..10,
+                left: Ident(
+                    Ident {
+                        name: "x",
+                        span: 5..6,
+                    },
+                ),
+                op: Plus,
+                right: Num(
+                    Num {
+                        span: 9..10,
+                        value: "1",
+                    },
+                ),
+            },
+        ),
     },
-    span: 0..10,
-}
+)

@@ -2,21 +2,21 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"x = y\")"
 ---
-Expr {
-    kind: Assign {
-        left: Expr {
-            kind: Identifier(
-                "x",
-            ),
-            span: 0..1,
-        },
+Assign(
+    Assign {
+        span: 0..5,
+        left: Ident(
+            Ident {
+                name: "x",
+                span: 0..1,
+            },
+        ),
         op: Assign,
-        right: Expr {
-            kind: Identifier(
-                "y",
-            ),
-            span: 4..5,
-        },
+        right: Ident(
+            Ident {
+                name: "y",
+                span: 4..5,
+            },
+        ),
     },
-    span: 0..5,
-}
+)

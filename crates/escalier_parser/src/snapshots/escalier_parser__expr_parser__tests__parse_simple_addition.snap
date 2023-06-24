@@ -2,39 +2,33 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"1 + 2 + 3\")"
 ---
-Expr {
-    kind: Binary {
-        left: Expr {
-            kind: Binary {
-                left: Expr {
-                    kind: Literal(
-                        Number(
-                            "1",
-                        ),
-                    ),
-                    span: 0..1,
-                },
-                op: Plus,
-                right: Expr {
-                    kind: Literal(
-                        Number(
-                            "2",
-                        ),
-                    ),
-                    span: 4..5,
-                },
-            },
-            span: 0..5,
-        },
-        op: Plus,
-        right: Expr {
-            kind: Literal(
-                Number(
-                    "3",
+Binary(
+    Binary {
+        span: 0..9,
+        left: Binary(
+            Binary {
+                span: 0..5,
+                left: Num(
+                    Num {
+                        span: 0..1,
+                        value: "1",
+                    },
                 ),
-            ),
-            span: 8..9,
-        },
+                op: Plus,
+                right: Num(
+                    Num {
+                        span: 4..5,
+                        value: "2",
+                    },
+                ),
+            },
+        ),
+        op: Plus,
+        right: Num(
+            Num {
+                span: 8..9,
+                value: "3",
+            },
+        ),
     },
-    span: 0..9,
-}
+)

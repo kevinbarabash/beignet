@@ -15,36 +15,36 @@ expression: "parse(r#\"let y: number = m*x + b;\"#)"
                     },
                 ),
             },
-            expr: Expr {
-                kind: Binary {
-                    left: Expr {
-                        kind: Binary {
-                            left: Expr {
-                                kind: Identifier(
-                                    "m",
-                                ),
-                                span: 16..17,
-                            },
+            expr: Binary(
+                Binary {
+                    span: 16..23,
+                    left: Binary(
+                        Binary {
+                            span: 16..19,
+                            left: Ident(
+                                Ident {
+                                    name: "m",
+                                    span: 16..17,
+                                },
+                            ),
                             op: Times,
-                            right: Expr {
-                                kind: Identifier(
-                                    "x",
-                                ),
-                                span: 18..19,
-                            },
+                            right: Ident(
+                                Ident {
+                                    name: "x",
+                                    span: 18..19,
+                                },
+                            ),
                         },
-                        span: 16..19,
-                    },
+                    ),
                     op: Plus,
-                    right: Expr {
-                        kind: Identifier(
-                            "b",
-                        ),
-                        span: 22..23,
-                    },
+                    right: Ident(
+                        Ident {
+                            name: "b",
+                            span: 22..23,
+                        },
+                    ),
                 },
-                span: 16..23,
-            },
+            ),
             type_ann: Some(
                 TypeAnn {
                     kind: Number,

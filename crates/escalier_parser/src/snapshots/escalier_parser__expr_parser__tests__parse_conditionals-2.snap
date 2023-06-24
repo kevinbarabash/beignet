@@ -2,25 +2,26 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(r#\"if (cond) { x; } else { y; }\"#)"
 ---
-Expr {
-    kind: IfElse {
-        cond: Expr {
-            kind: Identifier(
-                "cond",
-            ),
-            span: 4..8,
-        },
+IfElse(
+    IfElse {
+        span: 0..28,
+        cond: Ident(
+            Ident {
+                name: "cond",
+                span: 4..8,
+            },
+        ),
         consequent: Block {
             span: 9..16,
             stmts: [
                 Stmt {
                     kind: Expr {
-                        expr: Expr {
-                            kind: Identifier(
-                                "x",
-                            ),
-                            span: 12..13,
-                        },
+                        expr: Ident(
+                            Ident {
+                                name: "x",
+                                span: 12..13,
+                            },
+                        ),
                     },
                     span: 12..13,
                 },
@@ -32,12 +33,12 @@ Expr {
                 stmts: [
                     Stmt {
                         kind: Expr {
-                            expr: Expr {
-                                kind: Identifier(
-                                    "y",
-                                ),
-                                span: 24..25,
-                            },
+                            expr: Ident(
+                                Ident {
+                                    name: "y",
+                                    span: 24..25,
+                                },
+                            ),
                         },
                         span: 24..25,
                     },
@@ -45,5 +46,4 @@ Expr {
             },
         ),
     },
-    span: 0..28,
-}
+)

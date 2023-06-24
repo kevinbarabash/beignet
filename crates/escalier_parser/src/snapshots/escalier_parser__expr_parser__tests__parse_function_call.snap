@@ -2,32 +2,28 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"add(5, 10)\")"
 ---
-Expr {
-    kind: Call {
+Call(
+    Call {
+        span: 0..10,
         args: [
-            Expr {
-                kind: Literal(
-                    Number(
-                        "5",
-                    ),
-                ),
-                span: 4..5,
-            },
-            Expr {
-                kind: Literal(
-                    Number(
-                        "10",
-                    ),
-                ),
-                span: 7..9,
-            },
-        ],
-        callee: Expr {
-            kind: Identifier(
-                "add",
+            Num(
+                Num {
+                    span: 4..5,
+                    value: "5",
+                },
             ),
-            span: 0..3,
-        },
+            Num(
+                Num {
+                    span: 7..9,
+                    value: "10",
+                },
+            ),
+        ],
+        callee: Ident(
+            Ident {
+                name: "add",
+                span: 0..3,
+            },
+        ),
     },
-    span: 0..10,
-}
+)

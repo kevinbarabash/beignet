@@ -2,8 +2,9 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"fn ([head, ...tail]) => head\")"
 ---
-Expr {
-    kind: Function {
+Function(
+    Function {
+        span: 0..28,
         params: [
             FuncParam {
                 pattern: Pattern {
@@ -58,14 +59,13 @@ Expr {
             },
         ],
         body: Expr(
-            Expr {
-                kind: Identifier(
-                    "head",
-                ),
-                span: 24..28,
-            },
+            Ident(
+                Ident {
+                    name: "head",
+                    span: 24..28,
+                },
+            ),
         ),
         type_ann: None,
     },
-    span: 0..28,
-}
+)

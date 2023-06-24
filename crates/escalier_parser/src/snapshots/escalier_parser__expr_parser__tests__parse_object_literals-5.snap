@@ -2,42 +2,39 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(r#\"{ \"a\": 1, [b]: 2, 0: \"zero\" }\"#)"
 ---
-Expr {
-    kind: Object {
+Object(
+    Object {
+        span: 0..29,
         properties: [
             Prop(
                 Property {
                     key: String(
                         "a",
                     ),
-                    value: Expr {
-                        kind: Literal(
-                            Number(
-                                "1",
-                            ),
-                        ),
-                        span: 7..8,
-                    },
+                    value: Num(
+                        Num {
+                            span: 7..8,
+                            value: "1",
+                        },
+                    ),
                 },
             ),
             Prop(
                 Property {
                     key: Computed(
-                        Expr {
-                            kind: Identifier(
-                                "b",
-                            ),
-                            span: 11..12,
+                        Ident(
+                            Ident {
+                                name: "b",
+                                span: 11..12,
+                            },
+                        ),
+                    ),
+                    value: Num(
+                        Num {
+                            span: 15..16,
+                            value: "2",
                         },
                     ),
-                    value: Expr {
-                        kind: Literal(
-                            Number(
-                                "2",
-                            ),
-                        ),
-                        span: 15..16,
-                    },
                 },
             ),
             Prop(
@@ -45,17 +42,14 @@ Expr {
                     key: Number(
                         "0",
                     ),
-                    value: Expr {
-                        kind: Literal(
-                            String(
-                                "zero",
-                            ),
-                        ),
-                        span: 21..27,
-                    },
+                    value: Str(
+                        Str {
+                            span: 21..27,
+                            value: "zero",
+                        },
+                    ),
                 },
             ),
         ],
     },
-    span: 0..29,
-}
+)

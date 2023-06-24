@@ -18,11 +18,11 @@ StrTemplateLit {
         },
     ],
     exprs: [
-        Expr {
-            kind: Identifier(
-                "x",
-            ),
-            span: 6..7,
-        },
+        Ident(
+            Ident {
+                name: "x",
+                span: 6..7,
+            },
+        ),
     ],
 }

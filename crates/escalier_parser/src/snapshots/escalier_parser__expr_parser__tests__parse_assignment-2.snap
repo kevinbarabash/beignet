@@ -2,33 +2,33 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"x = y = z\")"
 ---
-Expr {
-    kind: Assign {
-        left: Expr {
-            kind: Identifier(
-                "x",
-            ),
-            span: 0..1,
-        },
-        op: Assign,
-        right: Expr {
-            kind: Assign {
-                left: Expr {
-                    kind: Identifier(
-                        "y",
-                    ),
-                    span: 4..5,
-                },
-                op: Assign,
-                right: Expr {
-                    kind: Identifier(
-                        "z",
-                    ),
-                    span: 8..9,
-                },
+Assign(
+    Assign {
+        span: 0..9,
+        left: Ident(
+            Ident {
+                name: "x",
+                span: 0..1,
             },
-            span: 4..9,
-        },
+        ),
+        op: Assign,
+        right: Assign(
+            Assign {
+                span: 4..9,
+                left: Ident(
+                    Ident {
+                        name: "y",
+                        span: 4..5,
+                    },
+                ),
+                op: Assign,
+                right: Ident(
+                    Ident {
+                        name: "z",
+                        span: 8..9,
+                    },
+                ),
+            },
+        ),
     },
-    span: 0..9,
-}
+)

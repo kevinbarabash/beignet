@@ -2,49 +2,43 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(r#\"[1, \"two\", [3]]\"#)"
 ---
-Expr {
-    kind: Tuple {
+Tuple(
+    Tuple {
+        span: 0..15,
         elements: [
             Expr(
-                Expr {
-                    kind: Literal(
-                        Number(
-                            "1",
-                        ),
-                    ),
-                    span: 1..2,
-                },
+                Num(
+                    Num {
+                        span: 1..2,
+                        value: "1",
+                    },
+                ),
             ),
             Expr(
-                Expr {
-                    kind: Literal(
-                        String(
-                            "two",
-                        ),
-                    ),
-                    span: 4..9,
-                },
+                Str(
+                    Str {
+                        span: 4..9,
+                        value: "two",
+                    },
+                ),
             ),
             Expr(
-                Expr {
-                    kind: Tuple {
+                Tuple(
+                    Tuple {
+                        span: 10..14,
                         elements: [
                             Expr(
-                                Expr {
-                                    kind: Literal(
-                                        Number(
-                                            "3",
-                                        ),
-                                    ),
-                                    span: 12..13,
-                                },
+                                Num(
+                                    Num {
+                                        span: 12..13,
+                                        value: "3",
+                                    },
+                                ),
                             ),
                         ],
                     },
-                    span: 10..14,
-                },
+                ),
             ),
         ],
     },
-    span: 0..15,
-}
+)

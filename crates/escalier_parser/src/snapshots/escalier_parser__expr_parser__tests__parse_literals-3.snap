@@ -2,11 +2,9 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"false\")"
 ---
-Expr {
-    kind: Literal(
-        Boolean(
-            false,
-        ),
-    ),
-    span: 0..5,
-}
+Bool(
+    Bool {
+        span: 0..5,
+        value: false,
+    },
+)

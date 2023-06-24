@@ -1,10 +1,10 @@
 // use std::iter::Peekable;
 
 use crate::expr::*;
-use crate::literal::Literal;
+use crate::identifier::Ident;
 use crate::parser::*;
 use crate::precedence::{Associativity, Operator, PRECEDENCE_TABLE};
-use crate::source_location::*;
+use crate::span::*;
 use crate::token::*;
 
 fn get_prefix_precedence(op: &Token) -> Option<(u8, Associativity)> {
@@ -80,66 +80,61 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_atom(&mut self) -> Expr {
-        let first = self.peek().unwrap_or(&EOF).clone();
+        let token = self.peek().unwrap_or(&EOF).clone();
 
-        let lhs = match &first.kind {
+        let lhs = match &token.kind {
             TokenKind::NumLit(n) => {
                 self.next(); // consume number
-                Expr {
-                    kind: ExprKind::Literal(Literal::Number(n.to_owned())),
-                    span: first.span.clone(),
-                }
+                Expr::Num(Num {
+                    span: token.span,
+                    value: n.to_owned(),
+                })
             }
             TokenKind::Identifier(id) => {
                 self.next(); // consume identifier
-                Expr {
-                    kind: ExprKind::Identifier(id.to_owned()),
-                    span: first.span.clone(),
-                }
+                Expr::Ident(Ident {
+                    name: id.to_owned(),
+                    span: token.span,
+                })
             }
             TokenKind::BoolLit(b) => {
                 self.next(); // consume boolean
-                Expr {
-                    kind: ExprKind::Literal(Literal::Boolean(*b)),
-                    span: first.span.clone(),
-                }
+                Expr::Bool(Bool {
+                    span: token.span,
+                    value: *b,
+                })
             }
             TokenKind::StrLit(s) => {
                 self.next(); // consume string
-                Expr {
-                    kind: ExprKind::Literal(Literal::String(s.to_owned())),
-                    span: first.span.clone(),
-                }
+                Expr::Str(Str {
+                    span: token.span,
+                    value: s.to_owned(),
+                })
             }
             TokenKind::StrTemplateLit { parts, exprs } => {
                 self.next(); // consume string template
-                Expr {
-                    kind: ExprKind::TemplateLiteral {
-                        parts: parts
-                            .iter()
-                            .map(|s| match &s.kind {
-                                TokenKind::StrLit(s) => Literal::String(s.to_owned()),
-                                _ => panic!("Expected string literal, got {:?}", s),
-                            })
-                            .collect(),
-                        exprs: exprs.to_owned(),
-                    },
-                    span: first.span.clone(),
-                }
+                Expr::TemplateLiteral(TemplateLiteral {
+                    span: token.span,
+                    parts: parts
+                        .iter()
+                        .map(|token| match &token.kind {
+                            TokenKind::StrLit(value) => Str {
+                                span: token.span,
+                                value: value.to_owned(),
+                            },
+                            _ => panic!("Expected string literal, got {:?}", token),
+                        })
+                        .collect(),
+                    exprs: exprs.to_owned(),
+                })
             }
             TokenKind::Null => {
                 self.next(); // consume 'null'
-                Expr {
-                    kind: ExprKind::Literal(Literal::Null),
-                    span: first.span.clone(),
-                }
+                Expr::Null(Null { span: token.span })
             }
             TokenKind::Undefined => {
                 self.next(); // consume 'undefined'
-                Expr {
-                    kind: ExprKind::Literal(Literal::Undefined),
-                    span: first.span.clone(),
-                }
+                Expr::Undefined(Undefined { span: token.span })
             }
             TokenKind::LeftParen => {
                 self.next(); // consume '('
@@ -152,7 +147,7 @@ impl<'a> Parser<'a> {
             }
             TokenKind::LeftBracket => {
                 self.next(); // consumes '['
-                let start = first;
+                let start = token;
                 let mut elements: Vec<ExprOrSpread> = Vec::new();
                 while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBracket {
                     let elem = match self.peek().unwrap_or(&EOF).kind {
@@ -185,14 +180,14 @@ impl<'a> Parser<'a> {
 
                 let end = self.next().unwrap_or(EOF.clone());
 
-                Expr {
-                    kind: ExprKind::Tuple { elements },
+                Expr::Tuple(Tuple {
                     span: merge_spans(&start.span, &end.span),
-                }
+                    elements,
+                })
             }
             TokenKind::LeftBrace => {
                 self.next(); // consumes '{'
-                let start = first;
+                let start = token;
                 let mut properties: Vec<PropOrSpread> = Vec::new();
                 while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
                     let next = self.next().unwrap_or(EOF.clone());
@@ -210,7 +205,10 @@ impl<'a> Parser<'a> {
                         }
                         _ => {
                             let key = match &next.kind {
-                                TokenKind::Identifier(id) => ObjectKey::Identifier(id.to_owned()),
+                                TokenKind::Identifier(id) => ObjectKey::Ident(Ident {
+                                    span: next.span,
+                                    name: id.to_owned(),
+                                }),
                                 TokenKind::StrLit(s) => ObjectKey::String(s.to_owned()),
                                 TokenKind::NumLit(n) => ObjectKey::Number(n.to_owned()),
                                 TokenKind::LeftBracket => {
@@ -250,10 +248,10 @@ impl<'a> Parser<'a> {
 
                 let end = self.next().unwrap_or(EOF.clone());
 
-                Expr {
-                    kind: ExprKind::Object { properties },
+                Expr::Object(Object {
                     span: merge_spans(&start.span, &end.span),
-                }
+                    properties,
+                })
             }
             TokenKind::Fn => {
                 self.next(); // consumes 'fn'
@@ -272,31 +270,27 @@ impl<'a> Parser<'a> {
                 match self.peek().unwrap_or(&EOF).kind {
                     TokenKind::LeftBrace => {
                         let block = self.parse_block();
-                        let span = merge_spans(&first.span, &block.span);
+                        let span = merge_spans(&token.span, &block.span);
                         let body = BlockOrExpr::Block(block);
 
-                        Expr {
-                            kind: ExprKind::Function {
-                                params,
-                                body,
-                                type_ann,
-                            },
+                        Expr::Function(Function {
                             span,
-                        }
+                            params,
+                            body,
+                            type_ann,
+                        })
                     }
                     _ => {
                         let expr = self.parse_expr();
-                        let span = merge_spans(&first.span, &expr.span);
+                        let span = merge_spans(&token.span, &expr.get_span());
                         let body = BlockOrExpr::Expr(Box::new(expr));
 
-                        Expr {
-                            kind: ExprKind::Function {
-                                params,
-                                body,
-                                type_ann,
-                            },
+                        Expr::Function(Function {
                             span,
-                        }
+                            params,
+                            body,
+                            type_ann,
+                        })
                     }
                 }
             }
@@ -316,32 +310,28 @@ impl<'a> Parser<'a> {
                 if self.peek().unwrap_or(&EOF).kind == TokenKind::Else {
                     self.next().unwrap_or(EOF.clone());
                     let alternate = self.parse_block();
-                    let span = merge_spans(&first.span, &alternate.span);
-                    Expr {
-                        kind: ExprKind::IfElse {
-                            cond: Box::new(cond),
-                            consequent,
-                            alternate: Some(alternate),
-                        },
+                    let span = merge_spans(&token.span, &alternate.span);
+                    Expr::IfElse(IfElse {
                         span,
-                    }
+                        cond: Box::new(cond),
+                        consequent,
+                        alternate: Some(alternate),
+                    })
                 } else {
-                    let span = merge_spans(&first.span, &consequent.span);
-                    Expr {
-                        kind: ExprKind::IfElse {
-                            cond: Box::new(cond),
-                            consequent,
-                            alternate: None,
-                        },
+                    let span = merge_spans(&token.span, &consequent.span);
+                    Expr::IfElse(IfElse {
                         span,
-                    }
+                        cond: Box::new(cond),
+                        consequent,
+                        alternate: None,
+                    })
                 }
             }
             TokenKind::Match => {
                 // TODO: make 'match' use parens to align with 'if'
                 self.next(); // consumes 'match'
                 let expr = self.parse_expr();
-                let mut span = expr.span.clone();
+                let mut span = expr.get_span();
                 assert_eq!(
                     self.next().unwrap_or(EOF.clone()).kind,
                     TokenKind::LeftBrace
@@ -354,13 +344,13 @@ impl<'a> Parser<'a> {
                     let (body, end) = match self.peek().unwrap_or(&EOF).kind {
                         TokenKind::LeftBrace => {
                             let block = self.parse_block();
-                            let loc = block.span.clone();
-                            (BlockOrExpr::Block(block), loc)
+                            let span = block.span;
+                            (BlockOrExpr::Block(block), span)
                         }
                         _ => {
                             let expr = self.parse_expr();
-                            let loc = expr.span.clone();
-                            (BlockOrExpr::Expr(Box::new(expr)), loc)
+                            let span = expr.get_span();
+                            (BlockOrExpr::Expr(Box::new(expr)), span)
                         }
                     };
 
@@ -380,13 +370,11 @@ impl<'a> Parser<'a> {
                     TokenKind::RightBrace
                 );
 
-                Expr {
-                    kind: ExprKind::Match {
-                        expr: Box::new(expr),
-                        arms,
-                    },
+                Expr::Match(Match {
                     span,
-                }
+                    expr: Box::new(expr),
+                    arms,
+                })
             }
             TokenKind::Try => {
                 self.next(); // consumes 'try'
@@ -410,49 +398,43 @@ impl<'a> Parser<'a> {
                             TokenKind::Finally => {
                                 self.next().unwrap_or(EOF.clone());
                                 let finally_body = self.parse_block();
-                                let span = merge_spans(&first.span, &finally_body.span);
+                                let span = merge_spans(&token.span, &finally_body.span);
 
-                                Expr {
-                                    kind: ExprKind::Try {
-                                        body: try_body,
-                                        catch: Some(CatchClause {
-                                            param: Some(error),
-                                            body: catch_body,
-                                        }),
-                                        finally: Some(finally_body),
-                                    },
+                                Expr::Try(Try {
                                     span,
-                                }
+                                    body: try_body,
+                                    catch: Some(CatchClause {
+                                        param: Some(error),
+                                        body: catch_body,
+                                    }),
+                                    finally: Some(finally_body),
+                                })
                             }
                             _ => {
-                                let span = merge_spans(&first.span, &catch_body.span);
+                                let span = merge_spans(&token.span, &catch_body.span);
 
-                                Expr {
-                                    kind: ExprKind::Try {
-                                        body: try_body,
-                                        catch: Some(CatchClause {
-                                            param: Some(error),
-                                            body: catch_body,
-                                        }),
-                                        finally: None,
-                                    },
+                                Expr::Try(Try {
                                     span,
-                                }
+                                    body: try_body,
+                                    catch: Some(CatchClause {
+                                        param: Some(error),
+                                        body: catch_body,
+                                    }),
+                                    finally: None,
+                                })
                             }
                         }
                     }
                     TokenKind::Finally => {
                         let finally_body = self.parse_block();
-                        let span = merge_spans(&first.span, &finally_body.span);
+                        let span = merge_spans(&token.span, &finally_body.span);
 
-                        Expr {
-                            kind: ExprKind::Try {
-                                body: try_body,
-                                catch: None,
-                                finally: Some(finally_body),
-                            },
+                        Expr::Try(Try {
                             span,
-                        }
+                            body: try_body,
+                            catch: None,
+                            finally: Some(finally_body),
+                        })
                     }
                     _ => {
                         panic!("expected catch or finally");
@@ -468,35 +450,23 @@ impl<'a> Parser<'a> {
             TokenKind::Do => {
                 self.next(); // consumes 'do'
                 let body = self.parse_block();
-                let span = merge_spans(&first.span, &body.span);
+                let span = merge_spans(&token.span, &body.span);
 
-                Expr {
-                    kind: ExprKind::Do { body },
-                    span,
-                }
+                Expr::Do(Do { span, body })
             }
             TokenKind::LessThan => {
-                // TODO: this is wrong
-                let span = first.span.clone();
-
                 // HACK: We use self.scanner.peek() to lookahead further than
                 // self.peek() will allow.  The reason why this is scanner.peek(0)
                 // and not scanner.peek(1) is because the call to self.peek() at
                 // the top of the method has already advanced the scanner's position.
                 match self.scanner.peek(0) {
-                    Some('>') => Expr {
-                        kind: ExprKind::JSXFragment(self.parse_jsx_fragment()),
-                        span,
-                    },
-                    _ => Expr {
-                        kind: ExprKind::JSXElement(self.parse_jsx_element()),
-                        span,
-                    },
+                    Some('>') => Expr::JSXFragment(self.parse_jsx_fragment()),
+                    _ => Expr::JSXElement(self.parse_jsx_element()),
                 }
             }
             t => {
                 self.next(); // consume the token
-                match get_prefix_precedence(&first) {
+                match get_prefix_precedence(&token) {
                     Some(precendence) => {
                         let op = match t {
                             TokenKind::Plus => UnaryOp::Plus,
@@ -504,16 +474,14 @@ impl<'a> Parser<'a> {
                             _ => panic!("unexpected token: {:?}", t),
                         };
                         let rhs = self.parse_expr_with_precedence(precendence.0);
-                        let span = merge_spans(&first.span, &rhs.span);
-                        Expr {
-                            kind: ExprKind::Unary {
-                                op,
-                                right: Box::new(rhs),
-                            },
+                        let span = merge_spans(&token.span, &rhs.get_span());
+                        Expr::Unary(Unary {
                             span,
-                        }
+                            op,
+                            right: Box::new(rhs),
+                        })
                     }
-                    None => panic!("unexpected token: {:?}", first),
+                    None => panic!("unexpected token: {:?}", token),
                 }
             }
         };
@@ -573,16 +541,14 @@ impl<'a> Parser<'a> {
                     };
 
                     let rhs = self.parse_expr_with_precedence(precedence);
-                    let span = merge_spans(&lhs.span, &rhs.span);
+                    let span = merge_spans(&lhs.get_span(), &rhs.get_span());
 
-                    lhs = Expr {
-                        kind: ExprKind::Assign {
-                            op,
-                            left: Box::new(lhs),
-                            right: Box::new(rhs),
-                        },
+                    lhs = Expr::Assign(Assign {
                         span,
-                    };
+                        op,
+                        left: Box::new(lhs),
+                        right: Box::new(rhs),
+                    });
 
                     continue;
                 }
@@ -611,16 +577,14 @@ impl<'a> Parser<'a> {
                 };
 
                 let rhs = self.parse_expr_with_precedence(precedence);
-                let span = merge_spans(&lhs.span, &rhs.span);
+                let span = merge_spans(&lhs.get_span(), &rhs.get_span());
 
-                lhs = Expr {
-                    kind: ExprKind::Binary {
-                        op,
-                        left: Box::new(lhs),
-                        right: Box::new(rhs),
-                    },
+                lhs = Expr::Binary(Binary {
                     span,
-                };
+                    op,
+                    left: Box::new(lhs),
+                    right: Box::new(rhs),
+                });
 
                 continue;
             }
@@ -641,18 +605,16 @@ impl<'a> Parser<'a> {
         match &next.kind {
             TokenKind::LeftBracket => {
                 let rhs = self.parse_expr();
-                let span = merge_spans(&lhs.span, &rhs.span);
+                let span = merge_spans(&lhs.get_span(), &rhs.get_span());
                 assert_eq!(
                     self.next().unwrap_or(EOF.clone()).kind,
                     TokenKind::RightBracket
                 );
-                Expr {
-                    kind: ExprKind::Index {
-                        left: Box::new(lhs),
-                        right: Box::new(rhs),
-                    },
+                Expr::Index(Index {
                     span,
-                }
+                    left: Box::new(lhs),
+                    right: Box::new(rhs),
+                })
             }
             TokenKind::LeftParen => {
                 let mut args = Vec::new();
@@ -670,32 +632,28 @@ impl<'a> Parser<'a> {
                         ),
                     }
                 }
-                let span = merge_spans(&lhs.span, &self.peek().unwrap_or(&EOF).span);
+                let span = merge_spans(&lhs.get_span(), &self.peek().unwrap_or(&EOF).span);
                 assert_eq!(
                     self.next().unwrap_or(EOF.clone()).kind,
                     TokenKind::RightParen
                 );
-                Expr {
-                    kind: ExprKind::Call {
-                        callee: Box::new(lhs),
-                        args,
-                    },
+                Expr::Call(Call {
                     span,
-                }
+                    callee: Box::new(lhs),
+                    args,
+                })
             }
             TokenKind::Dot => {
                 let rhs = self.parse_expr_with_precedence(precedence);
-                let span = merge_spans(&lhs.span, &rhs.span);
-                Expr {
-                    kind: ExprKind::Member {
-                        object: Box::new(lhs),
-                        property: Box::new(rhs),
-                    },
+                let span = merge_spans(&lhs.get_span(), &rhs.get_span());
+                Expr::Member(Member {
                     span,
-                }
+                    object: Box::new(lhs),
+                    property: Box::new(rhs),
+                })
             }
             TokenKind::QuestionDot => {
-                let lhs_span = lhs.span.clone();
+                let lhs_span = lhs.get_span();
 
                 let base = match self.peek().unwrap_or(&EOF).kind {
                     TokenKind::LeftParen | TokenKind::LeftBracket => {
@@ -703,25 +661,21 @@ impl<'a> Parser<'a> {
                     }
                     _ => {
                         let rhs = self.parse_expr_with_precedence(precedence);
-                        let span = merge_spans(&lhs.span, &rhs.span);
-                        Expr {
-                            kind: ExprKind::Member {
-                                object: Box::new(lhs),
-                                property: Box::new(rhs),
-                            },
+                        let span = merge_spans(&lhs.get_span(), &rhs.get_span());
+                        Expr::Member(Member {
                             span,
-                        }
+                            object: Box::new(lhs),
+                            property: Box::new(rhs),
+                        })
                     }
                 };
 
-                let span = merge_spans(&lhs_span, &base.span);
+                let span = merge_spans(&lhs_span, &base.get_span());
 
-                Expr {
-                    kind: ExprKind::OptionalChain {
-                        base: Box::new(base),
-                    },
+                Expr::OptionalChain(OptionalChain {
                     span,
-                }
+                    base: Box::new(base),
+                })
             }
             _ => panic!("unexpected token: {:?}", next),
         }
@@ -733,10 +687,10 @@ impl<'a> Parser<'a> {
 }
 
 fn is_lvalue(expr: &Expr) -> bool {
-    match &expr.kind {
-        ExprKind::Identifier(_) => true,
-        ExprKind::Member { object, .. } => is_lvalue(object),
-        ExprKind::Index { left, .. } => is_lvalue(left),
+    match expr {
+        Expr::Ident(_) => true,
+        Expr::Member(Member { object, .. }) => is_lvalue(object),
+        Expr::Index(Index { left, .. }) => is_lvalue(left),
         _ => false,
     }
 }
