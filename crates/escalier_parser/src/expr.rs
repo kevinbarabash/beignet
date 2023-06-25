@@ -115,6 +115,7 @@ pub struct Function {
     pub body: BlockOrExpr,
     pub type_ann: Option<TypeAnn>, // return type
     pub is_async: bool,
+    pub is_gen: bool,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -181,6 +182,12 @@ pub struct Await {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Yield {
+    pub span: Span,
+    pub arg: Box<Expr>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Expr {
     Ident(Ident),
     Num(Num),
@@ -204,6 +211,7 @@ pub enum Expr {
     Try(Try),
     Do(Do),
     Await(Await),
+    Yield(Yield),
     JSXElement(JSXElement),
     JSXFragment(JSXFragment),
 }
@@ -293,6 +301,7 @@ impl Expr {
             Expr::Try(Try { span, .. }) => span.to_owned(),
             Expr::Do(Do { span, .. }) => span.to_owned(),
             Expr::Await(Await { span, .. }) => span.to_owned(),
+            Expr::Yield(Yield { span, .. }) => span.to_owned(),
             Expr::JSXElement(JSXElement { span, .. }) => span.to_owned(),
             Expr::JSXFragment(JSXFragment { span, .. }) => span.to_owned(),
         }

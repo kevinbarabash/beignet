@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(r#\"\n            fn async () => { \n                let x = await foo()\n                return x\n            }\n        \"#)"
+expression: "parse(r#\"\n            async fn () => { \n                let x = await foo()\n                return x\n            }\n        \"#)"
 ---
 Function(
     Function {
@@ -61,5 +61,6 @@ Function(
         ),
         type_ann: None,
         is_async: true,
+        is_gen: false,
     },
 )

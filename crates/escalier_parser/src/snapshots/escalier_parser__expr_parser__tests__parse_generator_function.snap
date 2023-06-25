@@ -1,0 +1,68 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(r#\"\n            gen fn () => { \n                yield 1\n                yield 2\n                yield 3\n            }\n        \"#)"
+---
+Function(
+    Function {
+        span: 13..114,
+        params: [],
+        body: Block(
+            Block {
+                span: 25..114,
+                stmts: [
+                    Stmt {
+                        kind: Expr {
+                            expr: Yield(
+                                Yield {
+                                    span: 45..52,
+                                    arg: Num(
+                                        Num {
+                                            span: 51..52,
+                                            value: "1",
+                                        },
+                                    ),
+                                },
+                            ),
+                        },
+                        span: 45..52,
+                    },
+                    Stmt {
+                        kind: Expr {
+                            expr: Yield(
+                                Yield {
+                                    span: 69..76,
+                                    arg: Num(
+                                        Num {
+                                            span: 75..76,
+                                            value: "2",
+                                        },
+                                    ),
+                                },
+                            ),
+                        },
+                        span: 69..76,
+                    },
+                    Stmt {
+                        kind: Expr {
+                            expr: Yield(
+                                Yield {
+                                    span: 93..100,
+                                    arg: Num(
+                                        Num {
+                                            span: 99..100,
+                                            value: "3",
+                                        },
+                                    ),
+                                },
+                            ),
+                        },
+                        span: 93..100,
+                    },
+                ],
+            },
+        ),
+        type_ann: None,
+        is_async: false,
+        is_gen: true,
+    },
+)

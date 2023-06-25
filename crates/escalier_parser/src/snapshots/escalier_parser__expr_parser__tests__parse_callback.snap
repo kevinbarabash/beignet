@@ -49,6 +49,7 @@ Call(
                                     ),
                                     type_ann: None,
                                     is_async: false,
+                                    is_gen: false,
                                 },
                             ),
                         ],

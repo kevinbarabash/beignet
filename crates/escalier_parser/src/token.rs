@@ -26,8 +26,10 @@ pub enum TokenKind {
     Let,
     Return,
     Fn,
-    Await,
     Async,
+    Await,
+    Gen,
+    Yield,
     If,
     Else,
     Mut, // denotes a binding to a mutable reference

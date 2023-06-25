@@ -90,5 +90,6 @@ Function(
             },
         ),
         is_async: false,
+        is_gen: false,
     },
 )

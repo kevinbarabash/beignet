@@ -70,6 +70,7 @@ expression: "parse(\"let add = fn (x, y) => x + y\")"
                     ),
                     type_ann: None,
                     is_async: false,
+                    is_gen: false,
                 },
             ),
             type_ann: None,

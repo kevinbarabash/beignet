@@ -241,6 +241,8 @@ impl<'a> Parser<'a> {
             "fn" => TokenKind::Fn,
             "async" => TokenKind::Async,
             "await" => TokenKind::Await,
+            "gen" => TokenKind::Gen,
+            "yield" => TokenKind::Yield,
             "let" => TokenKind::Let,
             "var" => TokenKind::Var,
             "mut" => TokenKind::Mut,

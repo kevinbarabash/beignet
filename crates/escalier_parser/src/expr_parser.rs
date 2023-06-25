@@ -12,6 +12,7 @@ fn get_prefix_precedence(op: &Token) -> Option<(u8, Associativity)> {
         TokenKind::Plus => PRECEDENCE_TABLE.get(&Operator::UnaryPlus).cloned(),
         TokenKind::Minus => PRECEDENCE_TABLE.get(&Operator::UnaryMinus).cloned(),
         TokenKind::Await => PRECEDENCE_TABLE.get(&Operator::Await).cloned(),
+        TokenKind::Yield => PRECEDENCE_TABLE.get(&Operator::Yield).cloned(),
         _ => None,
     }
 }
@@ -259,9 +260,13 @@ impl<'a> Parser<'a> {
             }
             TokenKind::Async => {
                 self.next(); // consumes 'async'
-                self.parse_function(&token, true)
+                self.parse_function(&token, true, false)
             }
-            TokenKind::Fn => self.parse_function(&token, false),
+            TokenKind::Gen => {
+                self.next(); // consumes 'gen'
+                self.parse_function(&token, false, true)
+            }
+            TokenKind::Fn => self.parse_function(&token, false, false),
             TokenKind::If => {
                 self.next(); // consumes 'if'
                 let cond = self.parse_inside_parens(|p| p.parse_expr());
@@ -431,6 +436,10 @@ impl<'a> Parser<'a> {
                                 span,
                                 arg: Box::new(rhs),
                             }),
+                            TokenKind::Yield => Expr::Yield(Yield {
+                                span,
+                                arg: Box::new(rhs),
+                            }),
                             _ => panic!("unexpected token: {:?}", t),
                         }
                     }
@@ -442,7 +451,7 @@ impl<'a> Parser<'a> {
         lhs
     }
 
-    fn parse_function(&mut self, start: &Token, is_async: bool) -> Expr {
+    fn parse_function(&mut self, start: &Token, is_async: bool, is_gen: bool) -> Expr {
         self.next(); // consumes 'fn'
 
         let params = self.parse_params();
@@ -469,6 +478,7 @@ impl<'a> Parser<'a> {
                     body,
                     type_ann,
                     is_async,
+                    is_gen,
                 })
             }
             _ => {
@@ -482,6 +492,7 @@ impl<'a> Parser<'a> {
                     body,
                     type_ann,
                     is_async,
+                    is_gen,
                 })
             }
         }
@@ -1068,6 +1079,19 @@ mod tests {
             async fn () => { 
                 let x = await foo()
                 return x
+            }
+        "#
+        ));
+    }
+
+    #[test]
+    fn parse_generator_function() {
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            gen fn () => { 
+                yield 1
+                yield 2
+                yield 3
             }
         "#
         ));
