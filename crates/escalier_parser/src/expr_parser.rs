@@ -79,11 +79,6 @@ impl<'a> Parser<'a> {
             if self.peek().unwrap_or(&EOF).kind == TokenKind::RightBrace {
                 break;
             }
-
-            // assert_eq!(
-            //     self.next().unwrap_or(EOF.clone()).kind,
-            //     TokenKind::Semicolon
-            // );
         }
         let close = self.next().unwrap_or(EOF.clone());
         assert_eq!(close.kind, TokenKind::RightBrace);
@@ -153,33 +148,23 @@ impl<'a> Parser<'a> {
             TokenKind::LeftBracket => {
                 self.next(); // consumes '['
                 let start = token;
-                let mut elements: Vec<ExprOrSpread> = Vec::new();
-                while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBracket {
-                    let elem = match self.peek().unwrap_or(&EOF).kind {
-                        TokenKind::DotDotDot => {
-                            self.next().unwrap_or(EOF.clone()); // consumes `...`
-                            let expr = self.parse_expr_with_precedence(0);
-                            ExprOrSpread::Spread(expr)
+                let elements = self.parse_many(
+                    |p| {
+                        match p.peek().unwrap_or(&EOF).kind {
+                            TokenKind::DotDotDot => {
+                                p.next().unwrap_or(EOF.clone()); // consumes `...`
+                                let expr = p.parse_expr_with_precedence(0);
+                                ExprOrSpread::Spread(expr)
+                            }
+                            _ => {
+                                let expr = p.parse_expr_with_precedence(0);
+                                ExprOrSpread::Expr(expr)
+                            }
                         }
-                        _ => {
-                            let expr = self.parse_expr_with_precedence(0);
-                            ExprOrSpread::Expr(expr)
-                        }
-                    };
-
-                    elements.push(elem);
-
-                    match self.peek().unwrap_or(&EOF).kind {
-                        TokenKind::RightBracket => break,
-                        TokenKind::Comma => {
-                            self.next().unwrap_or(EOF.clone());
-                        }
-                        _ => panic!(
-                            "Expected comma or right bracket, got {:?}",
-                            self.peek().unwrap_or(&EOF)
-                        ),
-                    }
-                }
+                    },
+                    TokenKind::Comma,
+                    TokenKind::RightBracket,
+                );
 
                 assert_eq!(self.peek().unwrap_or(&EOF).kind, TokenKind::RightBracket);
 
@@ -193,63 +178,57 @@ impl<'a> Parser<'a> {
             TokenKind::LeftBrace => {
                 self.next(); // consumes '{'
                 let start = token;
-                let mut properties: Vec<PropOrSpread> = Vec::new();
-                while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
-                    let next = self.next().unwrap_or(EOF.clone());
 
-                    let prop = match &next.kind {
-                        TokenKind::DotDotDot => {
-                            let expr = self.parse_expr_with_precedence(0);
-                            PropOrSpread::Spread(expr)
+                let properties = self.parse_many(
+                    |p| {
+                        let next = p.next().unwrap_or(EOF.clone());
+
+                        match &next.kind {
+                            TokenKind::DotDotDot => {
+                                let expr = p.parse_expr_with_precedence(0);
+                                PropOrSpread::Spread(expr)
+                            }
+                            TokenKind::Identifier(id)
+                                if p.peek().unwrap_or(&EOF).kind == TokenKind::Comma
+                                    || p.peek().unwrap_or(&EOF).kind == TokenKind::RightBrace =>
+                            {
+                                PropOrSpread::Prop(Prop::Shorthand { key: id.to_owned() })
+                            }
+                            _ => {
+                                let key = match &next.kind {
+                                    TokenKind::Identifier(id) => ObjectKey::Ident(Ident {
+                                        span: next.span,
+                                        name: id.to_owned(),
+                                    }),
+                                    TokenKind::StrLit(s) => ObjectKey::String(s.to_owned()),
+                                    TokenKind::NumLit(n) => ObjectKey::Number(n.to_owned()),
+                                    TokenKind::LeftBracket => {
+                                        let expr = p.parse_expr_with_precedence(0);
+                                        assert_eq!(
+                                            p.next().unwrap_or(EOF.clone()).kind,
+                                            TokenKind::RightBracket
+                                        );
+                                        ObjectKey::Computed(Box::new(expr))
+                                    }
+                                    _ => {
+                                        panic!(
+                                            "Expected identifier or string literal, got {:?}",
+                                            next
+                                        )
+                                    }
+                                };
+
+                                assert_eq!(p.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
+
+                                let value = p.parse_expr();
+
+                                PropOrSpread::Prop(Prop::Property { key, value })
+                            }
                         }
-                        TokenKind::Identifier(id)
-                            if self.peek().unwrap_or(&EOF).kind == TokenKind::Comma
-                                || self.peek().unwrap_or(&EOF).kind == TokenKind::RightBrace =>
-                        {
-                            PropOrSpread::Prop(Prop::Shorthand { key: id.to_owned() })
-                        }
-                        _ => {
-                            let key = match &next.kind {
-                                TokenKind::Identifier(id) => ObjectKey::Ident(Ident {
-                                    span: next.span,
-                                    name: id.to_owned(),
-                                }),
-                                TokenKind::StrLit(s) => ObjectKey::String(s.to_owned()),
-                                TokenKind::NumLit(n) => ObjectKey::Number(n.to_owned()),
-                                TokenKind::LeftBracket => {
-                                    let expr = self.parse_expr_with_precedence(0);
-                                    assert_eq!(
-                                        self.next().unwrap_or(EOF.clone()).kind,
-                                        TokenKind::RightBracket
-                                    );
-                                    ObjectKey::Computed(Box::new(expr))
-                                }
-                                _ => {
-                                    panic!("Expected identifier or string literal, got {:?}", next)
-                                }
-                            };
-
-                            assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
-
-                            let value = self.parse_expr();
-
-                            PropOrSpread::Prop(Prop::Property { key, value })
-                        }
-                    };
-
-                    properties.push(prop);
-
-                    match self.peek().unwrap_or(&EOF).kind {
-                        TokenKind::RightBrace => break,
-                        TokenKind::Comma => {
-                            self.next().unwrap_or(EOF.clone());
-                        }
-                        _ => panic!(
-                            "Expected comma or right brace, got {:?}",
-                            self.peek().unwrap_or(&EOF)
-                        ),
-                    }
-                }
+                    },
+                    TokenKind::Comma,
+                    TokenKind::RightBrace,
+                );
 
                 let end = self.next().unwrap_or(EOF.clone());
 
@@ -297,40 +276,40 @@ impl<'a> Parser<'a> {
                 self.next(); // consumes 'match'
                 let expr = self.parse_inside_parens(|p| p.parse_expr());
 
-                let mut span = expr.get_span();
-                let mut arms: Vec<MatchArm> = Vec::new();
-
                 assert_eq!(
                     self.next().unwrap_or(EOF.clone()).kind,
                     TokenKind::LeftBrace
                 );
-                while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
-                    let pattern = self.parse_pattern();
-                    assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Arrow);
 
-                    let (body, end) = match self.peek().unwrap_or(&EOF).kind {
-                        TokenKind::LeftBrace => {
-                            let block = self.parse_block();
-                            let span = block.span;
-                            (BlockOrExpr::Block(block), span)
+                let arms = self.parse_many(
+                    |p| {
+                        let pattern = p.parse_pattern();
+                        assert_eq!(p.next().unwrap_or(EOF.clone()).kind, TokenKind::Arrow);
+
+                        let (body, end) = match p.peek().unwrap_or(&EOF).kind {
+                            TokenKind::LeftBrace => {
+                                let block = p.parse_block();
+                                let span = block.span;
+                                (BlockOrExpr::Block(block), span)
+                            }
+                            _ => {
+                                let expr = p.parse_expr();
+                                let span = expr.get_span();
+                                (BlockOrExpr::Expr(Box::new(expr)), span)
+                            }
+                        };
+
+                        MatchArm {
+                            span: merge_spans(&pattern.span, &end),
+                            pattern,
+                            guard: None,
+                            body,
                         }
-                        _ => {
-                            let expr = self.parse_expr();
-                            let span = expr.get_span();
-                            (BlockOrExpr::Expr(Box::new(expr)), span)
-                        }
-                    };
+                    },
+                    TokenKind::Comma,
+                    TokenKind::RightBrace,
+                );
 
-                    assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Comma);
-
-                    arms.push(MatchArm {
-                        span: merge_spans(&pattern.span, &end),
-                        pattern,
-                        guard: None,
-                        body,
-                    });
-                    span = merge_spans(&span, &end);
-                }
                 let end = self.next().unwrap_or(EOF.clone());
                 assert_eq!(end.kind, TokenKind::RightBrace);
 
@@ -628,22 +607,7 @@ impl<'a> Parser<'a> {
             }
             TokenKind::LeftParen => {
                 let args = self.parse_inside_parens(|p| {
-                    let mut args = Vec::new();
-                    while p.peek().unwrap_or(&EOF).kind != TokenKind::RightParen {
-                        args.push(p.parse_expr());
-
-                        match p.peek().unwrap_or(&EOF).kind {
-                            TokenKind::RightParen => break,
-                            TokenKind::Comma => {
-                                p.next().unwrap_or(EOF.clone());
-                            }
-                            _ => panic!(
-                                "Expected comma or right paren, got {:?}",
-                                p.peek().unwrap_or(&EOF)
-                            ),
-                        }
-                    }
-                    args
+                    p.parse_many(|p| p.parse_expr(), TokenKind::Comma, TokenKind::RightParen)
                 });
 
                 let end = self.scanner.cursor();
@@ -707,6 +671,32 @@ impl<'a> Parser<'a> {
             self.next().unwrap_or(EOF.clone()).kind,
             TokenKind::RightParen
         );
+        result
+    }
+
+    fn parse_many<T>(
+        &mut self,
+        mut callback: impl FnMut(&mut Self) -> T,
+        separator: TokenKind,
+        terminator: TokenKind,
+    ) -> Vec<T> {
+        let mut result = Vec::new();
+        while self.peek().unwrap_or(&EOF).kind != terminator {
+            result.push(callback(self));
+
+            let next = self.peek().unwrap_or(&EOF);
+
+            if next.kind == terminator {
+                break;
+            } else if next.kind == separator {
+                self.next().unwrap_or(EOF.clone());
+            } else {
+                panic!(
+                    "Expected {:?} or {:?}, got {:?}",
+                    separator, terminator, next
+                );
+            }
+        }
         result
     }
 
