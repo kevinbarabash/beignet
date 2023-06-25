@@ -5,6 +5,7 @@ mod identifier;
 mod jsx;
 mod jsx_parser;
 mod literal;
+mod parse_error;
 mod parser;
 mod pattern;
 mod pattern_parser;

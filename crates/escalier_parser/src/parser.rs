@@ -2,6 +2,7 @@ use core::panic;
 use std::iter::Iterator;
 
 use crate::expr::Expr;
+use crate::parse_error::ParseError;
 use crate::scanner::Scanner;
 use crate::span::*;
 use crate::token::*;
@@ -77,7 +78,10 @@ impl<'a> Parser<'a> {
                 }
                 '`' => {
                     // avoids an extra scanner.pop() call after the match
-                    return Some(self.lex_template_string(start));
+                    return match self.lex_template_string(start) {
+                        Ok(token) => Some(token),
+                        Err(ParseError { message }) => panic!("{}", message),
+                    };
                 }
                 '=' => match self.scanner.peek(1) {
                     Some('=') => {
@@ -361,7 +365,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn lex_template_string(&mut self, start: usize) -> Token {
+    pub fn lex_template_string(&mut self, start: usize) -> Result<Token, ParseError> {
         let mut string = String::new();
         let mut parts: Vec<Token> = vec![];
         let mut exprs: Vec<Expr> = vec![];
@@ -411,7 +415,7 @@ impl<'a> Parser<'a> {
                         self.scanner.pop(); // consumes '{'
 
                         self.brace_counts.push(0);
-                        exprs.push(self.parse_expr());
+                        exprs.push(self.parse_expr()?);
                         self.brace_counts.pop();
 
                         self.scanner.pop(); // consumes '}'
@@ -437,13 +441,13 @@ impl<'a> Parser<'a> {
             },
         });
 
-        Token {
+        Ok(Token {
             kind: TokenKind::StrTemplateLit { parts, exprs },
             span: Span {
                 start,
                 end: self.scanner.cursor(),
             },
-        }
+        })
     }
 }
 

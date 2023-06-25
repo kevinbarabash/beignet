@@ -1,3 +1,4 @@
+use crate::parse_error::ParseError;
 use crate::parser::*;
 use crate::pattern::Pattern;
 use crate::token::*;
@@ -11,7 +12,7 @@ pub struct FuncParam {
 }
 
 impl<'a> Parser<'a> {
-    pub fn parse_params(&mut self) -> Vec<FuncParam> {
+    pub fn parse_params(&mut self) -> Result<Vec<FuncParam>, ParseError> {
         assert_eq!(
             self.next().unwrap_or(EOF.clone()).kind,
             TokenKind::LeftParen
@@ -19,7 +20,7 @@ impl<'a> Parser<'a> {
 
         let mut params: Vec<FuncParam> = Vec::new();
         while self.peek().unwrap_or(&EOF).kind != TokenKind::RightParen {
-            let pattern = self.parse_pattern();
+            let pattern = self.parse_pattern()?;
 
             let optional = if let TokenKind::Question = self.peek().unwrap_or(&EOF).kind {
                 self.next().unwrap_or(EOF.clone());
@@ -32,7 +33,7 @@ impl<'a> Parser<'a> {
                 self.next().unwrap_or(EOF.clone());
                 params.push(FuncParam {
                     pattern,
-                    type_ann: Some(self.parse_type_ann()),
+                    type_ann: Some(self.parse_type_ann()?),
                     optional,
                 });
             } else {
@@ -62,6 +63,6 @@ impl<'a> Parser<'a> {
             TokenKind::RightParen
         );
 
-        params
+        Ok(params)
     }
 }

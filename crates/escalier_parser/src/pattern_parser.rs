@@ -1,12 +1,13 @@
 use crate::identifier::{BindingIdent, Ident};
 use crate::literal::Literal;
+use crate::parse_error::ParseError;
 use crate::parser::Parser;
 use crate::pattern::*;
 use crate::span::*;
 use crate::token::*;
 
 impl<'a> Parser<'a> {
-    pub fn parse_pattern(&mut self) -> Pattern {
+    pub fn parse_pattern(&mut self) -> Result<Pattern, ParseError> {
         let mut span = self.peek().unwrap_or(&EOF).span;
         let kind = match self.next().unwrap_or(EOF.clone()).kind {
             TokenKind::Identifier(name) => PatternKind::Ident(BindingIdent {
@@ -37,14 +38,14 @@ impl<'a> Parser<'a> {
                                 panic!("only one rest pattern is allowed per object pattern");
                             }
                             elems.push(Some(TuplePatElem {
-                                pattern: self.parse_pattern(),
+                                pattern: self.parse_pattern()?,
                                 init: None,
                             }));
                             has_rest = true;
                         }
                         _ => {
                             elems.push(Some(TuplePatElem {
-                                pattern: self.parse_pattern(),
+                                pattern: self.parse_pattern()?,
                                 init: None,
                             }));
                         }
@@ -81,7 +82,7 @@ impl<'a> Parser<'a> {
                             if self.peek().unwrap_or(&EOF).kind == TokenKind::Colon {
                                 self.next();
 
-                                let pattern = self.parse_pattern();
+                                let pattern = self.parse_pattern()?;
 
                                 // TODO: handle `var` and `mut` modifiers
                                 props.push(ObjectPatProp::KeyValue(KeyValuePatProp {
@@ -115,7 +116,7 @@ impl<'a> Parser<'a> {
                                 panic!("only one rest pattern is allowed per object pattern");
                             }
                             props.push(ObjectPatProp::Rest(RestPat {
-                                arg: Box::new(self.parse_pattern()),
+                                arg: Box::new(self.parse_pattern()?),
                             }));
                             has_rest = true;
                         }
@@ -136,7 +137,7 @@ impl<'a> Parser<'a> {
             }
             // This code can be called when parsing rest patterns in function params.
             TokenKind::DotDotDot => PatternKind::Rest(RestPat {
-                arg: Box::new(self.parse_pattern()),
+                arg: Box::new(self.parse_pattern()?),
             }),
             TokenKind::Underscore => PatternKind::Wildcard,
             token => {
@@ -144,7 +145,7 @@ impl<'a> Parser<'a> {
             }
         };
 
-        Pattern { span, kind }
+        Ok(Pattern { span, kind })
     }
 }
 
@@ -155,7 +156,7 @@ mod tests {
 
     pub fn parse(input: &str) -> Pattern {
         let mut parser = Parser::new(input);
-        parser.parse_pattern()
+        parser.parse_pattern().unwrap()
     }
 
     #[test]

@@ -1,11 +1,12 @@
 use crate::identifier::Ident;
 use crate::jsx::*;
+use crate::parse_error::ParseError;
 use crate::parser::*;
 use crate::span::*;
 use crate::token::{TokenKind, EOF};
 
 impl<'a> Parser<'a> {
-    pub fn parse_jsx_element(&mut self) -> JSXElement {
+    pub fn parse_jsx_element(&mut self) -> Result<JSXElement, ParseError> {
         let start = self.scanner.cursor();
 
         assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::LessThan);
@@ -37,7 +38,7 @@ impl<'a> Parser<'a> {
                     self.scanner.pop();
                 }
                 _ => {
-                    attrs.push(self.parse_jsx_attribute());
+                    attrs.push(self.parse_jsx_attribute()?);
                 }
             }
         }
@@ -53,7 +54,7 @@ impl<'a> Parser<'a> {
         let closing = if self_closing {
             None
         } else {
-            children = self.parse_jsx_children();
+            children = self.parse_jsx_children()?;
 
             let start = self.scanner.cursor();
 
@@ -77,15 +78,15 @@ impl<'a> Parser<'a> {
 
         let end = self.scanner.cursor();
 
-        JSXElement {
+        Ok(JSXElement {
             span: Span { start, end },
             opening,
             children,
             closing,
-        }
+        })
     }
 
-    pub fn parse_jsx_fragment(&mut self) -> JSXFragment {
+    pub fn parse_jsx_fragment(&mut self) -> Result<JSXFragment, ParseError> {
         let start = self.scanner.cursor();
 
         assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::LessThan);
@@ -94,7 +95,7 @@ impl<'a> Parser<'a> {
             TokenKind::GreaterThan
         );
 
-        let children = self.parse_jsx_children();
+        let children = self.parse_jsx_children()?;
 
         assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::LessThan);
         assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Divide);
@@ -105,15 +106,15 @@ impl<'a> Parser<'a> {
 
         let end = self.scanner.cursor();
 
-        JSXFragment {
+        Ok(JSXFragment {
             span: Span { start, end },
             opening: JSXOpeningFragment {},
             children,
             closing: JSXClosingFragment {},
-        }
+        })
     }
 
-    pub fn parse_jsx_attribute(&mut self) -> JSXAttr {
+    pub fn parse_jsx_attribute(&mut self) -> Result<JSXAttr, ParseError> {
         let name = self.lex_ident_or_keyword();
 
         let name = match name.kind {
@@ -124,10 +125,10 @@ impl<'a> Parser<'a> {
         if let Some('=') = self.scanner.peek(0) {
             self.scanner.pop();
         } else {
-            return JSXAttr { name, value: None };
+            return Ok(JSXAttr { name, value: None });
         }
 
-        match self.scanner.peek(0).unwrap() {
+        let attr = match self.scanner.peek(0).unwrap() {
             '"' => {
                 let value = self.lex_string();
                 let value = match value.kind {
@@ -144,7 +145,7 @@ impl<'a> Parser<'a> {
                 self.scanner.pop();
 
                 self.brace_counts.push(0);
-                let expr = self.parse_expr();
+                let expr = self.parse_expr()?;
                 self.brace_counts.pop();
 
                 JSXAttr {
@@ -155,10 +156,12 @@ impl<'a> Parser<'a> {
                 }
             }
             _ => panic!("Unexpected character"),
-        }
+        };
+
+        Ok(attr)
     }
 
-    pub fn parse_jsx_children(&mut self) -> Vec<JSXElementChild> {
+    pub fn parse_jsx_children(&mut self) -> Result<Vec<JSXElementChild>, ParseError> {
         let mut children = vec![];
 
         while !self.scanner.is_done() {
@@ -167,10 +170,10 @@ impl<'a> Parser<'a> {
                     if self.scanner.peek(1) == Some('/') {
                         break;
                     } else if self.scanner.peek(1) == Some('>') {
-                        let fragment = self.parse_jsx_fragment();
+                        let fragment = self.parse_jsx_fragment()?;
                         children.push(JSXElementChild::Fragment(Box::new(fragment)));
                     } else {
-                        let element = self.parse_jsx_element();
+                        let element = self.parse_jsx_element()?;
                         children.push(JSXElementChild::Element(Box::new(element)));
                     }
                 }
@@ -178,7 +181,7 @@ impl<'a> Parser<'a> {
                     self.scanner.pop(); // consumes '{'
 
                     self.brace_counts.push(0);
-                    let expr = self.parse_expr();
+                    let expr = self.parse_expr()?;
                     self.brace_counts.pop();
 
                     self.scanner.pop(); // consumes '}'
@@ -194,7 +197,7 @@ impl<'a> Parser<'a> {
             }
         }
 
-        children
+        Ok(children)
     }
 
     pub fn parse_jsx_text(&mut self) -> JSXText {
@@ -234,7 +237,7 @@ mod tests {
     fn parse_jsx_element() {
         let mut parser = Parser::new(r#"<Foo bar="baz" qux></Foo>"#);
 
-        let jsx_elem = parser.parse_jsx_element();
+        let jsx_elem = parser.parse_jsx_element().unwrap();
 
         insta::assert_debug_snapshot!(jsx_elem);
     }
@@ -243,7 +246,7 @@ mod tests {
     fn parse_self_closing_jsx_element() {
         let mut parser = Parser::new(r#"<Foo bar="baz" qux />"#);
 
-        let jsx_elem = parser.parse_jsx_element();
+        let jsx_elem = parser.parse_jsx_element().unwrap();
 
         insta::assert_debug_snapshot!(jsx_elem);
     }
@@ -252,7 +255,7 @@ mod tests {
     fn parse_jsx_element_with_children_text() {
         let mut parser = Parser::new(r#"<h1>Hello, world!</h1>"#);
 
-        let jsx_elem = parser.parse_jsx_element();
+        let jsx_elem = parser.parse_jsx_element().unwrap();
 
         insta::assert_debug_snapshot!(jsx_elem);
     }
@@ -261,7 +264,7 @@ mod tests {
     fn parse_jsx_element_with_text_and_exprs() {
         let mut parser = Parser::new(r#"<h1>Hello, {name}!</h1>"#);
 
-        let jsx_elem = parser.parse_jsx_element();
+        let jsx_elem = parser.parse_jsx_element().unwrap();
 
         insta::assert_debug_snapshot!(jsx_elem);
     }
@@ -270,7 +273,7 @@ mod tests {
     fn parse_jsx_element_with_children_elements() {
         let mut parser = Parser::new(r#"<ul><li>one</li><li>two</li></ul>"#);
 
-        let jsx_elem = parser.parse_jsx_element();
+        let jsx_elem = parser.parse_jsx_element().unwrap();
 
         insta::assert_debug_snapshot!(jsx_elem);
     }
@@ -279,7 +282,7 @@ mod tests {
     fn parse_jsx_fragment() {
         let mut parser = Parser::new(r#"<><span>Hello, </span><span>world!</span></>"#);
 
-        let jsx_elem = parser.parse_jsx_element();
+        let jsx_elem = parser.parse_jsx_element().unwrap();
 
         insta::assert_debug_snapshot!(jsx_elem);
     }
@@ -288,7 +291,7 @@ mod tests {
     fn parse_jsx_nested_fragments() {
         let mut parser = Parser::new(r#"<>a<>{b}{c}</>d</>"#);
 
-        let jsx_elem = parser.parse_jsx_element();
+        let jsx_elem = parser.parse_jsx_element().unwrap();
 
         insta::assert_debug_snapshot!(jsx_elem);
     }
@@ -297,7 +300,7 @@ mod tests {
     fn parse_jsx_props_dot_children() {
         let mut parser = Parser::new(r#"<div>{a+b}</div>"#);
 
-        let jsx_elem = parser.parse_jsx_element();
+        let jsx_elem = parser.parse_jsx_element().unwrap();
 
         insta::assert_debug_snapshot!(jsx_elem);
     }

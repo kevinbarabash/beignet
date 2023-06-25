@@ -1,27 +1,28 @@
+use crate::parse_error::ParseError;
 use crate::parser::*;
 use crate::span::merge_spans;
 use crate::stmt::{Stmt, StmtKind};
 use crate::token::*;
 
 impl<'a> Parser<'a> {
-    pub fn parse_stmt(&mut self) -> Stmt {
+    pub fn parse_stmt(&mut self) -> Result<Stmt, ParseError> {
         let token = self.peek().unwrap_or(&EOF).clone();
 
-        match &token.kind {
+        let stmt = match &token.kind {
             TokenKind::Let => {
                 self.next(); // consumes 'let'
-                let pattern = self.parse_pattern();
+                let pattern = self.parse_pattern()?;
 
                 let type_ann = match self.peek().unwrap_or(&EOF).kind {
                     TokenKind::Colon => {
                         self.next().unwrap_or(EOF.clone());
-                        Some(self.parse_type_ann())
+                        Some(self.parse_type_ann()?)
                     }
                     _ => None,
                 };
 
                 assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Assign);
-                let expr = self.parse_expr();
+                let expr = self.parse_expr()?;
 
                 let span = merge_spans(&token.span, &expr.get_span());
                 Stmt {
@@ -42,7 +43,7 @@ impl<'a> Parser<'a> {
                         span: token.span,
                     },
                     _ => {
-                        let arg = self.parse_expr();
+                        let arg = self.parse_expr()?;
 
                         let span = merge_spans(&next.span, &arg.get_span());
                         Stmt {
@@ -53,28 +54,30 @@ impl<'a> Parser<'a> {
                 }
             }
             _ => {
-                let expr = self.parse_expr();
+                let expr = self.parse_expr()?;
                 let span = expr.get_span();
                 Stmt {
                     kind: StmtKind::Expr { expr },
                     span,
                 }
             }
-        }
+        };
+
+        Ok(stmt)
     }
 
-    pub fn parse_program(&mut self) -> Vec<Stmt> {
+    pub fn parse_program(&mut self) -> Result<Vec<Stmt>, ParseError> {
         let mut stmts = Vec::new();
         while self.peek().unwrap_or(&EOF).kind != TokenKind::Eof {
-            stmts.push(self.parse_stmt());
+            stmts.push(self.parse_stmt()?);
         }
-        stmts
+        Ok(stmts)
     }
 }
 
 pub fn parse(input: &str) -> Vec<Stmt> {
     let mut parser = Parser::new(input);
-    parser.parse_program()
+    parser.parse_program().unwrap()
 }
 
 #[cfg(test)]
