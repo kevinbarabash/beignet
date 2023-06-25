@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(\"fn (x) => fn (y) => x + y;\")"
+expression: "parse(\"fn (x) => fn (y) => x + y\")"
 ---
 Function(
     Function {
@@ -62,9 +62,11 @@ Function(
                         ),
                     ),
                     type_ann: None,
+                    is_async: false,
                 },
             ),
         ),
         type_ann: None,
+        is_async: false,
     },
 )

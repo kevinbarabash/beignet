@@ -54,5 +54,6 @@ Function(
             ),
         ),
         type_ann: None,
+        is_async: false,
     },
 )

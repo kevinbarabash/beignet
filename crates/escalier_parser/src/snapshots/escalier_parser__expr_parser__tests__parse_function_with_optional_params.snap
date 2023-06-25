@@ -102,5 +102,6 @@ Function(
                 span: 39..45,
             },
         ),
+        is_async: false,
     },
 )

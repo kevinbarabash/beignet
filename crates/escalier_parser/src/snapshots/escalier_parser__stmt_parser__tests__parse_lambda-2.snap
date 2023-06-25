@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/stmt_parser.rs
-expression: "parse(\"let add = fn (x) => fn (y) => x + y;\")"
+expression: "parse(\"let add = fn (x) => fn (y) => x + y\")"
 ---
 [
     Stmt {
@@ -75,10 +75,12 @@ expression: "parse(\"let add = fn (x) => fn (y) => x + y;\")"
                                     ),
                                 ),
                                 type_ann: None,
+                                is_async: false,
                             },
                         ),
                     ),
                     type_ann: None,
+                    is_async: false,
                 },
             ),
             type_ann: None,

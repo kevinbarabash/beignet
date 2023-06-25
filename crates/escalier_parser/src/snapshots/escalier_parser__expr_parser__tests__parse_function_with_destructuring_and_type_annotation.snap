@@ -89,5 +89,6 @@ Function(
                 span: 20..26,
             },
         ),
+        is_async: false,
     },
 )

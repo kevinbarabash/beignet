@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/stmt_parser.rs
-expression: "parse(r#\"let add: fn (a: number, b: number) => number = fn (a, b) => a + b;\"#)"
+expression: "parse(r#\"let add: fn (a: number, b: number) => number = fn (a, b) => a + b\"#)"
 ---
 [
     Stmt {
@@ -69,6 +69,7 @@ expression: "parse(r#\"let add: fn (a: number, b: number) => number = fn (a, b) 
                         ),
                     ),
                     type_ann: None,
+                    is_async: false,
                 },
             ),
             type_ann: Some(

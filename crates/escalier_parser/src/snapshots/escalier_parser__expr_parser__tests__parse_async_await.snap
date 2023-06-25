@@ -1,0 +1,65 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(r#\"\n            fn async () => { \n                let x = await foo()\n                return x\n            }\n        \"#)"
+---
+Function(
+    Function {
+        span: 13..105,
+        params: [],
+        body: Block(
+            Block {
+                span: 27..105,
+                stmts: [
+                    Stmt {
+                        kind: Let {
+                            pattern: Pattern {
+                                span: 51..52,
+                                kind: Ident(
+                                    BindingIdent {
+                                        name: "x",
+                                        span: 51..52,
+                                        mutable: false,
+                                    },
+                                ),
+                            },
+                            expr: Await(
+                                Await {
+                                    span: 55..66,
+                                    arg: Call(
+                                        Call {
+                                            span: 61..66,
+                                            args: [],
+                                            callee: Ident(
+                                                Ident {
+                                                    name: "foo",
+                                                    span: 61..64,
+                                                },
+                                            ),
+                                        },
+                                    ),
+                                },
+                            ),
+                            type_ann: None,
+                        },
+                        span: 47..66,
+                    },
+                    Stmt {
+                        kind: Return {
+                            arg: Some(
+                                Ident(
+                                    Ident {
+                                        name: "x",
+                                        span: 90..91,
+                                    },
+                                ),
+                            ),
+                        },
+                        span: 90..91,
+                    },
+                ],
+            },
+        ),
+        type_ann: None,
+        is_async: true,
+    },
+)

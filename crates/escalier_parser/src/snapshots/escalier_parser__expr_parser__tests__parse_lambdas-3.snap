@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(r#\"fn (x: number, y: number): number => x + y;\"#)"
+expression: "parse(r#\"fn (x: number, y: number): number => x + y\"#)"
 ---
 Function(
     Function {
@@ -71,5 +71,6 @@ Function(
                 span: 27..33,
             },
         ),
+        is_async: false,
     },
 )
