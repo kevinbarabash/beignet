@@ -61,6 +61,8 @@ fn get_postfix_precedence(op: &Token) -> Option<(u8, Associativity)> {
         TokenKind::LeftParen => PRECEDENCE_TABLE.get(&Operator::FunctionCall).cloned(),
         TokenKind::Dot => PRECEDENCE_TABLE.get(&Operator::MemberAccess).cloned(),
         TokenKind::QuestionDot => PRECEDENCE_TABLE.get(&Operator::OptionalChaining).cloned(),
+        // TODO: re-enable once we're using Result for error handling
+        // TokenKind::LessThan => PRECEDENCE_TABLE.get(&Operator::LessThan).cloned(),
         _ => None,
     }
 }
@@ -433,6 +435,22 @@ impl<'a> Parser<'a> {
     fn parse_function(&mut self, start: &Token, is_async: bool, is_gen: bool) -> Expr {
         self.next(); // consumes 'fn'
 
+        let type_params = if self.peek().unwrap_or(&EOF).kind == TokenKind::LessThan {
+            self.next(); // consumes '<'
+            let type_params = self.parse_many(
+                |p| p.parse_type_param(),
+                TokenKind::Comma,
+                TokenKind::GreaterThan,
+            );
+            assert_eq!(
+                self.next().unwrap_or(EOF.clone()).kind,
+                TokenKind::GreaterThan
+            );
+            Some(type_params)
+        } else {
+            None
+        };
+
         let params = self.parse_params();
 
         let type_ann = match self.peek().unwrap_or(&EOF).kind {
@@ -445,35 +463,46 @@ impl<'a> Parser<'a> {
 
         assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Arrow);
 
-        match self.peek().unwrap_or(&EOF).kind {
+        let (body, span) = match self.peek().unwrap_or(&EOF).kind {
             TokenKind::LeftBrace => {
                 let block = self.parse_block();
                 let span = merge_spans(&start.span, &block.span);
-                let body = BlockOrExpr::Block(block);
-
-                Expr::Function(Function {
-                    span,
-                    params,
-                    body,
-                    type_ann,
-                    is_async,
-                    is_gen,
-                })
+                (BlockOrExpr::Block(block), span)
             }
             _ => {
                 let expr = self.parse_expr();
                 let span = merge_spans(&start.span, &expr.get_span());
-                let body = BlockOrExpr::Expr(Box::new(expr));
-
-                Expr::Function(Function {
-                    span,
-                    params,
-                    body,
-                    type_ann,
-                    is_async,
-                    is_gen,
-                })
+                (BlockOrExpr::Expr(Box::new(expr)), span)
             }
+        };
+
+        Expr::Function(Function {
+            span,
+            type_params,
+            params,
+            body,
+            type_ann,
+            is_async,
+            is_gen,
+        })
+    }
+
+    fn parse_type_param(&mut self) -> TypeParam {
+        let start = self.scanner.cursor();
+        let t = self.parse_type_ann();
+        let bound = if self.peek().unwrap_or(&EOF).kind == TokenKind::Colon {
+            self.next().unwrap_or(EOF.clone());
+            Some(self.parse_type_ann())
+        } else {
+            None
+        };
+        let end = self.scanner.cursor();
+
+        TypeParam {
+            span: Span { start, end },
+            t,
+            bound,
+            default: None,
         }
     }
 
@@ -621,6 +650,36 @@ impl<'a> Parser<'a> {
                     args,
                 })
             }
+            // TODO: re-enable once we're using Result<> for error handling
+            // TokenKind::LessThan => {
+            //     self.next(); // consumes '<'
+            //     let args = self.parse_many(
+            //         |p| p.parse_type_ann(),
+            //         TokenKind::Comma,
+            //         TokenKind::GreaterThan,
+            //     );
+            //     assert_eq!(
+            //         self.next().unwrap_or(EOF.clone()).kind,
+            //         TokenKind::GreaterThan
+            //     );
+
+            //     let end = self.scanner.cursor();
+
+            //     let args = self.parse_inside_parens(|p| {
+            //         p.parse_many(|p| p.parse_expr(), TokenKind::Comma, TokenKind::RightParen)
+            //     });
+
+            //     let end = self.scanner.cursor();
+
+            //     Expr::Call(Call {
+            //         span: Span {
+            //             start: lhs.get_span().start,
+            //             end,
+            //         },
+            //         callee: Box::new(lhs),
+            //         args,
+            //     })
+            // }
             TokenKind::Dot => {
                 self.next(); // consumes '.'
                 let rhs = self.parse_expr_with_precedence(precedence);
@@ -1085,5 +1144,20 @@ mod tests {
             }
         "#
         ));
+    }
+
+    #[test]
+    fn parse_func_with_type_params() {
+        insta::assert_debug_snapshot!(parse("fn <T> (x: T) => x"));
+        insta::assert_debug_snapshot!(parse("fn <A, B> (a: A, b: B): A => a"));
+        insta::assert_debug_snapshot!(parse("fn <A: number, B: number> (a: A, b: B): A => a"));
+    }
+
+    // TODO: reenable once we're using Result<> for error handling
+    #[test]
+    #[ignore]
+    fn parse_func_calls_with_type_args() {
+        insta::assert_debug_snapshot!(parse("id<number>(5)"));
+        insta::assert_debug_snapshot!(parse(r#"fst<number, string>(5, "hello")"#));
     }
 }

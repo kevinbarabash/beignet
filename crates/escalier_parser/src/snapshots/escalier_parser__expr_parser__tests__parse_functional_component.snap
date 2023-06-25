@@ -5,6 +5,7 @@ expression: "parse(\"fn (props) => <div>{props.children}</div>\")"
 Function(
     Function {
         span: 0..41,
+        type_params: None,
         params: [
             FuncParam {
                 pattern: Pattern {

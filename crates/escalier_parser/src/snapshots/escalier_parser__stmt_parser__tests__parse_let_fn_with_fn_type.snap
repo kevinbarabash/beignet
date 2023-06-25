@@ -18,6 +18,7 @@ expression: "parse(r#\"let add: fn (a: number, b: number) => number = fn (a, b) 
             expr: Function(
                 Function {
                     span: 47..65,
+                    type_params: None,
                     params: [
                         FuncParam {
                             pattern: Pattern {

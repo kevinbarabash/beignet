@@ -5,6 +5,7 @@ expression: "parse(r#\"fn ({x, y}: Point): number => { return x + y }\"#)"
 Function(
     Function {
         span: 0..46,
+        type_params: None,
         params: [
             FuncParam {
                 pattern: Pattern {

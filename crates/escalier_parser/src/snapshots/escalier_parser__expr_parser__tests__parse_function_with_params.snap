@@ -5,6 +5,7 @@ expression: parse(src)
 Function(
     Function {
         span: 0..29,
+        type_params: None,
         params: [
             FuncParam {
                 pattern: Pattern {

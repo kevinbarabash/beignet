@@ -39,6 +39,7 @@ StrTemplateLit {
                                     Function(
                                         Function {
                                             span: 17..36,
+                                            type_params: None,
                                             params: [
                                                 FuncParam {
                                                     pattern: Pattern {

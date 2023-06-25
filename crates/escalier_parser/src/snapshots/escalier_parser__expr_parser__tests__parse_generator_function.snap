@@ -5,6 +5,7 @@ expression: "parse(r#\"\n            gen fn () => { \n                yield 1\n 
 Function(
     Function {
         span: 13..114,
+        type_params: None,
         params: [],
         body: Block(
             Block {
