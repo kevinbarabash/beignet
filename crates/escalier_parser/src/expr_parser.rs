@@ -617,6 +617,9 @@ impl<'a> Parser<'a> {
         }
     }
 
+    // If we attempt to parse explicit type args for a function call and fail,
+    // we return None and restore the parser state to what it was before the
+    // attempt.
     fn parse_postfix(
         &mut self,
         lhs: Expr,
@@ -662,9 +665,12 @@ impl<'a> Parser<'a> {
                     args,
                 })
             }
-            // TODO: re-enable once we're using Result<> for error handling
             TokenKind::LessThan => {
+                // Parsing explicit type args conflicts with parsing expressions
+                // involving less-than and greater-than operators.  We can't know
+                // ahead of time which one to parse, so we have to try both.
                 let backup = self.clone();
+
                 self.next(); // consumes '<'
                 let type_args = self.parse_many(
                     |p| p.parse_type_ann(),
@@ -674,21 +680,17 @@ impl<'a> Parser<'a> {
                 let type_args = match type_args {
                     Ok(type_args) => type_args,
                     Err(_) => {
+                        // If we failed to parse explicit type args, restore the
+                        // parser state and continue parsing like nothing happened.
                         self.restore(backup);
                         return Ok(None);
                     }
                 };
 
-                // if self.next().unwrap_or(EOF.clone()).kind != TokenKind::GreaterThan {
-                //     self.restore(backup);
-                //     return Ok(None);
-                // }
                 assert_eq!(
                     self.next().unwrap_or(EOF.clone()).kind,
                     TokenKind::GreaterThan
                 );
-
-                let end = self.scanner.cursor();
 
                 let args = self.parse_inside_parens(|p| {
                     p.parse_many(|p| p.parse_expr(), TokenKind::Comma, TokenKind::RightParen)
