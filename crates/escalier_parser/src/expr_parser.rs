@@ -257,58 +257,11 @@ impl<'a> Parser<'a> {
                     properties,
                 })
             }
-            TokenKind::Fn => {
-                self.next(); // consumes 'fn'
-
-                let is_async = match self.peek().unwrap_or(&EOF).kind {
-                    TokenKind::Async => {
-                        self.next().unwrap_or(EOF.clone());
-                        true
-                    }
-                    _ => false,
-                };
-
-                let params = self.parse_params();
-
-                let type_ann = match self.peek().unwrap_or(&EOF).kind {
-                    TokenKind::Colon => {
-                        self.next().unwrap_or(EOF.clone());
-                        Some(self.parse_type_ann())
-                    }
-                    _ => None,
-                };
-
-                assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Arrow);
-
-                match self.peek().unwrap_or(&EOF).kind {
-                    TokenKind::LeftBrace => {
-                        let block = self.parse_block();
-                        let span = merge_spans(&token.span, &block.span);
-                        let body = BlockOrExpr::Block(block);
-
-                        Expr::Function(Function {
-                            span,
-                            params,
-                            body,
-                            type_ann,
-                            is_async,
-                        })
-                    }
-                    _ => {
-                        let expr = self.parse_expr();
-                        let span = merge_spans(&token.span, &expr.get_span());
-                        let body = BlockOrExpr::Expr(Box::new(expr));
-
-                        Expr::Function(Function {
-                            span,
-                            params,
-                            body,
-                            type_ann,
-                            is_async,
-                        })
-                    }
-                }
+            TokenKind::Async => {
+                self.next(); // consumes 'async'
+                self.parse_function(&token, true)
             }
+            TokenKind::Fn => self.parse_function(&token, false),
             TokenKind::If => {
                 self.next(); // consumes 'if'
                 let cond = self.parse_inside_parens(|p| p.parse_expr());
@@ -487,6 +440,51 @@ impl<'a> Parser<'a> {
         };
 
         lhs
+    }
+
+    fn parse_function(&mut self, start: &Token, is_async: bool) -> Expr {
+        self.next(); // consumes 'fn'
+
+        let params = self.parse_params();
+
+        let type_ann = match self.peek().unwrap_or(&EOF).kind {
+            TokenKind::Colon => {
+                self.next().unwrap_or(EOF.clone());
+                Some(self.parse_type_ann())
+            }
+            _ => None,
+        };
+
+        assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Arrow);
+
+        match self.peek().unwrap_or(&EOF).kind {
+            TokenKind::LeftBrace => {
+                let block = self.parse_block();
+                let span = merge_spans(&start.span, &block.span);
+                let body = BlockOrExpr::Block(block);
+
+                Expr::Function(Function {
+                    span,
+                    params,
+                    body,
+                    type_ann,
+                    is_async,
+                })
+            }
+            _ => {
+                let expr = self.parse_expr();
+                let span = merge_spans(&start.span, &expr.get_span());
+                let body = BlockOrExpr::Expr(Box::new(expr));
+
+                Expr::Function(Function {
+                    span,
+                    params,
+                    body,
+                    type_ann,
+                    is_async,
+                })
+            }
+        }
     }
 
     fn parse_expr_with_precedence(&mut self, precedence: u8) -> Expr {
@@ -1067,7 +1065,7 @@ mod tests {
     fn parse_async_await() {
         insta::assert_debug_snapshot!(parse(
             r#"
-            fn async () => { 
+            async fn () => { 
                 let x = await foo()
                 return x
             }
