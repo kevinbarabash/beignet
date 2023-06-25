@@ -5,6 +5,7 @@ expression: "parse(r#\"\n            async fn () => { \n                let x = 
 Function(
     Function {
         span: 13..105,
+        type_params: None,
         params: [],
         body: Block(
             Block {

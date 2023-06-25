@@ -109,8 +109,17 @@ pub struct Unary {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub struct TypeParam {
+    pub span: Span,
+    pub t: TypeAnn,
+    pub bound: Option<TypeAnn>,
+    pub default: Option<TypeAnn>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Function {
     pub span: Span,
+    pub type_params: Option<Vec<TypeParam>>,
     pub params: Vec<FuncParam>,
     pub body: BlockOrExpr,
     pub type_ann: Option<TypeAnn>, // return type

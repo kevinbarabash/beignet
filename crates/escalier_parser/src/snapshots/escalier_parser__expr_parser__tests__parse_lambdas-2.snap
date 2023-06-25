@@ -5,6 +5,7 @@ expression: "parse(\"fn (x) => fn (y) => x + y\")"
 Function(
     Function {
         span: 0..25,
+        type_params: None,
         params: [
             FuncParam {
                 pattern: Pattern {
@@ -25,6 +26,7 @@ Function(
             Function(
                 Function {
                     span: 10..25,
+                    type_params: None,
                     params: [
                         FuncParam {
                             pattern: Pattern {

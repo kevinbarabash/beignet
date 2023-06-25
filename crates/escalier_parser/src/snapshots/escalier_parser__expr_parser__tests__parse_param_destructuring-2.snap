@@ -5,6 +5,7 @@ expression: "parse(\"fn ([head, ...tail]) => head\")"
 Function(
     Function {
         span: 0..28,
+        type_params: None,
         params: [
             FuncParam {
                 pattern: Pattern {

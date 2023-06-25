@@ -23,6 +23,7 @@ Call(
                             Function(
                                 Function {
                                     span: 8..21,
+                                    type_params: None,
                                     params: [
                                         FuncParam {
                                             pattern: Pattern {
