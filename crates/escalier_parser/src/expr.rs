@@ -315,4 +315,13 @@ impl Expr {
             Expr::JSXFragment(JSXFragment { span, .. }) => span.to_owned(),
         }
     }
+
+    pub fn is_lvalue(&self) -> bool {
+        match self {
+            Expr::Ident(_) => true,
+            Expr::Member(Member { object, .. }) => object.is_lvalue(),
+            Expr::Index(Index { left, .. }) => left.is_lvalue(),
+            _ => false,
+        }
+    }
 }

@@ -1,10 +1,11 @@
+use crate::parse_error::ParseError;
 use crate::parser::*;
 use crate::span::merge_spans;
 use crate::token::*;
 use crate::type_ann::{ObjectProp, TypeAnn, TypeAnnKind};
 
 impl<'a> Parser<'a> {
-    pub fn parse_type_ann(&mut self) -> TypeAnn {
+    pub fn parse_type_ann(&mut self) -> Result<TypeAnn, ParseError> {
         let mut span = self.peek().unwrap_or(&EOF).span;
         let mut kind = match self.next().unwrap_or(EOF.clone()).kind {
             TokenKind::BoolLit(value) => TypeAnnKind::BoolLit(value),
@@ -28,7 +29,7 @@ impl<'a> Parser<'a> {
                             false
                         };
                         assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
-                        let type_ann = self.parse_type_ann();
+                        let type_ann = self.parse_type_ann()?;
 
                         props.push(ObjectProp {
                             name,
@@ -59,7 +60,7 @@ impl<'a> Parser<'a> {
                 let mut elems: Vec<TypeAnn> = vec![];
 
                 while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBracket {
-                    elems.push(self.parse_type_ann());
+                    elems.push(self.parse_type_ann()?);
 
                     if self.peek().unwrap_or(&EOF).kind == TokenKind::Comma {
                         self.next().unwrap_or(EOF.clone());
@@ -82,7 +83,7 @@ impl<'a> Parser<'a> {
                     let mut params: Vec<TypeAnn> = vec![];
 
                     while self.peek().unwrap_or(&EOF).kind != TokenKind::GreaterThan {
-                        params.push(self.parse_type_ann());
+                        params.push(self.parse_type_ann()?);
 
                         if self.peek().unwrap_or(&EOF).kind == TokenKind::Comma {
                             self.next().unwrap_or(EOF.clone());
@@ -103,11 +104,11 @@ impl<'a> Parser<'a> {
                 }
             }
             TokenKind::Fn => {
-                let params = self.parse_params();
+                let params = self.parse_params()?;
                 assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Arrow);
-                let return_type = Box::new(self.parse_type_ann());
+                let return_type = self.parse_type_ann()?;
 
-                TypeAnnKind::Function(params, return_type)
+                TypeAnnKind::Function(params, Box::new(return_type))
             }
             token => {
                 panic!("expected token to start type annotation, found {:?}", token)
@@ -126,7 +127,7 @@ impl<'a> Parser<'a> {
             span = merged_span;
         }
 
-        TypeAnn { kind, span }
+        Ok(TypeAnn { kind, span })
     }
 }
 
@@ -137,7 +138,7 @@ mod tests {
 
     pub fn parse(input: &str) -> TypeAnn {
         let mut parser = Parser::new(input);
-        parser.parse_type_ann()
+        parser.parse_type_ann().unwrap()
     }
 
     #[test]
