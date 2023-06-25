@@ -114,6 +114,7 @@ pub struct Function {
     pub params: Vec<FuncParam>,
     pub body: BlockOrExpr,
     pub type_ann: Option<TypeAnn>, // return type
+    pub is_async: bool,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -174,6 +175,12 @@ pub struct Do {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Await {
+    pub span: Span,
+    pub arg: Box<Expr>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Expr {
     Ident(Ident),
     Num(Num),
@@ -196,6 +203,7 @@ pub enum Expr {
     Match(Match),
     Try(Try),
     Do(Do),
+    Await(Await),
     JSXElement(JSXElement),
     JSXFragment(JSXFragment),
 }
@@ -284,6 +292,7 @@ impl Expr {
             Expr::Match(Match { span, .. }) => span.to_owned(),
             Expr::Try(Try { span, .. }) => span.to_owned(),
             Expr::Do(Do { span, .. }) => span.to_owned(),
+            Expr::Await(Await { span, .. }) => span.to_owned(),
             Expr::JSXElement(JSXElement { span, .. }) => span.to_owned(),
             Expr::JSXFragment(JSXFragment { span, .. }) => span.to_owned(),
         }

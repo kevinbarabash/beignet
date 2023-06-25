@@ -11,6 +11,7 @@ fn get_prefix_precedence(op: &Token) -> Option<(u8, Associativity)> {
     match &op.kind {
         TokenKind::Plus => PRECEDENCE_TABLE.get(&Operator::UnaryPlus).cloned(),
         TokenKind::Minus => PRECEDENCE_TABLE.get(&Operator::UnaryMinus).cloned(),
+        TokenKind::Await => PRECEDENCE_TABLE.get(&Operator::Await).cloned(),
         _ => None,
     }
 }
@@ -258,6 +259,15 @@ impl<'a> Parser<'a> {
             }
             TokenKind::Fn => {
                 self.next(); // consumes 'fn'
+
+                let is_async = match self.peek().unwrap_or(&EOF).kind {
+                    TokenKind::Async => {
+                        self.next().unwrap_or(EOF.clone());
+                        true
+                    }
+                    _ => false,
+                };
+
                 let params = self.parse_params();
 
                 let type_ann = match self.peek().unwrap_or(&EOF).kind {
@@ -281,6 +291,7 @@ impl<'a> Parser<'a> {
                             params,
                             body,
                             type_ann,
+                            is_async,
                         })
                     }
                     _ => {
@@ -293,6 +304,7 @@ impl<'a> Parser<'a> {
                             params,
                             body,
                             type_ann,
+                            is_async,
                         })
                     }
                 }
@@ -448,18 +460,26 @@ impl<'a> Parser<'a> {
                 self.next(); // consume the token
                 match get_prefix_precedence(&token) {
                     Some(precendence) => {
-                        let op = match t {
-                            TokenKind::Plus => UnaryOp::Plus,
-                            TokenKind::Minus => UnaryOp::Minus,
-                            _ => panic!("unexpected token: {:?}", t),
-                        };
                         let rhs = self.parse_expr_with_precedence(precendence.0);
                         let span = merge_spans(&token.span, &rhs.get_span());
-                        Expr::Unary(Unary {
-                            span,
-                            op,
-                            right: Box::new(rhs),
-                        })
+
+                        match t {
+                            TokenKind::Plus => Expr::Unary(Unary {
+                                span,
+                                op: UnaryOp::Plus,
+                                right: Box::new(rhs),
+                            }),
+                            TokenKind::Minus => Expr::Unary(Unary {
+                                span,
+                                op: UnaryOp::Minus,
+                                right: Box::new(rhs),
+                            }),
+                            TokenKind::Await => Expr::Await(Await {
+                                span,
+                                arg: Box::new(rhs),
+                            }),
+                            _ => panic!("unexpected token: {:?}", t),
+                        }
                     }
                     None => panic!("unexpected token: {:?}", token),
                 }
@@ -1041,5 +1061,17 @@ mod tests {
     #[test]
     fn parse_multiple_application() {
         insta::assert_debug_snapshot!(parse("foo()\n(3+4) * 5"));
+    }
+
+    #[test]
+    fn parse_async_await() {
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            fn async () => { 
+                let x = await foo()
+                return x
+            }
+        "#
+        ));
     }
 }
