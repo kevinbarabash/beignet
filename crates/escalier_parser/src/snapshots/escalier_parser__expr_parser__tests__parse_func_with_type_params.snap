@@ -1,0 +1,60 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(\"fn <T> (x: T) => x\")"
+---
+Function(
+    Function {
+        span: 0..18,
+        type_params: Some(
+            [
+                TypeParam {
+                    span: 5..6,
+                    t: TypeAnn {
+                        kind: TypeRef(
+                            "T",
+                            None,
+                        ),
+                        span: 4..5,
+                    },
+                    bound: None,
+                    default: None,
+                },
+            ],
+        ),
+        params: [
+            FuncParam {
+                pattern: Pattern {
+                    span: 8..9,
+                    kind: Ident(
+                        BindingIdent {
+                            name: "x",
+                            span: 8..9,
+                            mutable: false,
+                        },
+                    ),
+                },
+                type_ann: Some(
+                    TypeAnn {
+                        kind: TypeRef(
+                            "T",
+                            None,
+                        ),
+                        span: 11..12,
+                    },
+                ),
+                optional: false,
+            },
+        ],
+        body: Expr(
+            Ident(
+                Ident {
+                    name: "x",
+                    span: 17..18,
+                },
+            ),
+        ),
+        type_ann: None,
+        is_async: false,
+        is_gen: false,
+    },
+)
