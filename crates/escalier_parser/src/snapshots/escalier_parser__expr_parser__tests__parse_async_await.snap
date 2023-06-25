@@ -29,13 +29,14 @@ Function(
                                     arg: Call(
                                         Call {
                                             span: 61..66,
-                                            args: [],
                                             callee: Ident(
                                                 Ident {
                                                     name: "foo",
                                                     span: 61..64,
                                                 },
                                             ),
+                                            type_args: None,
+                                            args: [],
                                         },
                                     ),
                                 },

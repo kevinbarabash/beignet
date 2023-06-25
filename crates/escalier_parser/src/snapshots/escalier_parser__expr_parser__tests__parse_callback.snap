@@ -5,20 +5,30 @@ expression: "parse(r#\"ids.map(fn (id) => id).join(\", \")\"#)"
 Call(
     Call {
         span: 0..33,
-        args: [
-            Str(
-                Str {
-                    span: 28..32,
-                    value: ", ",
-                },
-            ),
-        ],
         callee: Member(
             Member {
                 span: 0..27,
                 object: Call(
                     Call {
                         span: 0..22,
+                        callee: Member(
+                            Member {
+                                span: 0..7,
+                                object: Ident(
+                                    Ident {
+                                        name: "ids",
+                                        span: 0..3,
+                                    },
+                                ),
+                                property: Ident(
+                                    Ident {
+                                        name: "map",
+                                        span: 4..7,
+                                    },
+                                ),
+                            },
+                        ),
+                        type_args: None,
                         args: [
                             Function(
                                 Function {
@@ -54,23 +64,6 @@ Call(
                                 },
                             ),
                         ],
-                        callee: Member(
-                            Member {
-                                span: 0..7,
-                                object: Ident(
-                                    Ident {
-                                        name: "ids",
-                                        span: 0..3,
-                                    },
-                                ),
-                                property: Ident(
-                                    Ident {
-                                        name: "map",
-                                        span: 4..7,
-                                    },
-                                ),
-                            },
-                        ),
                     },
                 ),
                 property: Ident(
@@ -81,5 +74,14 @@ Call(
                 ),
             },
         ),
+        type_args: None,
+        args: [
+            Str(
+                Str {
+                    span: 28..32,
+                    value: ", ",
+                },
+            ),
+        ],
     },
 )

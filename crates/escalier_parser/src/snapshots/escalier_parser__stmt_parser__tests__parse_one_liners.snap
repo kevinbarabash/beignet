@@ -8,13 +8,14 @@ expression: "parse(r#\"foo() bar()\"#)"
             expr: Call(
                 Call {
                     span: 0..5,
-                    args: [],
                     callee: Ident(
                         Ident {
                             name: "foo",
                             span: 0..3,
                         },
                     ),
+                    type_args: None,
+                    args: [],
                 },
             ),
         },
@@ -25,13 +26,14 @@ expression: "parse(r#\"foo() bar()\"#)"
             expr: Call(
                 Call {
                     span: 6..11,
-                    args: [],
                     callee: Ident(
                         Ident {
                             name: "bar",
                             span: 6..9,
                         },
                     ),
+                    type_args: None,
+                    args: [],
                 },
             ),
         },

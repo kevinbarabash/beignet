@@ -8,13 +8,14 @@ OptionalChain(
         base: Call(
             Call {
                 span: 0..7,
-                args: [],
                 callee: Ident(
                     Ident {
                         name: "foo",
                         span: 0..3,
                     },
                 ),
+                type_args: None,
+                args: [],
             },
         ),
     },

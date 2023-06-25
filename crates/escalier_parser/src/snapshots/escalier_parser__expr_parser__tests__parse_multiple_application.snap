@@ -8,6 +8,20 @@ Binary(
         left: Call(
             Call {
                 span: 0..11,
+                callee: Call(
+                    Call {
+                        span: 0..5,
+                        callee: Ident(
+                            Ident {
+                                name: "foo",
+                                span: 0..3,
+                            },
+                        ),
+                        type_args: None,
+                        args: [],
+                    },
+                ),
+                type_args: None,
                 args: [
                     Binary(
                         Binary {
@@ -28,18 +42,6 @@ Binary(
                         },
                     ),
                 ],
-                callee: Call(
-                    Call {
-                        span: 0..5,
-                        args: [],
-                        callee: Ident(
-                            Ident {
-                                name: "foo",
-                                span: 0..3,
-                            },
-                        ),
-                    },
-                ),
             },
         ),
         op: Times,

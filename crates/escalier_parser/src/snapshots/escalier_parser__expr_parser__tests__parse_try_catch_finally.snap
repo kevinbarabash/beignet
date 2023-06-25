@@ -13,13 +13,14 @@ Try(
                         expr: Call(
                             Call {
                                 span: 35..45,
-                                args: [],
                                 callee: Ident(
                                     Ident {
                                         name: "canThrow",
                                         span: 35..43,
                                     },
                                 ),
+                                type_args: None,
+                                args: [],
                             },
                         ),
                     },
@@ -49,6 +50,24 @@ Try(
                                 expr: Call(
                                     Call {
                                         span: 88..114,
+                                        callee: Member(
+                                            Member {
+                                                span: 88..99,
+                                                object: Ident(
+                                                    Ident {
+                                                        name: "console",
+                                                        span: 88..95,
+                                                    },
+                                                ),
+                                                property: Ident(
+                                                    Ident {
+                                                        name: "log",
+                                                        span: 96..99,
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                        type_args: None,
                                         args: [
                                             Binary(
                                                 Binary {
@@ -69,23 +88,6 @@ Try(
                                                 },
                                             ),
                                         ],
-                                        callee: Member(
-                                            Member {
-                                                span: 88..99,
-                                                object: Ident(
-                                                    Ident {
-                                                        name: "console",
-                                                        span: 88..95,
-                                                    },
-                                                ),
-                                                property: Ident(
-                                                    Ident {
-                                                        name: "log",
-                                                        span: 96..99,
-                                                    },
-                                                ),
-                                            },
-                                        ),
                                     },
                                 ),
                             },
@@ -104,13 +106,14 @@ Try(
                             expr: Call(
                                 Call {
                                     span: 155..164,
-                                    args: [],
                                     callee: Ident(
                                         Ident {
                                             name: "cleanup",
                                             span: 155..162,
                                         },
                                     ),
+                                    type_args: None,
+                                    args: [],
                                 },
                             ),
                         },

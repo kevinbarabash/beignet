@@ -63,7 +63,7 @@ fn get_postfix_precedence(op: &Token) -> Option<(u8, Associativity)> {
         TokenKind::Dot => PRECEDENCE_TABLE.get(&Operator::MemberAccess).cloned(),
         TokenKind::QuestionDot => PRECEDENCE_TABLE.get(&Operator::OptionalChaining).cloned(),
         // TODO: re-enable once we're using Result for error handling
-        // TokenKind::LessThan => PRECEDENCE_TABLE.get(&Operator::LessThan).cloned(),
+        TokenKind::LessThan => PRECEDENCE_TABLE.get(&Operator::LessThan).cloned(),
         _ => None,
     }
 }
@@ -530,9 +530,10 @@ impl<'a> Parser<'a> {
                     return Ok(lhs);
                 }
 
-                lhs = self.parse_postfix(lhs, next_precedence)?;
-
-                continue;
+                if let Some(result) = self.parse_postfix(lhs.clone(), next_precedence)? {
+                    lhs = result;
+                    continue;
+                }
             }
 
             if let Some(next_precedence) = get_infix_precedence(&next) {
@@ -620,7 +621,7 @@ impl<'a> Parser<'a> {
         &mut self,
         lhs: Expr,
         next_precedence: (u8, Associativity),
-    ) -> Result<Expr, ParseError> {
+    ) -> Result<Option<Expr>, ParseError> {
         let precedence = if next_precedence.1 == Associativity::Left {
             next_precedence.0
         } else {
@@ -657,39 +658,54 @@ impl<'a> Parser<'a> {
                         end,
                     },
                     callee: Box::new(lhs),
+                    type_args: None,
                     args,
                 })
             }
             // TODO: re-enable once we're using Result<> for error handling
-            // TokenKind::LessThan => {
-            //     self.next(); // consumes '<'
-            //     let args = self.parse_many(
-            //         |p| p.parse_type_ann(),
-            //         TokenKind::Comma,
-            //         TokenKind::GreaterThan,
-            //     );
-            //     assert_eq!(
-            //         self.next().unwrap_or(EOF.clone()).kind,
-            //         TokenKind::GreaterThan
-            //     );
+            TokenKind::LessThan => {
+                let backup = self.clone();
+                self.next(); // consumes '<'
+                let type_args = self.parse_many(
+                    |p| p.parse_type_ann(),
+                    TokenKind::Comma,
+                    TokenKind::GreaterThan,
+                );
+                let type_args = match type_args {
+                    Ok(type_args) => type_args,
+                    Err(_) => {
+                        self.restore(backup);
+                        return Ok(None);
+                    }
+                };
 
-            //     let end = self.scanner.cursor();
+                // if self.next().unwrap_or(EOF.clone()).kind != TokenKind::GreaterThan {
+                //     self.restore(backup);
+                //     return Ok(None);
+                // }
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::GreaterThan
+                );
 
-            //     let args = self.parse_inside_parens(|p| {
-            //         p.parse_many(|p| p.parse_expr(), TokenKind::Comma, TokenKind::RightParen)
-            //     });
+                let end = self.scanner.cursor();
 
-            //     let end = self.scanner.cursor();
+                let args = self.parse_inside_parens(|p| {
+                    p.parse_many(|p| p.parse_expr(), TokenKind::Comma, TokenKind::RightParen)
+                })?;
 
-            //     Expr::Call(Call {
-            //         span: Span {
-            //             start: lhs.get_span().start,
-            //             end,
-            //         },
-            //         callee: Box::new(lhs),
-            //         args,
-            //     })
-            // }
+                let end = self.scanner.cursor();
+
+                Expr::Call(Call {
+                    span: Span {
+                        start: lhs.get_span().start,
+                        end,
+                    },
+                    callee: Box::new(lhs),
+                    type_args: Some(type_args),
+                    args,
+                })
+            }
             TokenKind::Dot => {
                 self.next(); // consumes '.'
                 let rhs = self.parse_expr_with_precedence(precedence)?;
@@ -711,10 +727,19 @@ impl<'a> Parser<'a> {
                     _ => {
                         let rhs = self.parse_expr_with_precedence(precedence)?;
                         let span = merge_spans(&lhs.get_span(), &rhs.get_span());
-                        Expr::Member(Member {
+                        Some(Expr::Member(Member {
                             span,
                             object: Box::new(lhs),
                             property: Box::new(rhs),
+                        }))
+                    }
+                };
+
+                let base = match base {
+                    Some(base) => base,
+                    None => {
+                        return Err(ParseError {
+                            message: "base is None when parsing optional chain".to_string(),
                         })
                     }
                 };
@@ -729,7 +754,7 @@ impl<'a> Parser<'a> {
             _ => panic!("unexpected token: {:?}", token),
         };
 
-        Ok(expr)
+        Ok(Some(expr))
     }
 
     fn parse_inside_parens<T>(
@@ -765,10 +790,12 @@ impl<'a> Parser<'a> {
             } else if next.kind == separator {
                 self.next().unwrap_or(EOF.clone());
             } else {
-                panic!(
-                    "Expected {:?} or {:?}, got {:?}",
-                    separator, terminator, next
-                );
+                return Err(ParseError {
+                    message: format!(
+                        "Expected {:?} or {:?}, got {:?}",
+                        separator, terminator, next
+                    ),
+                });
             }
         }
         Ok(result)
@@ -1159,9 +1186,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse("fn <A: number, B: number> (a: A, b: B): A => a"));
     }
 
-    // TODO: reenable once we're using Result<> for error handling
     #[test]
-    #[ignore]
     fn parse_func_calls_with_type_args() {
         insta::assert_debug_snapshot!(parse("id<number>(5)"));
         insta::assert_debug_snapshot!(parse(r#"fst<number, string>(5, "hello")"#));

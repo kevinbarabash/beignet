@@ -22,14 +22,6 @@ expression: "parse(\"if (foo) { console.log(foo) }\")"
                                     expr: Call(
                                         Call {
                                             span: 11..27,
-                                            args: [
-                                                Ident(
-                                                    Ident {
-                                                        name: "foo",
-                                                        span: 23..26,
-                                                    },
-                                                ),
-                                            ],
                                             callee: Member(
                                                 Member {
                                                     span: 11..22,
@@ -47,6 +39,15 @@ expression: "parse(\"if (foo) { console.log(foo) }\")"
                                                     ),
                                                 },
                                             ),
+                                            type_args: None,
+                                            args: [
+                                                Ident(
+                                                    Ident {
+                                                        name: "foo",
+                                                        span: 23..26,
+                                                    },
+                                                ),
+                                            ],
                                         },
                                     ),
                                 },

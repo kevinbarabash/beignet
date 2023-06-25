@@ -21,20 +21,30 @@ StrTemplateLit {
         Call(
             Call {
                 span: 9..48,
-                args: [
-                    Str(
-                        Str {
-                            span: 43..47,
-                            value: ", ",
-                        },
-                    ),
-                ],
                 callee: Member(
                     Member {
                         span: 9..42,
                         object: Call(
                             Call {
                                 span: 9..37,
+                                callee: Member(
+                                    Member {
+                                        span: 9..16,
+                                        object: Ident(
+                                            Ident {
+                                                name: "ids",
+                                                span: 9..12,
+                                            },
+                                        ),
+                                        property: Ident(
+                                            Ident {
+                                                name: "map",
+                                                span: 13..16,
+                                            },
+                                        ),
+                                    },
+                                ),
+                                type_args: None,
                                 args: [
                                     Function(
                                         Function {
@@ -87,23 +97,6 @@ StrTemplateLit {
                                         },
                                     ),
                                 ],
-                                callee: Member(
-                                    Member {
-                                        span: 9..16,
-                                        object: Ident(
-                                            Ident {
-                                                name: "ids",
-                                                span: 9..12,
-                                            },
-                                        ),
-                                        property: Ident(
-                                            Ident {
-                                                name: "map",
-                                                span: 13..16,
-                                            },
-                                        ),
-                                    },
-                                ),
                             },
                         ),
                         property: Ident(
@@ -114,6 +107,15 @@ StrTemplateLit {
                         ),
                     },
                 ),
+                type_args: None,
+                args: [
+                    Str(
+                        Str {
+                            span: 43..47,
+                            value: ", ",
+                        },
+                    ),
+                ],
             },
         ),
     ],

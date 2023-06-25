@@ -8,7 +8,6 @@ expression: "parse(\"foo\\n.bar()\")"
             expr: Call(
                 Call {
                     span: 0..10,
-                    args: [],
                     callee: Member(
                         Member {
                             span: 0..8,
@@ -26,6 +25,8 @@ expression: "parse(\"foo\\n.bar()\")"
                             ),
                         },
                     ),
+                    type_args: None,
+                    args: [],
                 },
             ),
         },
