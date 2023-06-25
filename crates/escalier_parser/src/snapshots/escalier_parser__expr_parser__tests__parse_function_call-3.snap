@@ -5,6 +5,13 @@ expression: "parse(\"add(obj.x, obj.y)\")"
 Call(
     Call {
         span: 0..17,
+        callee: Ident(
+            Ident {
+                name: "add",
+                span: 0..3,
+            },
+        ),
+        type_args: None,
         args: [
             Member(
                 Member {
@@ -41,11 +48,5 @@ Call(
                 },
             ),
         ],
-        callee: Ident(
-            Ident {
-                name: "add",
-                span: 0..3,
-            },
-        ),
     },
 )

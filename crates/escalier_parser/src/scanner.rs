@@ -1,4 +1,4 @@
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Scanner<'a> {
     cursor: usize,
     column: usize,

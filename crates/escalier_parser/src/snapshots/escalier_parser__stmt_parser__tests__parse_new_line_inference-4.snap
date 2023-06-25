@@ -9,13 +9,14 @@ expression: "parse(\"return\\nfoo()\")"
                 Call(
                     Call {
                         span: 7..12,
-                        args: [],
                         callee: Ident(
                             Ident {
                                 name: "foo",
                                 span: 7..10,
                             },
                         ),
+                        type_args: None,
+                        args: [],
                     },
                 ),
             ),

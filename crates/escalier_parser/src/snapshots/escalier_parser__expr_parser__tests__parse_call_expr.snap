@@ -5,20 +5,6 @@ expression: parse(src)
 Call(
     Call {
         span: 0..15,
-        args: [
-            Num(
-                Num {
-                    span: 9..10,
-                    value: "5",
-                },
-            ),
-            Num(
-                Num {
-                    span: 12..14,
-                    value: "10",
-                },
-            ),
-        ],
         callee: Index(
             Index {
                 span: 0..7,
@@ -36,5 +22,20 @@ Call(
                 ),
             },
         ),
+        type_args: None,
+        args: [
+            Num(
+                Num {
+                    span: 9..10,
+                    value: "5",
+                },
+            ),
+            Num(
+                Num {
+                    span: 12..14,
+                    value: "10",
+                },
+            ),
+        ],
     },
 )

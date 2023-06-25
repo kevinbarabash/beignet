@@ -13,13 +13,14 @@ Try(
                         expr: Call(
                             Call {
                                 span: 35..45,
-                                args: [],
                                 callee: Ident(
                                     Ident {
                                         name: "canThrow",
                                         span: 35..43,
                                     },
                                 ),
+                                type_args: None,
+                                args: [],
                             },
                         ),
                     },
@@ -37,13 +38,14 @@ Try(
                             expr: Call(
                                 Call {
                                     span: 86..95,
-                                    args: [],
                                     callee: Ident(
                                         Ident {
                                             name: "cleanup",
                                             span: 86..93,
                                         },
                                     ),
+                                    type_args: None,
+                                    args: [],
                                 },
                             ),
                         },

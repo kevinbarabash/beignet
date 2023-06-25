@@ -130,8 +130,9 @@ pub struct Function {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Call {
     pub span: Span,
-    pub args: Vec<Expr>,
     pub callee: Box<Expr>,
+    pub type_args: Option<Vec<TypeAnn>>,
+    pub args: Vec<Expr>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

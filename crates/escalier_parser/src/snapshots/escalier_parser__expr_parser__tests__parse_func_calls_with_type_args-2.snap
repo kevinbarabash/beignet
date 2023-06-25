@@ -1,0 +1,41 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(r#\"fst<number, string>(5, \"hello\")\"#)"
+---
+Call(
+    Call {
+        span: 0..31,
+        callee: Ident(
+            Ident {
+                name: "fst",
+                span: 0..3,
+            },
+        ),
+        type_args: Some(
+            [
+                TypeAnn {
+                    kind: Number,
+                    span: 4..10,
+                },
+                TypeAnn {
+                    kind: String,
+                    span: 12..18,
+                },
+            ],
+        ),
+        args: [
+            Num(
+                Num {
+                    span: 20..21,
+                    value: "5",
+                },
+            ),
+            Str(
+                Str {
+                    span: 23..30,
+                    value: "hello",
+                },
+            ),
+        ],
+    },
+)

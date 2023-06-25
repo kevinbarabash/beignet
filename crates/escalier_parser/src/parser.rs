@@ -7,10 +7,11 @@ use crate::scanner::Scanner;
 use crate::span::*;
 use crate::token::*;
 
+#[derive(Debug, Clone)]
 pub struct Parser<'a> {
     pub scanner: Scanner<'a>,
     pub brace_counts: Vec<usize>,
-    peeked: Option<Token>,
+    pub peeked: Option<Token>,
 }
 
 impl<'a> Iterator for Parser<'a> {
@@ -33,6 +34,12 @@ impl<'a> Parser<'a> {
             brace_counts: vec![0], // we need separate brace counts for each mode
             peeked: None,
         }
+    }
+
+    pub fn restore(&mut self, backup: Parser<'a>) {
+        self.scanner = backup.scanner;
+        self.brace_counts = backup.brace_counts;
+        self.peeked = backup.peeked;
     }
 
     pub fn peek(&mut self) -> Option<&Token> {

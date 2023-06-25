@@ -5,6 +5,13 @@ expression: "parse(\"add(5, 10)\")"
 Call(
     Call {
         span: 0..10,
+        callee: Ident(
+            Ident {
+                name: "add",
+                span: 0..3,
+            },
+        ),
+        type_args: None,
         args: [
             Num(
                 Num {
@@ -19,11 +26,5 @@ Call(
                 },
             ),
         ],
-        callee: Ident(
-            Ident {
-                name: "add",
-                span: 0..3,
-            },
-        ),
     },
 )
