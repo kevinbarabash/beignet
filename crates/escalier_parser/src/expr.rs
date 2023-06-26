@@ -1,10 +1,12 @@
+use crate::block::Block;
+use crate::class::Class;
 use crate::func_param::FuncParam;
 use crate::identifier::Ident;
 use crate::jsx::{JSXElement, JSXFragment};
 use crate::pattern::Pattern;
 use crate::span::*;
-use crate::stmt::Stmt;
 use crate::type_ann::TypeAnn;
+use crate::type_param::TypeParam;
 
 // TODO: track source location
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -109,14 +111,6 @@ pub struct Unary {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct TypeParam {
-    pub span: Span,
-    pub t: TypeAnn,
-    pub bound: Option<TypeAnn>,
-    pub default: Option<TypeAnn>,
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Function {
     pub span: Span,
     pub type_params: Option<Vec<TypeParam>>,
@@ -212,6 +206,7 @@ pub enum Expr {
     Binary(Binary),
     Unary(Unary),
     Function(Function),
+    Class(Class),
     Call(Call),
     Member(Member),
     Index(Index),
@@ -245,12 +240,6 @@ pub struct MatchArm {
 pub enum BlockOrExpr {
     Block(Block),
     Expr(Box<Expr>),
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Block {
-    pub span: Span,
-    pub stmts: Vec<Stmt>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -302,6 +291,7 @@ impl Expr {
             Expr::Binary(Binary { span, .. }) => span.to_owned(),
             Expr::Unary(Unary { span, .. }) => span.to_owned(),
             Expr::Function(Function { span, .. }) => span.to_owned(),
+            Expr::Class(Class { span, .. }) => span.to_owned(),
             Expr::Call(Call { span, .. }) => span.to_owned(),
             Expr::Member(Member { span, .. }) => span.to_owned(),
             Expr::Index(Index { span, .. }) => span.to_owned(),

@@ -1,3 +1,5 @@
+mod block;
+mod class;
 mod expr;
 mod expr_parser;
 mod func_param;
@@ -17,5 +19,6 @@ mod stmt_parser;
 mod token;
 mod type_ann;
 mod type_ann_parser;
+mod type_param;
 
 pub use stmt_parser::parse;

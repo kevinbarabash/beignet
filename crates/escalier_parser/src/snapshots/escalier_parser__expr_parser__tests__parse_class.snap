@@ -1,0 +1,81 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(r#\"\n            class {\n                msg: string\n                id = 5\n                foo(self) {}\n            }\n        \"#)"
+---
+Class(
+    Class {
+        span: 13..114,
+        type_params: None,
+        super_class: None,
+        super_type_args: None,
+        body: [
+            Field(
+                Field {
+                    span: 37..67,
+                    name: Ident {
+                        name: "msg",
+                        span: 37..40,
+                    },
+                    type_ann: Some(
+                        TypeAnn {
+                            kind: String,
+                            span: 42..48,
+                        },
+                    ),
+                    init: None,
+                },
+            ),
+            Field(
+                Field {
+                    span: 65..91,
+                    name: Ident {
+                        name: "id",
+                        span: 65..67,
+                    },
+                    type_ann: None,
+                    init: Some(
+                        Num(
+                            Num {
+                                span: 70..71,
+                                value: "5",
+                            },
+                        ),
+                    ),
+                },
+            ),
+            Method(
+                Method {
+                    span: 88..100,
+                    name: Ident {
+                        name: "foo",
+                        span: 88..91,
+                    },
+                    type_params: None,
+                    params: [
+                        FuncParam {
+                            pattern: Pattern {
+                                span: 92..96,
+                                kind: Ident(
+                                    BindingIdent {
+                                        name: "self",
+                                        span: 92..96,
+                                        mutable: false,
+                                    },
+                                ),
+                            },
+                            type_ann: None,
+                            optional: false,
+                        },
+                    ],
+                    body: Block {
+                        span: 97..100,
+                        stmts: [],
+                    },
+                    type_ann: None,
+                    is_async: false,
+                    is_gen: false,
+                },
+            ),
+        ],
+    },
+)

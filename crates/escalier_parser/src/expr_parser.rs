@@ -1,5 +1,7 @@
 // use std::iter::Peekable;
 
+use crate::block::Block;
+use crate::class::*;
 use crate::expr::*;
 use crate::identifier::Ident;
 use crate::parse_error::ParseError;
@@ -7,6 +9,7 @@ use crate::parser::*;
 use crate::precedence::{Associativity, Operator, PRECEDENCE_TABLE};
 use crate::span::*;
 use crate::token::*;
+use crate::type_param::TypeParam;
 
 fn get_prefix_precedence(op: &Token) -> Option<(u8, Associativity)> {
     match &op.kind {
@@ -396,6 +399,55 @@ impl<'a> Parser<'a> {
                     _ => Expr::JSXElement(self.parse_jsx_element()?),
                 }
             }
+            TokenKind::Class => {
+                self.next(); // consumes 'class'
+
+                let super_class = if self.peek().unwrap_or(&EOF).kind == TokenKind::Extends {
+                    self.next(); // consumes 'extends'
+                    let token = self.next().unwrap_or(EOF.clone());
+                    if let TokenKind::Identifier(name) = token.kind {
+                        Some(Ident {
+                            span: token.span,
+                            name,
+                        })
+                    } else {
+                        panic!("expected identifier");
+                    }
+                } else {
+                    None
+                };
+
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::LeftBrace
+                );
+
+                let mut body = vec![]; // TODO
+
+                while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
+                    let member = self.parse_class_member()?;
+                    eprint!("member: {:?}", member);
+                    body.push(member);
+                }
+
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::RightBrace
+                );
+
+                let end = self.scanner.cursor();
+
+                Expr::Class(Class {
+                    span: Span {
+                        start: token.span.start,
+                        end,
+                    },
+                    type_params: None, // TODO
+                    super_class,
+                    super_type_args: None, // TODO
+                    body,
+                })
+            }
             t => {
                 self.next(); // consume the token
                 match get_prefix_precedence(&token) {
@@ -431,6 +483,79 @@ impl<'a> Parser<'a> {
         };
 
         Ok(lhs)
+    }
+
+    fn parse_class_member(&mut self) -> Result<ClassMember, ParseError> {
+        // TODO:
+        // - get/set
+        // - static
+        // - async
+        // - generator
+        // - type annotations
+
+        let token = self.next().unwrap_or(EOF.clone());
+        let start = token.span.start;
+
+        let name = if let TokenKind::Identifier(name) = token.kind {
+            Ident {
+                span: token.span,
+                name,
+            }
+        } else {
+            panic!("expected identifier");
+        };
+
+        let class_member = match self.peek().unwrap_or(&EOF).kind {
+            TokenKind::LeftParen => {
+                let params = self.parse_params()?;
+                let body = self.parse_block()?;
+                let end = self.scanner.cursor();
+
+                let span = Span { start, end };
+
+                ClassMember::Method(Method {
+                    span,
+                    name,
+                    params,
+                    body,
+                    is_async: false,
+                    is_gen: false,
+                    type_params: None,
+                    type_ann: None,
+                })
+            }
+            TokenKind::Colon => {
+                self.next(); // consumes ':'
+                let type_ann = self.parse_type_ann()?;
+                let end = self.scanner.cursor();
+
+                let span = Span { start, end };
+
+                ClassMember::Field(Field {
+                    span,
+                    name,
+                    init: None,
+                    type_ann: Some(type_ann),
+                })
+            }
+            TokenKind::Assign => {
+                self.next(); // consumes '='
+                let init = self.parse_expr()?;
+                let end = self.scanner.cursor();
+
+                let span = Span { start, end };
+
+                ClassMember::Field(Field {
+                    span,
+                    name,
+                    init: Some(Box::new(init)),
+                    type_ann: None,
+                })
+            }
+            _ => panic!("expected '(' or ':' or '='"),
+        };
+
+        Ok(class_member)
     }
 
     fn parse_function(
@@ -1192,5 +1317,18 @@ mod tests {
     fn parse_func_calls_with_type_args() {
         insta::assert_debug_snapshot!(parse("id<number>(5)"));
         insta::assert_debug_snapshot!(parse(r#"fst<number, string>(5, "hello")"#));
+    }
+
+    #[test]
+    fn parse_class() {
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            class {
+                msg: string
+                id = 5
+                foo(self) {}
+            }
+        "#
+        ));
     }
 }
