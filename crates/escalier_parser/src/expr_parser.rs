@@ -1331,4 +1331,15 @@ mod tests {
         "#
         ));
     }
+
+    #[test]
+    fn parse_class_with_extends() {
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            class extends Foo {
+                bar(self) {}
+            }
+        "#
+        ));
+    }
 }

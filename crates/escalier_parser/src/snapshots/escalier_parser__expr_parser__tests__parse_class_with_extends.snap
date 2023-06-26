@@ -1,0 +1,52 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(r#\"\n            class extends Foo {\n                bar(self) {}\n            }\n        \"#)"
+---
+Class(
+    Class {
+        span: 13..75,
+        type_params: None,
+        super_class: Some(
+            Ident {
+                name: "Foo",
+                span: 27..30,
+            },
+        ),
+        super_type_args: None,
+        body: [
+            Method(
+                Method {
+                    span: 49..61,
+                    name: Ident {
+                        name: "bar",
+                        span: 49..52,
+                    },
+                    type_params: None,
+                    params: [
+                        FuncParam {
+                            pattern: Pattern {
+                                span: 53..57,
+                                kind: Ident(
+                                    BindingIdent {
+                                        name: "self",
+                                        span: 53..57,
+                                        mutable: false,
+                                    },
+                                ),
+                            },
+                            type_ann: None,
+                            optional: false,
+                        },
+                    ],
+                    body: Block {
+                        span: 58..61,
+                        stmts: [],
+                    },
+                    type_ann: None,
+                    is_async: false,
+                    is_gen: false,
+                },
+            ),
+        ],
+    },
+)
