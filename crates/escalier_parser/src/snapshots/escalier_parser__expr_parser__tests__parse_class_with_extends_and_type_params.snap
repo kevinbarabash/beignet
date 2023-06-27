@@ -1,0 +1,112 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(r#\"\n            class<T> extends Foo {\n                bar<A>(self, a: A): T {}\n            }\n        \"#)"
+---
+Class(
+    Class {
+        span: 13..90,
+        type_params: Some(
+            [
+                TypeParam {
+                    span: 20..21,
+                    t: TypeAnn {
+                        kind: TypeRef(
+                            "T",
+                            None,
+                        ),
+                        span: 19..20,
+                    },
+                    bound: None,
+                    default: None,
+                },
+            ],
+        ),
+        super_class: Some(
+            Ident {
+                name: "Foo",
+                span: 30..33,
+            },
+        ),
+        super_type_args: None,
+        body: [
+            Method(
+                Method {
+                    span: 52..76,
+                    name: Ident {
+                        name: "bar",
+                        span: 52..55,
+                    },
+                    type_params: Some(
+                        [
+                            TypeParam {
+                                span: 57..58,
+                                t: TypeAnn {
+                                    kind: TypeRef(
+                                        "A",
+                                        None,
+                                    ),
+                                    span: 56..57,
+                                },
+                                bound: None,
+                                default: None,
+                            },
+                        ],
+                    ),
+                    params: [
+                        FuncParam {
+                            pattern: Pattern {
+                                span: 59..63,
+                                kind: Ident(
+                                    BindingIdent {
+                                        name: "self",
+                                        span: 59..63,
+                                        mutable: false,
+                                    },
+                                ),
+                            },
+                            type_ann: None,
+                            optional: false,
+                        },
+                        FuncParam {
+                            pattern: Pattern {
+                                span: 65..66,
+                                kind: Ident(
+                                    BindingIdent {
+                                        name: "a",
+                                        span: 65..66,
+                                        mutable: false,
+                                    },
+                                ),
+                            },
+                            type_ann: Some(
+                                TypeAnn {
+                                    kind: TypeRef(
+                                        "A",
+                                        None,
+                                    ),
+                                    span: 68..69,
+                                },
+                            ),
+                            optional: false,
+                        },
+                    ],
+                    body: Block {
+                        span: 73..76,
+                        stmts: [],
+                    },
+                    type_ann: Some(
+                        TypeAnn {
+                            kind: TypeRef(
+                                "T",
+                                None,
+                            ),
+                            span: 72..73,
+                        },
+                    ),
+                    is_async: false,
+                    is_gen: false,
+                },
+            ),
+        ],
+    },
+)
