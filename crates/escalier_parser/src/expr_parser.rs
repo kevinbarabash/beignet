@@ -1,7 +1,6 @@
 // use std::iter::Peekable;
 
 use crate::block::Block;
-use crate::class::*;
 use crate::expr::*;
 use crate::identifier::Ident;
 use crate::parse_error::ParseError;
@@ -72,7 +71,7 @@ fn get_postfix_precedence(op: &Token) -> Option<(u8, Associativity)> {
 
 impl<'a> Parser<'a> {
     // consumes leading '{' and trailing '}' tokens
-    fn parse_block(&mut self) -> Result<Block, ParseError> {
+    pub fn parse_block(&mut self) -> Result<Block, ParseError> {
         let open = self.next().unwrap_or(EOF.clone());
         assert_eq!(open.kind, TokenKind::LeftBrace);
         let mut stmts = Vec::new();
@@ -242,17 +241,9 @@ impl<'a> Parser<'a> {
                     properties,
                 })
             }
-            TokenKind::Async => {
-                // TODO: move this into parse_function
-                self.next(); // consumes 'async'
-                self.parse_function(&token, true, false)?
-            }
-            TokenKind::Gen => {
-                // TODO: move this into parse_function
-                self.next(); // consumes 'gen'
-                self.parse_function(&token, false, true)?
-            }
-            TokenKind::Fn => self.parse_function(&token, false, false)?,
+            TokenKind::Async => self.parse_function()?,
+            TokenKind::Gen => self.parse_function()?,
+            TokenKind::Fn => self.parse_function()?,
             TokenKind::If => {
                 self.next(); // consumes 'if'
                 let cond = self.parse_inside_parens(|p| p.parse_expr())?;
@@ -400,56 +391,7 @@ impl<'a> Parser<'a> {
                     _ => Expr::JSXElement(self.parse_jsx_element()?),
                 }
             }
-            TokenKind::Class => {
-                self.next(); // consumes 'class'
-
-                let type_params = self.maybe_parse_type_params()?;
-
-                let super_class = if self.peek().unwrap_or(&EOF).kind == TokenKind::Extends {
-                    self.next(); // consumes 'extends'
-                    let token = self.next().unwrap_or(EOF.clone());
-                    if let TokenKind::Identifier(name) = token.kind {
-                        Some(Ident {
-                            span: token.span,
-                            name,
-                        })
-                    } else {
-                        panic!("expected identifier");
-                    }
-                } else {
-                    None
-                };
-
-                assert_eq!(
-                    self.next().unwrap_or(EOF.clone()).kind,
-                    TokenKind::LeftBrace
-                );
-
-                let mut body = vec![];
-
-                while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
-                    let member = self.parse_class_member()?;
-                    body.push(member);
-                }
-
-                assert_eq!(
-                    self.next().unwrap_or(EOF.clone()).kind,
-                    TokenKind::RightBrace
-                );
-
-                let end = self.scanner.cursor();
-
-                Expr::Class(Class {
-                    span: Span {
-                        start: token.span.start,
-                        end,
-                    },
-                    type_params,
-                    super_class,
-                    super_type_args: None, // TODO
-                    body,
-                })
-            }
+            TokenKind::Class => self.parse_class()?,
             t => {
                 self.next(); // consume the token
                 match get_prefix_precedence(&token) {
@@ -487,118 +429,7 @@ impl<'a> Parser<'a> {
         Ok(lhs)
     }
 
-    fn parse_class_member(&mut self) -> Result<ClassMember, ParseError> {
-        // TODO:
-        // - get/set
-        // - static
-        // - async
-        // - generator
-        // - type annotations
-
-        let token = self.next().unwrap_or(EOF.clone());
-        let start = token.span.start;
-
-        let name = if let TokenKind::Identifier(name) = token.kind {
-            Ident {
-                span: token.span,
-                name,
-            }
-        } else {
-            panic!("expected identifier");
-        };
-
-        // TODO: split this into
-        // - parse_method (or parse_property)
-        // - parse_field
-        let class_member = match self.peek().unwrap_or(&EOF).kind {
-            TokenKind::LeftParen => {
-                let params = self.parse_params()?;
-
-                let type_ann = if self.peek().unwrap_or(&EOF).kind == TokenKind::Colon {
-                    self.next(); // consumes ':'
-                    Some(self.parse_type_ann()?)
-                } else {
-                    None
-                };
-
-                let body = self.parse_block()?;
-                let end = self.scanner.cursor();
-
-                let span = Span { start, end };
-
-                ClassMember::Method(Method {
-                    span,
-                    name,
-                    params,
-                    body,
-                    is_async: false,
-                    is_gen: false,
-                    type_params: None,
-                    type_ann,
-                })
-            }
-            TokenKind::LessThan => {
-                let type_params = self.maybe_parse_type_params()?;
-                let params = self.parse_params()?;
-
-                let type_ann = if self.peek().unwrap_or(&EOF).kind == TokenKind::Colon {
-                    self.next(); // consumes ':'
-                    Some(self.parse_type_ann()?)
-                } else {
-                    None
-                };
-
-                let body = self.parse_block()?;
-                let end = self.scanner.cursor();
-
-                let span = Span { start, end };
-
-                ClassMember::Method(Method {
-                    span,
-                    name,
-                    params,
-                    body,
-                    is_async: false,
-                    is_gen: false,
-                    type_params,
-                    type_ann,
-                })
-            }
-            TokenKind::Colon => {
-                self.next(); // consumes ':'
-                let type_ann = self.parse_type_ann()?;
-                let end = self.scanner.cursor();
-
-                let span = Span { start, end };
-
-                ClassMember::Field(Field {
-                    span,
-                    name,
-                    init: None,
-                    type_ann: Some(type_ann),
-                })
-            }
-            TokenKind::Assign => {
-                self.next(); // consumes '='
-                let init = self.parse_expr()?;
-                let end = self.scanner.cursor();
-
-                let span = Span { start, end };
-
-                ClassMember::Field(Field {
-                    span,
-                    name,
-                    init: Some(Box::new(init)),
-                    type_ann: None,
-                })
-            }
-            _ => panic!("expected '(' or ':' or '='"),
-        };
-
-        Ok(class_member)
-    }
-
-    fn maybe_parse_type_params(&mut self) -> Result<Option<Vec<TypeParam>>, ParseError> {
+    pub fn maybe_parse_type_params(&mut self) -> Result<Option<Vec<TypeParam>>, ParseError> {
         if self.peek().unwrap_or(&EOF).kind == TokenKind::LessThan {
             self.next(); // consumes '<'
             let type_params = self.parse_many(
@@ -616,13 +447,24 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_function(
-        &mut self,
-        start: &Token,
-        is_async: bool,
-        is_gen: bool,
-    ) -> Result<Expr, ParseError> {
-        self.next(); // consumes 'fn'
+    fn parse_function(&mut self) -> Result<Expr, ParseError> {
+        let start = self.peek().unwrap_or(&EOF).clone();
+
+        let is_async = if self.peek().unwrap_or(&EOF).kind == TokenKind::Async {
+            self.next(); // consumes 'async'
+            true
+        } else {
+            false
+        };
+
+        let is_gen = if self.peek().unwrap_or(&EOF).kind == TokenKind::Gen {
+            self.next(); // consumes 'gen'
+            true
+        } else {
+            false
+        };
+
+        assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Fn);
 
         let type_params = self.maybe_parse_type_params()?;
         let params = self.parse_params()?;
@@ -1369,7 +1211,7 @@ mod tests {
             class {
                 msg: string
                 id = 5
-                foo(self) {}
+                fn foo(self) {}
             }
         "#
         ));
@@ -1380,7 +1222,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse(
             r#"
             class<T> extends Foo {
-                bar<A>(self, a: A): T {}
+                fn bar<A>(self, a: A): T {}
             }
         "#
         ));
