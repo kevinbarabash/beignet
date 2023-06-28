@@ -1,10 +1,10 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(r#\"\n            class {\n                msg: string\n                id = 5\n                foo(self) {}\n            }\n        \"#)"
+expression: "parse(r#\"\n            class {\n                msg: string\n                id = 5\n                fn foo(self) {}\n            }\n        \"#)"
 ---
 Class(
     Class {
-        span: 13..114,
+        span: 13..117,
         type_params: None,
         super_class: None,
         super_type_args: None,
@@ -27,7 +27,7 @@ Class(
             ),
             Field(
                 Field {
-                    span: 65..91,
+                    span: 65..90,
                     name: Ident {
                         name: "id",
                         span: 65..67,
@@ -45,20 +45,20 @@ Class(
             ),
             Method(
                 Method {
-                    span: 88..100,
+                    span: 88..103,
                     name: Ident {
                         name: "foo",
-                        span: 88..91,
+                        span: 91..94,
                     },
                     type_params: None,
                     params: [
                         FuncParam {
                             pattern: Pattern {
-                                span: 92..96,
+                                span: 95..99,
                                 kind: Ident(
                                     BindingIdent {
                                         name: "self",
-                                        span: 92..96,
+                                        span: 95..99,
                                         mutable: false,
                                     },
                                 ),
@@ -68,7 +68,7 @@ Class(
                         },
                     ],
                     body: Block {
-                        span: 97..100,
+                        span: 100..103,
                         stmts: [],
                     },
                     type_ann: None,
