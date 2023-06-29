@@ -8,7 +8,6 @@ pub enum StmtKind {
     Expr {
         expr: Expr,
     },
-    // TODO: add support for explicit type annotations
     Let {
         pattern: Pattern,
         expr: Expr,
@@ -17,6 +16,10 @@ pub enum StmtKind {
     Return {
         arg: Option<Expr>,
     },
+    // TODO:
+    // - explicit type annotations
+    // - function decls: `fn foo() {}` desugars to `let foo = fn () {}`
+    // - class decls: `class Foo {}` desugars to `let Foo = class {}`
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

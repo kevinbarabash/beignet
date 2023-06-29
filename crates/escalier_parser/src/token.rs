@@ -26,6 +26,8 @@ pub enum TokenKind {
     Let,
     Return,
     Fn,
+    Get,
+    Set,
     Async,
     Await,
     Gen,
@@ -39,6 +41,8 @@ pub enum TokenKind {
     Catch,
     Finally,
     Do,
+    Class,
+    Extends,
 
     // Binary Operators
     Plus,
@@ -64,8 +68,9 @@ pub enum TokenKind {
     ModuloAssign,
 
     // punctuation
-    Semicolon,
+    Colon,
     Comma,
+    Semicolon,
     LeftParen,
     RightParen,
     LeftBrace,
@@ -79,7 +84,6 @@ pub enum TokenKind {
     Dot,
     DotDot,    // used for ranges
     DotDotDot, // used for rest/spread
-    Colon,
 
     Eof,
 }

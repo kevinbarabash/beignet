@@ -250,6 +250,8 @@ impl<'a> Parser<'a> {
         }
         let kind = match ident.as_ref() {
             "fn" => TokenKind::Fn,
+            "get" => TokenKind::Get,
+            "set" => TokenKind::Set,
             "async" => TokenKind::Async,
             "await" => TokenKind::Await,
             "gen" => TokenKind::Gen,
@@ -262,6 +264,8 @@ impl<'a> Parser<'a> {
             "catch" => TokenKind::Catch,
             "finally" => TokenKind::Finally,
             "do" => TokenKind::Do,
+            "class" => TokenKind::Class,
+            "extends" => TokenKind::Extends,
             "return" => TokenKind::Return,
             "if" => TokenKind::If,
             "else" => TokenKind::Else,

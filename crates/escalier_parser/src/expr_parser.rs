@@ -1,5 +1,6 @@
 // use std::iter::Peekable;
 
+use crate::block::Block;
 use crate::expr::*;
 use crate::identifier::Ident;
 use crate::parse_error::ParseError;
@@ -7,6 +8,7 @@ use crate::parser::*;
 use crate::precedence::{Associativity, Operator, PRECEDENCE_TABLE};
 use crate::span::*;
 use crate::token::*;
+use crate::type_param::TypeParam;
 
 fn get_prefix_precedence(op: &Token) -> Option<(u8, Associativity)> {
     match &op.kind {
@@ -62,7 +64,6 @@ fn get_postfix_precedence(op: &Token) -> Option<(u8, Associativity)> {
         TokenKind::LeftParen => PRECEDENCE_TABLE.get(&Operator::FunctionCall).cloned(),
         TokenKind::Dot => PRECEDENCE_TABLE.get(&Operator::MemberAccess).cloned(),
         TokenKind::QuestionDot => PRECEDENCE_TABLE.get(&Operator::OptionalChaining).cloned(),
-        // TODO: re-enable once we're using Result for error handling
         TokenKind::LessThan => PRECEDENCE_TABLE.get(&Operator::LessThan).cloned(),
         _ => None,
     }
@@ -70,7 +71,7 @@ fn get_postfix_precedence(op: &Token) -> Option<(u8, Associativity)> {
 
 impl<'a> Parser<'a> {
     // consumes leading '{' and trailing '}' tokens
-    fn parse_block(&mut self) -> Result<Block, ParseError> {
+    pub fn parse_block(&mut self) -> Result<Block, ParseError> {
         let open = self.next().unwrap_or(EOF.clone());
         assert_eq!(open.kind, TokenKind::LeftBrace);
         let mut stmts = Vec::new();
@@ -240,15 +241,9 @@ impl<'a> Parser<'a> {
                     properties,
                 })
             }
-            TokenKind::Async => {
-                self.next(); // consumes 'async'
-                self.parse_function(&token, true, false)?
-            }
-            TokenKind::Gen => {
-                self.next(); // consumes 'gen'
-                self.parse_function(&token, false, true)?
-            }
-            TokenKind::Fn => self.parse_function(&token, false, false)?,
+            TokenKind::Async => self.parse_function()?,
+            TokenKind::Gen => self.parse_function()?,
+            TokenKind::Fn => self.parse_function()?,
             TokenKind::If => {
                 self.next(); // consumes 'if'
                 let cond = self.parse_inside_parens(|p| p.parse_expr())?;
@@ -396,6 +391,7 @@ impl<'a> Parser<'a> {
                     _ => Expr::JSXElement(self.parse_jsx_element()?),
                 }
             }
+            TokenKind::Class => self.parse_class()?,
             t => {
                 self.next(); // consume the token
                 match get_prefix_precedence(&token) {
@@ -433,15 +429,8 @@ impl<'a> Parser<'a> {
         Ok(lhs)
     }
 
-    fn parse_function(
-        &mut self,
-        start: &Token,
-        is_async: bool,
-        is_gen: bool,
-    ) -> Result<Expr, ParseError> {
-        self.next(); // consumes 'fn'
-
-        let type_params = if self.peek().unwrap_or(&EOF).kind == TokenKind::LessThan {
+    pub fn maybe_parse_type_params(&mut self) -> Result<Option<Vec<TypeParam>>, ParseError> {
+        if self.peek().unwrap_or(&EOF).kind == TokenKind::LessThan {
             self.next(); // consumes '<'
             let type_params = self.parse_many(
                 |p| p.parse_type_param(),
@@ -452,11 +441,32 @@ impl<'a> Parser<'a> {
                 self.next().unwrap_or(EOF.clone()).kind,
                 TokenKind::GreaterThan
             );
-            Some(type_params)
+            Ok(Some(type_params))
         } else {
-            None
+            Ok(None)
+        }
+    }
+
+    fn parse_function(&mut self) -> Result<Expr, ParseError> {
+        let start = self.peek().unwrap_or(&EOF).clone();
+
+        let is_async = if self.peek().unwrap_or(&EOF).kind == TokenKind::Async {
+            self.next(); // consumes 'async'
+            true
+        } else {
+            false
         };
 
+        let is_gen = if self.peek().unwrap_or(&EOF).kind == TokenKind::Gen {
+            self.next(); // consumes 'gen'
+            true
+        } else {
+            false
+        };
+
+        assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Fn);
+
+        let type_params = self.maybe_parse_type_params()?;
         let params = self.parse_params()?;
 
         let type_ann = match self.peek().unwrap_or(&EOF).kind {
@@ -1192,5 +1202,43 @@ mod tests {
     fn parse_func_calls_with_type_args() {
         insta::assert_debug_snapshot!(parse("id<number>(5)"));
         insta::assert_debug_snapshot!(parse(r#"fst<number, string>(5, "hello")"#));
+    }
+
+    #[test]
+    fn parse_class() {
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            class {
+                msg: string
+                id = 5
+                fn foo(self) {}
+                async fn fetch(self, url: string) {}
+                gen fn [Symbol.iterator](self) {}
+            }
+        "#
+        ));
+    }
+
+    #[test]
+    fn parse_getters_setters() {
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            class {
+                get foo(self) {}
+                set foo(self, value) {}
+            }
+        "#
+        ));
+    }
+
+    #[test]
+    fn parse_class_with_extends_and_type_params() {
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            class<T> extends Foo {
+                fn bar<A>(self, a: A): T {}
+            }
+        "#
+        ));
     }
 }
