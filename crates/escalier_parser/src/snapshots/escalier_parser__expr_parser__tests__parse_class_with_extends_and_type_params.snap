@@ -32,10 +32,12 @@ Class(
             Method(
                 Method {
                     span: 52..79,
-                    name: Ident {
-                        name: "bar",
-                        span: 55..58,
-                    },
+                    name: Ident(
+                        Ident {
+                            name: "bar",
+                            span: 55..58,
+                        },
+                    ),
                     type_params: Some(
                         [
                             TypeParam {

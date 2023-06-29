@@ -1212,6 +1212,8 @@ mod tests {
                 msg: string
                 id = 5
                 fn foo(self) {}
+                async fn fetch(self, url: string) {}
+                gen fn [Symbol.iterator](self) {}
             }
         "#
         ));

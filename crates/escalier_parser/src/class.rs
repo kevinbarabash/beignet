@@ -1,5 +1,5 @@
 use crate::block::Block;
-use crate::expr::Expr;
+use crate::expr::*;
 use crate::func_param::FuncParam;
 use crate::identifier::Ident;
 use crate::parse_error::ParseError;
@@ -22,13 +22,21 @@ pub struct Class {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Method {
     pub span: Span,
-    pub name: Ident,
+    pub name: PropName,
     pub type_params: Option<Vec<TypeParam>>,
     pub params: Vec<FuncParam>,
     pub body: Block,
     pub type_ann: Option<TypeAnn>, // return type
     pub is_async: bool,
     pub is_gen: bool,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum PropName {
+    Ident(Ident),
+    // Str(Str),
+    // Num(Num),
+    Computed(Expr),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -193,15 +201,29 @@ impl<'a> Parser<'a> {
 
         assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Fn);
 
-        // TODO: extract into `parse_ident()` method
         let next = self.next().unwrap_or(EOF.clone());
-        let name = if let TokenKind::Identifier(name) = next.kind {
-            Ident {
+        let name = match &next.kind {
+            TokenKind::Identifier(ident) => PropName::Ident(Ident {
                 span: next.span,
-                name,
+                name: ident.to_owned(),
+            }),
+            // TokenKind::NumLit(num) => PropName::Num(Num {
+            //     span: next.span,
+            //     value: num.to_owned(),
+            // }),
+            // TokenKind::StrLit(str) => PropName::Str(Str {
+            //     span: next.span,
+            //     value: str.to_owned(),
+            // }),
+            TokenKind::LeftBracket => {
+                let expr = self.parse_expr()?;
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::RightBracket
+                );
+                PropName::Computed(expr)
             }
-        } else {
-            panic!("expected identifier");
+            _ => panic!("expected identifier or computed property name"),
         };
 
         let type_params = self.maybe_parse_type_params()?;
@@ -233,22 +255,3 @@ impl<'a> Parser<'a> {
         Ok(method)
     }
 }
-
-/*
-let Foo = class {
-    field: number
-
-    fn constructor(self) {}
-
-    fn foo(self) {}
-    fn bar(mut self) {}
-
-    fn baz() {} // static method
-}
-
-fn foo() {
-    let foo = Foo {
-        field: 42,
-    }
-}
- */
