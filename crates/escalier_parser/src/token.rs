@@ -26,6 +26,8 @@ pub enum TokenKind {
     Let,
     Return,
     Fn,
+    Get,
+    Set,
     Async,
     Await,
     Gen,

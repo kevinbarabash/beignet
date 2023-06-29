@@ -32,6 +32,24 @@ pub struct Method {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Getter {
+    pub span: Span,
+    pub name: PropName,
+    pub type_ann: Option<TypeAnn>,
+    pub params: Vec<FuncParam>, // should only contain `self` param
+    pub body: Block,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Setter {
+    pub span: Span,
+    pub name: PropName,
+    pub type_ann: Option<TypeAnn>, // should always be `void`
+    pub params: Vec<FuncParam>,    // should only contain `self`, `value` params
+    pub body: Block,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum PropName {
     Ident(Ident),
     // Str(Str),
@@ -57,6 +75,8 @@ pub struct Field {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ClassMember {
     Method(Method),
+    Getter(Getter),
+    Setter(Setter),
     Constructor(Constructor),
     Field(Field), // TODO: rename to property?
 }
@@ -130,6 +150,8 @@ impl<'a> Parser<'a> {
             TokenKind::Fn => self.parse_method(),
             TokenKind::Gen => self.parse_method(),
             TokenKind::Async => self.parse_method(),
+            TokenKind::Get => self.parse_getter(),
+            TokenKind::Set => self.parse_setter(),
             _ => panic!("unexpected token {:?}", token),
         }
     }
@@ -182,6 +204,52 @@ impl<'a> Parser<'a> {
         Ok(field)
     }
 
+    fn parse_getter(&mut self) -> Result<ClassMember, ParseError> {
+        let token = self.next().unwrap_or(EOF.clone());
+        assert_eq!(token.kind, TokenKind::Get);
+        let start = token.span.start;
+
+        let name = self.parse_name()?;
+        let params = self.parse_params()?;
+        let body = self.parse_block()?;
+
+        let getter = ClassMember::Getter(Getter {
+            span: Span {
+                start,
+                end: self.scanner.cursor(),
+            },
+            name,
+            type_ann: None,
+            params,
+            body,
+        });
+
+        Ok(getter)
+    }
+
+    fn parse_setter(&mut self) -> Result<ClassMember, ParseError> {
+        let token = self.next().unwrap_or(EOF.clone());
+        assert_eq!(token.kind, TokenKind::Set);
+        let start = token.span.start;
+
+        let name = self.parse_name()?;
+        let params = self.parse_params()?;
+        let body = self.parse_block()?;
+
+        let setter = ClassMember::Setter(Setter {
+            span: Span {
+                start,
+                end: self.scanner.cursor(),
+            },
+            name,
+            type_ann: None,
+            params,
+            body,
+        });
+
+        Ok(setter)
+    }
+
     fn parse_method(&mut self) -> Result<ClassMember, ParseError> {
         let start = self.peek().unwrap_or(&EOF).span.start;
 
@@ -201,6 +269,36 @@ impl<'a> Parser<'a> {
 
         assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Fn);
 
+        let name = self.parse_name()?;
+        let type_params = self.maybe_parse_type_params()?;
+        let params = self.parse_params()?;
+        let type_ann = if self.peek().unwrap_or(&EOF).kind == TokenKind::Colon {
+            self.next(); // consumes ':'
+            Some(self.parse_type_ann()?)
+        } else {
+            None
+        };
+
+        let body = self.parse_block()?;
+        let end = self.scanner.cursor();
+
+        let span = Span { start, end };
+
+        let method = ClassMember::Method(Method {
+            span,
+            name,
+            params,
+            body,
+            is_async,
+            is_gen,
+            type_params,
+            type_ann,
+        });
+
+        Ok(method)
+    }
+
+    fn parse_name(&mut self) -> Result<PropName, ParseError> {
         let next = self.next().unwrap_or(EOF.clone());
         let name = match &next.kind {
             TokenKind::Identifier(ident) => PropName::Ident(Ident {
@@ -226,32 +324,6 @@ impl<'a> Parser<'a> {
             _ => panic!("expected identifier or computed property name"),
         };
 
-        let type_params = self.maybe_parse_type_params()?;
-        let params = self.parse_params()?;
-
-        let type_ann = if self.peek().unwrap_or(&EOF).kind == TokenKind::Colon {
-            self.next(); // consumes ':'
-            Some(self.parse_type_ann()?)
-        } else {
-            None
-        };
-
-        let body = self.parse_block()?;
-        let end = self.scanner.cursor();
-
-        let span = Span { start, end };
-
-        let method = ClassMember::Method(Method {
-            span,
-            name,
-            params,
-            body,
-            is_async,
-            is_gen,
-            type_params,
-            type_ann,
-        });
-
-        Ok(method)
+        Ok(name)
     }
 }

@@ -1220,6 +1220,18 @@ mod tests {
     }
 
     #[test]
+    fn parse_getters_setters() {
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            class {
+                get foo(self) {}
+                set foo(self, value) {}
+            }
+        "#
+        ));
+    }
+
+    #[test]
     fn parse_class_with_extends_and_type_params() {
         insta::assert_debug_snapshot!(parse(
             r#"
