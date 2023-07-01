@@ -1383,7 +1383,7 @@ fn codegen_if_let() -> Result<(), Vec<TypeError>> {
     let $temp_0;
     const $temp_1 = p;
     {
-        const { x , y  } = $temp_1;
+        const { x, y } = $temp_1;
         $temp_0 = x + y;
     }$temp_0;
     "###);
@@ -1420,7 +1420,7 @@ fn codegen_if_let_with_rename() -> Result<(), Vec<TypeError>> {
     let $temp_0;
     const $temp_1 = p;
     {
-        const { x: a , y: b  } = $temp_1;
+        const { x: a, y: b } = $temp_1;
         $temp_0 = a + b;
     }$temp_0;
     "###);
@@ -1479,7 +1479,7 @@ fn infer_if_let_refutable_pattern_obj() -> Result<(), Vec<TypeError>> {
     let $temp_0;
     const $temp_1 = p;
     if ($temp_1.x === 5) {
-        const { y  } = $temp_1;
+        const { y } = $temp_1;
         $temp_0 = y;
     }
     $temp_0;
@@ -1520,7 +1520,7 @@ fn infer_if_let_refutable_pattern_nested_obj() -> Result<(), Vec<TypeError>> {
     let $temp_0;
     const $temp_1 = action;
     if ($temp_1.type === "moveto") {
-        const { point: { x , y  }  } = $temp_1;
+        const { point: { x, y } } = $temp_1;
         $temp_0 = x + y;
     }
     $temp_0;
@@ -1562,7 +1562,7 @@ fn infer_if_let_refutable_pattern_with_disjoint_union() -> Result<(), Vec<TypeEr
     let $temp_0;
     const $temp_1 = action;
     if ($temp_1.type === "moveto") {
-        const { point: { x , y  }  } = $temp_1;
+        const { point: { x, y } } = $temp_1;
         $temp_0 = x + y;
     }
     $temp_0;

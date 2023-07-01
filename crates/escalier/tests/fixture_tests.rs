@@ -138,7 +138,11 @@ fn compile(input: &str, lib: &str) -> (String, String, String, String) {
                 js,
                 srcmap,
                 "".to_string(),
-                all_reports_to_string(input, &checker) + &type_errors_to_string(&errors, input),
+                format!(
+                    "{}{}",
+                    all_reports_to_string(input, &checker),
+                    type_errors_to_string(&errors, input),
+                ),
             );
         }
     };
@@ -150,8 +154,11 @@ fn compile(input: &str, lib: &str) -> (String, String, String, String) {
                 js,
                 srcmap,
                 "".to_string(),
-                report_to_string(input, &checker.current_report)
-                    + &type_errors_to_string(&errors, input),
+                format!(
+                    "{}{}",
+                    report_to_string(input, &checker.current_report),
+                    type_errors_to_string(&errors, input),
+                ),
             );
         }
     };

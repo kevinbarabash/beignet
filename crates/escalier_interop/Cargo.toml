@@ -8,12 +8,12 @@ edition = "2021"
 [dependencies]
 defaultmap = "0.5.0"
 derive-visitor = "0.3.0"
-swc_atoms = "0.4.21"
-swc_ecma_ast = "0.95.4"
-swc_ecma_parser = "0.123.7"
-swc_common = "0.29.8"
-swc_ecma_visit = "0.81.4"
-memoize = "0.3.0"
+swc_atoms = "0.5.6"
+swc_ecma_ast = "0.107.0"
+swc_ecma_parser = "0.137.1"
+swc_common = "0.31.12"
+swc_ecma_visit = "0.93.0"
+memoize = "0.4.0"
 escalier_ast = { version = "0.1.0", path = "../escalier_ast" }
 escalier_infer = { version = "0.1.0", path = "../escalier_infer" }
 

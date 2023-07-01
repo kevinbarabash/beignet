@@ -847,6 +847,7 @@ pub fn parse_dts(d_ts_source: &str) -> Result<escalier_infer::Checker, Error> {
             dts: true,
             decorators: false,
             no_early_errors: false,
+            disallow_ambiguous_jsx_like: false,
         }),
         EsVersion::Es2020,
         Some(&comments),

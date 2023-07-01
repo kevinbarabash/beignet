@@ -14,9 +14,9 @@ tree-sitter = "0.20.8"
 tree_sitter_escalier = { version = "0.1.0", path = "../tree_sitter_escalier" }
 unescape = "0.1.0"
 # TODO: hide these behind a feature and then only use that feature in the codegen crate
-swc_atoms = "0.4.21"
-swc_common = "0.29.8"
-swc_ecma_ast = "0.95.4"
+swc_atoms = "0.5.6"
+swc_common = "0.31.16"
+swc_ecma_ast = "0.107.0"
 
 [dev-dependencies]
 insta = "1.13.0"

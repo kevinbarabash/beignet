@@ -46,7 +46,8 @@ pub fn codegen_js(src: &str, program: &values::Program) -> (String, String) {
     // The call to Mark::new() must be wrapped in a GLOBALS.set() closure
     GLOBALS.set(&globals, || {
         let top_level_mark = Mark::new();
-        let mut v = react(cm, comments, options, top_level_mark);
+        let unresolved_mark = Mark::new();
+        let mut v = react(cm, comments, options, top_level_mark, unresolved_mark);
         let program = program.fold_with(&mut v);
         print_js(src, &program)
     })
@@ -131,8 +132,8 @@ fn build_js(program: &values::Program, ctx: &mut Context) -> Program {
 
                 values::StmtKind::ForStmt(for_stmt) => ModuleItem::Stmt(Stmt::ForOf(ForOfStmt {
                     span: DUMMY_SP,
-                    await_token: None,
-                    left: VarDeclOrPat::VarDecl(Box::from(build_var_decl(
+                    is_await: false,
+                    left: ForHead::VarDecl(Box::from(build_var_decl(
                         &for_stmt.pattern,
                         None,
                         &mut stmts,
@@ -382,7 +383,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
             Expr::Arrow(ArrowExpr {
                 span,
                 params,
-                body,
+                body: Box::new(body),
                 is_async: is_async.to_owned(),
                 is_generator: false,
                 type_params: None,
@@ -598,7 +599,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                 tag: Box::from(Expr::Ident(Ident::from(tag))),
                 type_params: None, // TODO: support type params on tagged templates
 
-                tpl: build_template_literal(template, stmts, ctx),
+                tpl: Box::new(build_template_literal(template, stmts, ctx)),
             })
         }
         values::ExprKind::Match(values::Match { expr, arms, .. }) => {
@@ -774,8 +775,8 @@ fn build_body_block_stmt(
             values::StmtKind::ForStmt(for_stmt) => {
                 let stmt = Stmt::ForOf(ForOfStmt {
                     span: DUMMY_SP,
-                    await_token: None,
-                    left: VarDeclOrPat::VarDecl(Box::from(build_var_decl(
+                    is_await: false,
+                    left: ForHead::VarDecl(Box::from(build_var_decl(
                         &for_stmt.pattern,
                         None,
                         &mut new_stmts,

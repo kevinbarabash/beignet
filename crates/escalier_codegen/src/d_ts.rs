@@ -57,6 +57,7 @@ fn build_type_params_from_type_params(
                         name: build_ident(&type_param.name),
                         is_in: false,
                         is_out: false,
+                        is_const: false, // TODO: find ways to leverage this
                         constraint,
                         default: None, // TODO
                     }
@@ -567,6 +568,7 @@ pub fn build_type(t: &Type, type_params: Option<&TsTypeParamDecl>, scope: &Scope
                     name: build_ident(&type_param.name),
                     is_in: true,
                     is_out: false,
+                    is_const: false, // TODO: find ways to leverage this
                     constraint: type_param.constraint.as_ref().map(|constraint| {
                         Box::from(build_type(
                             &constraint.as_ref().to_owned(),
@@ -607,6 +609,7 @@ pub fn build_type(t: &Type, type_params: Option<&TsTypeParamDecl>, scope: &Scope
                 },
                 is_in: false,
                 is_out: false,
+                is_const: false, // TODO: find ways to leverage this
                 constraint: None,
                 default: None,
             },

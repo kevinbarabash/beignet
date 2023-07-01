@@ -160,10 +160,10 @@ fn pattern_matching_with_disjoint_union() {
     let $temp_0;
     const $temp_1 = event;
     if ($temp_1.type === "mousedown") {
-        const { x , y  } = $temp_1;
+        const { x, y } = $temp_1;
         $temp_0 = `mousedown: (${x}, ${y})`;
     } else if ($temp_1.type === "keydown" && key !== "Escape") {
-        const { key  } = $temp_1;
+        const { key } = $temp_1;
         $temp_0 = key;
     }
     export const result = $temp_0;
@@ -360,7 +360,7 @@ fn codegen_if_let_with_rename() {
         y: 10
     };
     {
-        const { x: a , y: b  } = $temp_1;
+        const { x: a, y: b } = $temp_1;
         $temp_0 = a + b;
     }export const result = $temp_0;
     "###);
@@ -387,7 +387,7 @@ fn codegen_if_let_refutable_pattern_nested_obj() {
     let $temp_0;
     const $temp_1 = action;
     if ($temp_1.type === "moveto") {
-        const { point: { x , y  }  } = $temp_1;
+        const { point: { x, y } } = $temp_1;
         $temp_0 = x + y;
     }
     $temp_0;
@@ -452,7 +452,7 @@ fn destructuring_function_object_params() -> Result<(), Vec<TypeError>> {
     "#;
     let (js, _) = compile(src);
 
-    insta::assert_snapshot!(js, @"export const foo = ({ x , y: b  })=>x + b;
+    insta::assert_snapshot!(js, @"export const foo = ({ x, y: b })=>x + b;
 ");
 
     let mut program = parse(src).unwrap();
@@ -461,7 +461,7 @@ fn destructuring_function_object_params() -> Result<(), Vec<TypeError>> {
     let result = codegen_d_ts(&program, &checker.current_scope)?;
 
     insta::assert_snapshot!(result, @r###"
-    export declare const foo: ({ x , y: b  }: {
+    export declare const foo: ({ x, y: b }: {
         readonly x: number;
         readonly y: number;
     }) => number;
