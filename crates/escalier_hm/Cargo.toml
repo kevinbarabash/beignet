@@ -10,6 +10,8 @@ defaultmap = "0.5.0"
 generational-arena = "0.2.8"
 itertools = "0.10.5"
 im = "15.1.0"
+escalier_ast = { version = "0.1.0", path = "../escalier_ast" }
+escalier_parser = { version = "0.1.0", path = "../escalier_parser" }
 tree-sitter = "0.20.8"
 tree_sitter_escalier = { version = "0.1.0", path = "../tree_sitter_escalier" }
 unescape = "0.1.0"

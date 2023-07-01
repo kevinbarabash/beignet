@@ -408,6 +408,8 @@ name = "escalier_hm"
 version = "0.1.0"
 dependencies = [
  "defaultmap",
+ "escalier_ast",
+ "escalier_parser",
  "generational-arena",
  "im",
  "insta",

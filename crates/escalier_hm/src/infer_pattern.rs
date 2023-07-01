@@ -1,7 +1,8 @@
 use generational_arena::{Arena, Index};
 use std::collections::HashMap;
 
-use crate::ast::{self, *};
+use escalier_ast::{self as ast, *};
+
 use crate::context::{get_type, Context};
 use crate::errors::*;
 use crate::types::{self, *};
@@ -163,8 +164,7 @@ pub fn pattern_to_tpat(pattern: &Pattern) -> TPat {
         PatternKind::Ident(binding_ident) => TPat::Ident(ast::BindingIdent {
             name: binding_ident.name.to_owned(),
             mutable: binding_ident.mutable.to_owned(),
-            loc: DUMMY_LOC,
-            span: 0..0,
+            span: Span { start: 0, end: 0 },
         }),
         PatternKind::Rest(e_rest) => TPat::Rest(types::RestPat {
             arg: Box::from(pattern_to_tpat(e_rest.arg.as_ref())),

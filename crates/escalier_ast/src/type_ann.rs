@@ -1,11 +1,7 @@
-// TODO:
-// - methods, callables, indexers, mapped types
-// - typeof, keyof, etc.
-// - conditional types
-
 use crate::func_param::FuncParam;
 use crate::span::*;
 
+// TODO: methods, callables, indexers, mapped types
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ObjectProp {
     pub name: String,
@@ -14,6 +10,7 @@ pub struct ObjectProp {
     pub type_ann: TypeAnn,
 }
 
+// TODO: typeof, keyof, conditional types
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TypeAnnKind {
     BoolLit(bool),
@@ -30,6 +27,8 @@ pub enum TypeAnnKind {
     Array(Box<TypeAnn>),
     TypeRef(String, Option<Vec<TypeAnn>>),
     Function(Vec<FuncParam>, Box<TypeAnn>),
+    Union(Vec<TypeAnn>),
+    Intersection(Vec<TypeAnn>),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

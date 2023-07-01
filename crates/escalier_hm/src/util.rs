@@ -1,7 +1,8 @@
 use generational_arena::{Arena, Index};
 use std::collections::HashMap;
 
-use crate::ast::{Lit, Num, SourceLocation, Str};
+use escalier_ast::Literal as Lit;
+
 use crate::context::*;
 use crate::errors::*;
 use crate::types::*;
@@ -202,14 +203,7 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
                         TPropKey::StringKey(value) => value,
                         TPropKey::NumberKey(value) => value,
                     };
-                    keys.push(new_lit_type(
-                        arena,
-                        &Lit::Str(Str {
-                            value: name.to_owned(),
-                            loc: SourceLocation::default(),
-                            span: 0..0,
-                        }),
-                    ));
+                    keys.push(new_lit_type(arena, &Lit::String(name.to_owned())));
                 }
             }
 
@@ -243,7 +237,7 @@ pub fn get_computed_member(
         // tuple[1]; // "hello"
         TypeKind::Constructor(tuple) if tuple.name == "@@tuple" => {
             match &key_type.kind {
-                TypeKind::Literal(Lit::Num(Num { value, .. })) => {
+                TypeKind::Literal(Lit::Number(value)) => {
                     let index: usize = str::parse(value).map_err(|_| {
                         Errors::InferenceError(format!("{} isn't a valid index", value))
                     })?;
@@ -256,7 +250,7 @@ pub fn get_computed_member(
                         tuple.types.len()
                     )))
                 }
-                TypeKind::Literal(Lit::Str(_)) => {
+                TypeKind::Literal(Lit::String(_)) => {
                     // TODO: look up methods on the `Array` interface
                     // we need to instantiate the scheme such that `T` is equal
                     // to the union of all types in the tuple
@@ -407,7 +401,7 @@ pub fn get_prop(
                     )))
                 }
             }
-            TypeKind::Literal(Lit::Str(Str { value: name, .. })) => {
+            TypeKind::Literal(Lit::String(name)) => {
                 let mut maybe_index: Option<&TIndex> = None;
                 for prop in &object.props {
                     match prop {
@@ -467,7 +461,7 @@ pub fn get_prop(
                     )))
                 }
             }
-            TypeKind::Literal(Lit::Num(Num { value: name, .. })) => {
+            TypeKind::Literal(Lit::Number(name)) => {
                 let mut maybe_index: Option<&TIndex> = None;
                 for prop in &object.props {
                     if let TObjElem::Index(index) = prop {

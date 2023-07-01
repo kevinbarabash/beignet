@@ -273,6 +273,7 @@ pub enum BinaryOp {
 pub enum UnaryOp {
     Plus,
     Minus,
+    Not,
 }
 
 impl Expr {
