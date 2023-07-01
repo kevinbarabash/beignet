@@ -5,4 +5,5 @@ expression: "parse(\"symbol\")"
 TypeAnn {
     kind: Symbol,
     span: 0..6,
+    inferred_type: None,
 }

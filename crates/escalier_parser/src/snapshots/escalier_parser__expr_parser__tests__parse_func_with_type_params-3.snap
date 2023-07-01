@@ -9,34 +9,38 @@ Expr {
                 [
                     TypeParam {
                         span: 5..14,
-                        t: TypeAnn {
+                        type_ann: TypeAnn {
                             kind: TypeRef(
                                 "A",
                                 None,
                             ),
                             span: 4..5,
+                            inferred_type: None,
                         },
                         bound: Some(
                             TypeAnn {
                                 kind: Number,
                                 span: 7..13,
+                                inferred_type: None,
                             },
                         ),
                         default: None,
                     },
                     TypeParam {
                         span: 16..25,
-                        t: TypeAnn {
+                        type_ann: TypeAnn {
                             kind: TypeRef(
                                 "B",
                                 None,
                             ),
                             span: 15..16,
+                            inferred_type: None,
                         },
                         bound: Some(
                             TypeAnn {
                                 kind: Number,
                                 span: 18..24,
+                                inferred_type: None,
                             },
                         ),
                         default: None,
@@ -63,6 +67,7 @@ Expr {
                                 None,
                             ),
                             span: 30..31,
+                            inferred_type: None,
                         },
                     ),
                     optional: false,
@@ -86,6 +91,7 @@ Expr {
                                 None,
                             ),
                             span: 36..37,
+                            inferred_type: None,
                         },
                     ),
                     optional: false,
@@ -110,6 +116,7 @@ Expr {
                         None,
                     ),
                     span: 40..41,
+                    inferred_type: None,
                 },
             ),
             is_async: false,

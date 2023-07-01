@@ -48,6 +48,7 @@ Expr {
                                 None,
                             ),
                             span: 12..17,
+                            inferred_type: None,
                         },
                     ),
                     optional: false,
@@ -100,6 +101,7 @@ Expr {
                 TypeAnn {
                     kind: Number,
                     span: 20..26,
+                    inferred_type: None,
                 },
             ),
             is_async: false,

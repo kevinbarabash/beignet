@@ -68,6 +68,7 @@ expression: "parse(r#\"let y: number = m*x + b\"#)"
                 TypeAnn {
                     kind: Number,
                     span: 7..13,
+                    inferred_type: None,
                 },
             ),
         },

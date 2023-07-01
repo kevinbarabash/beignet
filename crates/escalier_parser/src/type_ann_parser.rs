@@ -108,7 +108,12 @@ impl<'a> Parser<'a> {
                 assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Arrow);
                 let return_type = self.parse_type_ann()?;
 
-                TypeAnnKind::Function(params, Box::new(return_type))
+                // TODO: handle generics
+                TypeAnnKind::Function(FunctionType {
+                    type_params: None,
+                    params,
+                    ret: Box::new(return_type),
+                })
             }
             token => {
                 panic!("expected token to start type annotation, found {:?}", token)
@@ -123,11 +128,19 @@ impl<'a> Parser<'a> {
                 self.next().unwrap_or(EOF.clone()).kind,
                 TokenKind::RightBracket
             );
-            kind = TypeAnnKind::Array(Box::new(TypeAnn { kind, span }));
+            kind = TypeAnnKind::Array(Box::new(TypeAnn {
+                kind,
+                span,
+                inferred_type: None,
+            }));
             span = merged_span;
         }
 
-        Ok(TypeAnn { kind, span })
+        Ok(TypeAnn {
+            kind,
+            span,
+            inferred_type: None,
+        })
     }
 }
 

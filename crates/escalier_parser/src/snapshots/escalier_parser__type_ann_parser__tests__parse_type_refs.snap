@@ -13,9 +13,11 @@ TypeAnn {
                         None,
                     ),
                     span: 6..7,
+                    inferred_type: None,
                 },
             ],
         ),
     ),
     span: 0..8,
+    inferred_type: None,
 }

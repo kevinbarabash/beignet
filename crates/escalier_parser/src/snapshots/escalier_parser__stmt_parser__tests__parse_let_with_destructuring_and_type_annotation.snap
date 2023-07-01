@@ -55,6 +55,7 @@ expression: "parse(r#\"let {x, y}: Point = point\"#)"
                         None,
                     ),
                     span: 12..17,
+                    inferred_type: None,
                 },
             ),
         },

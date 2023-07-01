@@ -20,6 +20,7 @@ Expr {
                     TypeAnn {
                         kind: Number,
                         span: 3..9,
+                        inferred_type: None,
                     },
                 ],
             ),

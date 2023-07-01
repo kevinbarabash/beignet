@@ -7,4 +7,5 @@ TypeAnn {
         false,
     ),
     span: 0..5,
+    inferred_type: None,
 }

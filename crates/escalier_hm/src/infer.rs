@@ -60,8 +60,10 @@ pub fn infer_expression(
         }) => {
             let mut element_types = vec![];
             for element in elems.iter_mut() {
-                // TODO: handle spreads
-                let t = infer_expression(arena, element.expr.as_mut(), ctx)?;
+                let t = match element {
+                    ExprOrSpread::Expr(expr) => infer_expression(arena, expr, ctx)?,
+                    ExprOrSpread::Spread(_) => todo!(), // TODO: handle spreads
+                };
                 element_types.push(t);
             }
             new_tuple_type(arena, &element_types)
@@ -107,7 +109,7 @@ pub fn infer_expression(
                 .iter_mut()
                 .map(|arg| {
                     // TODO: handle spreads
-                    infer_expression(arena, arg.expr.as_mut(), ctx)
+                    infer_expression(arena, arg, ctx)
                 })
                 .collect::<Result<Vec<_>, _>>()?;
 
@@ -352,7 +354,12 @@ pub fn infer_expression(
         }
         ExprKind::Class(_) => todo!(),
         // ExprKind::Regex(_) => todo!(),
-        ExprKind::Do(Do { body, span: _ }) => infer_block(arena, body, ctx)?,
+        ExprKind::Do(Do { body }) => infer_block(arena, body, ctx)?,
+        ExprKind::Index(_) => todo!(), // TODO: replace with ::Member(MemberProps::Index { .. })
+        ExprKind::OptionalChain(_) => todo!(),
+        ExprKind::Try(_) => todo!(),
+        ExprKind::Yield(_) => todo!(),
+        ExprKind::JSXFragment(_) => todo!(),
     };
 
     node.inferred_type = Some(t);
@@ -390,7 +397,7 @@ pub fn infer_type_ann(
     ctx: &mut Context,
 ) -> Result<Index, Errors> {
     let idx = match &mut type_ann.kind {
-        TypeAnnKind::Function(LamType {
+        TypeAnnKind::Function(FunctionType {
             params,
             ret,
             type_params,
@@ -404,11 +411,14 @@ pub fn infer_type_ann(
                 .iter_mut()
                 .enumerate()
                 .map(|(i, param)| {
-                    let t = infer_type_ann(arena, &mut param.type_ann, &mut sig_ctx)?;
+                    let t = match &mut param.type_ann {
+                        Some(type_ann) => infer_type_ann(arena, type_ann, &mut sig_ctx)?,
+                        None => new_var_type(arena, None),
+                    };
 
                     Ok(types::FuncParam {
                         pattern: TPat::Ident(BindingIdent {
-                            name: param.pat.get_name(&i),
+                            name: param.pattern.get_name(&i),
                             mutable: false,
                             span: Span { start: 0, end: 0 },
                         }),
@@ -531,22 +541,22 @@ pub fn infer_type_ann(
             let idx = infer_type_ann(arena, elem_type, ctx)?;
             new_constructor(arena, "Array", &[idx])
         }
-        TypeAnnKind::IndexedAccess(IndexedAccessType {
+        TypeAnnKind::IndexedAccess(
             obj_type,
             index_type,
-        }) => {
+        ) => {
             let obj_idx = infer_type_ann(arena, obj_type, ctx)?;
             let index_idx = infer_type_ann(arena, index_type, ctx)?;
             new_utility_type(arena, "@@index", &[obj_idx, index_idx])
         }
-        TypeAnnKind::Query(QueryType { expr }) => {
+        TypeAnnKind::Query(expr) => {
             // typeof <expr>
             infer_expression(arena, expr, ctx)?
         }
         TypeAnnKind::Mutable(_) => todo!(),
 
         // TODO: Create types for all of these
-        TypeAnnKind::KeyOf(KeyOfType { type_ann }) => {
+        TypeAnnKind::KeyOf(type_ann) => {
             let t = infer_type_ann(arena, type_ann, ctx)?;
             let t = new_utility_type(arena, "@@keyof", &[t]);
             expand_type(arena, ctx, t)?

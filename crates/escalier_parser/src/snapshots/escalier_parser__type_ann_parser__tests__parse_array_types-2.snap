@@ -14,6 +14,7 @@ TypeAnn {
                         type_ann: TypeAnn {
                             kind: Number,
                             span: 4..10,
+                            inferred_type: None,
                         },
                     },
                     ObjectProp {
@@ -23,12 +24,15 @@ TypeAnn {
                         type_ann: TypeAnn {
                             kind: Number,
                             span: 15..21,
+                            inferred_type: None,
                         },
                     },
                 ],
             ),
             span: 0..22,
+            inferred_type: None,
         },
     ),
     span: 0..24,
+    inferred_type: None,
 }

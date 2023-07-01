@@ -8,4 +8,5 @@ TypeAnn {
         None,
     ),
     span: 0..1,
+    inferred_type: None,
 }

@@ -7,4 +7,5 @@ TypeAnn {
         "hello",
     ),
     span: 0..7,
+    inferred_type: None,
 }

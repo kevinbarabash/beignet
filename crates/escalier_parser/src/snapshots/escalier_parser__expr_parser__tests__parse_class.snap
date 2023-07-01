@@ -21,6 +21,7 @@ Expr {
                             TypeAnn {
                                 kind: String,
                                 span: 42..48,
+                                inferred_type: None,
                             },
                         ),
                         init: None,
@@ -125,6 +126,7 @@ Expr {
                                     TypeAnn {
                                         kind: String,
                                         span: 146..152,
+                                        inferred_type: None,
                                     },
                                 ),
                                 optional: false,

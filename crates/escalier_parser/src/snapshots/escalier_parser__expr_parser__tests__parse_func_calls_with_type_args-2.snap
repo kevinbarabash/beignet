@@ -20,10 +20,12 @@ Expr {
                     TypeAnn {
                         kind: Number,
                         span: 4..10,
+                        inferred_type: None,
                     },
                     TypeAnn {
                         kind: String,
                         span: 12..18,
+                        inferred_type: None,
                     },
                 ],
             ),

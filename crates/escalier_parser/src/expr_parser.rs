@@ -569,7 +569,7 @@ impl<'a> Parser<'a> {
 
     fn parse_type_param(&mut self) -> Result<TypeParam, ParseError> {
         let start = self.scanner.cursor();
-        let t = self.parse_type_ann()?;
+        let type_ann = self.parse_type_ann()?;
         let bound = if self.peek().unwrap_or(&EOF).kind == TokenKind::Colon {
             self.next().unwrap_or(EOF.clone());
             Some(self.parse_type_ann()?)
@@ -580,7 +580,7 @@ impl<'a> Parser<'a> {
 
         Ok(TypeParam {
             span: Span { start, end },
-            t,
+            type_ann,
             bound,
             default: None,
         })

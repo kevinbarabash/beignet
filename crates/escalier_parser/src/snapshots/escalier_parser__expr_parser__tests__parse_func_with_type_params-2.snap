@@ -9,24 +9,26 @@ Expr {
                 [
                     TypeParam {
                         span: 5..6,
-                        t: TypeAnn {
+                        type_ann: TypeAnn {
                             kind: TypeRef(
                                 "A",
                                 None,
                             ),
                             span: 4..5,
+                            inferred_type: None,
                         },
                         bound: None,
                         default: None,
                     },
                     TypeParam {
                         span: 8..9,
-                        t: TypeAnn {
+                        type_ann: TypeAnn {
                             kind: TypeRef(
                                 "B",
                                 None,
                             ),
                             span: 7..8,
+                            inferred_type: None,
                         },
                         bound: None,
                         default: None,
@@ -53,6 +55,7 @@ Expr {
                                 None,
                             ),
                             span: 14..15,
+                            inferred_type: None,
                         },
                     ),
                     optional: false,
@@ -76,6 +79,7 @@ Expr {
                                 None,
                             ),
                             span: 20..21,
+                            inferred_type: None,
                         },
                     ),
                     optional: false,
@@ -100,6 +104,7 @@ Expr {
                         None,
                     ),
                     span: 24..25,
+                    inferred_type: None,
                 },
             ),
             is_async: false,

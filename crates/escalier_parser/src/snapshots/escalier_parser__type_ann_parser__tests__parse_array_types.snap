@@ -7,7 +7,9 @@ TypeAnn {
         TypeAnn {
             kind: Number,
             span: 0..6,
+            inferred_type: None,
         },
     ),
     span: 0..8,
+    inferred_type: None,
 }

@@ -8,16 +8,20 @@ TypeAnn {
             TypeAnn {
                 kind: Number,
                 span: 4..10,
+                inferred_type: None,
             },
             TypeAnn {
                 kind: String,
                 span: 14..20,
+                inferred_type: None,
             },
             TypeAnn {
                 kind: Boolean,
                 span: 24..31,
+                inferred_type: None,
             },
         ],
     ),
     span: 0..34,
+    inferred_type: None,
 }
