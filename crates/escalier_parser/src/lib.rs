@@ -1,24 +1,14 @@
-mod block;
 mod class;
-mod expr;
 mod expr_parser;
 mod func_param;
-mod identifier;
-mod jsx;
 mod jsx_parser;
-mod literal;
 mod parse_error;
 mod parser;
-mod pattern;
 mod pattern_parser;
 mod precedence;
 mod scanner;
-mod span;
-mod stmt;
 mod stmt_parser;
 mod token;
-mod type_ann;
 mod type_ann_parser;
-mod type_param;
 
 pub use stmt_parser::parse;

@@ -1,10 +1,10 @@
 use core::panic;
 use std::iter::Iterator;
 
-use crate::expr::Expr;
+use escalier_ast::*;
+
 use crate::parse_error::ParseError;
 use crate::scanner::Scanner;
-use crate::span::*;
 use crate::token::*;
 
 #[derive(Debug, Clone)]

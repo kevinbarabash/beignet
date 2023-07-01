@@ -1,15 +1,8 @@
+use escalier_ast::*;
+
 use crate::parse_error::ParseError;
 use crate::parser::*;
-use crate::pattern::Pattern;
 use crate::token::*;
-use crate::type_ann::TypeAnn;
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct FuncParam {
-    pub pattern: Pattern,
-    pub type_ann: Option<TypeAnn>,
-    pub optional: bool,
-}
 
 impl<'a> Parser<'a> {
     pub fn parse_params(&mut self) -> Result<Vec<FuncParam>, ParseError> {

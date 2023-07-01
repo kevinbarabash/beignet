@@ -2,6 +2,7 @@
 
 members = [
     "crates/escalier",
+    "crates/escalier_ast",
     "crates/escalier_cli",
     "crates/escalier_codegen",
     "crates/escalier_hm",

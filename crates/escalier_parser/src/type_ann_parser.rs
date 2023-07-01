@@ -1,8 +1,8 @@
+use escalier_ast::*;
+
 use crate::parse_error::ParseError;
 use crate::parser::*;
-use crate::span::merge_spans;
 use crate::token::*;
-use crate::type_ann::{ObjectProp, TypeAnn, TypeAnnKind};
 
 impl<'a> Parser<'a> {
     pub fn parse_type_ann(&mut self) -> Result<TypeAnn, ParseError> {

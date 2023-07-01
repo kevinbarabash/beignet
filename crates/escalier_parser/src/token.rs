@@ -1,5 +1,4 @@
-use crate::expr::Expr;
-use crate::span::*;
+use escalier_ast::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TokenKind {
