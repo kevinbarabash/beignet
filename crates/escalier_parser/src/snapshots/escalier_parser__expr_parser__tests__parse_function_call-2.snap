@@ -2,37 +2,53 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"add(5)(10)\")"
 ---
-Call(
-    Call {
-        span: 0..10,
-        callee: Call(
-            Call {
-                span: 0..6,
-                callee: Ident(
-                    Ident {
-                        name: "add",
-                        span: 0..3,
+Expr {
+    kind: Call(
+        Call {
+            callee: Expr {
+                kind: Call(
+                    Call {
+                        callee: Expr {
+                            kind: Ident(
+                                Ident {
+                                    name: "add",
+                                    span: 0..3,
+                                },
+                            ),
+                            span: 0..3,
+                            inferred_type: None,
+                        },
+                        type_args: None,
+                        args: [
+                            Expr {
+                                kind: Num(
+                                    Num {
+                                        value: "5",
+                                    },
+                                ),
+                                span: 4..5,
+                                inferred_type: None,
+                            },
+                        ],
                     },
                 ),
-                type_args: None,
-                args: [
-                    Num(
+                span: 0..6,
+                inferred_type: None,
+            },
+            type_args: None,
+            args: [
+                Expr {
+                    kind: Num(
                         Num {
-                            span: 4..5,
-                            value: "5",
+                            value: "10",
                         },
                     ),
-                ],
-            },
-        ),
-        type_args: None,
-        args: [
-            Num(
-                Num {
                     span: 7..9,
-                    value: "10",
+                    inferred_type: None,
                 },
-            ),
-        ],
-    },
-)
+            ],
+        },
+    ),
+    span: 0..10,
+    inferred_type: None,
+}

@@ -6,7 +6,6 @@ expression: "parse(r#\"let add = fn(a, b) => a + b add(5, 10)\"#)"
     Stmt {
         kind: Let {
             pattern: Pattern {
-                span: 4..7,
                 kind: Ident(
                     BindingIdent {
                         name: "add",
@@ -14,98 +13,129 @@ expression: "parse(r#\"let add = fn(a, b) => a + b add(5, 10)\"#)"
                         mutable: false,
                     },
                 ),
+                span: 4..7,
+                inferred_type: None,
             },
-            expr: Function(
-                Function {
-                    span: 10..27,
-                    type_params: None,
-                    params: [
-                        FuncParam {
-                            pattern: Pattern {
-                                span: 13..14,
-                                kind: Ident(
-                                    BindingIdent {
-                                        name: "a",
-                                        span: 13..14,
-                                        mutable: false,
+            expr: Expr {
+                kind: Function(
+                    Function {
+                        type_params: None,
+                        params: [
+                            FuncParam {
+                                pattern: Pattern {
+                                    kind: Ident(
+                                        BindingIdent {
+                                            name: "a",
+                                            span: 13..14,
+                                            mutable: false,
+                                        },
+                                    ),
+                                    span: 13..14,
+                                    inferred_type: None,
+                                },
+                                type_ann: None,
+                                optional: false,
+                            },
+                            FuncParam {
+                                pattern: Pattern {
+                                    kind: Ident(
+                                        BindingIdent {
+                                            name: "b",
+                                            span: 16..17,
+                                            mutable: false,
+                                        },
+                                    ),
+                                    span: 16..17,
+                                    inferred_type: None,
+                                },
+                                type_ann: None,
+                                optional: false,
+                            },
+                        ],
+                        body: Expr(
+                            Expr {
+                                kind: Binary(
+                                    Binary {
+                                        left: Expr {
+                                            kind: Ident(
+                                                Ident {
+                                                    name: "a",
+                                                    span: 22..23,
+                                                },
+                                            ),
+                                            span: 22..23,
+                                            inferred_type: None,
+                                        },
+                                        op: Plus,
+                                        right: Expr {
+                                            kind: Ident(
+                                                Ident {
+                                                    name: "b",
+                                                    span: 26..27,
+                                                },
+                                            ),
+                                            span: 26..27,
+                                            inferred_type: None,
+                                        },
                                     },
                                 ),
-                            },
-                            type_ann: None,
-                            optional: false,
-                        },
-                        FuncParam {
-                            pattern: Pattern {
-                                span: 16..17,
-                                kind: Ident(
-                                    BindingIdent {
-                                        name: "b",
-                                        span: 16..17,
-                                        mutable: false,
-                                    },
-                                ),
-                            },
-                            type_ann: None,
-                            optional: false,
-                        },
-                    ],
-                    body: Expr(
-                        Binary(
-                            Binary {
                                 span: 22..27,
-                                left: Ident(
-                                    Ident {
-                                        name: "a",
-                                        span: 22..23,
-                                    },
-                                ),
-                                op: Plus,
-                                right: Ident(
-                                    Ident {
-                                        name: "b",
-                                        span: 26..27,
-                                    },
-                                ),
+                                inferred_type: None,
                             },
                         ),
-                    ),
-                    type_ann: None,
-                    is_async: false,
-                    is_gen: false,
-                },
-            ),
+                        type_ann: None,
+                        is_async: false,
+                        is_gen: false,
+                    },
+                ),
+                span: 10..27,
+                inferred_type: None,
+            },
             type_ann: None,
         },
         span: 0..27,
     },
     Stmt {
         kind: Expr {
-            expr: Call(
-                Call {
-                    span: 28..38,
-                    callee: Ident(
-                        Ident {
-                            name: "add",
+            expr: Expr {
+                kind: Call(
+                    Call {
+                        callee: Expr {
+                            kind: Ident(
+                                Ident {
+                                    name: "add",
+                                    span: 28..31,
+                                },
+                            ),
                             span: 28..31,
+                            inferred_type: None,
                         },
-                    ),
-                    type_args: None,
-                    args: [
-                        Num(
-                            Num {
+                        type_args: None,
+                        args: [
+                            Expr {
+                                kind: Num(
+                                    Num {
+                                        value: "5",
+                                    },
+                                ),
                                 span: 32..33,
-                                value: "5",
+                                inferred_type: None,
                             },
-                        ),
-                        Num(
-                            Num {
+                            Expr {
+                                kind: Num(
+                                    Num {
+                                        value: "10",
+                                    },
+                                ),
                                 span: 35..37,
-                                value: "10",
+                                inferred_type: None,
                             },
-                        ),
-                    ],
-                },
-            ),
+                        ],
+                    },
+                ),
+                span: 28..38,
+                inferred_type: None,
+            },
         },
         span: 28..38,
     },

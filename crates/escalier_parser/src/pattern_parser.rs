@@ -143,7 +143,11 @@ impl<'a> Parser<'a> {
             }
         };
 
-        Ok(Pattern { span, kind })
+        Ok(Pattern {
+            span,
+            kind,
+            inferred_type: None,
+        })
     }
 }
 

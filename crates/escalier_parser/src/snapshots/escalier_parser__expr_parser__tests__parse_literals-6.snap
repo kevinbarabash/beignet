@@ -2,9 +2,13 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(r#\"\"hello\"\"#)"
 ---
-Str(
-    Str {
-        span: 0..7,
-        value: "hello",
-    },
-)
+Expr {
+    kind: Str(
+        Str {
+            span: 0..7,
+            value: "hello",
+        },
+    ),
+    span: 0..7,
+    inferred_type: None,
+}

@@ -3,7 +3,6 @@ source: crates/escalier_parser/src/pattern_parser.rs
 expression: "parse(r#\"{type: \"foo\", bar: _, values: [head, ...tail]}\"#)"
 ---
 Pattern {
-    span: 0..46,
     kind: Object(
         ObjectPat {
             props: [
@@ -15,7 +14,6 @@ Pattern {
                             span: 1..5,
                         },
                         value: Pattern {
-                            span: 7..12,
                             kind: Lit(
                                 LitPat {
                                     lit: String(
@@ -23,6 +21,8 @@ Pattern {
                                     ),
                                 },
                             ),
+                            span: 7..12,
+                            inferred_type: None,
                         },
                         init: None,
                     },
@@ -35,8 +35,9 @@ Pattern {
                             span: 14..17,
                         },
                         value: Pattern {
-                            span: 19..20,
                             kind: Wildcard,
+                            span: 19..20,
+                            inferred_type: None,
                         },
                         init: None,
                     },
@@ -49,14 +50,12 @@ Pattern {
                             span: 22..28,
                         },
                         value: Pattern {
-                            span: 29..45,
                             kind: Tuple(
                                 TuplePat {
                                     elems: [
                                         Some(
                                             TuplePatElem {
                                                 pattern: Pattern {
-                                                    span: 31..35,
                                                     kind: Ident(
                                                         BindingIdent {
                                                             name: "head",
@@ -64,6 +63,8 @@ Pattern {
                                                             mutable: false,
                                                         },
                                                     ),
+                                                    span: 31..35,
+                                                    inferred_type: None,
                                                 },
                                                 init: None,
                                             },
@@ -71,11 +72,9 @@ Pattern {
                                         Some(
                                             TuplePatElem {
                                                 pattern: Pattern {
-                                                    span: 36..40,
                                                     kind: Rest(
                                                         RestPat {
                                                             arg: Pattern {
-                                                                span: 40..44,
                                                                 kind: Ident(
                                                                     BindingIdent {
                                                                         name: "tail",
@@ -83,9 +82,13 @@ Pattern {
                                                                         mutable: false,
                                                                     },
                                                                 ),
+                                                                span: 40..44,
+                                                                inferred_type: None,
                                                             },
                                                         },
                                                     ),
+                                                    span: 36..40,
+                                                    inferred_type: None,
                                                 },
                                                 init: None,
                                             },
@@ -94,6 +97,8 @@ Pattern {
                                     optional: false,
                                 },
                             ),
+                            span: 29..45,
+                            inferred_type: None,
                         },
                         init: None,
                     },
@@ -102,4 +107,6 @@ Pattern {
             optional: false,
         },
     ),
+    span: 0..46,
+    inferred_type: None,
 }

@@ -2,62 +2,78 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"fn (x, y) => x + y\")"
 ---
-Function(
-    Function {
-        span: 0..18,
-        type_params: None,
-        params: [
-            FuncParam {
-                pattern: Pattern {
-                    span: 4..5,
-                    kind: Ident(
-                        BindingIdent {
-                            name: "x",
-                            span: 4..5,
-                            mutable: false,
+Expr {
+    kind: Function(
+        Function {
+            type_params: None,
+            params: [
+                FuncParam {
+                    pattern: Pattern {
+                        kind: Ident(
+                            BindingIdent {
+                                name: "x",
+                                span: 4..5,
+                                mutable: false,
+                            },
+                        ),
+                        span: 4..5,
+                        inferred_type: None,
+                    },
+                    type_ann: None,
+                    optional: false,
+                },
+                FuncParam {
+                    pattern: Pattern {
+                        kind: Ident(
+                            BindingIdent {
+                                name: "y",
+                                span: 7..8,
+                                mutable: false,
+                            },
+                        ),
+                        span: 7..8,
+                        inferred_type: None,
+                    },
+                    type_ann: None,
+                    optional: false,
+                },
+            ],
+            body: Expr(
+                Expr {
+                    kind: Binary(
+                        Binary {
+                            left: Expr {
+                                kind: Ident(
+                                    Ident {
+                                        name: "x",
+                                        span: 13..14,
+                                    },
+                                ),
+                                span: 13..14,
+                                inferred_type: None,
+                            },
+                            op: Plus,
+                            right: Expr {
+                                kind: Ident(
+                                    Ident {
+                                        name: "y",
+                                        span: 17..18,
+                                    },
+                                ),
+                                span: 17..18,
+                                inferred_type: None,
+                            },
                         },
                     ),
-                },
-                type_ann: None,
-                optional: false,
-            },
-            FuncParam {
-                pattern: Pattern {
-                    span: 7..8,
-                    kind: Ident(
-                        BindingIdent {
-                            name: "y",
-                            span: 7..8,
-                            mutable: false,
-                        },
-                    ),
-                },
-                type_ann: None,
-                optional: false,
-            },
-        ],
-        body: Expr(
-            Binary(
-                Binary {
                     span: 13..18,
-                    left: Ident(
-                        Ident {
-                            name: "x",
-                            span: 13..14,
-                        },
-                    ),
-                    op: Plus,
-                    right: Ident(
-                        Ident {
-                            name: "y",
-                            span: 17..18,
-                        },
-                    ),
+                    inferred_type: None,
                 },
             ),
-        ),
-        type_ann: None,
-        is_async: false,
-        is_gen: false,
-    },
-)
+            type_ann: None,
+            is_async: false,
+            is_gen: false,
+        },
+    ),
+    span: 0..18,
+    inferred_type: None,
+}

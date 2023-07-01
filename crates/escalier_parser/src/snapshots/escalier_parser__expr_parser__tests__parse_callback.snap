@@ -2,86 +2,122 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(r#\"ids.map(fn (id) => id).join(\", \")\"#)"
 ---
-Call(
-    Call {
-        span: 0..33,
-        callee: Member(
-            Member {
-                span: 0..27,
-                object: Call(
-                    Call {
-                        span: 0..22,
-                        callee: Member(
-                            Member {
-                                span: 0..7,
-                                object: Ident(
-                                    Ident {
-                                        name: "ids",
-                                        span: 0..3,
-                                    },
-                                ),
-                                property: Ident(
-                                    Ident {
-                                        name: "map",
-                                        span: 4..7,
-                                    },
-                                ),
-                            },
-                        ),
-                        type_args: None,
-                        args: [
-                            Function(
-                                Function {
-                                    span: 8..21,
-                                    type_params: None,
-                                    params: [
-                                        FuncParam {
-                                            pattern: Pattern {
-                                                span: 12..14,
-                                                kind: Ident(
-                                                    BindingIdent {
-                                                        name: "id",
-                                                        span: 12..14,
-                                                        mutable: false,
-                                                    },
-                                                ),
-                                            },
-                                            type_ann: None,
-                                            optional: false,
-                                        },
-                                    ],
-                                    body: Expr(
-                                        Ident(
-                                            Ident {
-                                                name: "id",
-                                                span: 19..21,
+Expr {
+    kind: Call(
+        Call {
+            callee: Expr {
+                kind: Member(
+                    Member {
+                        object: Expr {
+                            kind: Call(
+                                Call {
+                                    callee: Expr {
+                                        kind: Member(
+                                            Member {
+                                                object: Expr {
+                                                    kind: Ident(
+                                                        Ident {
+                                                            name: "ids",
+                                                            span: 0..3,
+                                                        },
+                                                    ),
+                                                    span: 0..3,
+                                                    inferred_type: None,
+                                                },
+                                                property: Expr {
+                                                    kind: Ident(
+                                                        Ident {
+                                                            name: "map",
+                                                            span: 4..7,
+                                                        },
+                                                    ),
+                                                    span: 4..7,
+                                                    inferred_type: None,
+                                                },
                                             },
                                         ),
-                                    ),
-                                    type_ann: None,
-                                    is_async: false,
-                                    is_gen: false,
+                                        span: 0..7,
+                                        inferred_type: None,
+                                    },
+                                    type_args: None,
+                                    args: [
+                                        Expr {
+                                            kind: Function(
+                                                Function {
+                                                    type_params: None,
+                                                    params: [
+                                                        FuncParam {
+                                                            pattern: Pattern {
+                                                                kind: Ident(
+                                                                    BindingIdent {
+                                                                        name: "id",
+                                                                        span: 12..14,
+                                                                        mutable: false,
+                                                                    },
+                                                                ),
+                                                                span: 12..14,
+                                                                inferred_type: None,
+                                                            },
+                                                            type_ann: None,
+                                                            optional: false,
+                                                        },
+                                                    ],
+                                                    body: Expr(
+                                                        Expr {
+                                                            kind: Ident(
+                                                                Ident {
+                                                                    name: "id",
+                                                                    span: 19..21,
+                                                                },
+                                                            ),
+                                                            span: 19..21,
+                                                            inferred_type: None,
+                                                        },
+                                                    ),
+                                                    type_ann: None,
+                                                    is_async: false,
+                                                    is_gen: false,
+                                                },
+                                            ),
+                                            span: 8..21,
+                                            inferred_type: None,
+                                        },
+                                    ],
                                 },
                             ),
-                        ],
+                            span: 0..22,
+                            inferred_type: None,
+                        },
+                        property: Expr {
+                            kind: Ident(
+                                Ident {
+                                    name: "join",
+                                    span: 23..27,
+                                },
+                            ),
+                            span: 23..27,
+                            inferred_type: None,
+                        },
                     },
                 ),
-                property: Ident(
-                    Ident {
-                        name: "join",
-                        span: 23..27,
-                    },
-                ),
+                span: 0..27,
+                inferred_type: None,
             },
-        ),
-        type_args: None,
-        args: [
-            Str(
-                Str {
+            type_args: None,
+            args: [
+                Expr {
+                    kind: Str(
+                        Str {
+                            span: 28..32,
+                            value: ", ",
+                        },
+                    ),
                     span: 28..32,
-                    value: ", ",
+                    inferred_type: None,
                 },
-            ),
-        ],
-    },
-)
+            ],
+        },
+    ),
+    span: 0..33,
+    inferred_type: None,
+}

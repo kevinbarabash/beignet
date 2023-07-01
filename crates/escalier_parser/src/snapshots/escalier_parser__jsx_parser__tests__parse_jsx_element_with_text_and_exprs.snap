@@ -23,12 +23,16 @@ JSXElement {
         ),
         ExprContainer(
             JSXExprContainer {
-                expr: Ident(
-                    Ident {
-                        name: "name",
-                        span: 12..16,
-                    },
-                ),
+                expr: Expr {
+                    kind: Ident(
+                        Ident {
+                            name: "name",
+                            span: 12..16,
+                        },
+                    ),
+                    span: 12..16,
+                    inferred_type: None,
+                },
             },
         ),
         Text(

@@ -7,7 +7,6 @@ TypeAnn {
         [
             FuncParam {
                 pattern: Pattern {
-                    span: 4..5,
                     kind: Ident(
                         BindingIdent {
                             name: "a",
@@ -15,6 +14,8 @@ TypeAnn {
                             mutable: false,
                         },
                     ),
+                    span: 4..5,
+                    inferred_type: None,
                 },
                 type_ann: Some(
                     TypeAnn {
@@ -26,7 +27,6 @@ TypeAnn {
             },
             FuncParam {
                 pattern: Pattern {
-                    span: 15..16,
                     kind: Ident(
                         BindingIdent {
                             name: "b",
@@ -34,6 +34,8 @@ TypeAnn {
                             mutable: false,
                         },
                     ),
+                    span: 15..16,
+                    inferred_type: None,
                 },
                 type_ann: Some(
                     TypeAnn {

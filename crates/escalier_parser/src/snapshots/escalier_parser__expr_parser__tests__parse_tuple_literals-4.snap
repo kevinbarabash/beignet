@@ -2,26 +2,35 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"[1, 2,]\")"
 ---
-Tuple(
-    Tuple {
-        span: 0..7,
-        elements: [
-            Expr(
-                Num(
-                    Num {
+Expr {
+    kind: Tuple(
+        Tuple {
+            elements: [
+                Expr(
+                    Expr {
+                        kind: Num(
+                            Num {
+                                value: "1",
+                            },
+                        ),
                         span: 1..2,
-                        value: "1",
+                        inferred_type: None,
                     },
                 ),
-            ),
-            Expr(
-                Num(
-                    Num {
+                Expr(
+                    Expr {
+                        kind: Num(
+                            Num {
+                                value: "2",
+                            },
+                        ),
                         span: 4..5,
-                        value: "2",
+                        inferred_type: None,
                     },
                 ),
-            ),
-        ],
-    },
-)
+            ],
+        },
+    ),
+    span: 0..7,
+    inferred_type: None,
+}

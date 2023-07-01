@@ -2,38 +2,52 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"a + `b ${c} d`\")"
 ---
-Binary(
-    Binary {
-        span: 0..14,
-        left: Ident(
-            Ident {
-                name: "a",
+Expr {
+    kind: Binary(
+        Binary {
+            left: Expr {
+                kind: Ident(
+                    Ident {
+                        name: "a",
+                        span: 0..1,
+                    },
+                ),
                 span: 0..1,
+                inferred_type: None,
             },
-        ),
-        op: Plus,
-        right: TemplateLiteral(
-            TemplateLiteral {
+            op: Plus,
+            right: Expr {
+                kind: TemplateLiteral(
+                    TemplateLiteral {
+                        parts: [
+                            Str {
+                                span: 3..7,
+                                value: "b ",
+                            },
+                            Str {
+                                span: 11..14,
+                                value: " d",
+                            },
+                        ],
+                        exprs: [
+                            Expr {
+                                kind: Ident(
+                                    Ident {
+                                        name: "c",
+                                        span: 9..10,
+                                    },
+                                ),
+                                span: 9..10,
+                                inferred_type: None,
+                            },
+                        ],
+                    },
+                ),
                 span: 3..14,
-                parts: [
-                    Str {
-                        span: 3..7,
-                        value: "b ",
-                    },
-                    Str {
-                        span: 11..14,
-                        value: " d",
-                    },
-                ],
-                exprs: [
-                    Ident(
-                        Ident {
-                            name: "c",
-                            span: 9..10,
-                        },
-                    ),
-                ],
+                inferred_type: None,
             },
-        ),
-    },
-)
+        },
+    ),
+    span: 0..14,
+    inferred_type: None,
+}

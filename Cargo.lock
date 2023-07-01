@@ -367,6 +367,9 @@ dependencies = [
 [[package]]
 name = "escalier_ast"
 version = "0.1.0"
+dependencies = [
+ "generational-arena",
+]
 
 [[package]]
 name = "escalier_cli"

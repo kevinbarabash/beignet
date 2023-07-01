@@ -2,20 +2,23 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"{ a, b }\")"
 ---
-Object(
-    Object {
-        span: 0..8,
-        properties: [
-            Prop(
-                Shorthand {
-                    key: "a",
-                },
-            ),
-            Prop(
-                Shorthand {
-                    key: "b",
-                },
-            ),
-        ],
-    },
-)
+Expr {
+    kind: Object(
+        Object {
+            properties: [
+                Prop(
+                    Shorthand {
+                        key: "a",
+                    },
+                ),
+                Prop(
+                    Shorthand {
+                        key: "b",
+                    },
+                ),
+            ],
+        },
+    ),
+    span: 0..8,
+    inferred_type: None,
+}

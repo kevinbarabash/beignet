@@ -44,19 +44,23 @@ impl<'a> Parser<'a> {
         );
 
         let end = self.scanner.cursor();
-
-        let expr = Expr::Class(Class {
-            span: Span {
-                start: token.span.start,
-                end,
-            },
+        let span = Span {
+            start: token.span.start,
+            end,
+        };
+        let kind = ExprKind::Class(Class {
+            span,
             type_params,
             super_class,
             super_type_args: None, // TODO
             body,
         });
 
-        Ok(expr)
+        Ok(Expr {
+            kind,
+            span,
+            inferred_type: None,
+        })
     }
 
     fn parse_class_member(&mut self) -> Result<ClassMember, ParseError> {

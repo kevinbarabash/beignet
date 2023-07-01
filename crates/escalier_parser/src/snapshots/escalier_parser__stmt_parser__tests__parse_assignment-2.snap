@@ -1,39 +1,56 @@
 ---
 source: crates/escalier_parser/src/stmt_parser.rs
-expression: "parse(r#\"p.x = 5;\"#)"
+expression: "parse(r#\"p.x = 5\"#)"
 ---
 [
     Stmt {
         kind: Expr {
-            expr: Assign(
-                Assign {
-                    span: 0..7,
-                    left: Member(
-                        Member {
+            expr: Expr {
+                kind: Assign(
+                    Assign {
+                        left: Expr {
+                            kind: Member(
+                                Member {
+                                    object: Expr {
+                                        kind: Ident(
+                                            Ident {
+                                                name: "p",
+                                                span: 0..1,
+                                            },
+                                        ),
+                                        span: 0..1,
+                                        inferred_type: None,
+                                    },
+                                    property: Expr {
+                                        kind: Ident(
+                                            Ident {
+                                                name: "x",
+                                                span: 2..3,
+                                            },
+                                        ),
+                                        span: 2..3,
+                                        inferred_type: None,
+                                    },
+                                },
+                            ),
                             span: 0..3,
-                            object: Ident(
-                                Ident {
-                                    name: "p",
-                                    span: 0..1,
-                                },
-                            ),
-                            property: Ident(
-                                Ident {
-                                    name: "x",
-                                    span: 2..3,
-                                },
-                            ),
+                            inferred_type: None,
                         },
-                    ),
-                    op: Assign,
-                    right: Num(
-                        Num {
+                        op: Assign,
+                        right: Expr {
+                            kind: Num(
+                                Num {
+                                    value: "5",
+                                },
+                            ),
                             span: 6..7,
-                            value: "5",
+                            inferred_type: None,
                         },
-                    ),
-                },
-            ),
+                    },
+                ),
+                span: 0..7,
+                inferred_type: None,
+            },
         },
         span: 0..7,
     },

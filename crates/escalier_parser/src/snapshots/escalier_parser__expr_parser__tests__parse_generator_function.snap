@@ -2,68 +2,89 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(r#\"\n            gen fn () => { \n                yield 1\n                yield 2\n                yield 3\n            }\n        \"#)"
 ---
-Function(
-    Function {
-        span: 13..114,
-        type_params: None,
-        params: [],
-        body: Block(
-            Block {
-                span: 25..114,
-                stmts: [
-                    Stmt {
-                        kind: Expr {
-                            expr: Yield(
-                                Yield {
+Expr {
+    kind: Function(
+        Function {
+            type_params: None,
+            params: [],
+            body: Block(
+                Block {
+                    span: 25..114,
+                    stmts: [
+                        Stmt {
+                            kind: Expr {
+                                expr: Expr {
+                                    kind: Yield(
+                                        Yield {
+                                            arg: Expr {
+                                                kind: Num(
+                                                    Num {
+                                                        value: "1",
+                                                    },
+                                                ),
+                                                span: 51..52,
+                                                inferred_type: None,
+                                            },
+                                        },
+                                    ),
                                     span: 45..52,
-                                    arg: Num(
-                                        Num {
-                                            span: 51..52,
-                                            value: "1",
+                                    inferred_type: None,
+                                },
+                            },
+                            span: 45..52,
+                        },
+                        Stmt {
+                            kind: Expr {
+                                expr: Expr {
+                                    kind: Yield(
+                                        Yield {
+                                            arg: Expr {
+                                                kind: Num(
+                                                    Num {
+                                                        value: "2",
+                                                    },
+                                                ),
+                                                span: 75..76,
+                                                inferred_type: None,
+                                            },
                                         },
                                     ),
-                                },
-                            ),
-                        },
-                        span: 45..52,
-                    },
-                    Stmt {
-                        kind: Expr {
-                            expr: Yield(
-                                Yield {
                                     span: 69..76,
-                                    arg: Num(
-                                        Num {
-                                            span: 75..76,
-                                            value: "2",
+                                    inferred_type: None,
+                                },
+                            },
+                            span: 69..76,
+                        },
+                        Stmt {
+                            kind: Expr {
+                                expr: Expr {
+                                    kind: Yield(
+                                        Yield {
+                                            arg: Expr {
+                                                kind: Num(
+                                                    Num {
+                                                        value: "3",
+                                                    },
+                                                ),
+                                                span: 99..100,
+                                                inferred_type: None,
+                                            },
                                         },
                                     ),
-                                },
-                            ),
-                        },
-                        span: 69..76,
-                    },
-                    Stmt {
-                        kind: Expr {
-                            expr: Yield(
-                                Yield {
                                     span: 93..100,
-                                    arg: Num(
-                                        Num {
-                                            span: 99..100,
-                                            value: "3",
-                                        },
-                                    ),
+                                    inferred_type: None,
                                 },
-                            ),
+                            },
+                            span: 93..100,
                         },
-                        span: 93..100,
-                    },
-                ],
-            },
-        ),
-        type_ann: None,
-        is_async: false,
-        is_gen: true,
-    },
-)
+                    ],
+                },
+            ),
+            type_ann: None,
+            is_async: false,
+            is_gen: true,
+        },
+    ),
+    span: 13..114,
+    inferred_type: None,
+}

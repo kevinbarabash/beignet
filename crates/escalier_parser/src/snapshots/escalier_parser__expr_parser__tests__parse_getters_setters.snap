@@ -2,91 +2,98 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(r#\"\n            class {\n                get foo(self) {}\n                set foo(self, value) {}\n            }\n        \"#)"
 ---
-Class(
-    Class {
-        span: 13..107,
-        type_params: None,
-        super_class: None,
-        super_type_args: None,
-        body: [
-            Getter(
-                Getter {
-                    span: 37..53,
-                    name: Ident(
-                        Ident {
-                            name: "foo",
-                            span: 41..44,
-                        },
-                    ),
-                    type_ann: None,
-                    params: [
-                        FuncParam {
-                            pattern: Pattern {
-                                span: 45..49,
-                                kind: Ident(
-                                    BindingIdent {
-                                        name: "self",
-                                        span: 45..49,
-                                        mutable: false,
-                                    },
-                                ),
+Expr {
+    kind: Class(
+        Class {
+            span: 13..107,
+            type_params: None,
+            super_class: None,
+            super_type_args: None,
+            body: [
+                Getter(
+                    Getter {
+                        span: 37..53,
+                        name: Ident(
+                            Ident {
+                                name: "foo",
+                                span: 41..44,
                             },
-                            type_ann: None,
-                            optional: false,
+                        ),
+                        type_ann: None,
+                        params: [
+                            FuncParam {
+                                pattern: Pattern {
+                                    kind: Ident(
+                                        BindingIdent {
+                                            name: "self",
+                                            span: 45..49,
+                                            mutable: false,
+                                        },
+                                    ),
+                                    span: 45..49,
+                                    inferred_type: None,
+                                },
+                                type_ann: None,
+                                optional: false,
+                            },
+                        ],
+                        body: Block {
+                            span: 50..53,
+                            stmts: [],
                         },
-                    ],
-                    body: Block {
-                        span: 50..53,
-                        stmts: [],
                     },
-                },
-            ),
-            Setter(
-                Setter {
-                    span: 70..93,
-                    name: Ident(
-                        Ident {
-                            name: "foo",
-                            span: 74..77,
-                        },
-                    ),
-                    type_ann: None,
-                    params: [
-                        FuncParam {
-                            pattern: Pattern {
-                                span: 78..82,
-                                kind: Ident(
-                                    BindingIdent {
-                                        name: "self",
-                                        span: 78..82,
-                                        mutable: false,
-                                    },
-                                ),
+                ),
+                Setter(
+                    Setter {
+                        span: 70..93,
+                        name: Ident(
+                            Ident {
+                                name: "foo",
+                                span: 74..77,
                             },
-                            type_ann: None,
-                            optional: false,
-                        },
-                        FuncParam {
-                            pattern: Pattern {
-                                span: 84..89,
-                                kind: Ident(
-                                    BindingIdent {
-                                        name: "value",
-                                        span: 84..89,
-                                        mutable: false,
-                                    },
-                                ),
+                        ),
+                        type_ann: None,
+                        params: [
+                            FuncParam {
+                                pattern: Pattern {
+                                    kind: Ident(
+                                        BindingIdent {
+                                            name: "self",
+                                            span: 78..82,
+                                            mutable: false,
+                                        },
+                                    ),
+                                    span: 78..82,
+                                    inferred_type: None,
+                                },
+                                type_ann: None,
+                                optional: false,
                             },
-                            type_ann: None,
-                            optional: false,
+                            FuncParam {
+                                pattern: Pattern {
+                                    kind: Ident(
+                                        BindingIdent {
+                                            name: "value",
+                                            span: 84..89,
+                                            mutable: false,
+                                        },
+                                    ),
+                                    span: 84..89,
+                                    inferred_type: None,
+                                },
+                                type_ann: None,
+                                optional: false,
+                            },
+                        ],
+                        body: Block {
+                            span: 90..93,
+                            stmts: [],
                         },
-                    ],
-                    body: Block {
-                        span: 90..93,
-                        stmts: [],
                     },
-                },
-            ),
-        ],
-    },
-)
+                ),
+            ],
+        },
+    ),
+    span: 13..107,
+    inferred_type: None,
+}

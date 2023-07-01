@@ -18,11 +18,15 @@ StrTemplateLit {
         },
     ],
     exprs: [
-        Ident(
-            Ident {
-                name: "x",
-                span: 6..7,
-            },
-        ),
+        Expr {
+            kind: Ident(
+                Ident {
+                    name: "x",
+                    span: 6..7,
+                },
+            ),
+            span: 6..7,
+            inferred_type: None,
+        },
     ],
 }

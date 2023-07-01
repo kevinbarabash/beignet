@@ -1,3 +1,5 @@
+use generational_arena::Index;
+
 use crate::expr::Expr;
 use crate::identifier::{BindingIdent, Ident};
 use crate::literal::Literal;
@@ -18,10 +20,9 @@ pub enum PatternKind {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Pattern {
-    // pub loc: SourceLocation,
-    pub span: Span,
     pub kind: PatternKind,
-    // pub inferred_type: Option<Index>,
+    pub span: Span,
+    pub inferred_type: Option<Index>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

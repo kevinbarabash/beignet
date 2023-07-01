@@ -1,19 +1,17 @@
 ---
 source: crates/escalier_parser/src/stmt_parser.rs
-expression: "parse(\"let [head, ...tail] = polygon;\")"
+expression: "parse(\"let [head, ...tail] = polygon\")"
 ---
 [
     Stmt {
         kind: Let {
             pattern: Pattern {
-                span: 3..19,
                 kind: Tuple(
                     TuplePat {
                         elems: [
                             Some(
                                 TuplePatElem {
                                     pattern: Pattern {
-                                        span: 5..9,
                                         kind: Ident(
                                             BindingIdent {
                                                 name: "head",
@@ -21,6 +19,8 @@ expression: "parse(\"let [head, ...tail] = polygon;\")"
                                                 mutable: false,
                                             },
                                         ),
+                                        span: 5..9,
+                                        inferred_type: None,
                                     },
                                     init: None,
                                 },
@@ -28,11 +28,9 @@ expression: "parse(\"let [head, ...tail] = polygon;\")"
                             Some(
                                 TuplePatElem {
                                     pattern: Pattern {
-                                        span: 10..14,
                                         kind: Rest(
                                             RestPat {
                                                 arg: Pattern {
-                                                    span: 14..18,
                                                     kind: Ident(
                                                         BindingIdent {
                                                             name: "tail",
@@ -40,9 +38,13 @@ expression: "parse(\"let [head, ...tail] = polygon;\")"
                                                             mutable: false,
                                                         },
                                                     ),
+                                                    span: 14..18,
+                                                    inferred_type: None,
                                                 },
                                             },
                                         ),
+                                        span: 10..14,
+                                        inferred_type: None,
                                     },
                                     init: None,
                                 },
@@ -51,13 +53,19 @@ expression: "parse(\"let [head, ...tail] = polygon;\")"
                         optional: false,
                     },
                 ),
+                span: 3..19,
+                inferred_type: None,
             },
-            expr: Ident(
-                Ident {
-                    name: "polygon",
-                    span: 22..29,
-                },
-            ),
+            expr: Expr {
+                kind: Ident(
+                    Ident {
+                        name: "polygon",
+                        span: 22..29,
+                    },
+                ),
+                span: 22..29,
+                inferred_type: None,
+            },
             type_ann: None,
         },
         span: 0..29,

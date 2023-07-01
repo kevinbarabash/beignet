@@ -2,50 +2,63 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"{ a: 1, b: 2, ...c }\")"
 ---
-Object(
-    Object {
-        span: 0..20,
-        properties: [
-            Prop(
-                Property {
-                    key: Ident(
-                        Ident {
-                            name: "a",
-                            span: 2..3,
-                        },
-                    ),
-                    value: Num(
-                        Num {
+Expr {
+    kind: Object(
+        Object {
+            properties: [
+                Prop(
+                    Property {
+                        key: Ident(
+                            Ident {
+                                name: "a",
+                                span: 2..3,
+                            },
+                        ),
+                        value: Expr {
+                            kind: Num(
+                                Num {
+                                    value: "1",
+                                },
+                            ),
                             span: 5..6,
-                            value: "1",
+                            inferred_type: None,
                         },
-                    ),
-                },
-            ),
-            Prop(
-                Property {
-                    key: Ident(
-                        Ident {
-                            name: "b",
-                            span: 8..9,
-                        },
-                    ),
-                    value: Num(
-                        Num {
-                            span: 11..12,
-                            value: "2",
-                        },
-                    ),
-                },
-            ),
-            Spread(
-                Ident(
-                    Ident {
-                        name: "c",
-                        span: 17..18,
                     },
                 ),
-            ),
-        ],
-    },
-)
+                Prop(
+                    Property {
+                        key: Ident(
+                            Ident {
+                                name: "b",
+                                span: 8..9,
+                            },
+                        ),
+                        value: Expr {
+                            kind: Num(
+                                Num {
+                                    value: "2",
+                                },
+                            ),
+                            span: 11..12,
+                            inferred_type: None,
+                        },
+                    },
+                ),
+                Spread(
+                    Expr {
+                        kind: Ident(
+                            Ident {
+                                name: "c",
+                                span: 17..18,
+                            },
+                        ),
+                        span: 17..18,
+                        inferred_type: None,
+                    },
+                ),
+            ],
+        },
+    ),
+    span: 0..20,
+    inferred_type: None,
+}

@@ -2,89 +2,111 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"fn () => { let x = 5 let y = 10 return x + y }\")"
 ---
-Function(
-    Function {
-        span: 0..46,
-        type_params: None,
-        params: [],
-        body: Block(
-            Block {
-                span: 8..46,
-                stmts: [
-                    Stmt {
-                        kind: Let {
-                            pattern: Pattern {
-                                span: 15..16,
-                                kind: Ident(
-                                    BindingIdent {
-                                        name: "x",
-                                        span: 15..16,
-                                        mutable: false,
-                                    },
-                                ),
-                            },
-                            expr: Num(
-                                Num {
+Expr {
+    kind: Function(
+        Function {
+            type_params: None,
+            params: [],
+            body: Block(
+                Block {
+                    span: 8..46,
+                    stmts: [
+                        Stmt {
+                            kind: Let {
+                                pattern: Pattern {
+                                    kind: Ident(
+                                        BindingIdent {
+                                            name: "x",
+                                            span: 15..16,
+                                            mutable: false,
+                                        },
+                                    ),
+                                    span: 15..16,
+                                    inferred_type: None,
+                                },
+                                expr: Expr {
+                                    kind: Num(
+                                        Num {
+                                            value: "5",
+                                        },
+                                    ),
                                     span: 19..20,
-                                    value: "5",
+                                    inferred_type: None,
                                 },
-                            ),
-                            type_ann: None,
+                                type_ann: None,
+                            },
+                            span: 11..20,
                         },
-                        span: 11..20,
-                    },
-                    Stmt {
-                        kind: Let {
-                            pattern: Pattern {
-                                span: 25..26,
-                                kind: Ident(
-                                    BindingIdent {
-                                        name: "y",
-                                        span: 25..26,
-                                        mutable: false,
+                        Stmt {
+                            kind: Let {
+                                pattern: Pattern {
+                                    kind: Ident(
+                                        BindingIdent {
+                                            name: "y",
+                                            span: 25..26,
+                                            mutable: false,
+                                        },
+                                    ),
+                                    span: 25..26,
+                                    inferred_type: None,
+                                },
+                                expr: Expr {
+                                    kind: Num(
+                                        Num {
+                                            value: "10",
+                                        },
+                                    ),
+                                    span: 29..31,
+                                    inferred_type: None,
+                                },
+                                type_ann: None,
+                            },
+                            span: 21..31,
+                        },
+                        Stmt {
+                            kind: Return {
+                                arg: Some(
+                                    Expr {
+                                        kind: Binary(
+                                            Binary {
+                                                left: Expr {
+                                                    kind: Ident(
+                                                        Ident {
+                                                            name: "x",
+                                                            span: 39..40,
+                                                        },
+                                                    ),
+                                                    span: 39..40,
+                                                    inferred_type: None,
+                                                },
+                                                op: Plus,
+                                                right: Expr {
+                                                    kind: Ident(
+                                                        Ident {
+                                                            name: "y",
+                                                            span: 43..44,
+                                                        },
+                                                    ),
+                                                    span: 43..44,
+                                                    inferred_type: None,
+                                                },
+                                            },
+                                        ),
+                                        span: 39..44,
+                                        inferred_type: None,
                                     },
                                 ),
                             },
-                            expr: Num(
-                                Num {
-                                    span: 29..31,
-                                    value: "10",
-                                },
-                            ),
-                            type_ann: None,
+                            span: 39..44,
                         },
-                        span: 21..31,
-                    },
-                    Stmt {
-                        kind: Return {
-                            arg: Some(
-                                Binary(
-                                    Binary {
-                                        span: 39..44,
-                                        left: Ident(
-                                            Ident {
-                                                name: "x",
-                                                span: 39..40,
-                                            },
-                                        ),
-                                        op: Plus,
-                                        right: Ident(
-                                            Ident {
-                                                name: "y",
-                                                span: 43..44,
-                                            },
-                                        ),
-                                    },
-                                ),
-                            ),
-                        },
-                        span: 39..44,
-                    },
-                ],
-            },
-        ),
-        type_ann: None,
-        is_async: false,
-        is_gen: false,
-    },
-)
+                    ],
+                },
+            ),
+            type_ann: None,
+            is_async: false,
+            is_gen: false,
+        },
+    ),
+    span: 0..46,
+    inferred_type: None,
+}

@@ -2,8 +2,10 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"null\")"
 ---
-Null(
-    Null {
-        span: 0..4,
-    },
-)
+Expr {
+    kind: Null(
+        Null,
+    ),
+    span: 0..4,
+    inferred_type: None,
+}

@@ -2,93 +2,146 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"a > b && c >= d || e < f && g <= h\")"
 ---
-Binary(
-    Binary {
-        span: 0..34,
-        left: Binary(
-            Binary {
+Expr {
+    kind: Binary(
+        Binary {
+            left: Expr {
+                kind: Binary(
+                    Binary {
+                        left: Expr {
+                            kind: Binary(
+                                Binary {
+                                    left: Expr {
+                                        kind: Ident(
+                                            Ident {
+                                                name: "a",
+                                                span: 0..1,
+                                            },
+                                        ),
+                                        span: 0..1,
+                                        inferred_type: None,
+                                    },
+                                    op: GreaterThan,
+                                    right: Expr {
+                                        kind: Ident(
+                                            Ident {
+                                                name: "b",
+                                                span: 4..5,
+                                            },
+                                        ),
+                                        span: 4..5,
+                                        inferred_type: None,
+                                    },
+                                },
+                            ),
+                            span: 0..5,
+                            inferred_type: None,
+                        },
+                        op: And,
+                        right: Expr {
+                            kind: Binary(
+                                Binary {
+                                    left: Expr {
+                                        kind: Ident(
+                                            Ident {
+                                                name: "c",
+                                                span: 9..10,
+                                            },
+                                        ),
+                                        span: 9..10,
+                                        inferred_type: None,
+                                    },
+                                    op: GreaterThanOrEqual,
+                                    right: Expr {
+                                        kind: Ident(
+                                            Ident {
+                                                name: "d",
+                                                span: 14..15,
+                                            },
+                                        ),
+                                        span: 14..15,
+                                        inferred_type: None,
+                                    },
+                                },
+                            ),
+                            span: 9..15,
+                            inferred_type: None,
+                        },
+                    },
+                ),
                 span: 0..15,
-                left: Binary(
-                    Binary {
-                        span: 0..5,
-                        left: Ident(
-                            Ident {
-                                name: "a",
-                                span: 0..1,
-                            },
-                        ),
-                        op: GreaterThan,
-                        right: Ident(
-                            Ident {
-                                name: "b",
-                                span: 4..5,
-                            },
-                        ),
-                    },
-                ),
-                op: And,
-                right: Binary(
-                    Binary {
-                        span: 9..15,
-                        left: Ident(
-                            Ident {
-                                name: "c",
-                                span: 9..10,
-                            },
-                        ),
-                        op: GreaterThanOrEqual,
-                        right: Ident(
-                            Ident {
-                                name: "d",
-                                span: 14..15,
-                            },
-                        ),
-                    },
-                ),
+                inferred_type: None,
             },
-        ),
-        op: Or,
-        right: Binary(
-            Binary {
+            op: Or,
+            right: Expr {
+                kind: Binary(
+                    Binary {
+                        left: Expr {
+                            kind: Binary(
+                                Binary {
+                                    left: Expr {
+                                        kind: Ident(
+                                            Ident {
+                                                name: "e",
+                                                span: 19..20,
+                                            },
+                                        ),
+                                        span: 19..20,
+                                        inferred_type: None,
+                                    },
+                                    op: LessThan,
+                                    right: Expr {
+                                        kind: Ident(
+                                            Ident {
+                                                name: "f",
+                                                span: 23..24,
+                                            },
+                                        ),
+                                        span: 23..24,
+                                        inferred_type: None,
+                                    },
+                                },
+                            ),
+                            span: 19..24,
+                            inferred_type: None,
+                        },
+                        op: And,
+                        right: Expr {
+                            kind: Binary(
+                                Binary {
+                                    left: Expr {
+                                        kind: Ident(
+                                            Ident {
+                                                name: "g",
+                                                span: 28..29,
+                                            },
+                                        ),
+                                        span: 28..29,
+                                        inferred_type: None,
+                                    },
+                                    op: LessThanOrEqual,
+                                    right: Expr {
+                                        kind: Ident(
+                                            Ident {
+                                                name: "h",
+                                                span: 33..34,
+                                            },
+                                        ),
+                                        span: 33..34,
+                                        inferred_type: None,
+                                    },
+                                },
+                            ),
+                            span: 28..34,
+                            inferred_type: None,
+                        },
+                    },
+                ),
                 span: 19..34,
-                left: Binary(
-                    Binary {
-                        span: 19..24,
-                        left: Ident(
-                            Ident {
-                                name: "e",
-                                span: 19..20,
-                            },
-                        ),
-                        op: LessThan,
-                        right: Ident(
-                            Ident {
-                                name: "f",
-                                span: 23..24,
-                            },
-                        ),
-                    },
-                ),
-                op: And,
-                right: Binary(
-                    Binary {
-                        span: 28..34,
-                        left: Ident(
-                            Ident {
-                                name: "g",
-                                span: 28..29,
-                            },
-                        ),
-                        op: LessThanOrEqual,
-                        right: Ident(
-                            Ident {
-                                name: "h",
-                                span: 33..34,
-                            },
-                        ),
-                    },
-                ),
+                inferred_type: None,
             },
-        ),
-    },
-)
+        },
+    ),
+    span: 0..34,
+    inferred_type: None,
+}

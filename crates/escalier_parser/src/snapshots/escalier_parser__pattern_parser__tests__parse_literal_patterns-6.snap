@@ -3,7 +3,6 @@ source: crates/escalier_parser/src/pattern_parser.rs
 expression: "parse(r#\"\"hello\"\"#)"
 ---
 Pattern {
-    span: 0..7,
     kind: Lit(
         LitPat {
             lit: String(
@@ -11,4 +10,6 @@ Pattern {
             ),
         },
     ),
+    span: 0..7,
+    inferred_type: None,
 }

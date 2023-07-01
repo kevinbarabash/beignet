@@ -2,67 +2,85 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(r#\"\n            async fn () => { \n                let x = await foo()\n                return x\n            }\n        \"#)"
 ---
-Function(
-    Function {
-        span: 13..105,
-        type_params: None,
-        params: [],
-        body: Block(
-            Block {
-                span: 27..105,
-                stmts: [
-                    Stmt {
-                        kind: Let {
-                            pattern: Pattern {
-                                span: 51..52,
-                                kind: Ident(
-                                    BindingIdent {
-                                        name: "x",
-                                        span: 51..52,
-                                        mutable: false,
+Expr {
+    kind: Function(
+        Function {
+            type_params: None,
+            params: [],
+            body: Block(
+                Block {
+                    span: 27..105,
+                    stmts: [
+                        Stmt {
+                            kind: Let {
+                                pattern: Pattern {
+                                    kind: Ident(
+                                        BindingIdent {
+                                            name: "x",
+                                            span: 51..52,
+                                            mutable: false,
+                                        },
+                                    ),
+                                    span: 51..52,
+                                    inferred_type: None,
+                                },
+                                expr: Expr {
+                                    kind: Await(
+                                        Await {
+                                            arg: Expr {
+                                                kind: Call(
+                                                    Call {
+                                                        callee: Expr {
+                                                            kind: Ident(
+                                                                Ident {
+                                                                    name: "foo",
+                                                                    span: 61..64,
+                                                                },
+                                                            ),
+                                                            span: 61..64,
+                                                            inferred_type: None,
+                                                        },
+                                                        type_args: None,
+                                                        args: [],
+                                                    },
+                                                ),
+                                                span: 61..66,
+                                                inferred_type: None,
+                                            },
+                                        },
+                                    ),
+                                    span: 55..66,
+                                    inferred_type: None,
+                                },
+                                type_ann: None,
+                            },
+                            span: 47..66,
+                        },
+                        Stmt {
+                            kind: Return {
+                                arg: Some(
+                                    Expr {
+                                        kind: Ident(
+                                            Ident {
+                                                name: "x",
+                                                span: 90..91,
+                                            },
+                                        ),
+                                        span: 90..91,
+                                        inferred_type: None,
                                     },
                                 ),
                             },
-                            expr: Await(
-                                Await {
-                                    span: 55..66,
-                                    arg: Call(
-                                        Call {
-                                            span: 61..66,
-                                            callee: Ident(
-                                                Ident {
-                                                    name: "foo",
-                                                    span: 61..64,
-                                                },
-                                            ),
-                                            type_args: None,
-                                            args: [],
-                                        },
-                                    ),
-                                },
-                            ),
-                            type_ann: None,
+                            span: 90..91,
                         },
-                        span: 47..66,
-                    },
-                    Stmt {
-                        kind: Return {
-                            arg: Some(
-                                Ident(
-                                    Ident {
-                                        name: "x",
-                                        span: 90..91,
-                                    },
-                                ),
-                            ),
-                        },
-                        span: 90..91,
-                    },
-                ],
-            },
-        ),
-        type_ann: None,
-        is_async: true,
-        is_gen: false,
-    },
-)
+                    ],
+                },
+            ),
+            type_ann: None,
+            is_async: true,
+            is_gen: false,
+        },
+    ),
+    span: 13..105,
+    inferred_type: None,
+}

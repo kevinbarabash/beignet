@@ -2,31 +2,49 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"a[b][c]\")"
 ---
-Index(
-    Index {
-        span: 0..6,
-        left: Index(
-            Index {
+Expr {
+    kind: Index(
+        Member {
+            object: Expr {
+                kind: Index(
+                    Member {
+                        object: Expr {
+                            kind: Ident(
+                                Ident {
+                                    name: "a",
+                                    span: 0..1,
+                                },
+                            ),
+                            span: 0..1,
+                            inferred_type: None,
+                        },
+                        property: Expr {
+                            kind: Ident(
+                                Ident {
+                                    name: "b",
+                                    span: 2..3,
+                                },
+                            ),
+                            span: 2..3,
+                            inferred_type: None,
+                        },
+                    },
+                ),
                 span: 0..3,
-                left: Ident(
-                    Ident {
-                        name: "a",
-                        span: 0..1,
-                    },
-                ),
-                right: Ident(
-                    Ident {
-                        name: "b",
-                        span: 2..3,
-                    },
-                ),
+                inferred_type: None,
             },
-        ),
-        right: Ident(
-            Ident {
-                name: "c",
+            property: Expr {
+                kind: Ident(
+                    Ident {
+                        name: "c",
+                        span: 5..6,
+                    },
+                ),
                 span: 5..6,
+                inferred_type: None,
             },
-        ),
-    },
-)
+        },
+    ),
+    span: 0..6,
+    inferred_type: None,
+}

@@ -2,40 +2,60 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: parse(src)
 ---
-Call(
-    Call {
-        span: 0..15,
-        callee: Index(
-            Index {
+Expr {
+    kind: Call(
+        Call {
+            callee: Expr {
+                kind: Index(
+                    Member {
+                        object: Expr {
+                            kind: Ident(
+                                Ident {
+                                    name: "foo",
+                                    span: 0..3,
+                                },
+                            ),
+                            span: 0..3,
+                            inferred_type: None,
+                        },
+                        property: Expr {
+                            kind: Ident(
+                                Ident {
+                                    name: "bar",
+                                    span: 4..7,
+                                },
+                            ),
+                            span: 4..7,
+                            inferred_type: None,
+                        },
+                    },
+                ),
                 span: 0..7,
-                left: Ident(
-                    Ident {
-                        name: "foo",
-                        span: 0..3,
-                    },
-                ),
-                right: Ident(
-                    Ident {
-                        name: "bar",
-                        span: 4..7,
-                    },
-                ),
+                inferred_type: None,
             },
-        ),
-        type_args: None,
-        args: [
-            Num(
-                Num {
+            type_args: None,
+            args: [
+                Expr {
+                    kind: Num(
+                        Num {
+                            value: "5",
+                        },
+                    ),
                     span: 9..10,
-                    value: "5",
+                    inferred_type: None,
                 },
-            ),
-            Num(
-                Num {
+                Expr {
+                    kind: Num(
+                        Num {
+                            value: "10",
+                        },
+                    ),
                     span: 12..14,
-                    value: "10",
+                    inferred_type: None,
                 },
-            ),
-        ],
-    },
-)
+            ],
+        },
+    ),
+    span: 0..15,
+    inferred_type: None,
+}

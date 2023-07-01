@@ -3,7 +3,6 @@ source: crates/escalier_parser/src/pattern_parser.rs
 expression: "parse(\"true\")"
 ---
 Pattern {
-    span: 0..4,
     kind: Lit(
         LitPat {
             lit: Boolean(
@@ -11,4 +10,6 @@ Pattern {
             ),
         },
     ),
+    span: 0..4,
+    inferred_type: None,
 }

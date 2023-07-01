@@ -1,19 +1,17 @@
 ---
 source: crates/escalier_parser/src/stmt_parser.rs
-expression: "parse(\"let [p1, p2] = line;\")"
+expression: "parse(\"let [p1, p2] = line\")"
 ---
 [
     Stmt {
         kind: Let {
             pattern: Pattern {
-                span: 3..12,
                 kind: Tuple(
                     TuplePat {
                         elems: [
                             Some(
                                 TuplePatElem {
                                     pattern: Pattern {
-                                        span: 5..7,
                                         kind: Ident(
                                             BindingIdent {
                                                 name: "p1",
@@ -21,6 +19,8 @@ expression: "parse(\"let [p1, p2] = line;\")"
                                                 mutable: false,
                                             },
                                         ),
+                                        span: 5..7,
+                                        inferred_type: None,
                                     },
                                     init: None,
                                 },
@@ -28,7 +28,6 @@ expression: "parse(\"let [p1, p2] = line;\")"
                             Some(
                                 TuplePatElem {
                                     pattern: Pattern {
-                                        span: 9..11,
                                         kind: Ident(
                                             BindingIdent {
                                                 name: "p2",
@@ -36,6 +35,8 @@ expression: "parse(\"let [p1, p2] = line;\")"
                                                 mutable: false,
                                             },
                                         ),
+                                        span: 9..11,
+                                        inferred_type: None,
                                     },
                                     init: None,
                                 },
@@ -44,13 +45,19 @@ expression: "parse(\"let [p1, p2] = line;\")"
                         optional: false,
                     },
                 ),
+                span: 3..12,
+                inferred_type: None,
             },
-            expr: Ident(
-                Ident {
-                    name: "line",
-                    span: 15..19,
-                },
-            ),
+            expr: Expr {
+                kind: Ident(
+                    Ident {
+                        name: "line",
+                        span: 15..19,
+                    },
+                ),
+                span: 15..19,
+                inferred_type: None,
+            },
             type_ann: None,
         },
         span: 0..19,

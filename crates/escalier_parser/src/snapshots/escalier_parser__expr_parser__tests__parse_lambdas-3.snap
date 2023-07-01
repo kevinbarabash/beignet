@@ -2,77 +2,93 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(r#\"fn (x: number, y: number): number => x + y\"#)"
 ---
-Function(
-    Function {
-        span: 0..42,
-        type_params: None,
-        params: [
-            FuncParam {
-                pattern: Pattern {
-                    span: 4..5,
-                    kind: Ident(
-                        BindingIdent {
-                            name: "x",
-                            span: 4..5,
-                            mutable: false,
+Expr {
+    kind: Function(
+        Function {
+            type_params: None,
+            params: [
+                FuncParam {
+                    pattern: Pattern {
+                        kind: Ident(
+                            BindingIdent {
+                                name: "x",
+                                span: 4..5,
+                                mutable: false,
+                            },
+                        ),
+                        span: 4..5,
+                        inferred_type: None,
+                    },
+                    type_ann: Some(
+                        TypeAnn {
+                            kind: Number,
+                            span: 7..13,
                         },
                     ),
+                    optional: false,
                 },
-                type_ann: Some(
-                    TypeAnn {
-                        kind: Number,
-                        span: 7..13,
+                FuncParam {
+                    pattern: Pattern {
+                        kind: Ident(
+                            BindingIdent {
+                                name: "y",
+                                span: 15..16,
+                                mutable: false,
+                            },
+                        ),
+                        span: 15..16,
+                        inferred_type: None,
                     },
-                ),
-                optional: false,
-            },
-            FuncParam {
-                pattern: Pattern {
-                    span: 15..16,
-                    kind: Ident(
-                        BindingIdent {
-                            name: "y",
-                            span: 15..16,
-                            mutable: false,
+                    type_ann: Some(
+                        TypeAnn {
+                            kind: Number,
+                            span: 18..24,
                         },
                     ),
+                    optional: false,
                 },
-                type_ann: Some(
-                    TypeAnn {
-                        kind: Number,
-                        span: 18..24,
-                    },
-                ),
-                optional: false,
-            },
-        ],
-        body: Expr(
-            Binary(
-                Binary {
+            ],
+            body: Expr(
+                Expr {
+                    kind: Binary(
+                        Binary {
+                            left: Expr {
+                                kind: Ident(
+                                    Ident {
+                                        name: "x",
+                                        span: 37..38,
+                                    },
+                                ),
+                                span: 37..38,
+                                inferred_type: None,
+                            },
+                            op: Plus,
+                            right: Expr {
+                                kind: Ident(
+                                    Ident {
+                                        name: "y",
+                                        span: 41..42,
+                                    },
+                                ),
+                                span: 41..42,
+                                inferred_type: None,
+                            },
+                        },
+                    ),
                     span: 37..42,
-                    left: Ident(
-                        Ident {
-                            name: "x",
-                            span: 37..38,
-                        },
-                    ),
-                    op: Plus,
-                    right: Ident(
-                        Ident {
-                            name: "y",
-                            span: 41..42,
-                        },
-                    ),
+                    inferred_type: None,
                 },
             ),
-        ),
-        type_ann: Some(
-            TypeAnn {
-                kind: Number,
-                span: 27..33,
-            },
-        ),
-        is_async: false,
-        is_gen: false,
-    },
-)
+            type_ann: Some(
+                TypeAnn {
+                    kind: Number,
+                    span: 27..33,
+                },
+            ),
+            is_async: false,
+            is_gen: false,
+        },
+    ),
+    span: 0..42,
+    inferred_type: None,
+}

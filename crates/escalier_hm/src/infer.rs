@@ -37,25 +37,25 @@ pub fn infer_expression(
     node: &mut Expr,
     ctx: &mut Context,
 ) -> Result<Index, Errors> {
-    let t: Index = match &mut node {
-        Expr::Ident(Ident { name, .. }) => get_type(arena, name, ctx)?,
-        Expr::Str(str) => arena.insert(Type {
+    let t: Index = match &mut node.kind {
+        ExprKind::Ident(Ident { name, .. }) => get_type(arena, name, ctx)?,
+        ExprKind::Str(str) => arena.insert(Type {
             kind: TypeKind::Literal(syntax::Literal::String(str.value.to_owned())),
         }),
-        Expr::Num(num) => arena.insert(Type {
+        ExprKind::Num(num) => arena.insert(Type {
             kind: TypeKind::Literal(syntax::Literal::Number(num.value)),
         }),
-        Expr::Bool(bool) => arena.insert(Type {
+        ExprKind::Bool(bool) => arena.insert(Type {
             kind: TypeKind::Literal(syntax::Literal::Boolean(bool.value)),
         }),
-        Expr::Null(_) => arena.insert(Type {
+        ExprKind::Null(_) => arena.insert(Type {
             kind: TypeKind::Literal(syntax::Literal::Null),
         }),
-        Expr::Undefined(_) => arena.insert(Type {
+        ExprKind::Undefined(_) => arena.insert(Type {
             kind: TypeKind::Literal(syntax::Literal::Undefined),
         }),
-        // Expr::Lit(literal) => new_lit_type(arena, literal),
-        Expr::Tuple(syntax::Tuple {
+        // ExprKind::Lit(literal) => new_lit_type(arena, literal),
+        ExprKind::Tuple(syntax::Tuple {
             elements: elems, ..
         }) => {
             let mut element_types = vec![];
@@ -66,7 +66,7 @@ pub fn infer_expression(
             }
             new_tuple_type(arena, &element_types)
         }
-        Expr::Object(syntax::Object {
+        ExprKind::Object(syntax::Object {
             properties: props, ..
         }) => {
             let mut prop_types: Vec<types::TObjElem> = vec![];
@@ -95,7 +95,7 @@ pub fn infer_expression(
             }
             new_object_type(arena, &prop_types)
         }
-        Expr::Call(syntax::Call {
+        ExprKind::Call(syntax::Call {
             callee: func,
             args,
             type_args,
@@ -124,14 +124,13 @@ pub fn infer_expression(
             }
         }
         // TODO: Add support for explicit type parameters
-        Expr::Function(syntax::Function {
+        ExprKind::Function(syntax::Function {
             params,
             body,
             is_async,
             is_gen: _,
             type_params,
             type_ann: return_type,
-            span: _,
         }) => {
             let mut func_params: Vec<types::FuncParam> = vec![];
             let mut sig_ctx = ctx.clone();
@@ -204,11 +203,10 @@ pub fn infer_expression(
                 None => new_func_type(arena, &func_params, body_t, type_params),
             }
         }
-        Expr::IfElse(IfElse {
+        ExprKind::IfElse(IfElse {
             cond,
             consequent,
             alternate,
-            span: _,
         }) => {
             let cond_type = infer_expression(arena, cond, ctx)?;
             let bool_type = new_constructor(arena, "boolean", &[]);
@@ -218,10 +216,9 @@ pub fn infer_expression(
             let alternate_type = infer_block(arena, &mut alternate.clone().unwrap(), ctx)?;
             new_union_type(arena, &[consequent_type, alternate_type])
         }
-        Expr::Member(Member {
+        ExprKind::Member(Member {
             object: obj,
             property: prop,
-            span: _,
         }) => {
             let obj_idx = infer_expression(arena, obj, ctx)?;
             match prop {
@@ -235,17 +232,12 @@ pub fn infer_expression(
                 }
             }
         }
-        // Expr::New(_) => todo!(),
-        Expr::JSXElement(_) => todo!(),
-        Expr::Assign(_) => todo!(),
-        // Expr::LetExpr(_) => todo!(),
-        // Expr::Keyword(_) => todo!(), // null, undefined, etc.
-        Expr::Binary(Binary {
-            op,
-            left,
-            right,
-            span: _,
-        }) => {
+        // ExprKind::New(_) => todo!(),
+        ExprKind::JSXElement(_) => todo!(),
+        ExprKind::Assign(_) => todo!(),
+        // ExprKind::LetExpr(_) => todo!(),
+        // ExprKind::Keyword(_) => todo!(), // null, undefined, etc.
+        ExprKind::Binary(Binary { op, left, right }) => {
             let number = new_constructor(arena, "number", &[]);
             let boolean = new_constructor(arena, "boolean", &[]);
             let left_type = infer_expression(arena, left, ctx)?;
@@ -283,10 +275,9 @@ pub fn infer_expression(
                 }
             }
         }
-        Expr::Unary(Unary {
+        ExprKind::Unary(Unary {
             op,
             right: arg, // TODO: rename `right` to `arg`
-            span: _,
         }) => {
             let number = new_constructor(arena, "number", &[]);
             let boolean = new_constructor(arena, "boolean", &[]);
@@ -307,7 +298,7 @@ pub fn infer_expression(
                 }
             }
         }
-        Expr::Await(Await { arg: expr, .. }) => {
+        ExprKind::Await(Await { arg: expr, .. }) => {
             if !ctx.is_async {
                 return Err(Errors::InferenceError(
                     "Can't use await outside of an async function".to_string(),
@@ -324,14 +315,10 @@ pub fn infer_expression(
 
             inner_t
         }
-        // Expr::Empty => todo!(),
-        Expr::TemplateLiteral(_) => todo!(),
-        // Expr::TaggedTemplateLiteral(_) => todo!(),
-        Expr::Match(Match {
-            expr,
-            arms,
-            span: _,
-        }) => {
+        // ExprKind::Empty => todo!(),
+        ExprKind::TemplateLiteral(_) => todo!(),
+        // ExprKind::TaggedTemplateLiteral(_) => todo!(),
+        ExprKind::Match(Match { expr, arms }) => {
             let expr_idx = infer_expression(arena, expr, ctx)?;
             let mut body_types: Vec<Index> = vec![];
 
@@ -363,9 +350,9 @@ pub fn infer_expression(
 
             new_union_type(arena, &body_types)
         }
-        Expr::Class(_) => todo!(),
-        // Expr::Regex(_) => todo!(),
-        Expr::Do(Do { body, span: _ }) => infer_block(arena, body, ctx)?,
+        ExprKind::Class(_) => todo!(),
+        // ExprKind::Regex(_) => todo!(),
+        ExprKind::Do(Do { body, span: _ }) => infer_block(arena, body, ctx)?,
     };
 
     node.inferred_type = Some(t);

@@ -5,30 +5,44 @@ expression: "parse(\"foo\\n.bar()\")"
 [
     Stmt {
         kind: Expr {
-            expr: Call(
-                Call {
-                    span: 0..10,
-                    callee: Member(
-                        Member {
+            expr: Expr {
+                kind: Call(
+                    Call {
+                        callee: Expr {
+                            kind: Member(
+                                Member {
+                                    object: Expr {
+                                        kind: Ident(
+                                            Ident {
+                                                name: "foo",
+                                                span: 0..3,
+                                            },
+                                        ),
+                                        span: 0..3,
+                                        inferred_type: None,
+                                    },
+                                    property: Expr {
+                                        kind: Ident(
+                                            Ident {
+                                                name: "bar",
+                                                span: 5..8,
+                                            },
+                                        ),
+                                        span: 5..8,
+                                        inferred_type: None,
+                                    },
+                                },
+                            ),
                             span: 0..8,
-                            object: Ident(
-                                Ident {
-                                    name: "foo",
-                                    span: 0..3,
-                                },
-                            ),
-                            property: Ident(
-                                Ident {
-                                    name: "bar",
-                                    span: 5..8,
-                                },
-                            ),
+                            inferred_type: None,
                         },
-                    ),
-                    type_args: None,
-                    args: [],
-                },
-            ),
+                        type_args: None,
+                        args: [],
+                    },
+                ),
+                span: 0..10,
+                inferred_type: None,
+            },
         },
         span: 0..10,
     },

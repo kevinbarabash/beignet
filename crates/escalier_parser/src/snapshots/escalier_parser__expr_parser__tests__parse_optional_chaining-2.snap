@@ -2,25 +2,39 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"a?.[b]\")"
 ---
-OptionalChain(
-    OptionalChain {
-        span: 0..5,
-        base: Index(
-            Index {
+Expr {
+    kind: OptionalChain(
+        OptionalChain {
+            base: Expr {
+                kind: Index(
+                    Member {
+                        object: Expr {
+                            kind: Ident(
+                                Ident {
+                                    name: "a",
+                                    span: 0..1,
+                                },
+                            ),
+                            span: 0..1,
+                            inferred_type: None,
+                        },
+                        property: Expr {
+                            kind: Ident(
+                                Ident {
+                                    name: "b",
+                                    span: 4..5,
+                                },
+                            ),
+                            span: 4..5,
+                            inferred_type: None,
+                        },
+                    },
+                ),
                 span: 0..5,
-                left: Ident(
-                    Ident {
-                        name: "a",
-                        span: 0..1,
-                    },
-                ),
-                right: Ident(
-                    Ident {
-                        name: "b",
-                        span: 4..5,
-                    },
-                ),
+                inferred_type: None,
             },
-        ),
-    },
-)
+        },
+    ),
+    span: 0..5,
+    inferred_type: None,
+}

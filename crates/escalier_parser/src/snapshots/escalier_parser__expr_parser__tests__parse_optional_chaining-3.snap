@@ -2,21 +2,31 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"foo?.()\")"
 ---
-OptionalChain(
-    OptionalChain {
-        span: 0..7,
-        base: Call(
-            Call {
-                span: 0..7,
-                callee: Ident(
-                    Ident {
-                        name: "foo",
-                        span: 0..3,
+Expr {
+    kind: OptionalChain(
+        OptionalChain {
+            base: Expr {
+                kind: Call(
+                    Call {
+                        callee: Expr {
+                            kind: Ident(
+                                Ident {
+                                    name: "foo",
+                                    span: 0..3,
+                                },
+                            ),
+                            span: 0..3,
+                            inferred_type: None,
+                        },
+                        type_args: None,
+                        args: [],
                     },
                 ),
-                type_args: None,
-                args: [],
+                span: 0..7,
+                inferred_type: None,
             },
-        ),
-    },
-)
+        },
+    ),
+    span: 0..7,
+    inferred_type: None,
+}

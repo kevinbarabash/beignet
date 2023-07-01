@@ -6,7 +6,6 @@ expression: "parse(r#\"let add: fn (a: number, b: number) => number = fn (a, b) 
     Stmt {
         kind: Let {
             pattern: Pattern {
-                span: 4..7,
                 kind: Ident(
                     BindingIdent {
                         name: "add",
@@ -14,73 +13,90 @@ expression: "parse(r#\"let add: fn (a: number, b: number) => number = fn (a, b) 
                         mutable: false,
                     },
                 ),
+                span: 4..7,
+                inferred_type: None,
             },
-            expr: Function(
-                Function {
-                    span: 47..65,
-                    type_params: None,
-                    params: [
-                        FuncParam {
-                            pattern: Pattern {
-                                span: 51..52,
-                                kind: Ident(
-                                    BindingIdent {
-                                        name: "a",
-                                        span: 51..52,
-                                        mutable: false,
+            expr: Expr {
+                kind: Function(
+                    Function {
+                        type_params: None,
+                        params: [
+                            FuncParam {
+                                pattern: Pattern {
+                                    kind: Ident(
+                                        BindingIdent {
+                                            name: "a",
+                                            span: 51..52,
+                                            mutable: false,
+                                        },
+                                    ),
+                                    span: 51..52,
+                                    inferred_type: None,
+                                },
+                                type_ann: None,
+                                optional: false,
+                            },
+                            FuncParam {
+                                pattern: Pattern {
+                                    kind: Ident(
+                                        BindingIdent {
+                                            name: "b",
+                                            span: 54..55,
+                                            mutable: false,
+                                        },
+                                    ),
+                                    span: 54..55,
+                                    inferred_type: None,
+                                },
+                                type_ann: None,
+                                optional: false,
+                            },
+                        ],
+                        body: Expr(
+                            Expr {
+                                kind: Binary(
+                                    Binary {
+                                        left: Expr {
+                                            kind: Ident(
+                                                Ident {
+                                                    name: "a",
+                                                    span: 60..61,
+                                                },
+                                            ),
+                                            span: 60..61,
+                                            inferred_type: None,
+                                        },
+                                        op: Plus,
+                                        right: Expr {
+                                            kind: Ident(
+                                                Ident {
+                                                    name: "b",
+                                                    span: 64..65,
+                                                },
+                                            ),
+                                            span: 64..65,
+                                            inferred_type: None,
+                                        },
                                     },
                                 ),
-                            },
-                            type_ann: None,
-                            optional: false,
-                        },
-                        FuncParam {
-                            pattern: Pattern {
-                                span: 54..55,
-                                kind: Ident(
-                                    BindingIdent {
-                                        name: "b",
-                                        span: 54..55,
-                                        mutable: false,
-                                    },
-                                ),
-                            },
-                            type_ann: None,
-                            optional: false,
-                        },
-                    ],
-                    body: Expr(
-                        Binary(
-                            Binary {
                                 span: 60..65,
-                                left: Ident(
-                                    Ident {
-                                        name: "a",
-                                        span: 60..61,
-                                    },
-                                ),
-                                op: Plus,
-                                right: Ident(
-                                    Ident {
-                                        name: "b",
-                                        span: 64..65,
-                                    },
-                                ),
+                                inferred_type: None,
                             },
                         ),
-                    ),
-                    type_ann: None,
-                    is_async: false,
-                    is_gen: false,
-                },
-            ),
+                        type_ann: None,
+                        is_async: false,
+                        is_gen: false,
+                    },
+                ),
+                span: 47..65,
+                inferred_type: None,
+            },
             type_ann: Some(
                 TypeAnn {
                     kind: Function(
                         [
                             FuncParam {
                                 pattern: Pattern {
-                                    span: 13..14,
                                     kind: Ident(
                                         BindingIdent {
                                             name: "a",
@@ -88,6 +104,8 @@ expression: "parse(r#\"let add: fn (a: number, b: number) => number = fn (a, b) 
                                             mutable: false,
                                         },
                                     ),
+                                    span: 13..14,
+                                    inferred_type: None,
                                 },
                                 type_ann: Some(
                                     TypeAnn {
@@ -99,7 +117,6 @@ expression: "parse(r#\"let add: fn (a: number, b: number) => number = fn (a, b) 
                             },
                             FuncParam {
                                 pattern: Pattern {
-                                    span: 24..25,
                                     kind: Ident(
                                         BindingIdent {
                                             name: "b",
@@ -107,6 +124,8 @@ expression: "parse(r#\"let add: fn (a: number, b: number) => number = fn (a, b) 
                                             mutable: false,
                                         },
                                     ),
+                                    span: 24..25,
+                                    inferred_type: None,
                                 },
                                 type_ann: Some(
                                     TypeAnn {

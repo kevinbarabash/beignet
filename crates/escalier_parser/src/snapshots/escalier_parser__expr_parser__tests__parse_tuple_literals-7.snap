@@ -2,34 +2,49 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"[...a, ...b, ...c]\")"
 ---
-Tuple(
-    Tuple {
-        span: 0..18,
-        elements: [
-            Spread(
-                Ident(
-                    Ident {
-                        name: "a",
+Expr {
+    kind: Tuple(
+        Tuple {
+            elements: [
+                Spread(
+                    Expr {
+                        kind: Ident(
+                            Ident {
+                                name: "a",
+                                span: 4..5,
+                            },
+                        ),
                         span: 4..5,
+                        inferred_type: None,
                     },
                 ),
-            ),
-            Spread(
-                Ident(
-                    Ident {
-                        name: "b",
+                Spread(
+                    Expr {
+                        kind: Ident(
+                            Ident {
+                                name: "b",
+                                span: 10..11,
+                            },
+                        ),
                         span: 10..11,
+                        inferred_type: None,
                     },
                 ),
-            ),
-            Spread(
-                Ident(
-                    Ident {
-                        name: "c",
+                Spread(
+                    Expr {
+                        kind: Ident(
+                            Ident {
+                                name: "c",
+                                span: 16..17,
+                            },
+                        ),
                         span: 16..17,
+                        inferred_type: None,
                     },
                 ),
-            ),
-        ],
-    },
-)
+            ],
+        },
+    ),
+    span: 0..18,
+    inferred_type: None,
+}
