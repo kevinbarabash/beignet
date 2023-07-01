@@ -365,6 +365,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "escalier_ast"
+version = "0.1.0"
+
+[[package]]
 name = "escalier_cli"
 version = "0.1.0"
 dependencies = [
@@ -496,6 +500,7 @@ dependencies = [
 name = "escalier_parser"
 version = "0.1.0"
 dependencies = [
+ "escalier_ast",
  "insta",
  "lazy_static",
 ]

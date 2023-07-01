@@ -1,13 +1,8 @@
 [package]
-name = "escalier_parser"
+name = "escalier_ast"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-escalier_ast = { version = "0.1.0", path = "../escalier_ast" }
-lazy_static = "1.4.0"
-
-[dev-dependencies]
-insta = "1.13.0"

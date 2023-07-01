@@ -1,7 +1,7 @@
+use escalier_ast::*;
+
 use crate::parse_error::ParseError;
 use crate::parser::*;
-use crate::span::merge_spans;
-use crate::stmt::{Stmt, StmtKind};
 use crate::token::*;
 
 impl<'a> Parser<'a> {
