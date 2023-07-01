@@ -12,7 +12,7 @@ use swc_ecma_codegen::*;
 use swc_ecma_transforms_react::{react, Options, Runtime};
 use swc_ecma_visit::*;
 
-use escalier_ast::values;
+use escalier_old_ast::values;
 use values::LetExpr;
 
 pub struct Context {

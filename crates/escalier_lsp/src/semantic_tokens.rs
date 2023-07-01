@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 
 use lsp_types::*;
 
-use escalier_ast::values::*;
+use escalier_old_ast::values::*;
 
 pub fn get_semantic_tokens(prog: &mut Program) -> Vec<SemanticToken> {
     let mut visitor = SemanticTokenVisitor { raw_tokens: vec![] };
@@ -141,15 +141,15 @@ impl SemanticTokenVisitor {
         // STRING = 10
         // NUMBER = 11
         let token_type: Option<u32> = match &type_ann.kind {
-            escalier_ast::values::TypeAnnKind::Lam(_) => None,
-            escalier_ast::values::TypeAnnKind::Lit(lit) => match lit {
+            escalier_old_ast::values::TypeAnnKind::Lam(_) => None,
+            escalier_old_ast::values::TypeAnnKind::Lit(lit) => match lit {
                 Lit::Num(_) => Some(11),
                 Lit::Bool(_) => None,
                 Lit::Str(_) => Some(10),
             },
-            escalier_ast::values::TypeAnnKind::Keyword(_) => Some(0),
-            escalier_ast::values::TypeAnnKind::Object(_) => None,
-            escalier_ast::values::TypeAnnKind::TypeRef(TypeRef {
+            escalier_old_ast::values::TypeAnnKind::Keyword(_) => Some(0),
+            escalier_old_ast::values::TypeAnnKind::Object(_) => None,
+            escalier_old_ast::values::TypeAnnKind::TypeRef(TypeRef {
                 name: _,
                 type_args: _,
             }) => {
@@ -158,19 +158,19 @@ impl SemanticTokenVisitor {
                 // is solid green.
                 Some(0)
             }
-            escalier_ast::values::TypeAnnKind::Union(_) => None,
-            escalier_ast::values::TypeAnnKind::Intersection(_) => None,
-            escalier_ast::values::TypeAnnKind::Tuple(_) => None,
-            escalier_ast::values::TypeAnnKind::Array(_) => None,
-            escalier_ast::values::TypeAnnKind::KeyOf(_) => None,
-            escalier_ast::values::TypeAnnKind::Query(_) => None,
-            escalier_ast::values::TypeAnnKind::IndexedAccess(_) => None,
-            escalier_ast::values::TypeAnnKind::Mapped(_) => None,
-            escalier_ast::values::TypeAnnKind::Conditional(_) => None,
-            escalier_ast::values::TypeAnnKind::Infer(_) => None,
+            escalier_old_ast::values::TypeAnnKind::Union(_) => None,
+            escalier_old_ast::values::TypeAnnKind::Intersection(_) => None,
+            escalier_old_ast::values::TypeAnnKind::Tuple(_) => None,
+            escalier_old_ast::values::TypeAnnKind::Array(_) => None,
+            escalier_old_ast::values::TypeAnnKind::KeyOf(_) => None,
+            escalier_old_ast::values::TypeAnnKind::Query(_) => None,
+            escalier_old_ast::values::TypeAnnKind::IndexedAccess(_) => None,
+            escalier_old_ast::values::TypeAnnKind::Mapped(_) => None,
+            escalier_old_ast::values::TypeAnnKind::Conditional(_) => None,
+            escalier_old_ast::values::TypeAnnKind::Infer(_) => None,
             // TODO: figure out how to get the SourceLocation for just the `mut`
             // modifier
-            escalier_ast::values::TypeAnnKind::Mutable(_) => None,
+            escalier_old_ast::values::TypeAnnKind::Mutable(_) => None,
         };
 
         let TypeAnn { loc, .. } = type_ann;

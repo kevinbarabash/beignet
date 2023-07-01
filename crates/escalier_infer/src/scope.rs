@@ -1,4 +1,4 @@
-use escalier_ast::types::*;
+use escalier_old_ast::types::*;
 use im::hashmap::HashMap;
 
 use crate::binding::Binding;

@@ -1,10 +1,10 @@
 use ariadne::{Config, Label, Report as AriadneReport, ReportKind, Source};
 
-use escalier_ast::{
+use escalier_infer::TypeError;
+use escalier_old_ast::{
     types::{Type, TypeKind},
     values::{ExprKind, Span},
 };
-use escalier_infer::TypeError;
 
 use crate::compile_error::CompileError;
 

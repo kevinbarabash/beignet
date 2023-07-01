@@ -11,9 +11,11 @@ use lsp_types::notification::{DidChangeTextDocument, DidOpenTextDocument};
 use lsp_types::request::{HoverRequest, SemanticTokensFullRequest};
 use lsp_types::*;
 
-use escalier_ast::types::Type;
-use escalier_ast::values::{Expr, Pattern, Position, Program, SourceLocation, Statement, TypeAnn};
 use escalier_interop::parse::parse_dts;
+use escalier_old_ast::types::Type;
+use escalier_old_ast::values::{
+    Expr, Pattern, Position, Program, SourceLocation, Statement, TypeAnn,
+};
 use escalier_old_parser::parse;
 
 use crate::semantic_tokens::get_semantic_tokens;

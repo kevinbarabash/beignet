@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
-use escalier_ast::types::{TObjElem, TObject, TPropKey, TypeKind};
 use escalier_infer::{Checker, Scheme};
+use escalier_old_ast::types::{TObjElem, TObject, TPropKey, TypeKind};
 
 pub fn merge_schemes(old_scheme: &Scheme, new_scheme: &Scheme, checker: &mut Checker) -> Scheme {
     let type_params_1 = &old_scheme.type_params;
@@ -195,7 +195,7 @@ pub fn merge_schemes(old_scheme: &Scheme, new_scheme: &Scheme, checker: &mut Che
 mod tests {
     use super::*;
 
-    use escalier_ast::types::{TCallable, TIndex, TIndexKey, TKeyword, TMethod};
+    use escalier_old_ast::types::{TCallable, TIndex, TIndexKey, TKeyword, TMethod};
 
     #[test]
     fn if_obj_is_not_mutating_all_methods_are_not_mutating() {

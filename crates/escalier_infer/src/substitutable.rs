@@ -3,7 +3,7 @@ use im::hashmap::HashMap;
 use std::collections::BTreeSet;
 use std::iter::IntoIterator;
 
-use escalier_ast::types::*;
+use escalier_old_ast::types::*;
 
 use crate::binding::Binding;
 use crate::checker::Checker;

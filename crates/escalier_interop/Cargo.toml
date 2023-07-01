@@ -14,7 +14,7 @@ swc_ecma_parser = "0.137.1"
 swc_common = "0.31.12"
 swc_ecma_visit = "0.93.0"
 memoize = "0.4.0"
-escalier_ast = { version = "0.1.0", path = "../escalier_ast" }
+escalier_old_ast = { version = "0.1.0", path = "../escalier_old_ast" }
 escalier_infer = { version = "0.1.0", path = "../escalier_infer" }
 
 [dev-dependencies]

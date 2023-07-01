@@ -4,7 +4,7 @@ use im::hashmap::HashMap;
 use std::collections::BTreeSet;
 use std::iter::Iterator;
 
-use escalier_ast::types::*;
+use escalier_old_ast::types::*;
 
 use crate::checker::Checker;
 use crate::substitutable::{Subst, Substitutable};

@@ -1,11 +1,11 @@
 use derive_visitor::{DriveMut, VisitorMut};
 use im::hashmap::HashMap;
 
-use escalier_ast::types::{
+use escalier_old_ast::types::{
     self as types, Provenance, TCallable, TFnParam, TKeyword, TLam, TLit, TObjElem, TObject, TPat,
     TPropKey, TRef, TVar, Type, TypeKind,
 };
-use escalier_ast::values::*;
+use escalier_old_ast::values::*;
 
 use crate::infer_pattern::PatternUsage;
 use crate::substitutable::{Subst, Substitutable};

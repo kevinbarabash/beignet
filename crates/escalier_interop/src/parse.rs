@@ -6,13 +6,13 @@ use swc_ecma_ast::*;
 use swc_ecma_parser::{error::Error, parse_file_as_module, Syntax, TsConfig};
 use swc_ecma_visit::*;
 
-use escalier_ast::types::{
+use escalier_infer::{self, get_sub_and_type_params, Checker, Scheme, Subst, Substitutable};
+use escalier_old_ast::types::{
     self as types, RestPat, TCallable, TConditionalType, TFnParam, TIndex, TIndexAccess, TIndexKey,
     TKeyword, TLam, TMappedType, TMappedTypeChangeProp, TObjElem, TObject, TPat, TProp, TPropKey,
     TRef, Type, TypeKind, TypeParam,
 };
-use escalier_ast::values::{Lit, DUMMY_LOC};
-use escalier_infer::{self, get_sub_and_type_params, Checker, Scheme, Subst, Substitutable};
+use escalier_old_ast::values::{Lit, DUMMY_LOC};
 
 use crate::overrides::maybe_override_string_methods;
 use crate::util;
@@ -588,7 +588,7 @@ fn infer_ts_type_element(
                 let params = infer_fn_params(checker, &sig.params)?;
                 let key = params.get(0).unwrap();
 
-                if let TPat::Ident(escalier_ast::types::BindingIdent { name, .. }) = &key.pat {
+                if let TPat::Ident(escalier_old_ast::types::BindingIdent { name, .. }) = &key.pat {
                     Ok(TObjElem::Index(TIndex {
                         key: TIndexKey {
                             name: name.to_owned(),

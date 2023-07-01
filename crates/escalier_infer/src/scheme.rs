@@ -4,7 +4,7 @@ use itertools::join;
 use std::fmt;
 use std::iter::Iterator;
 
-use escalier_ast::types::*;
+use escalier_old_ast::types::*;
 
 use crate::substitutable::{Subst, Substitutable};
 use crate::type_error::TypeError;

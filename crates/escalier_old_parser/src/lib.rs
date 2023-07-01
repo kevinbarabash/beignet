@@ -2,7 +2,7 @@
 use std::ffi::CString;
 use std::os::raw::c_char;
 
-use escalier_ast::values::*;
+use escalier_old_ast::values::*;
 
 mod expr;
 mod literal;

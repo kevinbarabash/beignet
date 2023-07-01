@@ -1,7 +1,7 @@
-use escalier_ast::values::{Program, StmtKind};
 use escalier_codegen::*;
 use escalier_infer::TypeError;
 use escalier_infer::*;
+use escalier_old_ast::values::{Program, StmtKind};
 use escalier_old_parser::parse;
 
 pub fn current_report_message(checker: &Checker) -> String {
