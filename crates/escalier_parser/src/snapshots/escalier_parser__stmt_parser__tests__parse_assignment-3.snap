@@ -21,16 +21,21 @@ expression: "parse(r#\"p[\"y\"] = 10\"#)"
                                         span: 0..1,
                                         inferred_type: None,
                                     },
-                                    property: Expr {
-                                        kind: Str(
-                                            Str {
+                                    property: Computed(
+                                        ComputedPropName {
+                                            span: 0..5,
+                                            expr: Expr {
+                                                kind: Str(
+                                                    Str {
+                                                        span: 2..5,
+                                                        value: "y",
+                                                    },
+                                                ),
                                                 span: 2..5,
-                                                value: "y",
+                                                inferred_type: None,
                                             },
-                                        ),
-                                        span: 2..5,
-                                        inferred_type: None,
-                                    },
+                                        },
+                                    ),
                                 },
                             ),
                             span: 0..5,

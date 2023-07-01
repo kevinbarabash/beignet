@@ -21,16 +21,12 @@ expression: "parse(r#\"p.x = 5\"#)"
                                         span: 0..1,
                                         inferred_type: None,
                                     },
-                                    property: Expr {
-                                        kind: Ident(
-                                            Ident {
-                                                name: "x",
-                                                span: 2..3,
-                                            },
-                                        ),
-                                        span: 2..3,
-                                        inferred_type: None,
-                                    },
+                                    property: Ident(
+                                        Ident {
+                                            name: "x",
+                                            span: 2..3,
+                                        },
+                                    ),
                                 },
                             ),
                             span: 0..3,

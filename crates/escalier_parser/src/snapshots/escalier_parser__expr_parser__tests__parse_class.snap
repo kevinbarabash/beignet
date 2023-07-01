@@ -158,16 +158,12 @@ Expr {
                                             span: 181..187,
                                             inferred_type: None,
                                         },
-                                        property: Expr {
-                                            kind: Ident(
-                                                Ident {
-                                                    name: "iterator",
-                                                    span: 188..196,
-                                                },
-                                            ),
-                                            span: 188..196,
-                                            inferred_type: None,
-                                        },
+                                        property: Ident(
+                                            Ident {
+                                                name: "iterator",
+                                                span: 188..196,
+                                            },
+                                        ),
                                     },
                                 ),
                                 span: 181..196,

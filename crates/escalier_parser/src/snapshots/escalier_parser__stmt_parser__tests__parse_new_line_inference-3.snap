@@ -21,16 +21,12 @@ expression: "parse(\"foo\\n.bar()\")"
                                         span: 0..3,
                                         inferred_type: None,
                                     },
-                                    property: Expr {
-                                        kind: Ident(
-                                            Ident {
-                                                name: "bar",
-                                                span: 5..8,
-                                            },
-                                        ),
-                                        span: 5..8,
-                                        inferred_type: None,
-                                    },
+                                    property: Ident(
+                                        Ident {
+                                            name: "bar",
+                                            span: 5..8,
+                                        },
+                                    ),
                                 },
                             ),
                             span: 0..8,

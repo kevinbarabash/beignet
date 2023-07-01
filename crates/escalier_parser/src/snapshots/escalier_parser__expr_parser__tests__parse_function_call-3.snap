@@ -30,16 +30,12 @@ Expr {
                                 span: 4..7,
                                 inferred_type: None,
                             },
-                            property: Expr {
-                                kind: Ident(
-                                    Ident {
-                                        name: "x",
-                                        span: 8..9,
-                                    },
-                                ),
-                                span: 8..9,
-                                inferred_type: None,
-                            },
+                            property: Ident(
+                                Ident {
+                                    name: "x",
+                                    span: 8..9,
+                                },
+                            ),
                         },
                     ),
                     span: 4..9,
@@ -58,16 +54,12 @@ Expr {
                                 span: 11..14,
                                 inferred_type: None,
                             },
-                            property: Expr {
-                                kind: Ident(
-                                    Ident {
-                                        name: "y",
-                                        span: 15..16,
-                                    },
-                                ),
-                                span: 15..16,
-                                inferred_type: None,
-                            },
+                            property: Ident(
+                                Ident {
+                                    name: "y",
+                                    span: 15..16,
+                                },
+                            ),
                         },
                     ),
                     span: 11..16,

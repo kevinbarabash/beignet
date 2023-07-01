@@ -39,16 +39,12 @@ expression: "parse(\"if (foo) { console.log(foo) }\")"
                                                                     span: 11..18,
                                                                     inferred_type: None,
                                                                 },
-                                                                property: Expr {
-                                                                    kind: Ident(
-                                                                        Ident {
-                                                                            name: "log",
-                                                                            span: 19..22,
-                                                                        },
-                                                                    ),
-                                                                    span: 19..22,
-                                                                    inferred_type: None,
-                                                                },
+                                                                property: Ident(
+                                                                    Ident {
+                                                                        name: "log",
+                                                                        span: 19..22,
+                                                                    },
+                                                                ),
                                                             },
                                                         ),
                                                         span: 11..22,

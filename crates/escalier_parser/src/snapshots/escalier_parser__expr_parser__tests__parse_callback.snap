@@ -24,16 +24,12 @@ Expr {
                                                     span: 0..3,
                                                     inferred_type: None,
                                                 },
-                                                property: Expr {
-                                                    kind: Ident(
-                                                        Ident {
-                                                            name: "map",
-                                                            span: 4..7,
-                                                        },
-                                                    ),
-                                                    span: 4..7,
-                                                    inferred_type: None,
-                                                },
+                                                property: Ident(
+                                                    Ident {
+                                                        name: "map",
+                                                        span: 4..7,
+                                                    },
+                                                ),
                                             },
                                         ),
                                         span: 0..7,
@@ -88,16 +84,12 @@ Expr {
                             span: 0..22,
                             inferred_type: None,
                         },
-                        property: Expr {
-                            kind: Ident(
-                                Ident {
-                                    name: "join",
-                                    span: 23..27,
-                                },
-                            ),
-                            span: 23..27,
-                            inferred_type: None,
-                        },
+                        property: Ident(
+                            Ident {
+                                name: "join",
+                                span: 23..27,
+                            },
+                        ),
                     },
                 ),
                 span: 0..27,

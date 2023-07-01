@@ -18,16 +18,21 @@ Expr {
                             span: 0..1,
                             inferred_type: None,
                         },
-                        property: Expr {
-                            kind: Ident(
-                                Ident {
-                                    name: "b",
+                        property: Computed(
+                            ComputedPropName {
+                                span: 0..5,
+                                expr: Expr {
+                                    kind: Ident(
+                                        Ident {
+                                            name: "b",
+                                            span: 4..5,
+                                        },
+                                    ),
                                     span: 4..5,
+                                    inferred_type: None,
                                 },
-                            ),
-                            span: 4..5,
-                            inferred_type: None,
-                        },
+                            },
+                        ),
                     },
                 ),
                 span: 0..5,

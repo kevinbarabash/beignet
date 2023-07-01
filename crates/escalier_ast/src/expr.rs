@@ -120,15 +120,20 @@ pub struct Call {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Member {
     pub object: Box<Expr>,
-    pub property: Box<Expr>,
+    pub property: MemberProp,
 }
 
-// #[derive(Debug, PartialEq, Eq, Clone)]
-// pub struct Index {
-//
-//     pub left: Box<Expr>,
-//     pub right: Box<Expr>,
-// }
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum MemberProp {
+    Ident(Ident),
+    Computed(ComputedPropName),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ComputedPropName {
+    pub span: Span, // includes enclosing []
+    pub expr: Box<Expr>,
+}
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct OptionalChain {

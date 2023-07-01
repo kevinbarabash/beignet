@@ -218,7 +218,9 @@ impl<'a> Parser<'a> {
                                 if p.peek().unwrap_or(&EOF).kind == TokenKind::Comma
                                     || p.peek().unwrap_or(&EOF).kind == TokenKind::RightBrace =>
                             {
-                                Ok(PropOrSpread::Prop(Prop::Shorthand { key: id.to_owned() }))
+                                Ok(PropOrSpread::Prop(expr::Prop::Shorthand {
+                                    key: id.to_owned(),
+                                }))
                             }
                             _ => {
                                 let key = match &next.kind {
@@ -248,7 +250,7 @@ impl<'a> Parser<'a> {
 
                                 let value = p.parse_expr()?;
 
-                                Ok(PropOrSpread::Prop(Prop::Property { key, value }))
+                                Ok(PropOrSpread::Prop(expr::Prop::Property { key, value }))
                             }
                         }
                     },
@@ -715,7 +717,7 @@ impl<'a> Parser<'a> {
 
         let expr = match &token.kind {
             TokenKind::LeftBracket => {
-                self.next(); // consumes '{'
+                self.next(); // consumes '['
                 let rhs = self.parse_expr()?;
                 let span = merge_spans(&lhs.get_span(), &rhs.get_span());
                 assert_eq!(
@@ -725,7 +727,10 @@ impl<'a> Parser<'a> {
                 Expr {
                     kind: ExprKind::Index(Member {
                         object: Box::new(lhs),
-                        property: Box::new(rhs),
+                        property: MemberProp::Computed(ComputedPropName {
+                            span,
+                            expr: Box::new(rhs),
+                        }),
                     }),
                     span,
                     inferred_type: None,
@@ -804,14 +809,23 @@ impl<'a> Parser<'a> {
             TokenKind::Dot => {
                 self.next(); // consumes '.'
                 let rhs = self.parse_expr_with_precedence(precedence)?;
-                let span = merge_spans(&lhs.get_span(), &rhs.get_span());
-                Expr {
-                    kind: ExprKind::Member(Member {
-                        object: Box::new(lhs),
-                        property: Box::new(rhs),
-                    }),
-                    span,
-                    inferred_type: None,
+                match &rhs.kind {
+                    ExprKind::Ident(ident) => {
+                        let span = merge_spans(&lhs.get_span(), &rhs.get_span());
+                        Expr {
+                            kind: ExprKind::Member(Member {
+                                object: Box::new(lhs),
+                                property: MemberProp::Ident(ident.to_owned()),
+                            }),
+                            span,
+                            inferred_type: None,
+                        }
+                    }
+                    _ => {
+                        return Err(ParseError {
+                            message: "expected identifier".to_string(),
+                        });
+                    }
                 }
             }
             TokenKind::QuestionDot => {
@@ -824,16 +838,25 @@ impl<'a> Parser<'a> {
                     }
                     _ => {
                         let rhs = self.parse_expr_with_precedence(precedence)?;
-                        let span = merge_spans(&lhs.get_span(), &rhs.get_span());
-                        let expr = Expr {
-                            kind: ExprKind::Member(Member {
-                                object: Box::new(lhs),
-                                property: Box::new(rhs),
-                            }),
-                            span,
-                            inferred_type: None,
-                        };
-                        Some(expr)
+                        match &rhs.kind {
+                            ExprKind::Ident(ident) => {
+                                let span = merge_spans(&lhs.get_span(), &rhs.get_span());
+                                let expr = Expr {
+                                    kind: ExprKind::Member(Member {
+                                        object: Box::new(lhs),
+                                        property: MemberProp::Ident(ident.to_owned()),
+                                    }),
+                                    span,
+                                    inferred_type: None,
+                                };
+                                Some(expr)
+                            }
+                            _ => {
+                                return Err(ParseError {
+                                    message: "expected identifier".to_string(),
+                                });
+                            }
+                        }
                     }
                 };
 

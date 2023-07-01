@@ -40,16 +40,12 @@ StrTemplateLit {
                                                             span: 9..12,
                                                             inferred_type: None,
                                                         },
-                                                        property: Expr {
-                                                            kind: Ident(
-                                                                Ident {
-                                                                    name: "map",
-                                                                    span: 13..16,
-                                                                },
-                                                            ),
-                                                            span: 13..16,
-                                                            inferred_type: None,
-                                                        },
+                                                        property: Ident(
+                                                            Ident {
+                                                                name: "map",
+                                                                span: 13..16,
+                                                            },
+                                                        ),
                                                     },
                                                 ),
                                                 span: 9..16,
@@ -124,16 +120,12 @@ StrTemplateLit {
                                     span: 9..37,
                                     inferred_type: None,
                                 },
-                                property: Expr {
-                                    kind: Ident(
-                                        Ident {
-                                            name: "join",
-                                            span: 38..42,
-                                        },
-                                    ),
-                                    span: 38..42,
-                                    inferred_type: None,
-                                },
+                                property: Ident(
+                                    Ident {
+                                        name: "join",
+                                        span: 38..42,
+                                    },
+                                ),
                             },
                         ),
                         span: 9..42,

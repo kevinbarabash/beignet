@@ -21,31 +21,41 @@ Expr {
                                         span: 0..1,
                                         inferred_type: None,
                                     },
-                                    property: Expr {
-                                        kind: Str(
-                                            Str {
+                                    property: Computed(
+                                        ComputedPropName {
+                                            span: 0..5,
+                                            expr: Expr {
+                                                kind: Str(
+                                                    Str {
+                                                        span: 2..5,
+                                                        value: "b",
+                                                    },
+                                                ),
                                                 span: 2..5,
-                                                value: "b",
+                                                inferred_type: None,
                                             },
-                                        ),
-                                        span: 2..5,
-                                        inferred_type: None,
-                                    },
+                                        },
+                                    ),
                                 },
                             ),
                             span: 0..5,
                             inferred_type: None,
                         },
-                        property: Expr {
-                            kind: Ident(
-                                Ident {
-                                    name: "c",
+                        property: Computed(
+                            ComputedPropName {
+                                span: 0..8,
+                                expr: Expr {
+                                    kind: Ident(
+                                        Ident {
+                                            name: "c",
+                                            span: 7..8,
+                                        },
+                                    ),
                                     span: 7..8,
+                                    inferred_type: None,
                                 },
-                            ),
-                            span: 7..8,
-                            inferred_type: None,
-                        },
+                            },
+                        ),
                     },
                 ),
                 span: 0..8,

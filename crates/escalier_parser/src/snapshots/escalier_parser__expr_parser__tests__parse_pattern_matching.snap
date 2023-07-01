@@ -18,16 +18,12 @@ Expr {
                             span: 20..23,
                             inferred_type: None,
                         },
-                        property: Expr {
-                            kind: Ident(
-                                Ident {
-                                    name: "type",
-                                    span: 24..28,
-                                },
-                            ),
-                            span: 24..28,
-                            inferred_type: None,
-                        },
+                        property: Ident(
+                            Ident {
+                                name: "type",
+                                span: 24..28,
+                            },
+                        ),
                     },
                 ),
                 span: 20..28,
@@ -62,16 +58,12 @@ Expr {
                                         span: 57..60,
                                         inferred_type: None,
                                     },
-                                    property: Expr {
-                                        kind: Ident(
-                                            Ident {
-                                                name: "foo",
-                                                span: 61..64,
-                                            },
-                                        ),
-                                        span: 61..64,
-                                        inferred_type: None,
-                                    },
+                                    property: Ident(
+                                        Ident {
+                                            name: "foo",
+                                            span: 61..64,
+                                        },
+                                    ),
                                 },
                             ),
                             span: 57..64,
@@ -112,16 +104,12 @@ Expr {
                                                         span: 113..116,
                                                         inferred_type: None,
                                                     },
-                                                    property: Expr {
-                                                        kind: Ident(
-                                                            Ident {
-                                                                name: "bar",
-                                                                span: 117..120,
-                                                            },
-                                                        ),
-                                                        span: 117..120,
-                                                        inferred_type: None,
-                                                    },
+                                                    property: Ident(
+                                                        Ident {
+                                                            name: "bar",
+                                                            span: 117..120,
+                                                        },
+                                                    ),
                                                 },
                                             ),
                                             span: 113..120,

@@ -54,16 +54,12 @@ Expr {
                                                         span: 20..25,
                                                         inferred_type: None,
                                                     },
-                                                    property: Expr {
-                                                        kind: Ident(
-                                                            Ident {
-                                                                name: "children",
-                                                                span: 26..34,
-                                                            },
-                                                        ),
-                                                        span: 26..34,
-                                                        inferred_type: None,
-                                                    },
+                                                    property: Ident(
+                                                        Ident {
+                                                            name: "children",
+                                                            span: 26..34,
+                                                        },
+                                                    ),
                                                 },
                                             ),
                                             span: 20..34,

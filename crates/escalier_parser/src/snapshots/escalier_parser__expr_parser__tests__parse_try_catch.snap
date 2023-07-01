@@ -71,16 +71,12 @@ Expr {
                                                                 span: 88..95,
                                                                 inferred_type: None,
                                                             },
-                                                            property: Expr {
-                                                                kind: Ident(
-                                                                    Ident {
-                                                                        name: "log",
-                                                                        span: 96..99,
-                                                                    },
-                                                                ),
-                                                                span: 96..99,
-                                                                inferred_type: None,
-                                                            },
+                                                            property: Ident(
+                                                                Ident {
+                                                                    name: "log",
+                                                                    span: 96..99,
+                                                                },
+                                                            ),
                                                         },
                                                     ),
                                                     span: 88..99,

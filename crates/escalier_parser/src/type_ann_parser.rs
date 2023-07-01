@@ -31,12 +31,13 @@ impl<'a> Parser<'a> {
                         assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
                         let type_ann = self.parse_type_ann()?;
 
-                        props.push(ObjectProp {
+                        props.push(ObjectProp::Prop(type_ann::Prop {
                             name,
                             optional,
                             mutable: false, // TODO
-                            type_ann,
-                        });
+                            type_ann: Box::new(type_ann),
+                            span: Span { start: 0, end: 0 }, // TODO
+                        }));
 
                         if self.peek().unwrap_or(&EOF).kind == TokenKind::Comma {
                             self.next().unwrap_or(EOF.clone());

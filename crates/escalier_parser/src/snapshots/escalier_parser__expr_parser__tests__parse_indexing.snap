@@ -18,30 +18,40 @@ Expr {
                             span: 0..1,
                             inferred_type: None,
                         },
-                        property: Expr {
-                            kind: Num(
-                                Num {
-                                    value: "1",
+                        property: Computed(
+                            ComputedPropName {
+                                span: 0..3,
+                                expr: Expr {
+                                    kind: Num(
+                                        Num {
+                                            value: "1",
+                                        },
+                                    ),
+                                    span: 2..3,
+                                    inferred_type: None,
                                 },
-                            ),
-                            span: 2..3,
-                            inferred_type: None,
-                        },
+                            },
+                        ),
                     },
                 ),
                 span: 0..3,
                 inferred_type: None,
             },
-            property: Expr {
-                kind: Ident(
-                    Ident {
-                        name: "c",
+            property: Computed(
+                ComputedPropName {
+                    span: 0..6,
+                    expr: Expr {
+                        kind: Ident(
+                            Ident {
+                                name: "c",
+                                span: 5..6,
+                            },
+                        ),
                         span: 5..6,
+                        inferred_type: None,
                     },
-                ),
-                span: 5..6,
-                inferred_type: None,
-            },
+                },
+            ),
         },
     ),
     span: 0..6,

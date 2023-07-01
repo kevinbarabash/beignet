@@ -18,16 +18,12 @@ Expr {
                             span: 0..1,
                             inferred_type: None,
                         },
-                        property: Expr {
-                            kind: Ident(
-                                Ident {
-                                    name: "a",
-                                    span: 2..3,
-                                },
-                            ),
-                            span: 2..3,
-                            inferred_type: None,
-                        },
+                        property: Ident(
+                            Ident {
+                                name: "a",
+                                span: 2..3,
+                            },
+                        ),
                     },
                 ),
                 span: 0..3,
@@ -47,16 +43,12 @@ Expr {
                             span: 6..7,
                             inferred_type: None,
                         },
-                        property: Expr {
-                            kind: Ident(
-                                Ident {
-                                    name: "b",
-                                    span: 8..9,
-                                },
-                            ),
-                            span: 8..9,
-                            inferred_type: None,
-                        },
+                        property: Ident(
+                            Ident {
+                                name: "b",
+                                span: 8..9,
+                            },
+                        ),
                     },
                 ),
                 span: 6..9,

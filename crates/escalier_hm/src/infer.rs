@@ -475,9 +475,9 @@ pub fn infer_type_ann(
             let mut props: Vec<types::TObjElem> = Vec::new();
             for elem in obj.iter_mut() {
                 match elem {
-                    syntax::ObjectProp::Index(syntax::TIndex { key, type_ann, .. }) => {
+                    syntax::ObjectProp::Indexer(syntax::Indexer { key, type_ann, .. }) => {
                         let key = types::TIndexKey {
-                            name: key.name.name.to_owned(),
+                            name: key.name.to_owned(),
                             t: infer_type_ann(arena, &mut key.type_ann, ctx)?,
                         };
                         props.push(types::TObjElem::Index(types::TIndex {
@@ -919,7 +919,7 @@ fn infer_type_params(
     if let Some(type_params) = type_params {
         for tp in type_params.iter_mut() {
             let constraint = match &mut tp.bound {
-                Some(constraint) => Some(infer_type_ann(arena, constraint.as_mut(), sig_ctx)?),
+                Some(constraint) => Some(infer_type_ann(arena, constraint, sig_ctx)?),
                 None => None,
             };
 
