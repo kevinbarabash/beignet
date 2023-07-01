@@ -351,10 +351,10 @@ name = "escalier"
 version = "0.1.0"
 dependencies = [
  "ariadne 0.1.5",
- "escalier_ast",
  "escalier_codegen",
  "escalier_infer",
  "escalier_interop",
+ "escalier_old_ast",
  "escalier_old_parser",
  "insta",
  "pretty_assertions",
@@ -365,25 +365,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "escalier_ast"
-version = "0.1.0"
-dependencies = [
- "derive-visitor",
- "itertools 0.11.0",
- "swc_atoms",
- "swc_common",
- "swc_ecma_ast",
- "tree-sitter",
-]
-
-[[package]]
 name = "escalier_cli"
 version = "0.1.0"
 dependencies = [
- "escalier_ast",
  "escalier_codegen",
  "escalier_infer",
  "escalier_interop",
+ "escalier_old_ast",
  "escalier_old_parser",
  "insta",
  "pretty_assertions",
@@ -395,8 +383,8 @@ dependencies = [
 name = "escalier_codegen"
 version = "0.1.0"
 dependencies = [
- "escalier_ast",
  "escalier_infer",
+ "escalier_old_ast",
  "escalier_old_parser",
  "insta",
  "itertools 0.10.5",
@@ -436,7 +424,7 @@ dependencies = [
  "array_tool",
  "defaultmap",
  "derive-visitor",
- "escalier_ast",
+ "escalier_old_ast",
  "escalier_old_parser",
  "im",
  "insta",
@@ -450,8 +438,8 @@ version = "0.1.0"
 dependencies = [
  "defaultmap",
  "derive-visitor",
- "escalier_ast",
  "escalier_infer",
+ "escalier_old_ast",
  "escalier_old_parser",
  "insta",
  "memoize",
@@ -468,9 +456,9 @@ version = "0.1.0"
 dependencies = [
  "crossbeam",
  "derive-visitor",
- "escalier_ast",
  "escalier_infer",
  "escalier_interop",
+ "escalier_old_ast",
  "escalier_old_parser",
  "insta",
  "lsp-server",
@@ -480,10 +468,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "escalier_old_ast"
+version = "0.1.0"
+dependencies = [
+ "derive-visitor",
+ "itertools 0.11.0",
+ "swc_atoms",
+ "swc_common",
+ "swc_ecma_ast",
+ "tree-sitter",
+]
+
+[[package]]
 name = "escalier_old_parser"
 version = "0.1.0"
 dependencies = [
- "escalier_ast",
+ "escalier_old_ast",
  "insta",
  "itertools 0.10.5",
  "pretty_assertions",

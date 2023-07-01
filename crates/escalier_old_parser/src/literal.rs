@@ -1,7 +1,7 @@
 use itertools::free::join;
 use unescape::unescape;
 
-use escalier_ast::values::*;
+use escalier_old_ast::values::*;
 
 use crate::parse_error::ParseError;
 use crate::util::*;

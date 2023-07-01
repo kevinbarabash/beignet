@@ -1,7 +1,7 @@
 use im::hashmap::HashMap;
 
-use escalier_ast::types::{self as types, Provenance, TObject, TPropKey, Type, TypeKind};
-use escalier_ast::values::{self as values, *};
+use escalier_old_ast::types::{self as types, Provenance, TObject, TPropKey, Type, TypeKind};
+use escalier_old_ast::values::{self as values, *};
 
 use crate::assump::Assump;
 use crate::binding::Binding;

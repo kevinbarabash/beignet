@@ -1,4 +1,4 @@
-use escalier_ast::types::*;
+use escalier_old_ast::types::*;
 
 #[derive(Clone, Debug)]
 pub struct Binding {

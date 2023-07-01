@@ -1,10 +1,10 @@
 use std::cmp;
 use std::collections::BTreeSet;
 
-use escalier_ast::types::{
+use escalier_old_ast::types::{
     self as types, Provenance, TFnParam, TLam, TObjElem, TObject, TVar, Type, TypeKind,
 };
-use escalier_ast::values::{ExprKind, TypeAnn, TypeAnnKind};
+use escalier_old_ast::values::{ExprKind, TypeAnn, TypeAnnKind};
 use types::TKeyword;
 
 use crate::substitutable::{Subst, Substitutable};
@@ -893,8 +893,8 @@ fn occurs_check(tv: &TVar, t: &Type) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use escalier_ast::types::TPropKey;
-    use escalier_ast::values::{Lit, DUMMY_LOC};
+    use escalier_old_ast::types::TPropKey;
+    use escalier_old_ast::values::{Lit, DUMMY_LOC};
 
     fn num(val: &str) -> Lit {
         Lit::num(val.to_owned(), 0..0, DUMMY_LOC)

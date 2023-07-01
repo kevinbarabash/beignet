@@ -1,5 +1,5 @@
-use escalier_ast::types::{TKeyword, TLit, TVar, Type, TypeKind};
-use escalier_ast::values::{Keyword, Lit};
+use escalier_old_ast::types::{TKeyword, TLit, TVar, Type, TypeKind};
+use escalier_old_ast::values::{Keyword, Lit};
 use im::HashMap;
 
 use crate::binding::Binding;

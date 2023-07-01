@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 tree-sitter = "0.20.8"
-escalier_ast = { version = "0.1.0", path = "../escalier_ast" }
+escalier_old_ast = { version = "0.1.0", path = "../escalier_old_ast" }
 escalier_codegen = { version = "0.1.0", path = "../escalier_codegen" }
 escalier_interop = { version = "0.1.0", path = "../escalier_interop" }
 escalier_infer = { version = "0.1.0", path = "../escalier_infer" }

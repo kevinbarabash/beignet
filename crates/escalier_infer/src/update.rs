@@ -1,7 +1,7 @@
 use derive_visitor::{DriveMut, VisitorMut};
 
-use escalier_ast::types::TypeKind;
-use escalier_ast::values::*;
+use escalier_old_ast::types::TypeKind;
+use escalier_old_ast::values::*;
 
 use crate::checker::Checker;
 use crate::substitutable::{Subst, Substitutable};

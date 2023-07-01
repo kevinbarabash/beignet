@@ -1,7 +1,7 @@
 use regex_syntax::hir::{visit, Hir, Visitor};
 use regex_syntax::Parser;
 
-use escalier_ast::types::*;
+use escalier_old_ast::types::*;
 
 use crate::checker::Checker;
 

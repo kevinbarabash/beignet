@@ -1,7 +1,7 @@
 use std::fmt;
 
-use escalier_ast::types::Type;
-use escalier_ast::values::{Assign, Statement};
+use escalier_old_ast::types::Type;
+use escalier_old_ast::values::{Assign, Statement};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TypeError {

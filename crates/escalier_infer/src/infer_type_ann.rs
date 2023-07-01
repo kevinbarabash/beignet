@@ -1,11 +1,11 @@
 use im::hashmap::HashMap;
 use std::iter::Iterator;
 
-use escalier_ast::types::{
+use escalier_old_ast::types::{
     self as types, Provenance, TConditionalType, TFnParam, TIndex, TIndexAccess, TIndexKey,
     TInferType, TMappedType, TObjElem, TObject, TProp, TPropKey, Type, TypeKind,
 };
-use escalier_ast::values::*;
+use escalier_old_ast::values::*;
 
 use crate::infer_fn_param::pattern_to_tpat;
 use crate::substitutable::{Subst, Substitutable};
@@ -114,7 +114,7 @@ impl Checker {
 
                 for elem in &mut obj.elems {
                     match elem {
-                        escalier_ast::values::TObjElem::Index(index) => {
+                        escalier_old_ast::values::TObjElem::Index(index) => {
                             let (index_s, index_t) =
                                 self.infer_type_ann_rec(&mut index.type_ann, type_param_map)?;
 
@@ -139,7 +139,7 @@ impl Checker {
                                 return Err(vec![TypeError::Unspecified]);
                             }
                         }
-                        escalier_ast::values::TObjElem::Prop(prop) => {
+                        escalier_old_ast::values::TObjElem::Prop(prop) => {
                             let (prop_s, prop_t) =
                                 self.infer_type_ann_rec(&mut prop.type_ann, type_param_map)?;
 

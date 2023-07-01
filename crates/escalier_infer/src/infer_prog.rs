@@ -1,5 +1,5 @@
-use escalier_ast::types::{TObjElem, TObject, TProp, TPropKey, TypeKind};
-use escalier_ast::values::*;
+use escalier_old_ast::types::{TObjElem, TObject, TProp, TPropKey, TypeKind};
+use escalier_old_ast::values::*;
 
 use crate::type_error::TypeError;
 

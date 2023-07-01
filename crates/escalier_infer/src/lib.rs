@@ -33,7 +33,7 @@ pub use util::{close_over, immutable_obj_type, normalize, replace_aliases_rec};
 
 #[cfg(test)]
 mod tests {
-    use escalier_ast::types::*;
+    use escalier_old_ast::types::*;
     use escalier_old_parser::*;
 
     use super::*;

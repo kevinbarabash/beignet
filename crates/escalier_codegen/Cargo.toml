@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-escalier_ast = { version = "0.1.0", path = "../escalier_ast" }
+escalier_old_ast = { version = "0.1.0", path = "../escalier_old_ast" }
 escalier_infer = { version = "0.1.0", path = "../escalier_infer" }
 itertools = "0.10.3"
 sourcemap = "6"

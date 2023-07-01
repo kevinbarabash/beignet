@@ -1,6 +1,6 @@
 use derive_visitor::{DriveMut, VisitorMut};
-use escalier_ast::types::*;
-use escalier_ast::types::{
+use escalier_old_ast::types::*;
+use escalier_old_ast::types::{
     TIndex, TIndexKey, TLit, TObjElem, TObject, TProp, TPropKey, Type, TypeKind,
 };
 use im::hashmap::HashMap;
@@ -347,19 +347,19 @@ impl Checker {
 
                 match &key.kind {
                     TypeKind::Lit(lit) => match lit {
-                        escalier_ast::types::TLit::Num(name) => {
+                        escalier_old_ast::types::TLit::Num(name) => {
                             let prop = self.get_prop_by_name(&old_elems, name)?;
                             let optional = match &mapped.optional {
                                 Some(change) => match change {
-                                    escalier_ast::types::TMappedTypeChangeProp::Plus => true,
-                                    escalier_ast::types::TMappedTypeChangeProp::Minus => false,
+                                    escalier_old_ast::types::TMappedTypeChangeProp::Plus => true,
+                                    escalier_old_ast::types::TMappedTypeChangeProp::Minus => false,
                                 },
                                 None => prop.optional,
                             };
                             let mutable = match &mapped.mutable {
                                 Some(change) => match change {
-                                    escalier_ast::types::TMappedTypeChangeProp::Plus => true,
-                                    escalier_ast::types::TMappedTypeChangeProp::Minus => false,
+                                    escalier_old_ast::types::TMappedTypeChangeProp::Plus => true,
+                                    escalier_old_ast::types::TMappedTypeChangeProp::Minus => false,
                                 },
                                 None => prop.mutable,
                             };
@@ -370,20 +370,20 @@ impl Checker {
                                 t,
                             }))
                         }
-                        escalier_ast::types::TLit::Bool(_) => Err(vec![TypeError::Unspecified]),
-                        escalier_ast::types::TLit::Str(name) => {
+                        escalier_old_ast::types::TLit::Bool(_) => Err(vec![TypeError::Unspecified]),
+                        escalier_old_ast::types::TLit::Str(name) => {
                             let prop = self.get_prop_by_name(&old_elems, name)?;
                             let optional = match &mapped.optional {
                                 Some(change) => match change {
-                                    escalier_ast::types::TMappedTypeChangeProp::Plus => true,
-                                    escalier_ast::types::TMappedTypeChangeProp::Minus => false,
+                                    escalier_old_ast::types::TMappedTypeChangeProp::Plus => true,
+                                    escalier_old_ast::types::TMappedTypeChangeProp::Minus => false,
                                 },
                                 None => prop.optional,
                             };
                             let mutable = match &mapped.mutable {
                                 Some(change) => match change {
-                                    escalier_ast::types::TMappedTypeChangeProp::Plus => true,
-                                    escalier_ast::types::TMappedTypeChangeProp::Minus => false,
+                                    escalier_old_ast::types::TMappedTypeChangeProp::Plus => true,
+                                    escalier_old_ast::types::TMappedTypeChangeProp::Minus => false,
                                 },
                                 None => prop.mutable,
                             };
@@ -537,34 +537,34 @@ impl Checker {
                                 ..
                             }) => Some(t.as_ref().to_owned()),
                             TObjElem::Prop(prop) => match &prop.name {
-                                escalier_ast::types::TPropKey::StringKey(str) => Some(
+                                escalier_old_ast::types::TPropKey::StringKey(str) => Some(
                                     self.from_type_kind(TypeKind::Lit(TLit::Str(str.to_owned()))),
                                 ),
-                                escalier_ast::types::TPropKey::NumberKey(num) => Some(
+                                escalier_old_ast::types::TPropKey::NumberKey(num) => Some(
                                     self.from_type_kind(TypeKind::Lit(TLit::Num(num.to_owned()))),
                                 ),
                             },
                             TObjElem::Method(method) => match &method.name {
-                                escalier_ast::types::TPropKey::StringKey(str) => Some(
+                                escalier_old_ast::types::TPropKey::StringKey(str) => Some(
                                     self.from_type_kind(TypeKind::Lit(TLit::Str(str.to_owned()))),
                                 ),
-                                escalier_ast::types::TPropKey::NumberKey(num) => Some(
+                                escalier_old_ast::types::TPropKey::NumberKey(num) => Some(
                                     self.from_type_kind(TypeKind::Lit(TLit::Num(num.to_owned()))),
                                 ),
                             },
                             TObjElem::Getter(getter) => match &getter.name {
-                                escalier_ast::types::TPropKey::StringKey(str) => Some(
+                                escalier_old_ast::types::TPropKey::StringKey(str) => Some(
                                     self.from_type_kind(TypeKind::Lit(TLit::Str(str.to_owned()))),
                                 ),
-                                escalier_ast::types::TPropKey::NumberKey(num) => Some(
+                                escalier_old_ast::types::TPropKey::NumberKey(num) => Some(
                                     self.from_type_kind(TypeKind::Lit(TLit::Num(num.to_owned()))),
                                 ),
                             },
                             TObjElem::Setter(setter) => match &setter.name {
-                                escalier_ast::types::TPropKey::StringKey(str) => Some(
+                                escalier_old_ast::types::TPropKey::StringKey(str) => Some(
                                     self.from_type_kind(TypeKind::Lit(TLit::Str(str.to_owned()))),
                                 ),
-                                escalier_ast::types::TPropKey::NumberKey(num) => Some(
+                                escalier_old_ast::types::TPropKey::NumberKey(num) => Some(
                                     self.from_type_kind(TypeKind::Lit(TLit::Num(num.to_owned()))),
                                 ),
                             },

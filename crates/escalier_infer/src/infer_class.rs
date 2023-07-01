@@ -1,5 +1,5 @@
-use escalier_ast::types::*;
-use escalier_ast::values::{class::*, Lambda, PatternKind};
+use escalier_old_ast::types::*;
+use escalier_old_ast::values::{class::*, Lambda, PatternKind};
 use im::hashmap::HashMap;
 
 use crate::binding::Binding;
