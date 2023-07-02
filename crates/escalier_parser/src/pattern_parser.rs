@@ -70,7 +70,6 @@ impl<'a> Parser<'a> {
             }
             TokenKind::LeftBrace => {
                 let mut props: Vec<ObjectPatProp> = vec![];
-                let mut has_rest = false;
 
                 while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
                     let first = self.peek().unwrap_or(&EOF);
@@ -105,18 +104,33 @@ impl<'a> Parser<'a> {
                                 }))
                             }
 
-                            if self.peek().unwrap_or(&EOF).kind == TokenKind::Comma {
-                                self.next();
+                            // require a comma or right brace
+                            match self.peek().unwrap_or(&EOF).kind {
+                                TokenKind::Comma => {
+                                    self.next();
+                                    continue;
+                                }
+                                TokenKind::RightBrace => {
+                                    break;
+                                }
+                                _ => panic!("expected comma or right brace"),
                             }
                         }
                         TokenKind::DotDotDot => {
-                            if has_rest {
-                                panic!("only one rest pattern is allowed per object pattern");
-                            }
                             props.push(ObjectPatProp::Rest(RestPat {
                                 arg: Box::new(self.parse_pattern()?),
                             }));
-                            has_rest = true;
+
+                            match self.peek().unwrap_or(&EOF).kind {
+                                TokenKind::Comma => {
+                                    self.next();
+                                    continue;
+                                }
+                                TokenKind::RightBrace => {
+                                    break;
+                                }
+                                _ => panic!("expected comma or right brace"),
+                            }
                         }
                         _ => panic!("expected identifier or rest pattern"),
                     }
@@ -192,7 +206,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn parse_object_patterns_multiple_rest() {
         insta::assert_debug_snapshot!(parse("{...x, ...y, ...z}"));
     }

@@ -29,7 +29,7 @@ pub struct IndexerKey {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Indexer {
     pub span: Span,
-    pub key: Box<IndexerKey>,
+    pub key: IndexerKey,
     pub mutable: bool,
     pub type_ann: Box<TypeAnn>,
 }

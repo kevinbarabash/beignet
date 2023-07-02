@@ -1,0 +1,26 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(\"T[K]\")"
+---
+TypeAnn {
+    kind: IndexedAccess(
+        TypeAnn {
+            kind: TypeRef(
+                "T",
+                None,
+            ),
+            span: 0..1,
+            inferred_type: None,
+        },
+        TypeAnn {
+            kind: TypeRef(
+                "K",
+                None,
+            ),
+            span: 2..3,
+            inferred_type: None,
+        },
+    ),
+    span: 0..3,
+    inferred_type: None,
+}

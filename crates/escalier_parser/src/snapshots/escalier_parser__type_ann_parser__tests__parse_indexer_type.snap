@@ -1,0 +1,31 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(\"{[key: string]: number}\")"
+---
+TypeAnn {
+    kind: Object(
+        [
+            Indexer(
+                Indexer {
+                    span: 0..0,
+                    key: IndexerKey {
+                        name: "key",
+                        type_ann: TypeAnn {
+                            kind: String,
+                            span: 7..13,
+                            inferred_type: None,
+                        },
+                    },
+                    mutable: false,
+                    type_ann: TypeAnn {
+                        kind: Number,
+                        span: 16..22,
+                        inferred_type: None,
+                    },
+                },
+            ),
+        ],
+    ),
+    span: 0..23,
+    inferred_type: None,
+}

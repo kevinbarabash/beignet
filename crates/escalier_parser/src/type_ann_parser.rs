@@ -65,31 +65,76 @@ impl<'a> Parser<'a> {
                 let mut props: Vec<ObjectProp> = vec![];
 
                 while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
-                    if let TokenKind::Identifier(name) = self.next().unwrap_or(EOF.clone()).kind {
-                        let optional = if self.peek().unwrap_or(&EOF).kind == TokenKind::Question {
-                            self.next().unwrap_or(EOF.clone());
-                            true
-                        } else {
-                            false
-                        };
-                        assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
-                        let type_ann = self.parse_type_ann()?;
+                    match self.next().unwrap_or(EOF.clone()).kind {
+                        TokenKind::Identifier(name) => {
+                            let optional =
+                                if self.peek().unwrap_or(&EOF).kind == TokenKind::Question {
+                                    self.next().unwrap_or(EOF.clone());
+                                    true
+                                } else {
+                                    false
+                                };
+                            assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
+                            let type_ann = self.parse_type_ann()?;
 
-                        props.push(ObjectProp::Prop(type_ann::Prop {
-                            name,
-                            optional,
-                            mutable: false, // TODO
-                            type_ann: Box::new(type_ann),
-                            span: Span { start: 0, end: 0 }, // TODO
-                        }));
+                            props.push(ObjectProp::Prop(type_ann::Prop {
+                                name,
+                                optional,
+                                mutable: false, // TODO
+                                type_ann: Box::new(type_ann),
+                                span: Span { start: 0, end: 0 }, // TODO
+                            }));
+                        }
+                        TokenKind::LeftBracket => {
+                            let name = match self.next().unwrap_or(EOF.clone()).kind {
+                                TokenKind::Identifier(name) => name,
+                                _ => {
+                                    return Err(ParseError {
+                                        message: "expected identifier".to_string(),
+                                    })
+                                }
+                            };
+                            assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
+                            let type_ann = self.parse_type_ann()?;
+                            assert_eq!(
+                                self.next().unwrap_or(EOF.clone()).kind,
+                                TokenKind::RightBracket
+                            );
 
-                        if self.peek().unwrap_or(&EOF).kind == TokenKind::Comma {
-                            self.next().unwrap_or(EOF.clone());
-                        } else {
+                            let key = IndexerKey {
+                                name,
+                                type_ann: Box::new(type_ann),
+                            };
+
+                            assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
+                            let type_ann = self.parse_type_ann()?;
+
+                            props.push(ObjectProp::Indexer(Indexer {
+                                key,
+                                mutable: false, // TODO
+                                type_ann: Box::new(type_ann),
+                                span: Span { start: 0, end: 0 }, // TODO
+                            }));
+                        }
+                        _ => {
+                            return Err(ParseError {
+                                message: "expected identifier or indexer".to_string(),
+                            })
+                        }
+                    }
+
+                    match self.peek().unwrap_or(&EOF).kind {
+                        TokenKind::Comma => {
+                            self.next();
+                        }
+                        TokenKind::RightBrace => {
                             break;
                         }
-                    } else {
-                        panic!("expected identifier")
+                        _ => {
+                            return Err(ParseError {
+                                message: "expected ',' or '}'".to_string(),
+                            })
+                        }
                     }
                 }
 
@@ -158,13 +203,14 @@ impl<'a> Parser<'a> {
             TokenKind::Fn => {
                 self.next(); // consumes 'fn'
 
+                let type_params = self.maybe_parse_type_params()?;
                 let params = self.parse_params()?;
                 assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Arrow);
                 let return_type = self.parse_type_ann()?;
 
                 // TODO: handle generics
                 TypeAnnKind::Function(FunctionType {
-                    type_params: None,
+                    type_params,
                     params,
                     ret: Box::new(return_type),
                 })
@@ -188,7 +234,7 @@ impl<'a> Parser<'a> {
         lhs: TypeAnn,
         next_precedence: (u8, Associativity),
     ) -> Result<TypeAnn, ParseError> {
-        let precedence = if next_precedence.1 == Associativity::Left {
+        let _precedence = if next_precedence.1 == Associativity::Left {
             next_precedence.0
         } else {
             next_precedence.0 - 1
@@ -199,18 +245,42 @@ impl<'a> Parser<'a> {
         let type_ann = match &token.kind {
             // TODO: handle parsing index access type
             TokenKind::LeftBracket => {
-                self.next().unwrap_or(EOF.clone());
-                let next = self.peek().unwrap_or(&EOF);
-                let merged_span = merge_spans(&lhs.span, &next.span);
-                assert_eq!(
-                    self.next().unwrap_or(EOF.clone()).kind,
-                    TokenKind::RightBracket
-                );
-                TypeAnn {
-                    kind: TypeAnnKind::Array(Box::new(lhs)),
-                    span: merged_span,
-                    inferred_type: None,
+                self.next();
+                match self.peek().unwrap_or(&EOF).kind {
+                    TokenKind::RightBracket => {
+                        let next = self.next().unwrap_or(EOF.clone());
+                        let span = merge_spans(&lhs.span, &next.span);
+                        TypeAnn {
+                            kind: TypeAnnKind::Array(Box::new(lhs)),
+                            span,
+                            inferred_type: None,
+                        }
+                    }
+                    _ => {
+                        let index_type = self.parse_type_ann()?;
+                        let merged_span = merge_spans(&lhs.span, &index_type.span);
+                        assert_eq!(
+                            self.next().unwrap_or(EOF.clone()).kind,
+                            TokenKind::RightBracket
+                        );
+                        TypeAnn {
+                            kind: TypeAnnKind::IndexedAccess(Box::new(lhs), Box::new(index_type)),
+                            span: merged_span,
+                            inferred_type: None,
+                        }
+                    }
                 }
+                // let next = self.peek().unwrap_or(&EOF);
+                // let merged_span = merge_spans(&lhs.span, &next.span);
+                // assert_eq!(
+                //     self.next().unwrap_or(EOF.clone()).kind,
+                //     TokenKind::RightBracket
+                // );
+                // TypeAnn {
+                //     kind: TypeAnnKind::Array(Box::new(lhs)),
+                //     span: merged_span,
+                //     inferred_type: None,
+                // }
             }
             _ => panic!("unexpected token: {:?}", token),
         };
@@ -414,5 +484,17 @@ mod tests {
     #[test]
     fn parse_parens_for_grouping() {
         insta::assert_debug_snapshot!(parse("number & (string | boolean)"));
+    }
+
+    #[test]
+    fn parse_indexed_access() {
+        insta::assert_debug_snapshot!(parse("T[K]"));
+        insta::assert_debug_snapshot!(parse(r#"T["foo"]"#));
+    }
+
+    #[test]
+    fn parse_indexer_type() {
+        insta::assert_debug_snapshot!(parse("{[key: string]: number}"));
+        insta::assert_debug_snapshot!(parse("{[key: string]: number, [key: number]: string}"));
     }
 }

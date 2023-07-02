@@ -793,7 +793,7 @@ fn object_subtyping() -> Result<(), Errors> {
     // Each prop must be a subtype of the expected element type
     // It's okay to pass an object with extra props
     let src = r#"
-    declare let foo: (x: {a: number, b: string}) => boolean
+    declare let foo: fn (x: {a: number, b: string}) => boolean
     let result = foo({a: 5, b: "hello", c: true})
     "#;
     let mut program = parse(src).unwrap();
@@ -811,7 +811,7 @@ fn object_subtyping_missing_prop() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    declare let foo: (x: {a: number, b: string}) => boolean
+    declare let foo: fn (x: {a: number, b: string}) => boolean
     let result = foo({b: "hello"})
     "#;
     let mut program = parse(src).unwrap();
@@ -1187,9 +1187,15 @@ fn test_do_expr() -> Result<(), Errors> {
         }
         let x = 5
         let y = 10
-        [msg, x + y]
+        let result = [msg, x + y]
+        result
     }
     "#;
+    // The following is ambiguous:
+    // let y = 10
+    // [msg]
+    // TODO: If there's a newline before a postfix operator, we should
+    // ignore the postfix operator.
     let mut program = parse(src).unwrap();
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
@@ -1228,10 +1234,10 @@ fn test_let_with_type_ann() -> Result<(), Errors> {
     let tuple: [number, string] = [5, "hello"]
     let union: number | string = 5
     let union_arr: (number | string)[] = [5, "hello"]
-
+    "#;
+    // TODO: add support for comments
     // This should be valid, but we don't support it yet
     // let baz: (number) => number = <A>(a: A) => a;
-    "#;
     let mut program = parse(src).unwrap();
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
@@ -1690,8 +1696,8 @@ fn test_explicit_type_params() -> Result<(), Errors> {
 
     let src = r#"
     let identity = fn (x) => x
-    let x = fn identity<number>(5)
-    let y = fn identity<string>("hello")
+    let x = identity<number>(5)
+    let y = identity<string>("hello")
     "#;
     let mut program = parse(src).unwrap();
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
@@ -1751,7 +1757,7 @@ fn test_type_param_with_constraint() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let identity = fn <T extends number | string>(x: T): T => x
+    let identity = fn <T: number | string>(x: T): T => x
     let x = identity(5)
     let y = identity("hello")
     "#;
@@ -1815,7 +1821,7 @@ fn test_type_param_with_violated_constraint() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let identity = fn <T extends number | string>(x: T): T => x
+    let identity = fn <T: number | string>(x: T): T => x
     identity(true);
     "#;
     let mut program = parse(src).unwrap();
@@ -1836,7 +1842,7 @@ fn test_type_ann_func_with_type_constraint() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let identity: fn <T extends number | string>(x: T) => T = (x) => x
+    let identity: fn <T: number | string>(x: T) => T = (x) => x
     let x = identity<number>(5)
     "#;
     let mut program = parse(src).unwrap();
@@ -1858,8 +1864,8 @@ fn test_type_ann_func_with_type_constraint_error() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let id1 = fn <T extends number | string>(x: T): T => x
-    let id2: fn <T extends boolean>(x: T) => T = id1
+    let id1 = fn <T: number | string>(x: T): T => x
+    let id2: fn <T: boolean>(x: T) => T = id1
     "#;
     let mut program = parse(src).unwrap();
     let result = infer_program(&mut arena, &mut program, &mut my_ctx);
@@ -1879,8 +1885,8 @@ fn test_callback_with_type_param_subtyping() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    declare let foo: fn (callback: <T extends number>(x: T) => T) => boolean
-    let identity = fn <T extends number | string>(x: T): T => x
+    declare let foo: fn (callback: fn <T: number>(x: T) => T) => boolean
+    let identity = fn <T: number | string>(x: T): T => x
     let result = foo(identity)
     "#;
     let mut program = parse(src).unwrap();
@@ -1897,8 +1903,8 @@ fn test_callback_with_type_param_subtyping_error() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    declare let foo: fn (callback: <T extends number | string>(x: T) => T) => boolean
-    let identity = fn <T extends number>(x: T): T => x
+    declare let foo: fn (callback: fn <T: number | string>(x: T) => T) => boolean
+    let identity = fn <T: number>(x: T): T => x
     let result = foo(identity)
     "#;
     let mut program = parse(src).unwrap();
@@ -2339,7 +2345,7 @@ fn test_type_param_explicit_unknown_constraint() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let add = fn <T extends unknown>(a: T, b: T): T => {
+    let add = fn <T: unknown>(a: T, b: T): T => {
         return a + b
     }
     "#;
