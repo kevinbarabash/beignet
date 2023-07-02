@@ -17,6 +17,7 @@ Expr {
                             name: "msg",
                             span: 37..40,
                         },
+                        is_public: false,
                         type_ann: Some(
                             TypeAnn {
                                 kind: String,
@@ -34,6 +35,7 @@ Expr {
                             name: "id",
                             span: 65..67,
                         },
+                        is_public: false,
                         type_ann: None,
                         init: Some(
                             Expr {
@@ -57,6 +59,9 @@ Expr {
                                 span: 91..94,
                             },
                         ),
+                        is_public: false,
+                        is_async: false,
+                        is_gen: false,
                         type_params: None,
                         params: [
                             FuncParam {
@@ -80,8 +85,6 @@ Expr {
                             stmts: [],
                         },
                         type_ann: None,
-                        is_async: false,
-                        is_gen: false,
                     },
                 ),
                 Method(
@@ -93,6 +96,9 @@ Expr {
                                 span: 129..134,
                             },
                         ),
+                        is_public: false,
+                        is_async: true,
+                        is_gen: false,
                         type_params: None,
                         params: [
                             FuncParam {
@@ -137,8 +143,6 @@ Expr {
                             stmts: [],
                         },
                         type_ann: None,
-                        is_async: true,
-                        is_gen: false,
                     },
                 ),
                 Method(
@@ -170,6 +174,9 @@ Expr {
                                 inferred_type: None,
                             },
                         ),
+                        is_public: false,
+                        is_async: false,
+                        is_gen: true,
                         type_params: None,
                         params: [
                             FuncParam {
@@ -193,8 +200,6 @@ Expr {
                             stmts: [],
                         },
                         type_ann: None,
-                        is_async: false,
-                        is_gen: true,
                     },
                 ),
             ],

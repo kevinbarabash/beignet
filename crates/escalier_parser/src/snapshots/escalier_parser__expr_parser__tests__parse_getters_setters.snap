@@ -19,6 +19,7 @@ Expr {
                                 span: 41..44,
                             },
                         ),
+                        is_public: false,
                         type_ann: None,
                         params: [
                             FuncParam {
@@ -52,6 +53,7 @@ Expr {
                                 span: 74..77,
                             },
                         ),
+                        is_public: false,
                         type_ann: None,
                         params: [
                             FuncParam {

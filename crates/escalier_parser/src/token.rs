@@ -30,6 +30,7 @@ pub enum TokenKind {
     Fn,
     Get,
     Set,
+    Pub,
     Async,
     Await,
     Gen,

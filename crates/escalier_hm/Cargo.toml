@@ -8,12 +8,10 @@ edition = "2021"
 [dependencies]
 defaultmap = "0.5.0"
 generational-arena = "0.2.8"
-itertools = "0.10.5"
+itertools = "0.11.0"
 im = "15.1.0"
 escalier_ast = { version = "0.1.0", path = "../escalier_ast" }
 escalier_parser = { version = "0.1.0", path = "../escalier_parser" }
-tree-sitter = "0.20.8"
-tree_sitter_escalier = { version = "0.1.0", path = "../tree_sitter_escalier" }
 unescape = "0.1.0"
 # TODO: hide these behind a feature and then only use that feature in the codegen crate
 swc_atoms = "0.5.6"

@@ -33,6 +33,9 @@ Expr {
                                 span: 55..58,
                             },
                         ),
+                        is_public: false,
+                        is_async: false,
+                        is_gen: false,
                         type_params: Some(
                             [
                                 TypeParam {
@@ -98,8 +101,6 @@ Expr {
                                 inferred_type: None,
                             },
                         ),
-                        is_async: false,
-                        is_gen: false,
                     },
                 ),
             ],

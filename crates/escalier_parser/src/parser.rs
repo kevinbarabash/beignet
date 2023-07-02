@@ -252,6 +252,7 @@ impl<'a> Parser<'a> {
             "fn" => TokenKind::Fn,
             "get" => TokenKind::Get,
             "set" => TokenKind::Set,
+            "pub" => TokenKind::Pub,
             "async" => TokenKind::Async,
             "await" => TokenKind::Await,
             "gen" => TokenKind::Gen,

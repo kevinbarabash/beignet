@@ -1179,7 +1179,7 @@ mod tests {
                     obj.bar
                 },
                 _ => "default",
-            };
+            }
             "#
         ));
     }
@@ -1359,6 +1359,30 @@ mod tests {
             r#"
             class<T> extends Foo {
                 fn bar<A>(self, a: A): T {}
+            }
+        "#
+        ));
+    }
+
+    #[test]
+    fn parse_class_with_private_constructor_public_methods() {
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            class {
+                x: number
+                pub y: number
+                fn constructor(x, y) {
+                    return {x, y}
+                }
+                pub fn make_point(x, y) {
+                    return new Self.constructor(x, y)
+                }
+                pub get x(self) {
+                    return self.x
+                }
+                pub set x(self, value) {
+                    self.x = value
+                }
             }
         "#
         ));
