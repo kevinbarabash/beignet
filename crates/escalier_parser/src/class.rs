@@ -65,7 +65,7 @@ impl<'a> Parser<'a> {
 
     fn parse_class_member(&mut self) -> Result<ClassMember, ParseError> {
         let is_public = if self.peek().unwrap_or(&EOF).kind == TokenKind::Pub {
-            self.next(); // consumes 'async'
+            self.next(); // consumes 'pub'
             true
         } else {
             false
