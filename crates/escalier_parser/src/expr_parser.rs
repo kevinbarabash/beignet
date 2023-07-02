@@ -1371,7 +1371,7 @@ mod tests {
             class {
                 x: number
                 pub y: number
-                fn constructor(x, y) {
+                fn new(x, y) {
                     return {x, y}
                 }
                 pub fn make_point(x, y) {

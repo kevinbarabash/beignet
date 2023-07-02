@@ -217,7 +217,7 @@ impl<'a> Parser<'a> {
         let span = Span { start, end };
 
         let method = match name {
-            PropName::Ident(ident) if ident.name == "constructor" => {
+            PropName::Ident(ident) if ident.name == "new" => {
                 ClassMember::Constructor(Constructor {
                     span,
                     is_public,
