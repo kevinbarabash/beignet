@@ -13,6 +13,7 @@ Expr {
                     stmts: [
                         Stmt {
                             kind: Let {
+                                declare: false,
                                 pattern: Pattern {
                                     kind: Ident(
                                         BindingIdent {
@@ -24,34 +25,36 @@ Expr {
                                     span: 51..52,
                                     inferred_type: None,
                                 },
-                                expr: Expr {
-                                    kind: Await(
-                                        Await {
-                                            arg: Expr {
-                                                kind: Call(
-                                                    Call {
-                                                        callee: Expr {
-                                                            kind: Ident(
-                                                                Ident {
-                                                                    name: "foo",
-                                                                    span: 61..64,
-                                                                },
-                                                            ),
-                                                            span: 61..64,
-                                                            inferred_type: None,
+                                expr: Some(
+                                    Expr {
+                                        kind: Await(
+                                            Await {
+                                                arg: Expr {
+                                                    kind: Call(
+                                                        Call {
+                                                            callee: Expr {
+                                                                kind: Ident(
+                                                                    Ident {
+                                                                        name: "foo",
+                                                                        span: 61..64,
+                                                                    },
+                                                                ),
+                                                                span: 61..64,
+                                                                inferred_type: None,
+                                                            },
+                                                            type_args: None,
+                                                            args: [],
                                                         },
-                                                        type_args: None,
-                                                        args: [],
-                                                    },
-                                                ),
-                                                span: 61..66,
-                                                inferred_type: None,
+                                                    ),
+                                                    span: 61..66,
+                                                    inferred_type: None,
+                                                },
                                             },
-                                        },
-                                    ),
-                                    span: 55..66,
-                                    inferred_type: None,
-                                },
+                                        ),
+                                        span: 55..66,
+                                        inferred_type: None,
+                                    },
+                                ),
                                 type_ann: None,
                             },
                             span: 47..66,

@@ -5,6 +5,7 @@ expression: "parse(\"let {x: x1, y: y1} = p1\")"
 [
     Stmt {
         kind: Let {
+            declare: false,
             pattern: Pattern {
                 kind: Object(
                     ObjectPat {
@@ -58,16 +59,18 @@ expression: "parse(\"let {x: x1, y: y1} = p1\")"
                 span: 3..18,
                 inferred_type: None,
             },
-            expr: Expr {
-                kind: Ident(
-                    Ident {
-                        name: "p1",
-                        span: 21..23,
-                    },
-                ),
-                span: 21..23,
-                inferred_type: None,
-            },
+            expr: Some(
+                Expr {
+                    kind: Ident(
+                        Ident {
+                            name: "p1",
+                            span: 21..23,
+                        },
+                    ),
+                    span: 21..23,
+                    inferred_type: None,
+                },
+            ),
             type_ann: None,
         },
         span: 0..23,

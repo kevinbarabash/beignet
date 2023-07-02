@@ -208,14 +208,14 @@ impl<'a> Parser<'a> {
                         self.scanner.pop();
                         TokenKind::And
                     }
-                    _ => panic!("Unexpected character: '{}'", character),
+                    _ => TokenKind::Ampersand,
                 },
                 '|' => match self.scanner.peek(1) {
                     Some('|') => {
                         self.scanner.pop();
                         TokenKind::Or
                     }
-                    _ => panic!("Unexpected character: '{}'", character),
+                    _ => TokenKind::Pipe,
                 },
                 _ => panic!("Unexpected character: '{}'", character),
             };
@@ -256,6 +256,7 @@ impl<'a> Parser<'a> {
             "await" => TokenKind::Await,
             "gen" => TokenKind::Gen,
             "yield" => TokenKind::Yield,
+            "declare" => TokenKind::Declare,
             "let" => TokenKind::Let,
             "var" => TokenKind::Var,
             "mut" => TokenKind::Mut,
@@ -277,6 +278,9 @@ impl<'a> Parser<'a> {
             "string" => TokenKind::String,
             "boolean" => TokenKind::Boolean,
             "symbol" => TokenKind::Symbol,
+            "type" => TokenKind::Type,
+            "typeof" => TokenKind::TypeOf,
+            "keyof" => TokenKind::KeyOf,
             "_" => TokenKind::Underscore,
             _ => TokenKind::Identifier(ident),
         };

@@ -1,0 +1,27 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(\"number & string & boolean\")"
+---
+TypeAnn {
+    kind: Intersection(
+        [
+            TypeAnn {
+                kind: Number,
+                span: 0..6,
+                inferred_type: None,
+            },
+            TypeAnn {
+                kind: String,
+                span: 9..15,
+                inferred_type: None,
+            },
+            TypeAnn {
+                kind: Boolean,
+                span: 18..25,
+                inferred_type: None,
+            },
+        ],
+    ),
+    span: 0..25,
+    inferred_type: None,
+}

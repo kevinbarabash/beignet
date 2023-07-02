@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(r#\"\n            match (obj.type) {\n                \"foo\" => obj.foo,\n                \"bar\" => {\n                    obj.bar\n                },\n                _ => \"default\",\n            };\n            \"#)"
+expression: "parse(r#\"\n            match (obj.kind) {\n                \"foo\" => obj.foo,\n                \"bar\" => {\n                    obj.bar\n                },\n                _ => \"default\",\n            };\n            \"#)"
 ---
 Expr {
     kind: Match(
@@ -20,7 +20,7 @@ Expr {
                         },
                         property: Ident(
                             Ident {
-                                name: "type",
+                                name: "kind",
                                 span: 24..28,
                             },
                         ),

@@ -9,7 +9,7 @@ expression: "parse(r#\"p[\"y\"] = 10\"#)"
                 kind: Assign(
                     Assign {
                         left: Expr {
-                            kind: Index(
+                            kind: Member(
                                 Member {
                                     object: Expr {
                                         kind: Ident(

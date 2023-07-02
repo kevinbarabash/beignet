@@ -371,7 +371,6 @@ pub fn infer_expression(
         ExprKind::Class(_) => todo!(),
         // ExprKind::Regex(_) => todo!(),
         ExprKind::Do(Do { body }) => infer_block(arena, body, ctx)?,
-        ExprKind::Index(_) => todo!(), // TODO: replace with ::Member(MemberProps::Index { .. })
         ExprKind::OptionalChain(_) => todo!(),
         ExprKind::Try(_) => todo!(),
         ExprKind::Yield(_) => todo!(),
@@ -598,13 +597,9 @@ pub fn infer_statement(
             pattern,
             expr: init,
             type_ann,
-            // declare,
+            declare,
             ..
         } => {
-            // TODO: parse `declare`
-            let declare = false;
-            let init = Some(init);
-
             let (pat_bindings, pat_type) = infer_pattern(arena, pattern, ctx)?;
 
             match (declare, init, type_ann) {

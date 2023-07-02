@@ -726,7 +726,7 @@ impl<'a> Parser<'a> {
                     TokenKind::RightBracket
                 );
                 Expr {
-                    kind: ExprKind::Index(Member {
+                    kind: ExprKind::Member(Member {
                         object: Box::new(lhs),
                         property: MemberProp::Computed(ComputedPropName {
                             span,
@@ -886,7 +886,7 @@ impl<'a> Parser<'a> {
         Ok(Some(expr))
     }
 
-    fn parse_inside_parens<T>(
+    pub fn parse_inside_parens<T>(
         &mut self,
         callback: impl FnOnce(&mut Self) -> Result<T, ParseError>,
     ) -> Result<T, ParseError> {
@@ -1168,7 +1168,7 @@ mod tests {
     fn parse_pattern_matching() {
         insta::assert_debug_snapshot!(parse(
             r#"
-            match (obj.type) {
+            match (obj.kind) {
                 "foo" => obj.foo,
                 "bar" => {
                     obj.bar

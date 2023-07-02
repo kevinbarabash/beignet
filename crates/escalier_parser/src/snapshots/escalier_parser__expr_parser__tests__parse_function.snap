@@ -13,6 +13,7 @@ Expr {
                     stmts: [
                         Stmt {
                             kind: Let {
+                                declare: false,
                                 pattern: Pattern {
                                     kind: Ident(
                                         BindingIdent {
@@ -24,15 +25,17 @@ Expr {
                                     span: 15..16,
                                     inferred_type: None,
                                 },
-                                expr: Expr {
-                                    kind: Num(
-                                        Num {
-                                            value: "5",
-                                        },
-                                    ),
-                                    span: 19..20,
-                                    inferred_type: None,
-                                },
+                                expr: Some(
+                                    Expr {
+                                        kind: Num(
+                                            Num {
+                                                value: "5",
+                                            },
+                                        ),
+                                        span: 19..20,
+                                        inferred_type: None,
+                                    },
+                                ),
                                 type_ann: None,
                             },
                             span: 11..20,
@@ -40,6 +43,7 @@ Expr {
                         },
                         Stmt {
                             kind: Let {
+                                declare: false,
                                 pattern: Pattern {
                                     kind: Ident(
                                         BindingIdent {
@@ -51,15 +55,17 @@ Expr {
                                     span: 25..26,
                                     inferred_type: None,
                                 },
-                                expr: Expr {
-                                    kind: Num(
-                                        Num {
-                                            value: "10",
-                                        },
-                                    ),
-                                    span: 29..31,
-                                    inferred_type: None,
-                                },
+                                expr: Some(
+                                    Expr {
+                                        kind: Num(
+                                            Num {
+                                                value: "10",
+                                            },
+                                        ),
+                                        span: 29..31,
+                                        inferred_type: None,
+                                    },
+                                ),
                                 type_ann: None,
                             },
                             span: 21..31,

@@ -5,6 +5,7 @@ expression: "parse(r#\"let y: number = m*x + b\"#)"
 [
     Stmt {
         kind: Let {
+            declare: false,
             pattern: Pattern {
                 kind: Ident(
                     BindingIdent {
@@ -16,54 +17,56 @@ expression: "parse(r#\"let y: number = m*x + b\"#)"
                 span: 4..5,
                 inferred_type: None,
             },
-            expr: Expr {
-                kind: Binary(
-                    Binary {
-                        left: Expr {
-                            kind: Binary(
-                                Binary {
-                                    left: Expr {
-                                        kind: Ident(
-                                            Ident {
-                                                name: "m",
-                                                span: 16..17,
-                                            },
-                                        ),
-                                        span: 16..17,
-                                        inferred_type: None,
+            expr: Some(
+                Expr {
+                    kind: Binary(
+                        Binary {
+                            left: Expr {
+                                kind: Binary(
+                                    Binary {
+                                        left: Expr {
+                                            kind: Ident(
+                                                Ident {
+                                                    name: "m",
+                                                    span: 16..17,
+                                                },
+                                            ),
+                                            span: 16..17,
+                                            inferred_type: None,
+                                        },
+                                        op: Times,
+                                        right: Expr {
+                                            kind: Ident(
+                                                Ident {
+                                                    name: "x",
+                                                    span: 18..19,
+                                                },
+                                            ),
+                                            span: 18..19,
+                                            inferred_type: None,
+                                        },
                                     },
-                                    op: Times,
-                                    right: Expr {
-                                        kind: Ident(
-                                            Ident {
-                                                name: "x",
-                                                span: 18..19,
-                                            },
-                                        ),
-                                        span: 18..19,
-                                        inferred_type: None,
+                                ),
+                                span: 16..19,
+                                inferred_type: None,
+                            },
+                            op: Plus,
+                            right: Expr {
+                                kind: Ident(
+                                    Ident {
+                                        name: "b",
+                                        span: 22..23,
                                     },
-                                },
-                            ),
-                            span: 16..19,
-                            inferred_type: None,
+                                ),
+                                span: 22..23,
+                                inferred_type: None,
+                            },
                         },
-                        op: Plus,
-                        right: Expr {
-                            kind: Ident(
-                                Ident {
-                                    name: "b",
-                                    span: 22..23,
-                                },
-                            ),
-                            span: 22..23,
-                            inferred_type: None,
-                        },
-                    },
-                ),
-                span: 16..23,
-                inferred_type: None,
-            },
+                    ),
+                    span: 16..23,
+                    inferred_type: None,
+                },
+            ),
             type_ann: Some(
                 TypeAnn {
                     kind: Number,

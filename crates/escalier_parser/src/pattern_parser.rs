@@ -209,6 +209,6 @@ mod tests {
 
     #[test]
     fn parse_mixed_patterns() {
-        insta::assert_debug_snapshot!(parse(r#"{type: "foo", bar: _, values: [head, ...tail]}"#));
+        insta::assert_debug_snapshot!(parse(r#"{kind: "foo", bar: _, values: [head, ...tail]}"#));
     }
 }

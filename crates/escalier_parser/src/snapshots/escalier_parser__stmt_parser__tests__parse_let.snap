@@ -5,6 +5,7 @@ expression: "parse(r#\"let y = m*x + b\"#)"
 [
     Stmt {
         kind: Let {
+            declare: false,
             pattern: Pattern {
                 kind: Ident(
                     BindingIdent {
@@ -16,54 +17,56 @@ expression: "parse(r#\"let y = m*x + b\"#)"
                 span: 4..5,
                 inferred_type: None,
             },
-            expr: Expr {
-                kind: Binary(
-                    Binary {
-                        left: Expr {
-                            kind: Binary(
-                                Binary {
-                                    left: Expr {
-                                        kind: Ident(
-                                            Ident {
-                                                name: "m",
-                                                span: 8..9,
-                                            },
-                                        ),
-                                        span: 8..9,
-                                        inferred_type: None,
+            expr: Some(
+                Expr {
+                    kind: Binary(
+                        Binary {
+                            left: Expr {
+                                kind: Binary(
+                                    Binary {
+                                        left: Expr {
+                                            kind: Ident(
+                                                Ident {
+                                                    name: "m",
+                                                    span: 8..9,
+                                                },
+                                            ),
+                                            span: 8..9,
+                                            inferred_type: None,
+                                        },
+                                        op: Times,
+                                        right: Expr {
+                                            kind: Ident(
+                                                Ident {
+                                                    name: "x",
+                                                    span: 10..11,
+                                                },
+                                            ),
+                                            span: 10..11,
+                                            inferred_type: None,
+                                        },
                                     },
-                                    op: Times,
-                                    right: Expr {
-                                        kind: Ident(
-                                            Ident {
-                                                name: "x",
-                                                span: 10..11,
-                                            },
-                                        ),
-                                        span: 10..11,
-                                        inferred_type: None,
+                                ),
+                                span: 8..11,
+                                inferred_type: None,
+                            },
+                            op: Plus,
+                            right: Expr {
+                                kind: Ident(
+                                    Ident {
+                                        name: "b",
+                                        span: 14..15,
                                     },
-                                },
-                            ),
-                            span: 8..11,
-                            inferred_type: None,
+                                ),
+                                span: 14..15,
+                                inferred_type: None,
+                            },
                         },
-                        op: Plus,
-                        right: Expr {
-                            kind: Ident(
-                                Ident {
-                                    name: "b",
-                                    span: 14..15,
-                                },
-                            ),
-                            span: 14..15,
-                            inferred_type: None,
-                        },
-                    },
-                ),
-                span: 8..15,
-                inferred_type: None,
-            },
+                    ),
+                    span: 8..15,
+                    inferred_type: None,
+                },
+            ),
             type_ann: None,
         },
         span: 0..15,

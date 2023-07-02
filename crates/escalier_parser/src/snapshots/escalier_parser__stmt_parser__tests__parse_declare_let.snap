@@ -1,0 +1,32 @@
+---
+source: crates/escalier_parser/src/stmt_parser.rs
+expression: "parse(r#\"declare let foo: number\"#)"
+---
+[
+    Stmt {
+        kind: Let {
+            declare: true,
+            pattern: Pattern {
+                kind: Ident(
+                    BindingIdent {
+                        name: "foo",
+                        span: 12..15,
+                        mutable: false,
+                    },
+                ),
+                span: 12..15,
+                inferred_type: None,
+            },
+            expr: None,
+            type_ann: Some(
+                TypeAnn {
+                    kind: Number,
+                    span: 17..23,
+                    inferred_type: None,
+                },
+            ),
+        },
+        span: 0..23,
+        inferred_type: None,
+    },
+]

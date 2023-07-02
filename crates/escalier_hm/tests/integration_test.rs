@@ -438,9 +438,9 @@ fn test_callback_subtyping() -> Result<(), Errors> {
     // types.  Lastly, it's okay for the return type to be a subtype of the
     // expected return type since it still conforms to the expected type.
     let src = r#"
-    declare let foo: fn (cb: (a: number, b: string) => boolean) => boolean
+    declare let foo: fn (cb: fn (a: number, b: string) => boolean) => boolean
     declare let bar: fn (x: number | string) => boolean
-    let result = foo(bar);
+    let result = foo(bar)
     "#;
     let mut program = parse(src).unwrap();
 
@@ -455,7 +455,7 @@ fn test_callback_error_too_many_params() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    declare let foo: fn (cb: (x: number) => boolean) => boolean
+    declare let foo: fn (cb: fn (x: number) => boolean) => boolean
     declare let bar: fn (a: number, b: string) => boolean
     let result = foo(bar)
     "#;
@@ -994,7 +994,10 @@ fn test_function_with_multiple_statements() -> Result<(), Errors> {
     let t = my_ctx.values.get("result").unwrap();
     assert_eq!(arena[*t].as_string(&arena), r#"() => number"#);
 
-    if let StmtKind::Let { expr: init, .. } = &program.stmts[0].kind {
+    if let StmtKind::Let {
+        expr: Some(init), ..
+    } = &program.stmts[0].kind
+    {
         if let ExprKind::Function(syntax::Function {
             body: BlockOrExpr::Block(Block { stmts: _, .. }),
             ..
@@ -1033,7 +1036,10 @@ fn test_inferred_type_on_ast_nodes() -> Result<(), Errors> {
 
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-    if let StmtKind::Let { expr: init, .. } = &program.stmts[0].kind {
+    if let StmtKind::Let {
+        expr: Some(init), ..
+    } = &program.stmts[0].kind
+    {
         if let ExprKind::Function(expr::Function { params, .. }) = &init.kind {
             let x_t = params[0].pattern.inferred_type.unwrap();
             let y_t = params[1].pattern.inferred_type.unwrap();
@@ -1107,8 +1113,8 @@ fn test_await_in_async() -> Result<(), Errors> {
     let bar = async fn () => {
         let x = await foo()
         return x
-    };
-    let baz = async fun () => foo()
+    }
+    let baz = async fn () => foo()
     "#;
     let mut program = parse(src).unwrap();
 

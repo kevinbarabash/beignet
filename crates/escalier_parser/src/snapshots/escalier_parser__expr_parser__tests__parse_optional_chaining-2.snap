@@ -6,7 +6,7 @@ Expr {
     kind: OptionalChain(
         OptionalChain {
             base: Expr {
-                kind: Index(
+                kind: Member(
                     Member {
                         object: Expr {
                             kind: Ident(

@@ -5,6 +5,7 @@ expression: "parse(\"let [head, ...tail] = polygon\")"
 [
     Stmt {
         kind: Let {
+            declare: false,
             pattern: Pattern {
                 kind: Tuple(
                     TuplePat {
@@ -56,16 +57,18 @@ expression: "parse(\"let [head, ...tail] = polygon\")"
                 span: 3..19,
                 inferred_type: None,
             },
-            expr: Expr {
-                kind: Ident(
-                    Ident {
-                        name: "polygon",
-                        span: 22..29,
-                    },
-                ),
-                span: 22..29,
-                inferred_type: None,
-            },
+            expr: Some(
+                Expr {
+                    kind: Ident(
+                        Ident {
+                            name: "polygon",
+                            span: 22..29,
+                        },
+                    ),
+                    span: 22..29,
+                    inferred_type: None,
+                },
+            ),
             type_ann: None,
         },
         span: 0..29,

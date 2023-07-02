@@ -12,8 +12,9 @@ pub enum StmtKind {
         expr: Expr,
     },
     Let {
+        declare: bool,
         pattern: Pattern,
-        expr: Expr,
+        expr: Option<Expr>,
         type_ann: Option<TypeAnn>,
     },
     Return {

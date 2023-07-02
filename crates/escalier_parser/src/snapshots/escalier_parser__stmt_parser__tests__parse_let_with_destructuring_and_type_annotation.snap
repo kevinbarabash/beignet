@@ -5,6 +5,7 @@ expression: "parse(r#\"let {x, y}: Point = point\"#)"
 [
     Stmt {
         kind: Let {
+            declare: false,
             pattern: Pattern {
                 kind: Object(
                     ObjectPat {
@@ -38,16 +39,18 @@ expression: "parse(r#\"let {x, y}: Point = point\"#)"
                 span: 3..10,
                 inferred_type: None,
             },
-            expr: Expr {
-                kind: Ident(
-                    Ident {
-                        name: "point",
-                        span: 20..25,
-                    },
-                ),
-                span: 20..25,
-                inferred_type: None,
-            },
+            expr: Some(
+                Expr {
+                    kind: Ident(
+                        Ident {
+                            name: "point",
+                            span: 20..25,
+                        },
+                    ),
+                    span: 20..25,
+                    inferred_type: None,
+                },
+            ),
             type_ann: Some(
                 TypeAnn {
                     kind: TypeRef(

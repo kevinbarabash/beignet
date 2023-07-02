@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/pattern_parser.rs
-expression: "parse(r#\"{type: \"foo\", bar: _, values: [head, ...tail]}\"#)"
+expression: "parse(r#\"{kind: \"foo\", bar: _, values: [head, ...tail]}\"#)"
 ---
 Pattern {
     kind: Object(
@@ -10,7 +10,7 @@ Pattern {
                     KeyValuePatProp {
                         span: 1..12,
                         key: Ident {
-                            name: "type",
+                            name: "kind",
                             span: 1..5,
                         },
                         value: Pattern {

@@ -22,6 +22,7 @@ pub enum TokenKind {
     Symbol,
 
     // Keywords
+    Declare,
     Let,
     Return,
     Fn,
@@ -42,6 +43,9 @@ pub enum TokenKind {
     Do,
     Class,
     Extends,
+    Type,
+    TypeOf,
+    KeyOf,
 
     // Binary Operators
     Plus,
@@ -83,6 +87,8 @@ pub enum TokenKind {
     Dot,
     DotDot,    // used for ranges
     DotDotDot, // used for rest/spread
+    Pipe,
+    Ampersand,
 
     Eof,
 }

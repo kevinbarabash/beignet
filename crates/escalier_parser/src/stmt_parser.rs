@@ -9,6 +9,26 @@ impl<'a> Parser<'a> {
         let token = self.peek().unwrap_or(&EOF).clone();
 
         let stmt = match &token.kind {
+            // TODO: handle 'declare type ...'
+            TokenKind::Declare => {
+                self.next(); // consumes 'declare'
+                assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Let);
+                let pattern = self.parse_pattern()?;
+                assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
+                let type_ann = self.parse_type_ann()?;
+                let span = merge_spans(&token.span, &type_ann.span);
+
+                Stmt {
+                    kind: StmtKind::Let {
+                        declare: true,
+                        pattern,
+                        expr: None,
+                        type_ann: Some(type_ann),
+                    },
+                    span,
+                    inferred_type: None,
+                }
+            }
             TokenKind::Let => {
                 self.next(); // consumes 'let'
                 let pattern = self.parse_pattern()?;
@@ -27,8 +47,9 @@ impl<'a> Parser<'a> {
                 let span = merge_spans(&token.span, &expr.get_span());
                 Stmt {
                     kind: StmtKind::Let {
+                        declare: false,
                         pattern,
-                        expr,
+                        expr: Some(expr),
                         type_ann,
                     },
                     span,
@@ -54,6 +75,35 @@ impl<'a> Parser<'a> {
                             inferred_type: None,
                         }
                     }
+                }
+            }
+            TokenKind::Type => {
+                self.next(); // consumes 'type'
+
+                let name = match self.next().unwrap_or(EOF.clone()).kind {
+                    TokenKind::Identifier(name) => name,
+                    _ => {
+                        return Err(ParseError {
+                            message: "expected identifier".to_string(),
+                        })
+                    }
+                };
+
+                let type_params = self.maybe_parse_type_params()?;
+
+                assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Assign);
+                let type_ann = self.parse_type_ann()?;
+                let span = merge_spans(&token.span, &type_ann.span);
+
+                Stmt {
+                    kind: StmtKind::TypeDecl {
+                        declare: false,
+                        name,
+                        type_ann,
+                        type_params,
+                    },
+                    span,
+                    inferred_type: None,
                 }
             }
             _ => {
@@ -132,6 +182,12 @@ mod tests {
     }
 
     #[test]
+    fn parse_declare_let() {
+        insta::assert_debug_snapshot!(parse(r#"declare let foo: number"#));
+        insta::assert_debug_snapshot!(parse(r#"declare let bar: fn () => number"#));
+    }
+
+    #[test]
     fn parse_let_with_destructuring() {
         insta::assert_debug_snapshot!(parse(r#"let {x, y} = point"#));
     }
@@ -187,5 +243,11 @@ mod tests {
         insta::assert_debug_snapshot!(parse("1 \n+ 2"));
         insta::assert_debug_snapshot!(parse("foo\n.bar()"));
         insta::assert_debug_snapshot!(parse("return\nfoo()"));
+    }
+
+    #[test]
+    fn parse_type_alias() {
+        insta::assert_debug_snapshot!(parse(r#"type Foo = Bar"#));
+        insta::assert_debug_snapshot!(parse(r#"type Point<T> = {x: T, y: T}"#));
     }
 }

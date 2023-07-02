@@ -194,7 +194,7 @@ pub enum ExprKind {
     Class(Class),
     Call(Call),
     Member(Member),
-    Index(Member),
+    // Index(Member),
     OptionalChain(OptionalChain),
     IfElse(IfElse),
     Match(Match),
@@ -277,7 +277,6 @@ impl Expr {
         match &self.kind {
             ExprKind::Ident(_) => true,
             ExprKind::Member(Member { object, .. }) => object.is_lvalue(),
-            ExprKind::Index(Member { object, .. }) => object.is_lvalue(),
             _ => false,
         }
     }
