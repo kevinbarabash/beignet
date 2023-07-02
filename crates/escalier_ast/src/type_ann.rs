@@ -53,6 +53,8 @@ pub enum TypeAnnKind {
     Symbol,
     Null,
     Undefined,
+    Unknown,
+    Never,
     Object(Vec<ObjectProp>),
     Tuple(Vec<TypeAnn>),
     Array(Box<TypeAnn>),
@@ -62,7 +64,7 @@ pub enum TypeAnnKind {
     Intersection(Vec<TypeAnn>),
     IndexedAccess(Box<TypeAnn>, Box<TypeAnn>),
     KeyOf(Box<TypeAnn>),
-    Query(Box<Expr>),
+    TypeOf(Box<Expr>),
     Mutable(Box<TypeAnn>),
 }
 

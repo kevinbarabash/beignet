@@ -278,6 +278,8 @@ impl<'a> Parser<'a> {
             "string" => TokenKind::String,
             "boolean" => TokenKind::Boolean,
             "symbol" => TokenKind::Symbol,
+            "unknown" => TokenKind::Unknown,
+            "never" => TokenKind::Never,
             "type" => TokenKind::Type,
             "typeof" => TokenKind::TypeOf,
             "keyof" => TokenKind::KeyOf,

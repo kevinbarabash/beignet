@@ -20,6 +20,8 @@ pub enum TokenKind {
     Boolean,
     String,
     Symbol,
+    Unknown,
+    Never,
 
     // Keywords
     Declare,

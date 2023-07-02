@@ -475,6 +475,8 @@ pub fn infer_type_ann(
         TypeAnnKind::Null => new_constructor(arena, "null", &[]),
         TypeAnnKind::Symbol => new_constructor(arena, "symbol", &[]),
         TypeAnnKind::Undefined => new_constructor(arena, "undefined", &[]),
+        TypeAnnKind::Unknown => new_constructor(arena, "unknown", &[]),
+        TypeAnnKind::Never => new_constructor(arena, "never", &[]),
         // TypeAnnKind::Keyword(KeywordType { keyword }) => match keyword {
         //     Keyword::Number => new_constructor(arena, "number", &[]),
         //     Keyword::Boolean => new_constructor(arena, "boolean", &[]),
@@ -564,8 +566,7 @@ pub fn infer_type_ann(
             let index_idx = infer_type_ann(arena, index_type, ctx)?;
             new_utility_type(arena, "@@index", &[obj_idx, index_idx])
         }
-        TypeAnnKind::Query(expr) => {
-            // typeof <expr>
+        TypeAnnKind::TypeOf(expr) => {
             infer_expression(arena, expr, ctx)?
         }
         TypeAnnKind::Mutable(_) => todo!(),

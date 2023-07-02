@@ -60,6 +60,14 @@ impl<'a> Parser<'a> {
                 self.next();
                 TypeAnnKind::Undefined
             }
+            TokenKind::Unknown => {
+                self.next();
+                TypeAnnKind::Unknown
+            }
+            TokenKind::Never => {
+                self.next();
+                TypeAnnKind::Never
+            }
             TokenKind::LeftBrace => {
                 self.next(); // consumes '{'
                 let mut props: Vec<ObjectProp> = vec![];
@@ -214,6 +222,20 @@ impl<'a> Parser<'a> {
                     params,
                     ret: Box::new(return_type),
                 })
+            }
+            TokenKind::KeyOf => {
+                self.next(); // consumes 'keyof'
+
+                let type_ann = self.parse_type_ann()?;
+
+                TypeAnnKind::KeyOf(Box::new(type_ann))
+            }
+            TokenKind::TypeOf => {
+                self.next(); // consumes 'typeof'
+
+                let expr = self.parse_expr()?;
+
+                TypeAnnKind::TypeOf(Box::new(expr))
             }
             token => {
                 panic!("expected token to start type annotation, found {:?}", token)
