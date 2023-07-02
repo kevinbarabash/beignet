@@ -12,6 +12,7 @@ fn get_prefix_precedence(op: &Token) -> Option<(u8, Associativity)> {
         TokenKind::Minus => PRECEDENCE_TABLE.get(&Operator::UnaryMinus).cloned(),
         TokenKind::Await => PRECEDENCE_TABLE.get(&Operator::Await).cloned(),
         TokenKind::Yield => PRECEDENCE_TABLE.get(&Operator::Yield).cloned(),
+        TokenKind::Not => PRECEDENCE_TABLE.get(&Operator::LogicalNot).cloned(),
         _ => None,
     }
 }
@@ -467,6 +468,10 @@ impl<'a> Parser<'a> {
                             }),
                             TokenKind::Minus => ExprKind::Unary(Unary {
                                 op: UnaryOp::Minus,
+                                right: Box::new(rhs),
+                            }),
+                            TokenKind::Not => ExprKind::Unary(Unary {
+                                op: UnaryOp::Not,
                                 right: Box::new(rhs),
                             }),
                             TokenKind::Await => ExprKind::Await(Await { arg: Box::new(rhs) }),

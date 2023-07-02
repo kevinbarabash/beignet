@@ -201,7 +201,7 @@ impl<'a> Parser<'a> {
                         self.scanner.pop();
                         TokenKind::NotEquals
                     }
-                    _ => panic!("Unexpected character: '{}'", character),
+                    _ => TokenKind::Not,
                 },
                 '&' => match self.scanner.peek(1) {
                     Some('&') => {
@@ -531,8 +531,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Unexpected character: '!'"]
-    fn lex_unexpected_exclamation() {
+    fn lex_exclamation() {
         let parser = Parser::new("1 ! 2");
 
         let _ = parser.collect::<Vec<_>>();

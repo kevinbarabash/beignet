@@ -49,20 +49,25 @@ pub enum TokenKind {
     TypeOf,
     KeyOf,
 
-    // Binary Operators
+    // Arithmetic Operators
     Plus,
     Minus,
     Times,
     Divide,
     Modulo,
+
+    // Comparison Operators
     Equals,
     NotEquals,
     LessThan,
     LessThanOrEqual,
     GreaterThan,
     GreaterThanOrEqual,
+
+    // Logical Operators
     Or,
     And,
+    Not,
 
     // Assignment Operators
     Assign,
