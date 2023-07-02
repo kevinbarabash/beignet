@@ -9,14 +9,7 @@ Expr {
                 [
                     TypeParam {
                         span: 5..14,
-                        type_ann: TypeAnn {
-                            kind: TypeRef(
-                                "A",
-                                None,
-                            ),
-                            span: 4..5,
-                            inferred_type: None,
-                        },
+                        name: "A",
                         bound: Some(
                             TypeAnn {
                                 kind: Number,
@@ -28,14 +21,7 @@ Expr {
                     },
                     TypeParam {
                         span: 16..25,
-                        type_ann: TypeAnn {
-                            kind: TypeRef(
-                                "B",
-                                None,
-                            ),
-                            span: 15..16,
-                            inferred_type: None,
-                        },
+                        name: "B",
                         bound: Some(
                             TypeAnn {
                                 kind: Number,

@@ -69,5 +69,6 @@ expression: "parse(\"let [head, ...tail] = polygon\")"
             type_ann: None,
         },
         span: 0..29,
+        inferred_type: None,
     },
 ]

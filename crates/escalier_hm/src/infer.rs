@@ -43,7 +43,7 @@ pub fn infer_expression(
             kind: TypeKind::Literal(syntax::Literal::String(str.value.to_owned())),
         }),
         ExprKind::Num(num) => arena.insert(Type {
-            kind: TypeKind::Literal(syntax::Literal::Number(num.value)),
+            kind: TypeKind::Literal(syntax::Literal::Number(num.value.to_owned())),
         }),
         ExprKind::Bool(bool) => arena.insert(Type {
             kind: TypeKind::Literal(syntax::Literal::Boolean(bool.value)),
@@ -75,22 +75,38 @@ pub fn infer_expression(
             for prop_or_spread in props.iter_mut() {
                 match prop_or_spread {
                     PropOrSpread::Spread(_) => todo!(),
-                    PropOrSpread::Prop(prop) => match prop.as_mut() {
-                        Prop::Shorthand(ident) => {
+                    PropOrSpread::Prop(prop) => match prop {
+                        expr::Prop::Shorthand(ident) => {
                             prop_types.push(types::TObjElem::Prop(types::TProp {
-                                name: TPropKey::StringKey(ident.name.to_owned()),
-                                t: get_type(arena, &ident.name, ctx)?,
+                                name: TPropKey::StringKey(ident.to_owned()),
+                                t: get_type(arena, ident, ctx)?,
                                 mutable: false,
                                 optional: false,
                             }));
                         }
-                        Prop::KeyValue(KeyValueProp { key, value }) => {
-                            prop_types.push(types::TObjElem::Prop(types::TProp {
-                                name: TPropKey::StringKey(key.name.to_owned()),
-                                t: infer_expression(arena, value.as_mut(), ctx)?,
-                                mutable: false,
-                                optional: false,
-                            }));
+                        expr::Prop::Property { key, value } => {
+                            let prop = match key {
+                                ObjectKey::Ident(ident) => types::TProp {
+                                    name: TPropKey::StringKey(ident.name.to_owned()),
+                                    t: infer_expression(arena, value, ctx)?,
+                                    mutable: false,
+                                    optional: false,
+                                },
+                                ObjectKey::String(name) => types::TProp {
+                                    name: TPropKey::StringKey(name.to_owned()),
+                                    t: infer_expression(arena, value, ctx)?,
+                                    mutable: false,
+                                    optional: false,
+                                },
+                                ObjectKey::Number(name) => types::TProp {
+                                    name: TPropKey::StringKey(name.to_owned()),
+                                    t: infer_expression(arena, value, ctx)?,
+                                    mutable: false,
+                                    optional: false,
+                                },
+                                ObjectKey::Computed(_) => todo!(),
+                            };
+                            prop_types.push(types::TObjElem::Prop(prop));
                         }
                     },
                 }
@@ -447,12 +463,12 @@ pub fn infer_type_ann(
                 kind: TypeKind::Literal(syntax::Literal::Boolean(value.to_owned())),
             })
         }
-        TypeAnnKind::Null => arena.insert(Type {
-            kind: TypeKind::Literal(syntax::Literal::Null),
-        }),
-        TypeAnnKind::Undefined => arena.insert(Type {
-            kind: TypeKind::Literal(syntax::Literal::Undefined),
-        }),
+        // TypeAnnKind::Null => arena.insert(Type {
+        //     kind: TypeKind::Literal(syntax::Literal::Null),
+        // }),
+        // TypeAnnKind::Undefined => arena.insert(Type {
+        //     kind: TypeKind::Literal(syntax::Literal::Undefined),
+        // }),
         // TypeAnnKind::Lit(lit) => new_lit_type(arena, lit),
         TypeAnnKind::Number => new_constructor(arena, "number", &[]),
         TypeAnnKind::Boolean => new_constructor(arena, "boolean", &[]),
@@ -593,7 +609,7 @@ pub fn infer_statement(
 
             match (declare, init, type_ann) {
                 (false, Some(init), type_ann) => {
-                    let init_idx = infer_expression(arena, &mut init, ctx)?;
+                    let init_idx = infer_expression(arena, init, ctx)?;
 
                     let init_type = arena.get(init_idx).unwrap().clone();
                     let init_idx = match &init_type.kind {
@@ -683,12 +699,12 @@ pub fn infer_statement(
             }
         }
         // StmtKind::ClassDecl(_) => todo!(),
-        StmtKind::TypeDecl(TypeDecl {
+        StmtKind::TypeDecl {
             declare: _,
-            id,
+            name,
             type_ann,
             type_params,
-        }) => {
+        } => {
             // NOTE: We clone `ctx` so that type params don't escape the signature
             let mut sig_ctx = ctx.clone();
 
@@ -698,7 +714,7 @@ pub fn infer_statement(
             // TODO: generalize type `t` into a scheme
             let scheme = Scheme { t, type_params };
 
-            ctx.schemes.insert(id.name.to_owned(), scheme);
+            ctx.schemes.insert(name.to_owned(), scheme);
 
             t
         } // StmtKind::ForStmt(_) => todo!(),
@@ -717,13 +733,13 @@ pub fn infer_program(
     node: &mut Program,
     ctx: &mut Context,
 ) -> Result<(), Errors> {
-    for stmt in &node.statements {
-        if let StmtKind::TypeDecl(TypeDecl { id, .. }) = &stmt.kind {
+    for stmt in &node.stmts {
+        if let StmtKind::TypeDecl { name, .. } = &stmt.kind {
             let placeholder_scheme = Scheme {
                 t: new_constructor(arena, "unknown", &[]),
                 type_params: None,
             };
-            let name = id.name.to_owned();
+            let name = name.to_owned();
             if ctx
                 .schemes
                 .insert(name.clone(), placeholder_scheme)
@@ -736,9 +752,9 @@ pub fn infer_program(
         }
     }
 
-    for stmt in &mut node.statements {
+    for stmt in &mut node.stmts {
         if let StmtKind::Let { pattern, .. } = &mut stmt.kind {
-            let (bindings, _) = infer_pattern(arena, &mut pattern, ctx)?;
+            let (bindings, _) = infer_pattern(arena, pattern, ctx)?;
 
             for (name, binding) in bindings {
                 ctx.non_generic.insert(binding.t);
@@ -754,7 +770,7 @@ pub fn infer_program(
     // TODO: capture all type decls and do a second pass to valid them
 
     // TODO: figure out how to avoid parsing patterns twice
-    for stmt in &mut node.statements.iter_mut() {
+    for stmt in &mut node.stmts.iter_mut() {
         infer_statement(arena, stmt, ctx, true)?;
     }
 
@@ -932,7 +948,7 @@ fn infer_type_params(
                 },
                 type_params: None,
             };
-            sig_ctx.schemes.insert(tp.name.name.to_owned(), scheme);
+            sig_ctx.schemes.insert(tp.name.to_owned(), scheme);
         }
     }
 
@@ -944,13 +960,13 @@ fn infer_type_params(
             type_params
                 .iter_mut()
                 .map(|tp| {
-                    if !type_param_names.insert(tp.name.name.to_owned()) {
+                    if !type_param_names.insert(tp.name.to_owned()) {
                         return Err(Errors::InferenceError(
                             "type param identifiers must be unique".to_string(),
                         ));
                     }
                     Ok(types::TypeParam {
-                        name: tp.name.name.to_owned(),
+                        name: tp.name.to_owned(),
                         constraint: match &mut tp.bound {
                             Some(constraint) => Some(infer_type_ann(arena, constraint, sig_ctx)?),
                             None => None,

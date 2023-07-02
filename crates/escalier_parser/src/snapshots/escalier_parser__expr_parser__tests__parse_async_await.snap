@@ -55,6 +55,7 @@ Expr {
                                 type_ann: None,
                             },
                             span: 47..66,
+                            inferred_type: None,
                         },
                         Stmt {
                             kind: Return {
@@ -72,6 +73,7 @@ Expr {
                                 ),
                             },
                             span: 90..91,
+                            inferred_type: None,
                         },
                     ],
                 },

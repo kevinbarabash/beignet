@@ -36,6 +36,7 @@ Expr {
                                 type_ann: None,
                             },
                             span: 11..20,
+                            inferred_type: None,
                         },
                         Stmt {
                             kind: Let {
@@ -62,6 +63,7 @@ Expr {
                                 type_ann: None,
                             },
                             span: 21..31,
+                            inferred_type: None,
                         },
                         Stmt {
                             kind: Return {
@@ -98,6 +100,7 @@ Expr {
                                 ),
                             },
                             span: 39..44,
+                            inferred_type: None,
                         },
                     ],
                 },

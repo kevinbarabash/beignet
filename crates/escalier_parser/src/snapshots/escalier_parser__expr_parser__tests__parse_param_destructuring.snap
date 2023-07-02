@@ -84,6 +84,7 @@ Expr {
                                 ),
                             },
                             span: 24..29,
+                            inferred_type: None,
                         },
                     ],
                 },

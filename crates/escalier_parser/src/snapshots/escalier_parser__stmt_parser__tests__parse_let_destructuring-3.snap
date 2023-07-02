@@ -61,5 +61,6 @@ expression: "parse(\"let [p1, p2] = line\")"
             type_ann: None,
         },
         span: 0..19,
+        inferred_type: None,
     },
 ]

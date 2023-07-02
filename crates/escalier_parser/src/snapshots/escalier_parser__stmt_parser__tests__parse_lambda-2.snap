@@ -110,5 +110,6 @@ expression: "parse(\"let add = fn (x) => fn (y) => x + y\")"
             type_ann: None,
         },
         span: 0..35,
+        inferred_type: None,
     },
 ]

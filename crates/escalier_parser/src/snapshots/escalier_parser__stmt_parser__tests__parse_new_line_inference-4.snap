@@ -29,5 +29,6 @@ expression: "parse(\"return\\nfoo()\")"
             ),
         },
         span: 7..12,
+        inferred_type: None,
     },
 ]

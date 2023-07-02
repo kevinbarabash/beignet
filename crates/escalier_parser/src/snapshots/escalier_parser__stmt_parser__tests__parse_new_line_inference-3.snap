@@ -41,5 +41,6 @@ expression: "parse(\"foo\\n.bar()\")"
             },
         },
         span: 0..10,
+        inferred_type: None,
     },
 ]

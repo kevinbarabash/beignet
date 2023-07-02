@@ -73,5 +73,6 @@ expression: "parse(r#\"let y: number = m*x + b\"#)"
             ),
         },
         span: 0..23,
+        inferred_type: None,
     },
 ]

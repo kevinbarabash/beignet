@@ -22,7 +22,7 @@ pub enum ObjectKey {
 // TODO: track source location
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Prop {
-    Shorthand { key: String }, // TODO: use Identifier
+    Shorthand(String), // TODO: use Identifier
     Property { key: ObjectKey, value: Expr },
     // TODO:
     // - method

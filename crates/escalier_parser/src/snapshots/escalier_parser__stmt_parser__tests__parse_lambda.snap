@@ -94,5 +94,6 @@ expression: "parse(\"let add = fn (x, y) => x + y\")"
             type_ann: None,
         },
         span: 0..28,
+        inferred_type: None,
     },
 ]

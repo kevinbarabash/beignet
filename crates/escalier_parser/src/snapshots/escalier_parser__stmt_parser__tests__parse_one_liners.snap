@@ -27,6 +27,7 @@ expression: "parse(r#\"foo() bar()\"#)"
             },
         },
         span: 0..5,
+        inferred_type: None,
     },
     Stmt {
         kind: Expr {
@@ -52,5 +53,6 @@ expression: "parse(r#\"foo() bar()\"#)"
             },
         },
         span: 6..11,
+        inferred_type: None,
     },
 ]

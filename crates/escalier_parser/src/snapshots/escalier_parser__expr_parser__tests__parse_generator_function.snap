@@ -32,6 +32,7 @@ Expr {
                                 },
                             },
                             span: 45..52,
+                            inferred_type: None,
                         },
                         Stmt {
                             kind: Expr {
@@ -54,6 +55,7 @@ Expr {
                                 },
                             },
                             span: 69..76,
+                            inferred_type: None,
                         },
                         Stmt {
                             kind: Expr {
@@ -76,6 +78,7 @@ Expr {
                                 },
                             },
                             span: 93..100,
+                            inferred_type: None,
                         },
                     ],
                 },

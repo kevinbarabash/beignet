@@ -71,5 +71,6 @@ expression: "parse(\"let {x: x1, y: y1} = p1\")"
             type_ann: None,
         },
         span: 0..23,
+        inferred_type: None,
     },
 ]

@@ -58,5 +58,6 @@ expression: "parse(r#\"p[\"y\"] = 10\"#)"
             },
         },
         span: 0..11,
+        inferred_type: None,
     },
 ]

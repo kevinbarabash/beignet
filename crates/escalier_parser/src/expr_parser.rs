@@ -218,9 +218,7 @@ impl<'a> Parser<'a> {
                                 if p.peek().unwrap_or(&EOF).kind == TokenKind::Comma
                                     || p.peek().unwrap_or(&EOF).kind == TokenKind::RightBrace =>
                             {
-                                Ok(PropOrSpread::Prop(expr::Prop::Shorthand {
-                                    key: id.to_owned(),
-                                }))
+                                Ok(PropOrSpread::Prop(expr::Prop::Shorthand(id.to_owned())))
                             }
                             _ => {
                                 let key = match &next.kind {
@@ -571,7 +569,10 @@ impl<'a> Parser<'a> {
 
     fn parse_type_param(&mut self) -> Result<TypeParam, ParseError> {
         let start = self.scanner.cursor();
-        let type_ann = self.parse_type_ann()?;
+        let name = match self.next().unwrap_or(EOF.clone()).kind {
+            TokenKind::Identifier(name) => name,
+            _ => panic!("expected identifier"),
+        };
         let bound = if self.peek().unwrap_or(&EOF).kind == TokenKind::Colon {
             self.next().unwrap_or(EOF.clone());
             Some(self.parse_type_ann()?)
@@ -582,7 +583,7 @@ impl<'a> Parser<'a> {
 
         Ok(TypeParam {
             span: Span { start, end },
-            type_ann,
+            name,
             bound,
             default: None,
         })

@@ -70,6 +70,7 @@ expression: "parse(\"if (foo) { console.log(foo) }\")"
                                         },
                                     },
                                     span: 11..27,
+                                    inferred_type: None,
                                 },
                             ],
                         },
@@ -81,5 +82,6 @@ expression: "parse(\"if (foo) { console.log(foo) }\")"
             },
         },
         span: 0..29,
+        inferred_type: None,
     },
 ]

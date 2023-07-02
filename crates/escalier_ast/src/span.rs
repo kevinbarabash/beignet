@@ -1,7 +1,7 @@
 use std::cmp::{max, min};
 use std::fmt;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Span {
     pub start: usize,
     pub end: usize,

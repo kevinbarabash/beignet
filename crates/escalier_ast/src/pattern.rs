@@ -25,6 +25,15 @@ pub struct Pattern {
     pub inferred_type: Option<Index>,
 }
 
+impl Pattern {
+    pub fn get_name(&self, index: &usize) -> String {
+        match &self.kind {
+            PatternKind::Ident(BindingIdent { name, .. }) => name.to_owned(),
+            _ => format!("arg{index}"),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LitPat {
     pub lit: Literal,

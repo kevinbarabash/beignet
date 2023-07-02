@@ -49,5 +49,6 @@ expression: "parse(r#\"p.x = 5\"#)"
             },
         },
         span: 0..7,
+        inferred_type: None,
     },
 ]

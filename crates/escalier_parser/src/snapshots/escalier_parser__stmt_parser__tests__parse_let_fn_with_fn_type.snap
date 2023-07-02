@@ -153,5 +153,6 @@ expression: "parse(r#\"let add: fn (a: number, b: number) => number = fn (a, b) 
             ),
         },
         span: 0..65,
+        inferred_type: None,
     },
 ]

@@ -94,6 +94,7 @@ expression: "parse(r#\"let add = fn(a, b) => a + b add(5, 10)\"#)"
             type_ann: None,
         },
         span: 0..27,
+        inferred_type: None,
     },
     Stmt {
         kind: Expr {
@@ -138,5 +139,6 @@ expression: "parse(r#\"let add = fn(a, b) => a + b add(5, 10)\"#)"
             },
         },
         span: 28..38,
+        inferred_type: None,
     },
 ]

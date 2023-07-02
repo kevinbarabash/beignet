@@ -32,6 +32,7 @@ impl<'a> Parser<'a> {
                         type_ann,
                     },
                     span,
+                    inferred_type: None,
                 }
             }
             TokenKind::Return => {
@@ -41,6 +42,7 @@ impl<'a> Parser<'a> {
                     TokenKind::Eof => Stmt {
                         kind: StmtKind::Return { arg: None },
                         span: token.span,
+                        inferred_type: None,
                     },
                     _ => {
                         let arg = self.parse_expr()?;
@@ -49,6 +51,7 @@ impl<'a> Parser<'a> {
                         Stmt {
                             kind: StmtKind::Return { arg: Some(arg) },
                             span,
+                            inferred_type: None,
                         }
                     }
                 }
@@ -59,6 +62,7 @@ impl<'a> Parser<'a> {
                 Stmt {
                     kind: StmtKind::Expr { expr },
                     span,
+                    inferred_type: None,
                 }
             }
         };
@@ -66,23 +70,28 @@ impl<'a> Parser<'a> {
         Ok(stmt)
     }
 
-    pub fn parse_program(&mut self) -> Result<Vec<Stmt>, ParseError> {
+    pub fn parse_program(&mut self) -> Result<Program, ParseError> {
         let mut stmts = Vec::new();
         while self.peek().unwrap_or(&EOF).kind != TokenKind::Eof {
             stmts.push(self.parse_stmt()?);
         }
-        Ok(stmts)
+        Ok(Program { stmts })
     }
 }
 
-pub fn parse(input: &str) -> Vec<Stmt> {
+pub fn parse(input: &str) -> Result<Program, ParseError> {
     let mut parser = Parser::new(input);
-    parser.parse_program().unwrap()
+    parser.parse_program()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn parse(input: &str) -> Vec<Stmt> {
+        let mut parser = Parser::new(input);
+        parser.parse_program().unwrap().stmts
+    }
 
     #[test]
     fn single_statement() {

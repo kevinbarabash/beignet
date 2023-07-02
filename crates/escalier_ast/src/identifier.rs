@@ -6,7 +6,7 @@ pub struct Ident {
     pub span: Span,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct BindingIdent {
     pub name: String,
     pub span: Span,

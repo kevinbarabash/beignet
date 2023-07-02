@@ -51,5 +51,6 @@ expression: "parse(\"let {x, y} = point\")"
             type_ann: None,
         },
         span: 0..18,
+        inferred_type: None,
     },
 ]

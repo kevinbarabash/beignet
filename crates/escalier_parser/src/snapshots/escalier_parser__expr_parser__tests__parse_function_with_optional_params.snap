@@ -110,6 +110,7 @@ Expr {
                                 ),
                             },
                             span: 58..63,
+                            inferred_type: None,
                         },
                     ],
                 },

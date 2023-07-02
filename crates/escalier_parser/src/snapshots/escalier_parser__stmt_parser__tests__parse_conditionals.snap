@@ -65,6 +65,7 @@ expression: "parse(\"let max = if (x > y) { x } else { y }\")"
                                         },
                                     },
                                     span: 23..24,
+                                    inferred_type: None,
                                 },
                             ],
                         },
@@ -86,6 +87,7 @@ expression: "parse(\"let max = if (x > y) { x } else { y }\")"
                                             },
                                         },
                                         span: 34..35,
+                                        inferred_type: None,
                                     },
                                 ],
                             },
@@ -98,5 +100,6 @@ expression: "parse(\"let max = if (x > y) { x } else { y }\")"
             type_ann: None,
         },
         span: 0..37,
+        inferred_type: None,
     },
 ]

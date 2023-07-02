@@ -117,6 +117,7 @@ Expr {
                                         },
                                     },
                                     span: 113..120,
+                                    inferred_type: None,
                                 },
                             ],
                         },

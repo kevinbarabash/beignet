@@ -7,14 +7,14 @@ Expr {
         Object {
             properties: [
                 Prop(
-                    Shorthand {
-                        key: "a",
-                    },
+                    Shorthand(
+                        "a",
+                    ),
                 ),
                 Prop(
-                    Shorthand {
-                        key: "b",
-                    },
+                    Shorthand(
+                        "b",
+                    ),
                 ),
             ],
         },
