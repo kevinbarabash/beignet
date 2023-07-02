@@ -73,6 +73,7 @@ impl<'a> Parser<'a> {
                 let mut props: Vec<ObjectProp> = vec![];
 
                 while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
+                    eprintln!("self.peek() = {:?}", self.peek().unwrap_or(&EOF));
                     match self.next().unwrap_or(EOF.clone()).kind {
                         TokenKind::Identifier(name) => {
                             let optional =

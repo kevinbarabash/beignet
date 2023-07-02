@@ -261,6 +261,7 @@ impl<'a> Parser<'a> {
             "var" => TokenKind::Var,
             "mut" => TokenKind::Mut,
             "match" => TokenKind::Match,
+            "is" => TokenKind::Is,
             "try" => TokenKind::Try,
             "catch" => TokenKind::Catch,
             "finally" => TokenKind::Finally,

@@ -395,9 +395,9 @@ fn test_composition_with_statements() -> Result<(), Errors> {
     let src = r#"
     let result = fn (f) => {
         let mantel = fn (g) => {
-            let core = (arg) => g(f(arg))
+            let core = fn (arg) => g(f(arg))
             return core
-        };
+        }
         return mantel
     }
     "#;
@@ -549,7 +549,7 @@ fn literal_isnt_callable() -> Result<(), Errors> {
     assert_eq!(
         result,
         Err(Errors::InferenceError(
-            "literal 5 is not callable".to_string()
+            "literal Number(\n    \"5\",\n) is not callable".to_string()
         ))
     );
 
@@ -985,7 +985,7 @@ fn test_function_with_multiple_statements() -> Result<(), Errors> {
         let x = 5
         let y = 10
         return x * y
-    };
+    }
     "#;
     let mut program = parse(src).unwrap();
 
@@ -1357,8 +1357,8 @@ fn test_pattern_matching_is_patterns() -> Result<(), Errors> {
     let src = r#"
     declare let expr: number | string
     let name = match (expr) {
-        x is number => x + 1,
-        x is string => "bar"
+        a is number => a + 1,
+        b is string => "bar"
     }
     "#;
     let mut program = parse(src).unwrap();
@@ -1379,8 +1379,8 @@ fn test_pattern_matching_does_not_refine_expr() -> Result<(), Errors> {
     declare let expr: number | string
     let name = match (expr) {
         x is number => expr + 1,
-        x is string > "bar"
-    };
+        x is string => "bar"
+    }
     "#;
     let mut program = parse(src).unwrap();
     let result = infer_program(&mut arena, &mut program, &mut my_ctx);
@@ -1406,7 +1406,7 @@ fn test_pattern_not_a_subtype_of_expr() -> Result<(), Errors> {
         x is number => "foo",
         x is string => "bar",
         x is boolean => "baz"
-    };
+    }
     "#;
     let mut program = parse(src).unwrap();
     let result = infer_program(&mut arena, &mut program, &mut my_ctx);
@@ -1455,10 +1455,10 @@ fn test_pattern_matching_object() -> Result<(), Errors> {
     // TODO: allow trailing `,` when doing pattern matching
     // TODO: add support for omitting fields in object patterns
     let src = r#"
-    declare let action: {type: "insert", key: string, value: string} | {type: "delete", key: string}
+    declare let action: {kind: "insert", key: string, value: string} | {kind: "delete", key: string}
     let key = match (action) {
-        {type: "insert", key, value} => key,
-        {type: "delete", key} => key
+        {kind: "insert", key, value} => key,
+        {kind: "delete", key} => key
     }
     "#;
     let mut program = parse(src).unwrap();
@@ -1536,7 +1536,7 @@ fn member_access_on_type_variable() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let get_a = (x) => x.a
+    let get_a = fn (x) => x.a
     "#;
     let mut program = parse(src).unwrap();
 
@@ -1822,7 +1822,7 @@ fn test_type_param_with_violated_constraint() -> Result<(), Errors> {
 
     let src = r#"
     let identity = fn <T: number | string>(x: T): T => x
-    identity(true);
+    identity(true)
     "#;
     let mut program = parse(src).unwrap();
     let result = infer_program(&mut arena, &mut program, &mut my_ctx);
@@ -1842,7 +1842,7 @@ fn test_type_ann_func_with_type_constraint() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let identity: fn <T: number | string>(x: T) => T = (x) => x
+    let identity: fn <T: number | string>(x: T) => T = fn (x) => x
     let x = identity<number>(5)
     "#;
     let mut program = parse(src).unwrap();

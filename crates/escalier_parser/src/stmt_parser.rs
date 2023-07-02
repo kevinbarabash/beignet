@@ -6,29 +6,19 @@ use crate::token::*;
 
 impl<'a> Parser<'a> {
     pub fn parse_stmt(&mut self) -> Result<Stmt, ParseError> {
-        let token = self.peek().unwrap_or(&EOF).clone();
+        let mut token = self.peek().unwrap_or(&EOF).clone();
+        let start = token.span.start;
 
-        let stmt = match &token.kind {
-            // TODO: handle 'declare type ...'
+        let declare = match &token.kind {
             TokenKind::Declare => {
                 self.next(); // consumes 'declare'
-                assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Let);
-                let pattern = self.parse_pattern()?;
-                assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
-                let type_ann = self.parse_type_ann()?;
-                let span = merge_spans(&token.span, &type_ann.span);
-
-                Stmt {
-                    kind: StmtKind::Let {
-                        declare: true,
-                        pattern,
-                        expr: None,
-                        type_ann: Some(type_ann),
-                    },
-                    span,
-                    inferred_type: None,
-                }
+                token = self.peek().unwrap_or(&EOF).clone();
+                true
             }
+            _ => false,
+        };
+
+        let stmt = match &token.kind {
             TokenKind::Let => {
                 self.next(); // consumes 'let'
                 let pattern = self.parse_pattern()?;
@@ -41,15 +31,31 @@ impl<'a> Parser<'a> {
                     _ => None,
                 };
 
-                assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Assign);
-                let expr = self.parse_expr()?;
+                let expr = match self.peek().unwrap_or(&EOF).kind {
+                    TokenKind::Assign => {
+                        self.next().unwrap_or(EOF.clone());
+                        Some(self.parse_expr()?)
+                    }
+                    _ => None,
+                };
 
-                let span = merge_spans(&token.span, &expr.get_span());
+                let span = Span {
+                    start,
+                    end: if let Some(expr) = &expr {
+                        expr.get_span().end
+                    } else if let Some(type_ann) = &type_ann {
+                        type_ann.span.end
+                    } else {
+                        pattern.span.end
+                    },
+                };
+
+                // TODO: check invariants in semantic analysis pass
                 Stmt {
                     kind: StmtKind::Let {
-                        declare: false,
+                        declare,
                         pattern,
-                        expr: Some(expr),
+                        expr,
                         type_ann,
                     },
                     span,
@@ -97,7 +103,7 @@ impl<'a> Parser<'a> {
 
                 Stmt {
                     kind: StmtKind::TypeDecl {
-                        declare: false,
+                        declare,
                         name,
                         type_ann,
                         type_params,
