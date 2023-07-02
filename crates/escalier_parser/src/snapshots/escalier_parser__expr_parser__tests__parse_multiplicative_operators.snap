@@ -2,45 +2,70 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"a * b / c % d\")"
 ---
-Binary(
-    Binary {
-        span: 0..13,
-        left: Binary(
-            Binary {
-                span: 0..9,
-                left: Binary(
+Expr {
+    kind: Binary(
+        Binary {
+            left: Expr {
+                kind: Binary(
                     Binary {
-                        span: 0..5,
-                        left: Ident(
-                            Ident {
-                                name: "a",
-                                span: 0..1,
-                            },
-                        ),
-                        op: Times,
-                        right: Ident(
-                            Ident {
-                                name: "b",
-                                span: 4..5,
-                            },
-                        ),
+                        left: Expr {
+                            kind: Binary(
+                                Binary {
+                                    left: Expr {
+                                        kind: Ident(
+                                            Ident {
+                                                name: "a",
+                                                span: 0..1,
+                                            },
+                                        ),
+                                        span: 0..1,
+                                        inferred_type: None,
+                                    },
+                                    op: Times,
+                                    right: Expr {
+                                        kind: Ident(
+                                            Ident {
+                                                name: "b",
+                                                span: 4..5,
+                                            },
+                                        ),
+                                        span: 4..5,
+                                        inferred_type: None,
+                                    },
+                                },
+                            ),
+                            span: 0..5,
+                            inferred_type: None,
+                        },
+                        op: Divide,
+                        right: Expr {
+                            kind: Ident(
+                                Ident {
+                                    name: "c",
+                                    span: 8..9,
+                                },
+                            ),
+                            span: 8..9,
+                            inferred_type: None,
+                        },
                     },
                 ),
-                op: Divide,
-                right: Ident(
+                span: 0..9,
+                inferred_type: None,
+            },
+            op: Modulo,
+            right: Expr {
+                kind: Ident(
                     Ident {
-                        name: "c",
-                        span: 8..9,
+                        name: "d",
+                        span: 12..13,
                     },
                 ),
-            },
-        ),
-        op: Modulo,
-        right: Ident(
-            Ident {
-                name: "d",
                 span: 12..13,
+                inferred_type: None,
             },
-        ),
-    },
-)
+        },
+    ),
+    span: 0..13,
+    inferred_type: None,
+}

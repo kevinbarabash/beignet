@@ -5,4 +5,5 @@ expression: "parse(\"undefined\")"
 TypeAnn {
     kind: Undefined,
     span: 0..9,
+    inferred_type: None,
 }

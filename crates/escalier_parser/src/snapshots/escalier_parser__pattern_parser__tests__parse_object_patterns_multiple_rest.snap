@@ -1,0 +1,60 @@
+---
+source: crates/escalier_parser/src/pattern_parser.rs
+expression: "parse(\"{...x, ...y, ...z}\")"
+---
+Pattern {
+    kind: Object(
+        ObjectPat {
+            props: [
+                Rest(
+                    RestPat {
+                        arg: Pattern {
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "x",
+                                    span: 4..5,
+                                    mutable: false,
+                                },
+                            ),
+                            span: 4..5,
+                            inferred_type: None,
+                        },
+                    },
+                ),
+                Rest(
+                    RestPat {
+                        arg: Pattern {
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "y",
+                                    span: 10..11,
+                                    mutable: false,
+                                },
+                            ),
+                            span: 10..11,
+                            inferred_type: None,
+                        },
+                    },
+                ),
+                Rest(
+                    RestPat {
+                        arg: Pattern {
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "z",
+                                    span: 16..17,
+                                    mutable: false,
+                                },
+                            ),
+                            span: 16..17,
+                            inferred_type: None,
+                        },
+                    },
+                ),
+            ],
+            optional: false,
+        },
+    ),
+    span: 0..18,
+    inferred_type: None,
+}

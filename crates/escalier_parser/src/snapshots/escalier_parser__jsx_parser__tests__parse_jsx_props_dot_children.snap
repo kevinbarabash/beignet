@@ -17,24 +17,35 @@ JSXElement {
     children: [
         ExprContainer(
             JSXExprContainer {
-                expr: Binary(
-                    Binary {
-                        span: 6..9,
-                        left: Ident(
-                            Ident {
-                                name: "a",
+                expr: Expr {
+                    kind: Binary(
+                        Binary {
+                            left: Expr {
+                                kind: Ident(
+                                    Ident {
+                                        name: "a",
+                                        span: 6..7,
+                                    },
+                                ),
                                 span: 6..7,
+                                inferred_type: None,
                             },
-                        ),
-                        op: Plus,
-                        right: Ident(
-                            Ident {
-                                name: "b",
+                            op: Plus,
+                            right: Expr {
+                                kind: Ident(
+                                    Ident {
+                                        name: "b",
+                                        span: 8..9,
+                                    },
+                                ),
                                 span: 8..9,
+                                inferred_type: None,
                             },
-                        ),
-                    },
-                ),
+                        },
+                    ),
+                    span: 6..9,
+                    inferred_type: None,
+                },
             },
         ),
     ],

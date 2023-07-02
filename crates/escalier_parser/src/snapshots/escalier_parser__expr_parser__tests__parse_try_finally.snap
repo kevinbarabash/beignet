@@ -2,57 +2,76 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(r#\"\n            try {\n                canThrow()\n            } finally {\n                cleanup()\n            }\n            \"#)"
 ---
-Try(
-    Try {
-        span: 13..109,
-        body: Block {
-            span: 16..59,
-            stmts: [
-                Stmt {
-                    kind: Expr {
-                        expr: Call(
-                            Call {
-                                span: 35..45,
-                                callee: Ident(
-                                    Ident {
-                                        name: "canThrow",
-                                        span: 35..43,
-                                    },
-                                ),
-                                type_args: None,
-                                args: [],
-                            },
-                        ),
-                    },
-                    span: 35..45,
-                },
-            ],
-        },
-        catch: None,
-        finally: Some(
-            Block {
-                span: 67..109,
+Expr {
+    kind: Try(
+        Try {
+            body: Block {
+                span: 16..59,
                 stmts: [
                     Stmt {
                         kind: Expr {
-                            expr: Call(
-                                Call {
-                                    span: 86..95,
-                                    callee: Ident(
-                                        Ident {
-                                            name: "cleanup",
-                                            span: 86..93,
+                            expr: Expr {
+                                kind: Call(
+                                    Call {
+                                        callee: Expr {
+                                            kind: Ident(
+                                                Ident {
+                                                    name: "canThrow",
+                                                    span: 35..43,
+                                                },
+                                            ),
+                                            span: 35..43,
+                                            inferred_type: None,
                                         },
-                                    ),
-                                    type_args: None,
-                                    args: [],
-                                },
-                            ),
+                                        type_args: None,
+                                        args: [],
+                                    },
+                                ),
+                                span: 35..45,
+                                inferred_type: None,
+                            },
                         },
-                        span: 86..95,
+                        span: 35..45,
+                        inferred_type: None,
                     },
                 ],
             },
-        ),
-    },
-)
+            catch: None,
+            finally: Some(
+                Block {
+                    span: 67..109,
+                    stmts: [
+                        Stmt {
+                            kind: Expr {
+                                expr: Expr {
+                                    kind: Call(
+                                        Call {
+                                            callee: Expr {
+                                                kind: Ident(
+                                                    Ident {
+                                                        name: "cleanup",
+                                                        span: 86..93,
+                                                    },
+                                                ),
+                                                span: 86..93,
+                                                inferred_type: None,
+                                            },
+                                            type_args: None,
+                                            args: [],
+                                        },
+                                    ),
+                                    span: 86..95,
+                                    inferred_type: None,
+                                },
+                            },
+                            span: 86..95,
+                            inferred_type: None,
+                        },
+                    ],
+                },
+            ),
+        },
+    ),
+    span: 13..109,
+    inferred_type: None,
+}

@@ -201,21 +201,21 @@ impl<'a> Parser<'a> {
                         self.scanner.pop();
                         TokenKind::NotEquals
                     }
-                    _ => panic!("Unexpected character: '{}'", character),
+                    _ => TokenKind::Not,
                 },
                 '&' => match self.scanner.peek(1) {
                     Some('&') => {
                         self.scanner.pop();
                         TokenKind::And
                     }
-                    _ => panic!("Unexpected character: '{}'", character),
+                    _ => TokenKind::Ampersand,
                 },
                 '|' => match self.scanner.peek(1) {
                     Some('|') => {
                         self.scanner.pop();
                         TokenKind::Or
                     }
-                    _ => panic!("Unexpected character: '{}'", character),
+                    _ => TokenKind::Pipe,
                 },
                 _ => panic!("Unexpected character: '{}'", character),
             };
@@ -256,10 +256,12 @@ impl<'a> Parser<'a> {
             "await" => TokenKind::Await,
             "gen" => TokenKind::Gen,
             "yield" => TokenKind::Yield,
+            "declare" => TokenKind::Declare,
             "let" => TokenKind::Let,
             "var" => TokenKind::Var,
             "mut" => TokenKind::Mut,
             "match" => TokenKind::Match,
+            "is" => TokenKind::Is,
             "try" => TokenKind::Try,
             "catch" => TokenKind::Catch,
             "finally" => TokenKind::Finally,
@@ -277,6 +279,11 @@ impl<'a> Parser<'a> {
             "string" => TokenKind::String,
             "boolean" => TokenKind::Boolean,
             "symbol" => TokenKind::Symbol,
+            "unknown" => TokenKind::Unknown,
+            "never" => TokenKind::Never,
+            "type" => TokenKind::Type,
+            "typeof" => TokenKind::TypeOf,
+            "keyof" => TokenKind::KeyOf,
             "_" => TokenKind::Underscore,
             _ => TokenKind::Identifier(ident),
         };
@@ -525,8 +532,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic = "Unexpected character: '!'"]
-    fn lex_unexpected_exclamation() {
+    fn lex_exclamation() {
         let parser = Parser::new("1 ! 2");
 
         let _ = parser.collect::<Vec<_>>();

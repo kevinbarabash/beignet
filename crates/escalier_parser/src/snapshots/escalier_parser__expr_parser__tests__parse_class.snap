@@ -2,184 +2,204 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(r#\"\n            class {\n                msg: string\n                id = 5\n                fn foo(self) {}\n                async fn fetch(self, url: string) {}\n                gen fn [Symbol.iterator](self) {}\n            }\n        \"#)"
 ---
-Class(
-    Class {
-        span: 13..220,
-        type_params: None,
-        super_class: None,
-        super_type_args: None,
-        body: [
-            Field(
-                Field {
-                    span: 37..67,
-                    name: Ident {
-                        name: "msg",
-                        span: 37..40,
-                    },
-                    type_ann: Some(
-                        TypeAnn {
-                            kind: String,
-                            span: 42..48,
+Expr {
+    kind: Class(
+        Class {
+            span: 13..220,
+            type_params: None,
+            super_class: None,
+            super_type_args: None,
+            body: [
+                Field(
+                    Field {
+                        span: 37..67,
+                        name: Ident {
+                            name: "msg",
+                            span: 37..40,
                         },
-                    ),
-                    init: None,
-                },
-            ),
-            Field(
-                Field {
-                    span: 65..90,
-                    name: Ident {
-                        name: "id",
-                        span: 65..67,
+                        type_ann: Some(
+                            TypeAnn {
+                                kind: String,
+                                span: 42..48,
+                                inferred_type: None,
+                            },
+                        ),
+                        init: None,
                     },
-                    type_ann: None,
-                    init: Some(
-                        Num(
-                            Num {
+                ),
+                Field(
+                    Field {
+                        span: 65..90,
+                        name: Ident {
+                            name: "id",
+                            span: 65..67,
+                        },
+                        type_ann: None,
+                        init: Some(
+                            Expr {
+                                kind: Num(
+                                    Num {
+                                        value: "5",
+                                    },
+                                ),
                                 span: 70..71,
-                                value: "5",
+                                inferred_type: None,
                             },
                         ),
-                    ),
-                },
-            ),
-            Method(
-                Method {
-                    span: 88..103,
-                    name: Ident(
-                        Ident {
-                            name: "foo",
-                            span: 91..94,
-                        },
-                    ),
-                    type_params: None,
-                    params: [
-                        FuncParam {
-                            pattern: Pattern {
-                                span: 95..99,
-                                kind: Ident(
-                                    BindingIdent {
-                                        name: "self",
-                                        span: 95..99,
-                                        mutable: false,
-                                    },
-                                ),
-                            },
-                            type_ann: None,
-                            optional: false,
-                        },
-                    ],
-                    body: Block {
-                        span: 100..103,
-                        stmts: [],
                     },
-                    type_ann: None,
-                    is_async: false,
-                    is_gen: false,
-                },
-            ),
-            Method(
-                Method {
-                    span: 120..156,
-                    name: Ident(
-                        Ident {
-                            name: "fetch",
-                            span: 129..134,
-                        },
-                    ),
-                    type_params: None,
-                    params: [
-                        FuncParam {
-                            pattern: Pattern {
-                                span: 135..139,
-                                kind: Ident(
-                                    BindingIdent {
-                                        name: "self",
-                                        span: 135..139,
-                                        mutable: false,
-                                    },
-                                ),
+                ),
+                Method(
+                    Method {
+                        span: 88..103,
+                        name: Ident(
+                            Ident {
+                                name: "foo",
+                                span: 91..94,
                             },
-                            type_ann: None,
-                            optional: false,
-                        },
-                        FuncParam {
-                            pattern: Pattern {
-                                span: 141..144,
-                                kind: Ident(
-                                    BindingIdent {
-                                        name: "url",
-                                        span: 141..144,
-                                        mutable: false,
-                                    },
-                                ),
-                            },
-                            type_ann: Some(
-                                TypeAnn {
-                                    kind: String,
-                                    span: 146..152,
+                        ),
+                        type_params: None,
+                        params: [
+                            FuncParam {
+                                pattern: Pattern {
+                                    kind: Ident(
+                                        BindingIdent {
+                                            name: "self",
+                                            span: 95..99,
+                                            mutable: false,
+                                        },
+                                    ),
+                                    span: 95..99,
+                                    inferred_type: None,
                                 },
-                            ),
-                            optional: false,
+                                type_ann: None,
+                                optional: false,
+                            },
+                        ],
+                        body: Block {
+                            span: 100..103,
+                            stmts: [],
                         },
-                    ],
-                    body: Block {
-                        span: 153..156,
-                        stmts: [],
+                        type_ann: None,
+                        is_async: false,
+                        is_gen: false,
                     },
-                    type_ann: None,
-                    is_async: true,
-                    is_gen: false,
-                },
-            ),
-            Method(
-                Method {
-                    span: 173..206,
-                    name: Computed(
-                        Member(
-                            Member {
-                                span: 181..196,
-                                object: Ident(
-                                    Ident {
-                                        name: "Symbol",
-                                        span: 181..187,
-                                    },
-                                ),
-                                property: Ident(
-                                    Ident {
-                                        name: "iterator",
-                                        span: 188..196,
-                                    },
-                                ),
+                ),
+                Method(
+                    Method {
+                        span: 120..156,
+                        name: Ident(
+                            Ident {
+                                name: "fetch",
+                                span: 129..134,
                             },
                         ),
-                    ),
-                    type_params: None,
-                    params: [
-                        FuncParam {
-                            pattern: Pattern {
-                                span: 198..202,
-                                kind: Ident(
-                                    BindingIdent {
-                                        name: "self",
-                                        span: 198..202,
-                                        mutable: false,
+                        type_params: None,
+                        params: [
+                            FuncParam {
+                                pattern: Pattern {
+                                    kind: Ident(
+                                        BindingIdent {
+                                            name: "self",
+                                            span: 135..139,
+                                            mutable: false,
+                                        },
+                                    ),
+                                    span: 135..139,
+                                    inferred_type: None,
+                                },
+                                type_ann: None,
+                                optional: false,
+                            },
+                            FuncParam {
+                                pattern: Pattern {
+                                    kind: Ident(
+                                        BindingIdent {
+                                            name: "url",
+                                            span: 141..144,
+                                            mutable: false,
+                                        },
+                                    ),
+                                    span: 141..144,
+                                    inferred_type: None,
+                                },
+                                type_ann: Some(
+                                    TypeAnn {
+                                        kind: String,
+                                        span: 146..152,
+                                        inferred_type: None,
                                     },
                                 ),
+                                optional: false,
                             },
-                            type_ann: None,
-                            optional: false,
+                        ],
+                        body: Block {
+                            span: 153..156,
+                            stmts: [],
                         },
-                    ],
-                    body: Block {
-                        span: 203..206,
-                        stmts: [],
+                        type_ann: None,
+                        is_async: true,
+                        is_gen: false,
                     },
-                    type_ann: None,
-                    is_async: false,
-                    is_gen: true,
-                },
-            ),
-        ],
-    },
-)
+                ),
+                Method(
+                    Method {
+                        span: 173..206,
+                        name: Computed(
+                            Expr {
+                                kind: Member(
+                                    Member {
+                                        object: Expr {
+                                            kind: Ident(
+                                                Ident {
+                                                    name: "Symbol",
+                                                    span: 181..187,
+                                                },
+                                            ),
+                                            span: 181..187,
+                                            inferred_type: None,
+                                        },
+                                        property: Ident(
+                                            Ident {
+                                                name: "iterator",
+                                                span: 188..196,
+                                            },
+                                        ),
+                                    },
+                                ),
+                                span: 181..196,
+                                inferred_type: None,
+                            },
+                        ),
+                        type_params: None,
+                        params: [
+                            FuncParam {
+                                pattern: Pattern {
+                                    kind: Ident(
+                                        BindingIdent {
+                                            name: "self",
+                                            span: 198..202,
+                                            mutable: false,
+                                        },
+                                    ),
+                                    span: 198..202,
+                                    inferred_type: None,
+                                },
+                                type_ann: None,
+                                optional: false,
+                            },
+                        ],
+                        body: Block {
+                            span: 203..206,
+                            stmts: [],
+                        },
+                        type_ann: None,
+                        is_async: false,
+                        is_gen: true,
+                    },
+                ),
+            ],
+        },
+    ),
+    span: 13..220,
+    inferred_type: None,
+}

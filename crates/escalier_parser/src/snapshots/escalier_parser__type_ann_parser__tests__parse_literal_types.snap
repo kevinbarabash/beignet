@@ -7,4 +7,5 @@ TypeAnn {
         "123",
     ),
     span: 0..3,
+    inferred_type: None,
 }

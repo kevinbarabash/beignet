@@ -12,10 +12,13 @@ TypeAnn {
                         None,
                     ),
                     span: 0..1,
+                    inferred_type: None,
                 },
             ),
             span: 0..3,
+            inferred_type: None,
         },
     ),
     span: 0..5,
+    inferred_type: None,
 }

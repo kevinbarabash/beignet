@@ -6,7 +6,17 @@ use crate::token::*;
 
 impl<'a> Parser<'a> {
     pub fn parse_stmt(&mut self) -> Result<Stmt, ParseError> {
-        let token = self.peek().unwrap_or(&EOF).clone();
+        let mut token = self.peek().unwrap_or(&EOF).clone();
+        let start = token.span.start;
+
+        let declare = match &token.kind {
+            TokenKind::Declare => {
+                self.next(); // consumes 'declare'
+                token = self.peek().unwrap_or(&EOF).clone();
+                true
+            }
+            _ => false,
+        };
 
         let stmt = match &token.kind {
             TokenKind::Let => {
@@ -21,17 +31,35 @@ impl<'a> Parser<'a> {
                     _ => None,
                 };
 
-                assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Assign);
-                let expr = self.parse_expr()?;
+                let expr = match self.peek().unwrap_or(&EOF).kind {
+                    TokenKind::Assign => {
+                        self.next().unwrap_or(EOF.clone());
+                        Some(self.parse_expr()?)
+                    }
+                    _ => None,
+                };
 
-                let span = merge_spans(&token.span, &expr.get_span());
+                let span = Span {
+                    start,
+                    end: if let Some(expr) = &expr {
+                        expr.get_span().end
+                    } else if let Some(type_ann) = &type_ann {
+                        type_ann.span.end
+                    } else {
+                        pattern.span.end
+                    },
+                };
+
+                // TODO: check invariants in semantic analysis pass
                 Stmt {
                     kind: StmtKind::Let {
+                        declare,
                         pattern,
                         expr,
                         type_ann,
                     },
                     span,
+                    inferred_type: None,
                 }
             }
             TokenKind::Return => {
@@ -41,6 +69,7 @@ impl<'a> Parser<'a> {
                     TokenKind::Eof => Stmt {
                         kind: StmtKind::Return { arg: None },
                         span: token.span,
+                        inferred_type: None,
                     },
                     _ => {
                         let arg = self.parse_expr()?;
@@ -49,8 +78,38 @@ impl<'a> Parser<'a> {
                         Stmt {
                             kind: StmtKind::Return { arg: Some(arg) },
                             span,
+                            inferred_type: None,
                         }
                     }
+                }
+            }
+            TokenKind::Type => {
+                self.next(); // consumes 'type'
+
+                let name = match self.next().unwrap_or(EOF.clone()).kind {
+                    TokenKind::Identifier(name) => name,
+                    _ => {
+                        return Err(ParseError {
+                            message: "expected identifier".to_string(),
+                        })
+                    }
+                };
+
+                let type_params = self.maybe_parse_type_params()?;
+
+                assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Assign);
+                let type_ann = self.parse_type_ann()?;
+                let span = merge_spans(&token.span, &type_ann.span);
+
+                Stmt {
+                    kind: StmtKind::TypeDecl {
+                        declare,
+                        name,
+                        type_ann,
+                        type_params,
+                    },
+                    span,
+                    inferred_type: None,
                 }
             }
             _ => {
@@ -59,6 +118,7 @@ impl<'a> Parser<'a> {
                 Stmt {
                     kind: StmtKind::Expr { expr },
                     span,
+                    inferred_type: None,
                 }
             }
         };
@@ -66,23 +126,28 @@ impl<'a> Parser<'a> {
         Ok(stmt)
     }
 
-    pub fn parse_program(&mut self) -> Result<Vec<Stmt>, ParseError> {
+    pub fn parse_program(&mut self) -> Result<Program, ParseError> {
         let mut stmts = Vec::new();
         while self.peek().unwrap_or(&EOF).kind != TokenKind::Eof {
             stmts.push(self.parse_stmt()?);
         }
-        Ok(stmts)
+        Ok(Program { stmts })
     }
 }
 
-pub fn parse(input: &str) -> Vec<Stmt> {
+pub fn parse(input: &str) -> Result<Program, ParseError> {
     let mut parser = Parser::new(input);
-    parser.parse_program().unwrap()
+    parser.parse_program()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn parse(input: &str) -> Vec<Stmt> {
+        let mut parser = Parser::new(input);
+        parser.parse_program().unwrap().stmts
+    }
 
     #[test]
     fn single_statement() {
@@ -120,6 +185,12 @@ mod tests {
     #[test]
     fn parse_let_with_type_annotation() {
         insta::assert_debug_snapshot!(parse(r#"let y: number = m*x + b"#));
+    }
+
+    #[test]
+    fn parse_declare_let() {
+        insta::assert_debug_snapshot!(parse(r#"declare let foo: number"#));
+        insta::assert_debug_snapshot!(parse(r#"declare let bar: fn () => number"#));
     }
 
     #[test]
@@ -178,5 +249,11 @@ mod tests {
         insta::assert_debug_snapshot!(parse("1 \n+ 2"));
         insta::assert_debug_snapshot!(parse("foo\n.bar()"));
         insta::assert_debug_snapshot!(parse("return\nfoo()"));
+    }
+
+    #[test]
+    fn parse_type_alias() {
+        insta::assert_debug_snapshot!(parse(r#"type Foo = Bar"#));
+        insta::assert_debug_snapshot!(parse(r#"type Point<T> = {x: T, y: T}"#));
     }
 }

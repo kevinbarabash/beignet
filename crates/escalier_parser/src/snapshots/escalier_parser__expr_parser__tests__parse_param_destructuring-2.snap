@@ -2,73 +2,84 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"fn ([head, ...tail]) => head\")"
 ---
-Function(
-    Function {
-        span: 0..28,
-        type_params: None,
-        params: [
-            FuncParam {
-                pattern: Pattern {
-                    span: 4..19,
-                    kind: Tuple(
-                        TuplePat {
-                            elems: [
-                                Some(
-                                    TuplePatElem {
-                                        pattern: Pattern {
-                                            span: 5..9,
-                                            kind: Ident(
-                                                BindingIdent {
-                                                    name: "head",
-                                                    span: 5..9,
-                                                    mutable: false,
-                                                },
-                                            ),
-                                        },
-                                        init: None,
-                                    },
-                                ),
-                                Some(
-                                    TuplePatElem {
-                                        pattern: Pattern {
-                                            span: 10..14,
-                                            kind: Rest(
-                                                RestPat {
-                                                    arg: Pattern {
-                                                        span: 14..18,
-                                                        kind: Ident(
-                                                            BindingIdent {
-                                                                name: "tail",
-                                                                span: 14..18,
-                                                                mutable: false,
-                                                            },
-                                                        ),
+Expr {
+    kind: Function(
+        Function {
+            type_params: None,
+            params: [
+                FuncParam {
+                    pattern: Pattern {
+                        kind: Tuple(
+                            TuplePat {
+                                elems: [
+                                    Some(
+                                        TuplePatElem {
+                                            pattern: Pattern {
+                                                kind: Ident(
+                                                    BindingIdent {
+                                                        name: "head",
+                                                        span: 5..9,
+                                                        mutable: false,
                                                     },
-                                                },
-                                            ),
+                                                ),
+                                                span: 5..9,
+                                                inferred_type: None,
+                                            },
+                                            init: None,
                                         },
-                                        init: None,
-                                    },
-                                ),
-                            ],
-                            optional: false,
+                                    ),
+                                    Some(
+                                        TuplePatElem {
+                                            pattern: Pattern {
+                                                kind: Rest(
+                                                    RestPat {
+                                                        arg: Pattern {
+                                                            kind: Ident(
+                                                                BindingIdent {
+                                                                    name: "tail",
+                                                                    span: 14..18,
+                                                                    mutable: false,
+                                                                },
+                                                            ),
+                                                            span: 14..18,
+                                                            inferred_type: None,
+                                                        },
+                                                    },
+                                                ),
+                                                span: 10..14,
+                                                inferred_type: None,
+                                            },
+                                            init: None,
+                                        },
+                                    ),
+                                ],
+                                optional: false,
+                            },
+                        ),
+                        span: 4..19,
+                        inferred_type: None,
+                    },
+                    type_ann: None,
+                    optional: false,
+                },
+            ],
+            body: Expr(
+                Expr {
+                    kind: Ident(
+                        Ident {
+                            name: "head",
+                            span: 24..28,
                         },
                     ),
-                },
-                type_ann: None,
-                optional: false,
-            },
-        ],
-        body: Expr(
-            Ident(
-                Ident {
-                    name: "head",
                     span: 24..28,
+                    inferred_type: None,
                 },
             ),
-        ),
-        type_ann: None,
-        is_async: false,
-        is_gen: false,
-    },
-)
+            type_ann: None,
+            is_async: false,
+            is_gen: false,
+        },
+    ),
+    span: 0..28,
+    inferred_type: None,
+}

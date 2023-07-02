@@ -1,40 +1,63 @@
 ---
 source: crates/escalier_parser/src/stmt_parser.rs
-expression: "parse(r#\"p[\"y\"] = 10;\"#)"
+expression: "parse(r#\"p[\"y\"] = 10\"#)"
 ---
 [
     Stmt {
         kind: Expr {
-            expr: Assign(
-                Assign {
-                    span: 0..11,
-                    left: Index(
-                        Index {
+            expr: Expr {
+                kind: Assign(
+                    Assign {
+                        left: Expr {
+                            kind: Member(
+                                Member {
+                                    object: Expr {
+                                        kind: Ident(
+                                            Ident {
+                                                name: "p",
+                                                span: 0..1,
+                                            },
+                                        ),
+                                        span: 0..1,
+                                        inferred_type: None,
+                                    },
+                                    property: Computed(
+                                        ComputedPropName {
+                                            span: 0..5,
+                                            expr: Expr {
+                                                kind: Str(
+                                                    Str {
+                                                        span: 2..5,
+                                                        value: "y",
+                                                    },
+                                                ),
+                                                span: 2..5,
+                                                inferred_type: None,
+                                            },
+                                        },
+                                    ),
+                                },
+                            ),
                             span: 0..5,
-                            left: Ident(
-                                Ident {
-                                    name: "p",
-                                    span: 0..1,
-                                },
-                            ),
-                            right: Str(
-                                Str {
-                                    span: 2..5,
-                                    value: "y",
-                                },
-                            ),
+                            inferred_type: None,
                         },
-                    ),
-                    op: Assign,
-                    right: Num(
-                        Num {
+                        op: Assign,
+                        right: Expr {
+                            kind: Num(
+                                Num {
+                                    value: "10",
+                                },
+                            ),
                             span: 9..11,
-                            value: "10",
+                            inferred_type: None,
                         },
-                    ),
-                },
-            ),
+                    },
+                ),
+                span: 0..11,
+                inferred_type: None,
+            },
         },
         span: 0..11,
+        inferred_type: None,
     },
 ]

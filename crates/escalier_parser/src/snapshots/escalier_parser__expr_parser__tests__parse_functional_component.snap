@@ -2,78 +2,93 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"fn (props) => <div>{props.children}</div>\")"
 ---
-Function(
-    Function {
-        span: 0..41,
-        type_params: None,
-        params: [
-            FuncParam {
-                pattern: Pattern {
-                    span: 4..9,
-                    kind: Ident(
-                        BindingIdent {
-                            name: "props",
-                            span: 4..9,
-                            mutable: false,
-                        },
-                    ),
-                },
-                type_ann: None,
-                optional: false,
-            },
-        ],
-        body: Expr(
-            JSXElement(
-                JSXElement {
-                    span: 15..41,
-                    opening: JSXOpeningElement {
-                        name: Ident(
-                            Ident {
-                                name: "div",
-                                span: 15..18,
+Expr {
+    kind: Function(
+        Function {
+            type_params: None,
+            params: [
+                FuncParam {
+                    pattern: Pattern {
+                        kind: Ident(
+                            BindingIdent {
+                                name: "props",
+                                span: 4..9,
+                                mutable: false,
                             },
                         ),
-                        attrs: [],
-                        self_closing: false,
+                        span: 4..9,
+                        inferred_type: None,
                     },
-                    children: [
-                        ExprContainer(
-                            JSXExprContainer {
-                                expr: Member(
-                                    Member {
-                                        span: 20..34,
-                                        object: Ident(
-                                            Ident {
-                                                name: "props",
-                                                span: 20..25,
-                                            },
-                                        ),
-                                        property: Ident(
-                                            Ident {
-                                                name: "children",
-                                                span: 26..34,
-                                            },
-                                        ),
+                    type_ann: None,
+                    optional: false,
+                },
+            ],
+            body: Expr(
+                Expr {
+                    kind: JSXElement(
+                        JSXElement {
+                            span: 15..41,
+                            opening: JSXOpeningElement {
+                                name: Ident(
+                                    Ident {
+                                        name: "div",
+                                        span: 15..18,
                                     },
                                 ),
+                                attrs: [],
+                                self_closing: false,
                             },
-                        ),
-                    ],
-                    closing: Some(
-                        JSXClosingElement {
-                            name: Ident(
-                                Ident {
-                                    name: "div",
-                                    span: 35..41,
+                            children: [
+                                ExprContainer(
+                                    JSXExprContainer {
+                                        expr: Expr {
+                                            kind: Member(
+                                                Member {
+                                                    object: Expr {
+                                                        kind: Ident(
+                                                            Ident {
+                                                                name: "props",
+                                                                span: 20..25,
+                                                            },
+                                                        ),
+                                                        span: 20..25,
+                                                        inferred_type: None,
+                                                    },
+                                                    property: Ident(
+                                                        Ident {
+                                                            name: "children",
+                                                            span: 26..34,
+                                                        },
+                                                    ),
+                                                },
+                                            ),
+                                            span: 20..34,
+                                            inferred_type: None,
+                                        },
+                                    },
+                                ),
+                            ],
+                            closing: Some(
+                                JSXClosingElement {
+                                    name: Ident(
+                                        Ident {
+                                            name: "div",
+                                            span: 35..41,
+                                        },
+                                    ),
                                 },
                             ),
                         },
                     ),
+                    span: 15..41,
+                    inferred_type: None,
                 },
             ),
-        ),
-        type_ann: None,
-        is_async: false,
-        is_gen: false,
-    },
-)
+            type_ann: None,
+            is_async: false,
+            is_gen: false,
+        },
+    ),
+    span: 0..41,
+    inferred_type: None,
+}

@@ -3,6 +3,7 @@ source: crates/escalier_parser/src/pattern_parser.rs
 expression: "parse(\"_\")"
 ---
 Pattern {
-    span: 0..1,
     kind: Wildcard,
+    span: 0..1,
+    inferred_type: None,
 }

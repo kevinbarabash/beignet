@@ -3,14 +3,12 @@ source: crates/escalier_parser/src/pattern_parser.rs
 expression: "parse(\"[a, b, ...c]\")"
 ---
 Pattern {
-    span: 0..12,
     kind: Tuple(
         TuplePat {
             elems: [
                 Some(
                     TuplePatElem {
                         pattern: Pattern {
-                            span: 1..2,
                             kind: Ident(
                                 BindingIdent {
                                     name: "a",
@@ -18,6 +16,8 @@ Pattern {
                                     mutable: false,
                                 },
                             ),
+                            span: 1..2,
+                            inferred_type: None,
                         },
                         init: None,
                     },
@@ -25,7 +25,6 @@ Pattern {
                 Some(
                     TuplePatElem {
                         pattern: Pattern {
-                            span: 4..5,
                             kind: Ident(
                                 BindingIdent {
                                     name: "b",
@@ -33,6 +32,8 @@ Pattern {
                                     mutable: false,
                                 },
                             ),
+                            span: 4..5,
+                            inferred_type: None,
                         },
                         init: None,
                     },
@@ -40,11 +41,9 @@ Pattern {
                 Some(
                     TuplePatElem {
                         pattern: Pattern {
-                            span: 6..10,
                             kind: Rest(
                                 RestPat {
                                     arg: Pattern {
-                                        span: 10..11,
                                         kind: Ident(
                                             BindingIdent {
                                                 name: "c",
@@ -52,9 +51,13 @@ Pattern {
                                                 mutable: false,
                                             },
                                         ),
+                                        span: 10..11,
+                                        inferred_type: None,
                                     },
                                 },
                             ),
+                            span: 6..10,
+                            inferred_type: None,
                         },
                         init: None,
                     },
@@ -63,4 +66,6 @@ Pattern {
             optional: false,
         },
     ),
+    span: 0..12,
+    inferred_type: None,
 }

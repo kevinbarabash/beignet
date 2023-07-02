@@ -7,28 +7,38 @@ TypeAnn {
         TypeAnn {
             kind: Object(
                 [
-                    ObjectProp {
-                        name: "x",
-                        optional: false,
-                        mutable: false,
-                        type_ann: TypeAnn {
-                            kind: Number,
-                            span: 4..10,
+                    Prop(
+                        Prop {
+                            span: 0..0,
+                            name: "x",
+                            optional: false,
+                            mutable: false,
+                            type_ann: TypeAnn {
+                                kind: Number,
+                                span: 4..10,
+                                inferred_type: None,
+                            },
                         },
-                    },
-                    ObjectProp {
-                        name: "y",
-                        optional: false,
-                        mutable: false,
-                        type_ann: TypeAnn {
-                            kind: Number,
-                            span: 15..21,
+                    ),
+                    Prop(
+                        Prop {
+                            span: 0..0,
+                            name: "y",
+                            optional: false,
+                            mutable: false,
+                            type_ann: TypeAnn {
+                                kind: Number,
+                                span: 15..21,
+                                inferred_type: None,
+                            },
                         },
-                    },
+                    ),
                 ],
             ),
             span: 0..22,
+            inferred_type: None,
         },
     ),
     span: 0..24,
+    inferred_type: None,
 }

@@ -1,7 +1,10 @@
+use generational_arena::Index;
+
 use crate::expr::Expr;
 use crate::pattern::Pattern;
 use crate::span::Span;
 use crate::type_ann::TypeAnn;
+use crate::TypeParam;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum StmtKind {
@@ -9,12 +12,19 @@ pub enum StmtKind {
         expr: Expr,
     },
     Let {
+        declare: bool,
         pattern: Pattern,
-        expr: Expr,
+        expr: Option<Expr>,
         type_ann: Option<TypeAnn>,
     },
     Return {
         arg: Option<Expr>,
+    },
+    TypeDecl {
+        declare: bool,
+        name: String,
+        type_ann: TypeAnn,
+        type_params: Option<Vec<TypeParam>>,
     },
     // TODO:
     // - explicit type annotations
@@ -26,4 +36,5 @@ pub enum StmtKind {
 pub struct Stmt {
     pub kind: StmtKind,
     pub span: Span,
+    pub inferred_type: Option<Index>,
 }

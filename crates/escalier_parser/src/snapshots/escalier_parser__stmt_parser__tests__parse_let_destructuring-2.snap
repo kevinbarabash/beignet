@@ -1,12 +1,12 @@
 ---
 source: crates/escalier_parser/src/stmt_parser.rs
-expression: "parse(\"let {x: x1, y: y1} = p1;\")"
+expression: "parse(\"let {x: x1, y: y1} = p1\")"
 ---
 [
     Stmt {
         kind: Let {
+            declare: false,
             pattern: Pattern {
-                span: 3..18,
                 kind: Object(
                     ObjectPat {
                         props: [
@@ -18,7 +18,6 @@ expression: "parse(\"let {x: x1, y: y1} = p1;\")"
                                         span: 5..6,
                                     },
                                     value: Pattern {
-                                        span: 8..10,
                                         kind: Ident(
                                             BindingIdent {
                                                 name: "x1",
@@ -26,6 +25,8 @@ expression: "parse(\"let {x: x1, y: y1} = p1;\")"
                                                 mutable: false,
                                             },
                                         ),
+                                        span: 8..10,
+                                        inferred_type: None,
                                     },
                                     init: None,
                                 },
@@ -38,7 +39,6 @@ expression: "parse(\"let {x: x1, y: y1} = p1;\")"
                                         span: 12..13,
                                     },
                                     value: Pattern {
-                                        span: 15..17,
                                         kind: Ident(
                                             BindingIdent {
                                                 name: "y1",
@@ -46,6 +46,8 @@ expression: "parse(\"let {x: x1, y: y1} = p1;\")"
                                                 mutable: false,
                                             },
                                         ),
+                                        span: 15..17,
+                                        inferred_type: None,
                                     },
                                     init: None,
                                 },
@@ -54,15 +56,24 @@ expression: "parse(\"let {x: x1, y: y1} = p1;\")"
                         optional: false,
                     },
                 ),
+                span: 3..18,
+                inferred_type: None,
             },
-            expr: Ident(
-                Ident {
-                    name: "p1",
+            expr: Some(
+                Expr {
+                    kind: Ident(
+                        Ident {
+                            name: "p1",
+                            span: 21..23,
+                        },
+                    ),
                     span: 21..23,
+                    inferred_type: None,
                 },
             ),
             type_ann: None,
         },
         span: 0..23,
+        inferred_type: None,
     },
 ]

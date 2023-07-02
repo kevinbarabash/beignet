@@ -3,11 +3,9 @@ source: crates/escalier_parser/src/pattern_parser.rs
 expression: "parse(\"...rest\")"
 ---
 Pattern {
-    span: 0..3,
     kind: Rest(
         RestPat {
             arg: Pattern {
-                span: 3..7,
                 kind: Ident(
                     BindingIdent {
                         name: "rest",
@@ -15,7 +13,11 @@ Pattern {
                         mutable: false,
                     },
                 ),
+                span: 3..7,
+                inferred_type: None,
             },
         },
     ),
+    span: 0..3,
+    inferred_type: None,
 }

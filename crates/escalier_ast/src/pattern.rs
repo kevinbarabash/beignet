@@ -1,3 +1,5 @@
+use generational_arena::Index;
+
 use crate::expr::Expr;
 use crate::identifier::{BindingIdent, Ident};
 use crate::literal::Literal;
@@ -18,10 +20,18 @@ pub enum PatternKind {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Pattern {
-    // pub loc: SourceLocation,
-    pub span: Span,
     pub kind: PatternKind,
-    // pub inferred_type: Option<Index>,
+    pub span: Span,
+    pub inferred_type: Option<Index>,
+}
+
+impl Pattern {
+    pub fn get_name(&self, index: &usize) -> String {
+        match &self.kind {
+            PatternKind::Ident(BindingIdent { name, .. }) => name.to_owned(),
+            _ => format!("arg{index}"),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

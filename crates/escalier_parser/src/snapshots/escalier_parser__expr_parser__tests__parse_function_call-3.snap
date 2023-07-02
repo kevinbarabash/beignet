@@ -2,51 +2,72 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"add(obj.x, obj.y)\")"
 ---
-Call(
-    Call {
-        span: 0..17,
-        callee: Ident(
-            Ident {
-                name: "add",
+Expr {
+    kind: Call(
+        Call {
+            callee: Expr {
+                kind: Ident(
+                    Ident {
+                        name: "add",
+                        span: 0..3,
+                    },
+                ),
                 span: 0..3,
+                inferred_type: None,
             },
-        ),
-        type_args: None,
-        args: [
-            Member(
-                Member {
+            type_args: None,
+            args: [
+                Expr {
+                    kind: Member(
+                        Member {
+                            object: Expr {
+                                kind: Ident(
+                                    Ident {
+                                        name: "obj",
+                                        span: 4..7,
+                                    },
+                                ),
+                                span: 4..7,
+                                inferred_type: None,
+                            },
+                            property: Ident(
+                                Ident {
+                                    name: "x",
+                                    span: 8..9,
+                                },
+                            ),
+                        },
+                    ),
                     span: 4..9,
-                    object: Ident(
-                        Ident {
-                            name: "obj",
-                            span: 4..7,
-                        },
-                    ),
-                    property: Ident(
-                        Ident {
-                            name: "x",
-                            span: 8..9,
-                        },
-                    ),
+                    inferred_type: None,
                 },
-            ),
-            Member(
-                Member {
+                Expr {
+                    kind: Member(
+                        Member {
+                            object: Expr {
+                                kind: Ident(
+                                    Ident {
+                                        name: "obj",
+                                        span: 11..14,
+                                    },
+                                ),
+                                span: 11..14,
+                                inferred_type: None,
+                            },
+                            property: Ident(
+                                Ident {
+                                    name: "y",
+                                    span: 15..16,
+                                },
+                            ),
+                        },
+                    ),
                     span: 11..16,
-                    object: Ident(
-                        Ident {
-                            name: "obj",
-                            span: 11..14,
-                        },
-                    ),
-                    property: Ident(
-                        Ident {
-                            name: "y",
-                            span: 15..16,
-                        },
-                    ),
+                    inferred_type: None,
                 },
-            ),
-        ],
-    },
-)
+            ],
+        },
+    ),
+    span: 0..17,
+    inferred_type: None,
+}

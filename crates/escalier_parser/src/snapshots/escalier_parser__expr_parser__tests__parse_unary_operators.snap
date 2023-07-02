@@ -2,39 +2,59 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"--a - +b\")"
 ---
-Binary(
-    Binary {
-        span: 0..8,
-        left: Unary(
-            Unary {
-                span: 0..3,
-                op: Minus,
-                right: Unary(
+Expr {
+    kind: Binary(
+        Binary {
+            left: Expr {
+                kind: Unary(
                     Unary {
-                        span: 1..3,
                         op: Minus,
-                        right: Ident(
-                            Ident {
-                                name: "a",
-                                span: 2..3,
-                            },
-                        ),
+                        right: Expr {
+                            kind: Unary(
+                                Unary {
+                                    op: Minus,
+                                    right: Expr {
+                                        kind: Ident(
+                                            Ident {
+                                                name: "a",
+                                                span: 2..3,
+                                            },
+                                        ),
+                                        span: 2..3,
+                                        inferred_type: None,
+                                    },
+                                },
+                            ),
+                            span: 1..3,
+                            inferred_type: None,
+                        },
                     },
                 ),
+                span: 0..3,
+                inferred_type: None,
             },
-        ),
-        op: Minus,
-        right: Unary(
-            Unary {
+            op: Minus,
+            right: Expr {
+                kind: Unary(
+                    Unary {
+                        op: Plus,
+                        right: Expr {
+                            kind: Ident(
+                                Ident {
+                                    name: "b",
+                                    span: 7..8,
+                                },
+                            ),
+                            span: 7..8,
+                            inferred_type: None,
+                        },
+                    },
+                ),
                 span: 5..8,
-                op: Plus,
-                right: Ident(
-                    Ident {
-                        name: "b",
-                        span: 7..8,
-                    },
-                ),
+                inferred_type: None,
             },
-        ),
-    },
-)
+        },
+    ),
+    span: 0..8,
+    inferred_type: None,
+}

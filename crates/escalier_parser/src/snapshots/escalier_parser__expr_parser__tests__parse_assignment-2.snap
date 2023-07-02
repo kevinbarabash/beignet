@@ -2,33 +2,51 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"x = y = z\")"
 ---
-Assign(
-    Assign {
-        span: 0..9,
-        left: Ident(
-            Ident {
-                name: "x",
+Expr {
+    kind: Assign(
+        Assign {
+            left: Expr {
+                kind: Ident(
+                    Ident {
+                        name: "x",
+                        span: 0..1,
+                    },
+                ),
                 span: 0..1,
+                inferred_type: None,
             },
-        ),
-        op: Assign,
-        right: Assign(
-            Assign {
+            op: Assign,
+            right: Expr {
+                kind: Assign(
+                    Assign {
+                        left: Expr {
+                            kind: Ident(
+                                Ident {
+                                    name: "y",
+                                    span: 4..5,
+                                },
+                            ),
+                            span: 4..5,
+                            inferred_type: None,
+                        },
+                        op: Assign,
+                        right: Expr {
+                            kind: Ident(
+                                Ident {
+                                    name: "z",
+                                    span: 8..9,
+                                },
+                            ),
+                            span: 8..9,
+                            inferred_type: None,
+                        },
+                    },
+                ),
                 span: 4..9,
-                left: Ident(
-                    Ident {
-                        name: "y",
-                        span: 4..5,
-                    },
-                ),
-                op: Assign,
-                right: Ident(
-                    Ident {
-                        name: "z",
-                        span: 8..9,
-                    },
-                ),
+                inferred_type: None,
             },
-        ),
-    },
-)
+        },
+    ),
+    span: 0..9,
+    inferred_type: None,
+}

@@ -18,28 +18,35 @@ StrTemplateLit {
         },
     ],
     exprs: [
-        TemplateLiteral(
-            TemplateLiteral {
-                span: 4..11,
-                parts: [
-                    Str {
-                        span: 4..6,
-                        value: "b",
-                    },
-                    Str {
-                        span: 10..11,
-                        value: "",
-                    },
-                ],
-                exprs: [
-                    Ident(
-                        Ident {
-                            name: "c",
-                            span: 8..9,
+        Expr {
+            kind: TemplateLiteral(
+                TemplateLiteral {
+                    parts: [
+                        Str {
+                            span: 4..6,
+                            value: "b",
                         },
-                    ),
-                ],
-            },
-        ),
+                        Str {
+                            span: 10..11,
+                            value: "",
+                        },
+                    ],
+                    exprs: [
+                        Expr {
+                            kind: Ident(
+                                Ident {
+                                    name: "c",
+                                    span: 8..9,
+                                },
+                            ),
+                            span: 8..9,
+                            inferred_type: None,
+                        },
+                    ],
+                },
+            ),
+            span: 4..11,
+            inferred_type: None,
+        },
     ],
 }

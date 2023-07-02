@@ -5,40 +5,53 @@ expression: "parse(\"{a: {b: {c: boolean}}}\")"
 TypeAnn {
     kind: Object(
         [
-            ObjectProp {
-                name: "a",
-                optional: false,
-                mutable: false,
-                type_ann: TypeAnn {
-                    kind: Object(
-                        [
-                            ObjectProp {
-                                name: "b",
-                                optional: false,
-                                mutable: false,
-                                type_ann: TypeAnn {
-                                    kind: Object(
-                                        [
-                                            ObjectProp {
-                                                name: "c",
-                                                optional: false,
-                                                mutable: false,
-                                                type_ann: TypeAnn {
-                                                    kind: Boolean,
-                                                    span: 12..19,
-                                                },
-                                            },
-                                        ],
-                                    ),
-                                    span: 7..20,
-                                },
-                            },
-                        ],
-                    ),
-                    span: 3..21,
+            Prop(
+                Prop {
+                    span: 0..0,
+                    name: "a",
+                    optional: false,
+                    mutable: false,
+                    type_ann: TypeAnn {
+                        kind: Object(
+                            [
+                                Prop(
+                                    Prop {
+                                        span: 0..0,
+                                        name: "b",
+                                        optional: false,
+                                        mutable: false,
+                                        type_ann: TypeAnn {
+                                            kind: Object(
+                                                [
+                                                    Prop(
+                                                        Prop {
+                                                            span: 0..0,
+                                                            name: "c",
+                                                            optional: false,
+                                                            mutable: false,
+                                                            type_ann: TypeAnn {
+                                                                kind: Boolean,
+                                                                span: 12..19,
+                                                                inferred_type: None,
+                                                            },
+                                                        },
+                                                    ),
+                                                ],
+                                            ),
+                                            span: 7..20,
+                                            inferred_type: None,
+                                        },
+                                    },
+                                ),
+                            ],
+                        ),
+                        span: 3..21,
+                        inferred_type: None,
+                    },
                 },
-            },
+            ),
         ],
     ),
     span: 0..22,
+    inferred_type: None,
 }

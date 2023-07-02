@@ -1,6 +1,7 @@
 use generational_arena::Index;
 
-use crate::ast::Lit;
+use escalier_ast::Literal as Lit;
+
 use crate::types::*;
 
 pub trait KeyValueStore<K, V> {

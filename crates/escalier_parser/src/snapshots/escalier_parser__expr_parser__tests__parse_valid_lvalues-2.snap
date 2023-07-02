@@ -2,43 +2,78 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(r#\"a[\"b\"][c] = x\"\"#)"
 ---
-Assign(
-    Assign {
-        span: 0..13,
-        left: Index(
-            Index {
+Expr {
+    kind: Assign(
+        Assign {
+            left: Expr {
+                kind: Member(
+                    Member {
+                        object: Expr {
+                            kind: Member(
+                                Member {
+                                    object: Expr {
+                                        kind: Ident(
+                                            Ident {
+                                                name: "a",
+                                                span: 0..1,
+                                            },
+                                        ),
+                                        span: 0..1,
+                                        inferred_type: None,
+                                    },
+                                    property: Computed(
+                                        ComputedPropName {
+                                            span: 0..5,
+                                            expr: Expr {
+                                                kind: Str(
+                                                    Str {
+                                                        span: 2..5,
+                                                        value: "b",
+                                                    },
+                                                ),
+                                                span: 2..5,
+                                                inferred_type: None,
+                                            },
+                                        },
+                                    ),
+                                },
+                            ),
+                            span: 0..5,
+                            inferred_type: None,
+                        },
+                        property: Computed(
+                            ComputedPropName {
+                                span: 0..8,
+                                expr: Expr {
+                                    kind: Ident(
+                                        Ident {
+                                            name: "c",
+                                            span: 7..8,
+                                        },
+                                    ),
+                                    span: 7..8,
+                                    inferred_type: None,
+                                },
+                            },
+                        ),
+                    },
+                ),
                 span: 0..8,
-                left: Index(
-                    Index {
-                        span: 0..5,
-                        left: Ident(
-                            Ident {
-                                name: "a",
-                                span: 0..1,
-                            },
-                        ),
-                        right: Str(
-                            Str {
-                                span: 2..5,
-                                value: "b",
-                            },
-                        ),
-                    },
-                ),
-                right: Ident(
+                inferred_type: None,
+            },
+            op: Assign,
+            right: Expr {
+                kind: Ident(
                     Ident {
-                        name: "c",
-                        span: 7..8,
+                        name: "x",
+                        span: 12..13,
                     },
                 ),
-            },
-        ),
-        op: Assign,
-        right: Ident(
-            Ident {
-                name: "x",
                 span: 12..13,
+                inferred_type: None,
             },
-        ),
-    },
-)
+        },
+    ),
+    span: 0..13,
+    inferred_type: None,
+}

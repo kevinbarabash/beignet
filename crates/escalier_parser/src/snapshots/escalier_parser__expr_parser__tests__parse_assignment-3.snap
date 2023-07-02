@@ -2,43 +2,60 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"x.a = y.b\")"
 ---
-Assign(
-    Assign {
-        span: 0..9,
-        left: Member(
-            Member {
+Expr {
+    kind: Assign(
+        Assign {
+            left: Expr {
+                kind: Member(
+                    Member {
+                        object: Expr {
+                            kind: Ident(
+                                Ident {
+                                    name: "x",
+                                    span: 0..1,
+                                },
+                            ),
+                            span: 0..1,
+                            inferred_type: None,
+                        },
+                        property: Ident(
+                            Ident {
+                                name: "a",
+                                span: 2..3,
+                            },
+                        ),
+                    },
+                ),
                 span: 0..3,
-                object: Ident(
-                    Ident {
-                        name: "x",
-                        span: 0..1,
-                    },
-                ),
-                property: Ident(
-                    Ident {
-                        name: "a",
-                        span: 2..3,
-                    },
-                ),
+                inferred_type: None,
             },
-        ),
-        op: Assign,
-        right: Member(
-            Member {
+            op: Assign,
+            right: Expr {
+                kind: Member(
+                    Member {
+                        object: Expr {
+                            kind: Ident(
+                                Ident {
+                                    name: "y",
+                                    span: 6..7,
+                                },
+                            ),
+                            span: 6..7,
+                            inferred_type: None,
+                        },
+                        property: Ident(
+                            Ident {
+                                name: "b",
+                                span: 8..9,
+                            },
+                        ),
+                    },
+                ),
                 span: 6..9,
-                object: Ident(
-                    Ident {
-                        name: "y",
-                        span: 6..7,
-                    },
-                ),
-                property: Ident(
-                    Ident {
-                        name: "b",
-                        span: 8..9,
-                    },
-                ),
+                inferred_type: None,
             },
-        ),
-    },
-)
+        },
+    ),
+    span: 0..9,
+    inferred_type: None,
+}

@@ -3,7 +3,6 @@ source: crates/escalier_parser/src/pattern_parser.rs
 expression: "parse(\"{x: a, y: b, z: c}\")"
 ---
 Pattern {
-    span: 0..18,
     kind: Object(
         ObjectPat {
             props: [
@@ -15,7 +14,6 @@ Pattern {
                             span: 1..2,
                         },
                         value: Pattern {
-                            span: 4..5,
                             kind: Ident(
                                 BindingIdent {
                                     name: "a",
@@ -23,6 +21,8 @@ Pattern {
                                     mutable: false,
                                 },
                             ),
+                            span: 4..5,
+                            inferred_type: None,
                         },
                         init: None,
                     },
@@ -35,7 +35,6 @@ Pattern {
                             span: 7..8,
                         },
                         value: Pattern {
-                            span: 10..11,
                             kind: Ident(
                                 BindingIdent {
                                     name: "b",
@@ -43,6 +42,8 @@ Pattern {
                                     mutable: false,
                                 },
                             ),
+                            span: 10..11,
+                            inferred_type: None,
                         },
                         init: None,
                     },
@@ -55,7 +56,6 @@ Pattern {
                             span: 13..14,
                         },
                         value: Pattern {
-                            span: 16..17,
                             kind: Ident(
                                 BindingIdent {
                                     name: "c",
@@ -63,6 +63,8 @@ Pattern {
                                     mutable: false,
                                 },
                             ),
+                            span: 16..17,
+                            inferred_type: None,
                         },
                         init: None,
                     },
@@ -71,4 +73,6 @@ Pattern {
             optional: false,
         },
     ),
+    span: 0..18,
+    inferred_type: None,
 }

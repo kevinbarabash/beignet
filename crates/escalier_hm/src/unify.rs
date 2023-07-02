@@ -3,7 +3,8 @@ use generational_arena::{Arena, Index};
 use itertools::Itertools;
 use std::collections::BTreeSet;
 
-use crate::ast::{BindingIdent, Bool, Lit, Num, Str, DUMMY_LOC};
+use escalier_ast::{BindingIdent, Literal as Lit, Span};
+
 use crate::context::*;
 use crate::errors::*;
 use crate::types::*;
@@ -254,15 +255,9 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
         }
         (TypeKind::Literal(lit1), TypeKind::Literal(lit2)) => {
             let equal = match (&lit1, &lit2) {
-                (Lit::Bool(Bool { value: value1, .. }), Lit::Bool(Bool { value: value2, .. })) => {
-                    value1 == value2
-                }
-                (Lit::Num(Num { value: value1, .. }), Lit::Num(Num { value: value2, .. })) => {
-                    value1 == value2
-                }
-                (Lit::Str(Str { value: value1, .. }), Lit::Str(Str { value: value2, .. })) => {
-                    value1 == value2
-                }
+                (Lit::Boolean(value1), Lit::Boolean(value2)) => value1 == value2,
+                (Lit::Number(value1), Lit::Number(value2)) => value1 == value2,
+                (Lit::String(value1), Lit::String(value2)) => value1 == value2,
                 _ => false,
             };
             if !equal {
@@ -274,17 +269,17 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             }
             Ok(())
         }
-        (TypeKind::Literal(Lit::Num(_)), TypeKind::Constructor(Constructor { name, .. }))
+        (TypeKind::Literal(Lit::Number(_)), TypeKind::Constructor(Constructor { name, .. }))
             if name == "number" =>
         {
             Ok(())
         }
-        (TypeKind::Literal(Lit::Str(_)), TypeKind::Constructor(Constructor { name, .. }))
+        (TypeKind::Literal(Lit::String(_)), TypeKind::Constructor(Constructor { name, .. }))
             if name == "string" =>
         {
             Ok(())
         }
-        (TypeKind::Literal(Lit::Bool(_)), TypeKind::Constructor(Constructor { name, .. }))
+        (TypeKind::Literal(Lit::Boolean(_)), TypeKind::Constructor(Constructor { name, .. }))
             if name == "boolean" =>
         {
             Ok(())
@@ -475,8 +470,8 @@ pub fn unify_call(
                     pattern: TPat::Ident(BindingIdent {
                         name: format!("arg{i}"),
                         mutable: false,
-                        loc: DUMMY_LOC,
-                        span: 0..0,
+                        // loc: DUMMY_LOC,
+                        span: Span { start: 0, end: 0 },
                     }),
                     // name: format!("arg{i}"),
                     t: *t,
@@ -525,7 +520,7 @@ pub fn unify_call(
         }
         TypeKind::Literal(lit) => {
             return Err(Errors::InferenceError(format!(
-                "literal {lit} is not callable"
+                "literal {lit:#?} is not callable"
             )));
         }
         TypeKind::Object(_) => {

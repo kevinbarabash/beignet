@@ -3,10 +3,11 @@ source: crates/escalier_parser/src/pattern_parser.rs
 expression: "parse(\"undefined\")"
 ---
 Pattern {
-    span: 0..9,
     kind: Lit(
         LitPat {
             lit: Undefined,
         },
     ),
+    span: 0..9,
+    inferred_type: None,
 }

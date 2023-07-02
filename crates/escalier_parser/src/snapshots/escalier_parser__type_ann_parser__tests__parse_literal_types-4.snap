@@ -5,4 +5,5 @@ expression: "parse(\"null\")"
 TypeAnn {
     kind: Null,
     span: 0..4,
+    inferred_type: None,
 }

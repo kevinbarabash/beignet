@@ -2,30 +2,41 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"id<number>(5)\")"
 ---
-Call(
-    Call {
-        span: 0..13,
-        callee: Ident(
-            Ident {
-                name: "id",
+Expr {
+    kind: Call(
+        Call {
+            callee: Expr {
+                kind: Ident(
+                    Ident {
+                        name: "id",
+                        span: 0..2,
+                    },
+                ),
                 span: 0..2,
+                inferred_type: None,
             },
-        ),
-        type_args: Some(
-            [
-                TypeAnn {
-                    kind: Number,
-                    span: 3..9,
+            type_args: Some(
+                [
+                    TypeAnn {
+                        kind: Number,
+                        span: 3..9,
+                        inferred_type: None,
+                    },
+                ],
+            ),
+            args: [
+                Expr {
+                    kind: Num(
+                        Num {
+                            value: "5",
+                        },
+                    ),
+                    span: 11..12,
+                    inferred_type: None,
                 },
             ],
-        ),
-        args: [
-            Num(
-                Num {
-                    span: 11..12,
-                    value: "5",
-                },
-            ),
-        ],
-    },
-)
+        },
+    ),
+    span: 0..13,
+    inferred_type: None,
+}

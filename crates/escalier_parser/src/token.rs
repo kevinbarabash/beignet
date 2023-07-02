@@ -20,8 +20,11 @@ pub enum TokenKind {
     Boolean,
     String,
     Symbol,
+    Unknown,
+    Never,
 
     // Keywords
+    Declare,
     Let,
     Return,
     Fn,
@@ -36,27 +39,36 @@ pub enum TokenKind {
     Mut, // denotes a binding to a mutable reference
     Var, // denotes a re-assignable binding
     Match,
+    Is,
     Try,
     Catch,
     Finally,
     Do,
     Class,
     Extends,
+    Type,
+    TypeOf,
+    KeyOf,
 
-    // Binary Operators
+    // Arithmetic Operators
     Plus,
     Minus,
     Times,
     Divide,
     Modulo,
+
+    // Comparison Operators
     Equals,
     NotEquals,
     LessThan,
     LessThanOrEqual,
     GreaterThan,
     GreaterThanOrEqual,
+
+    // Logical Operators
     Or,
     And,
+    Not,
 
     // Assignment Operators
     Assign,
@@ -83,6 +95,8 @@ pub enum TokenKind {
     Dot,
     DotDot,    // used for ranges
     DotDotDot, // used for rest/spread
+    Pipe,
+    Ampersand,
 
     Eof,
 }

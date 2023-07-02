@@ -1,120 +1,152 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(r#\"\n            match (obj.type) {\n                \"foo\" => obj.foo,\n                \"bar\" => {\n                    obj.bar\n                },\n                _ => \"default\",\n            };\n            \"#)"
+expression: "parse(r#\"\n            match (obj.kind) {\n                \"foo\" => obj.foo,\n                \"bar\" => {\n                    obj.bar\n                },\n                _ => \"default\",\n            };\n            \"#)"
 ---
-Match(
-    Match {
-        span: 13..185,
-        expr: Member(
-            Member {
-                span: 20..28,
-                object: Ident(
-                    Ident {
-                        name: "obj",
-                        span: 20..23,
-                    },
-                ),
-                property: Ident(
-                    Ident {
-                        name: "type",
-                        span: 24..28,
-                    },
-                ),
-            },
-        ),
-        arms: [
-            MatchArm {
-                span: 48..64,
-                pattern: Pattern {
-                    span: 48..53,
-                    kind: Lit(
-                        LitPat {
-                            lit: String(
-                                "foo",
-                            ),
-                        },
-                    ),
-                },
-                guard: None,
-                body: Expr(
-                    Member(
-                        Member {
-                            span: 57..64,
-                            object: Ident(
+Expr {
+    kind: Match(
+        Match {
+            expr: Expr {
+                kind: Member(
+                    Member {
+                        object: Expr {
+                            kind: Ident(
                                 Ident {
                                     name: "obj",
-                                    span: 57..60,
+                                    span: 20..23,
                                 },
                             ),
-                            property: Ident(
-                                Ident {
-                                    name: "foo",
-                                    span: 61..64,
-                                },
-                            ),
+                            span: 20..23,
+                            inferred_type: None,
                         },
-                    ),
+                        property: Ident(
+                            Ident {
+                                name: "kind",
+                                span: 24..28,
+                            },
+                        ),
+                    },
                 ),
+                span: 20..28,
+                inferred_type: None,
             },
-            MatchArm {
-                span: 82..138,
-                pattern: Pattern {
-                    span: 82..87,
-                    kind: Lit(
-                        LitPat {
-                            lit: String(
-                                "bar",
-                            ),
-                        },
-                    ),
-                },
-                guard: None,
-                body: Block(
-                    Block {
-                        span: 90..138,
-                        stmts: [
-                            Stmt {
-                                kind: Expr {
-                                    expr: Member(
-                                        Member {
-                                            span: 113..120,
-                                            object: Ident(
-                                                Ident {
-                                                    name: "obj",
-                                                    span: 113..116,
-                                                },
-                                            ),
-                                            property: Ident(
-                                                Ident {
-                                                    name: "bar",
-                                                    span: 117..120,
-                                                },
-                                            ),
+            arms: [
+                MatchArm {
+                    span: 48..64,
+                    pattern: Pattern {
+                        kind: Lit(
+                            LitPat {
+                                lit: String(
+                                    "foo",
+                                ),
+                            },
+                        ),
+                        span: 48..53,
+                        inferred_type: None,
+                    },
+                    guard: None,
+                    body: Expr(
+                        Expr {
+                            kind: Member(
+                                Member {
+                                    object: Expr {
+                                        kind: Ident(
+                                            Ident {
+                                                name: "obj",
+                                                span: 57..60,
+                                            },
+                                        ),
+                                        span: 57..60,
+                                        inferred_type: None,
+                                    },
+                                    property: Ident(
+                                        Ident {
+                                            name: "foo",
+                                            span: 61..64,
                                         },
                                     ),
                                 },
-                                span: 113..120,
-                            },
-                        ],
-                    },
-                ),
-            },
-            MatchArm {
-                span: 156..170,
-                pattern: Pattern {
-                    span: 156..157,
-                    kind: Wildcard,
-                },
-                guard: None,
-                body: Expr(
-                    Str(
-                        Str {
-                            span: 161..170,
-                            value: "default",
+                            ),
+                            span: 57..64,
+                            inferred_type: None,
                         },
                     ),
-                ),
-            },
-        ],
-    },
-)
+                },
+                MatchArm {
+                    span: 82..138,
+                    pattern: Pattern {
+                        kind: Lit(
+                            LitPat {
+                                lit: String(
+                                    "bar",
+                                ),
+                            },
+                        ),
+                        span: 82..87,
+                        inferred_type: None,
+                    },
+                    guard: None,
+                    body: Block(
+                        Block {
+                            span: 90..138,
+                            stmts: [
+                                Stmt {
+                                    kind: Expr {
+                                        expr: Expr {
+                                            kind: Member(
+                                                Member {
+                                                    object: Expr {
+                                                        kind: Ident(
+                                                            Ident {
+                                                                name: "obj",
+                                                                span: 113..116,
+                                                            },
+                                                        ),
+                                                        span: 113..116,
+                                                        inferred_type: None,
+                                                    },
+                                                    property: Ident(
+                                                        Ident {
+                                                            name: "bar",
+                                                            span: 117..120,
+                                                        },
+                                                    ),
+                                                },
+                                            ),
+                                            span: 113..120,
+                                            inferred_type: None,
+                                        },
+                                    },
+                                    span: 113..120,
+                                    inferred_type: None,
+                                },
+                            ],
+                        },
+                    ),
+                },
+                MatchArm {
+                    span: 156..170,
+                    pattern: Pattern {
+                        kind: Wildcard,
+                        span: 156..157,
+                        inferred_type: None,
+                    },
+                    guard: None,
+                    body: Expr(
+                        Expr {
+                            kind: Str(
+                                Str {
+                                    span: 161..170,
+                                    value: "default",
+                                },
+                            ),
+                            span: 161..170,
+                            inferred_type: None,
+                        },
+                    ),
+                },
+            ],
+        },
+    ),
+    span: 13..185,
+    inferred_type: None,
+}

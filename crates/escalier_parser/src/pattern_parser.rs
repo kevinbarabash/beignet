@@ -8,11 +8,50 @@ impl<'a> Parser<'a> {
     pub fn parse_pattern(&mut self) -> Result<Pattern, ParseError> {
         let mut span = self.peek().unwrap_or(&EOF).span;
         let kind = match self.next().unwrap_or(EOF.clone()).kind {
-            TokenKind::Identifier(name) => PatternKind::Ident(BindingIdent {
-                name,
-                span,
-                mutable: false,
-            }),
+            TokenKind::Identifier(name) => {
+                match self.peek().unwrap_or(&EOF).kind {
+                    TokenKind::Is => {
+                        self.next(); // consumes 'is'
+                        let next = self.next().unwrap_or(EOF.clone());
+                        let is_id = match &next.kind {
+                            TokenKind::Identifier(name) => Ident {
+                                name: name.to_owned(),
+                                span: next.span,
+                            },
+                            TokenKind::Number => Ident {
+                                name: "number".to_string(),
+                                span: next.span,
+                            },
+                            TokenKind::String => Ident {
+                                name: "string".to_string(),
+                                span: next.span,
+                            },
+                            TokenKind::Boolean => Ident {
+                                name: "boolean".to_string(),
+                                span: next.span,
+                            },
+                            TokenKind::Symbol => Ident {
+                                name: "symbol".to_string(),
+                                span: next.span,
+                            },
+                            _ => panic!("expected identifier after 'is'"),
+                        };
+                        PatternKind::Is(IsPat {
+                            ident: BindingIdent {
+                                name,
+                                span,
+                                mutable: false,
+                            },
+                            is_id,
+                        })
+                    }
+                    _ => PatternKind::Ident(BindingIdent {
+                        name,
+                        span,
+                        mutable: false,
+                    }),
+                }
+            }
             TokenKind::StrLit(value) => PatternKind::Lit(LitPat {
                 lit: Literal::String(value),
             }),
@@ -70,7 +109,6 @@ impl<'a> Parser<'a> {
             }
             TokenKind::LeftBrace => {
                 let mut props: Vec<ObjectPatProp> = vec![];
-                let mut has_rest = false;
 
                 while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
                     let first = self.peek().unwrap_or(&EOF);
@@ -105,18 +143,33 @@ impl<'a> Parser<'a> {
                                 }))
                             }
 
-                            if self.peek().unwrap_or(&EOF).kind == TokenKind::Comma {
-                                self.next();
+                            // require a comma or right brace
+                            match self.peek().unwrap_or(&EOF).kind {
+                                TokenKind::Comma => {
+                                    self.next();
+                                    continue;
+                                }
+                                TokenKind::RightBrace => {
+                                    break;
+                                }
+                                _ => panic!("expected comma or right brace"),
                             }
                         }
                         TokenKind::DotDotDot => {
-                            if has_rest {
-                                panic!("only one rest pattern is allowed per object pattern");
-                            }
                             props.push(ObjectPatProp::Rest(RestPat {
                                 arg: Box::new(self.parse_pattern()?),
                             }));
-                            has_rest = true;
+
+                            match self.peek().unwrap_or(&EOF).kind {
+                                TokenKind::Comma => {
+                                    self.next();
+                                    continue;
+                                }
+                                TokenKind::RightBrace => {
+                                    break;
+                                }
+                                _ => panic!("expected comma or right brace"),
+                            }
                         }
                         _ => panic!("expected identifier or rest pattern"),
                     }
@@ -143,7 +196,11 @@ impl<'a> Parser<'a> {
             }
         };
 
-        Ok(Pattern { span, kind })
+        Ok(Pattern {
+            span,
+            kind,
+            inferred_type: None,
+        })
     }
 }
 
@@ -188,7 +245,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn parse_object_patterns_multiple_rest() {
         insta::assert_debug_snapshot!(parse("{...x, ...y, ...z}"));
     }
@@ -205,6 +261,6 @@ mod tests {
 
     #[test]
     fn parse_mixed_patterns() {
-        insta::assert_debug_snapshot!(parse(r#"{type: "foo", bar: _, values: [head, ...tail]}"#));
+        insta::assert_debug_snapshot!(parse(r#"{kind: "foo", bar: _, values: [head, ...tail]}"#));
     }
 }

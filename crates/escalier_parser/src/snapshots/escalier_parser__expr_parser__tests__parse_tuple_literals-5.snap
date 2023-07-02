@@ -2,43 +2,59 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(r#\"[1, \"two\", [3]]\"#)"
 ---
-Tuple(
-    Tuple {
-        span: 0..15,
-        elements: [
-            Expr(
-                Num(
-                    Num {
+Expr {
+    kind: Tuple(
+        Tuple {
+            elements: [
+                Expr(
+                    Expr {
+                        kind: Num(
+                            Num {
+                                value: "1",
+                            },
+                        ),
                         span: 1..2,
-                        value: "1",
+                        inferred_type: None,
                     },
                 ),
-            ),
-            Expr(
-                Str(
-                    Str {
+                Expr(
+                    Expr {
+                        kind: Str(
+                            Str {
+                                span: 4..9,
+                                value: "two",
+                            },
+                        ),
                         span: 4..9,
-                        value: "two",
+                        inferred_type: None,
                     },
                 ),
-            ),
-            Expr(
-                Tuple(
-                    Tuple {
+                Expr(
+                    Expr {
+                        kind: Tuple(
+                            Tuple {
+                                elements: [
+                                    Expr(
+                                        Expr {
+                                            kind: Num(
+                                                Num {
+                                                    value: "3",
+                                                },
+                                            ),
+                                            span: 12..13,
+                                            inferred_type: None,
+                                        },
+                                    ),
+                                ],
+                            },
+                        ),
                         span: 10..14,
-                        elements: [
-                            Expr(
-                                Num(
-                                    Num {
-                                        span: 12..13,
-                                        value: "3",
-                                    },
-                                ),
-                            ),
-                        ],
+                        inferred_type: None,
                     },
                 ),
-            ),
-        ],
-    },
-)
+            ],
+        },
+    ),
+    span: 0..15,
+    inferred_type: None,
+}

@@ -1,12 +1,12 @@
 ---
 source: crates/escalier_parser/src/stmt_parser.rs
-expression: "parse(r#\"let y = m*x + b;\"#)"
+expression: "parse(r#\"let y = m*x + b\"#)"
 ---
 [
     Stmt {
         kind: Let {
+            declare: false,
             pattern: Pattern {
-                span: 4..5,
                 kind: Ident(
                     BindingIdent {
                         name: "y",
@@ -14,39 +14,62 @@ expression: "parse(r#\"let y = m*x + b;\"#)"
                         mutable: false,
                     },
                 ),
+                span: 4..5,
+                inferred_type: None,
             },
-            expr: Binary(
-                Binary {
-                    span: 8..15,
-                    left: Binary(
+            expr: Some(
+                Expr {
+                    kind: Binary(
                         Binary {
-                            span: 8..11,
-                            left: Ident(
-                                Ident {
-                                    name: "m",
-                                    span: 8..9,
-                                },
-                            ),
-                            op: Times,
-                            right: Ident(
-                                Ident {
-                                    name: "x",
-                                    span: 10..11,
-                                },
-                            ),
+                            left: Expr {
+                                kind: Binary(
+                                    Binary {
+                                        left: Expr {
+                                            kind: Ident(
+                                                Ident {
+                                                    name: "m",
+                                                    span: 8..9,
+                                                },
+                                            ),
+                                            span: 8..9,
+                                            inferred_type: None,
+                                        },
+                                        op: Times,
+                                        right: Expr {
+                                            kind: Ident(
+                                                Ident {
+                                                    name: "x",
+                                                    span: 10..11,
+                                                },
+                                            ),
+                                            span: 10..11,
+                                            inferred_type: None,
+                                        },
+                                    },
+                                ),
+                                span: 8..11,
+                                inferred_type: None,
+                            },
+                            op: Plus,
+                            right: Expr {
+                                kind: Ident(
+                                    Ident {
+                                        name: "b",
+                                        span: 14..15,
+                                    },
+                                ),
+                                span: 14..15,
+                                inferred_type: None,
+                            },
                         },
                     ),
-                    op: Plus,
-                    right: Ident(
-                        Ident {
-                            name: "b",
-                            span: 14..15,
-                        },
-                    ),
+                    span: 8..15,
+                    inferred_type: None,
                 },
             ),
             type_ann: None,
         },
         span: 0..15,
+        inferred_type: None,
     },
 ]

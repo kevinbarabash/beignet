@@ -28,22 +28,30 @@ JSXElement {
                 children: [
                     ExprContainer(
                         JSXExprContainer {
-                            expr: Ident(
-                                Ident {
-                                    name: "b",
-                                    span: 6..7,
-                                },
-                            ),
+                            expr: Expr {
+                                kind: Ident(
+                                    Ident {
+                                        name: "b",
+                                        span: 6..7,
+                                    },
+                                ),
+                                span: 6..7,
+                                inferred_type: None,
+                            },
                         },
                     ),
                     ExprContainer(
                         JSXExprContainer {
-                            expr: Ident(
-                                Ident {
-                                    name: "c",
-                                    span: 9..10,
-                                },
-                            ),
+                            expr: Expr {
+                                kind: Ident(
+                                    Ident {
+                                        name: "c",
+                                        span: 9..10,
+                                    },
+                                ),
+                                span: 9..10,
+                                inferred_type: None,
+                            },
                         },
                     ),
                 ],

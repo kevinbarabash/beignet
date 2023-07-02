@@ -3,7 +3,6 @@ source: crates/escalier_parser/src/pattern_parser.rs
 expression: "parse(\"123\")"
 ---
 Pattern {
-    span: 0..3,
     kind: Lit(
         LitPat {
             lit: Number(
@@ -11,4 +10,6 @@ Pattern {
             ),
         },
     ),
+    span: 0..3,
+    inferred_type: None,
 }

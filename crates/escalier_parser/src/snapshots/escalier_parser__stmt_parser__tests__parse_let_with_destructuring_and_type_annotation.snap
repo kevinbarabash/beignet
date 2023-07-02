@@ -1,12 +1,12 @@
 ---
 source: crates/escalier_parser/src/stmt_parser.rs
-expression: "parse(r#\"let {x, y}: Point = point;\"#)"
+expression: "parse(r#\"let {x, y}: Point = point\"#)"
 ---
 [
     Stmt {
         kind: Let {
+            declare: false,
             pattern: Pattern {
-                span: 3..10,
                 kind: Object(
                     ObjectPat {
                         props: [
@@ -36,11 +36,19 @@ expression: "parse(r#\"let {x, y}: Point = point;\"#)"
                         optional: false,
                     },
                 ),
+                span: 3..10,
+                inferred_type: None,
             },
-            expr: Ident(
-                Ident {
-                    name: "point",
+            expr: Some(
+                Expr {
+                    kind: Ident(
+                        Ident {
+                            name: "point",
+                            span: 20..25,
+                        },
+                    ),
                     span: 20..25,
+                    inferred_type: None,
                 },
             ),
             type_ann: Some(
@@ -50,9 +58,11 @@ expression: "parse(r#\"let {x, y}: Point = point;\"#)"
                         None,
                     ),
                     span: 12..17,
+                    inferred_type: None,
                 },
             ),
         },
         span: 0..25,
+        inferred_type: None,
     },
 ]

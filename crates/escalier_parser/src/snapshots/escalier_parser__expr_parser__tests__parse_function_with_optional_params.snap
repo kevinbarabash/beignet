@@ -2,108 +2,130 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(r#\"fn (x: number, y: number, z?: number): number => { return x + y }\"#)"
 ---
-Function(
-    Function {
-        span: 0..65,
-        type_params: None,
-        params: [
-            FuncParam {
-                pattern: Pattern {
-                    span: 4..5,
-                    kind: Ident(
-                        BindingIdent {
-                            name: "x",
-                            span: 4..5,
-                            mutable: false,
+Expr {
+    kind: Function(
+        Function {
+            type_params: None,
+            params: [
+                FuncParam {
+                    pattern: Pattern {
+                        kind: Ident(
+                            BindingIdent {
+                                name: "x",
+                                span: 4..5,
+                                mutable: false,
+                            },
+                        ),
+                        span: 4..5,
+                        inferred_type: None,
+                    },
+                    type_ann: Some(
+                        TypeAnn {
+                            kind: Number,
+                            span: 7..13,
+                            inferred_type: None,
                         },
                     ),
+                    optional: false,
                 },
-                type_ann: Some(
-                    TypeAnn {
-                        kind: Number,
-                        span: 7..13,
+                FuncParam {
+                    pattern: Pattern {
+                        kind: Ident(
+                            BindingIdent {
+                                name: "y",
+                                span: 15..16,
+                                mutable: false,
+                            },
+                        ),
+                        span: 15..16,
+                        inferred_type: None,
                     },
-                ),
-                optional: false,
-            },
-            FuncParam {
-                pattern: Pattern {
-                    span: 15..16,
-                    kind: Ident(
-                        BindingIdent {
-                            name: "y",
-                            span: 15..16,
-                            mutable: false,
+                    type_ann: Some(
+                        TypeAnn {
+                            kind: Number,
+                            span: 18..24,
+                            inferred_type: None,
                         },
                     ),
+                    optional: false,
                 },
-                type_ann: Some(
-                    TypeAnn {
-                        kind: Number,
-                        span: 18..24,
+                FuncParam {
+                    pattern: Pattern {
+                        kind: Ident(
+                            BindingIdent {
+                                name: "z",
+                                span: 26..27,
+                                mutable: false,
+                            },
+                        ),
+                        span: 26..27,
+                        inferred_type: None,
                     },
-                ),
-                optional: false,
-            },
-            FuncParam {
-                pattern: Pattern {
-                    span: 26..27,
-                    kind: Ident(
-                        BindingIdent {
-                            name: "z",
-                            span: 26..27,
-                            mutable: false,
+                    type_ann: Some(
+                        TypeAnn {
+                            kind: Number,
+                            span: 30..36,
+                            inferred_type: None,
                         },
                     ),
+                    optional: true,
                 },
-                type_ann: Some(
-                    TypeAnn {
-                        kind: Number,
-                        span: 30..36,
-                    },
-                ),
-                optional: true,
-            },
-        ],
-        body: Block(
-            Block {
-                span: 48..65,
-                stmts: [
-                    Stmt {
-                        kind: Return {
-                            arg: Some(
-                                Binary(
-                                    Binary {
+            ],
+            body: Block(
+                Block {
+                    span: 48..65,
+                    stmts: [
+                        Stmt {
+                            kind: Return {
+                                arg: Some(
+                                    Expr {
+                                        kind: Binary(
+                                            Binary {
+                                                left: Expr {
+                                                    kind: Ident(
+                                                        Ident {
+                                                            name: "x",
+                                                            span: 58..59,
+                                                        },
+                                                    ),
+                                                    span: 58..59,
+                                                    inferred_type: None,
+                                                },
+                                                op: Plus,
+                                                right: Expr {
+                                                    kind: Ident(
+                                                        Ident {
+                                                            name: "y",
+                                                            span: 62..63,
+                                                        },
+                                                    ),
+                                                    span: 62..63,
+                                                    inferred_type: None,
+                                                },
+                                            },
+                                        ),
                                         span: 58..63,
-                                        left: Ident(
-                                            Ident {
-                                                name: "x",
-                                                span: 58..59,
-                                            },
-                                        ),
-                                        op: Plus,
-                                        right: Ident(
-                                            Ident {
-                                                name: "y",
-                                                span: 62..63,
-                                            },
-                                        ),
+                                        inferred_type: None,
                                     },
                                 ),
-                            ),
+                            },
+                            span: 58..63,
+                            inferred_type: None,
                         },
-                        span: 58..63,
-                    },
-                ],
-            },
-        ),
-        type_ann: Some(
-            TypeAnn {
-                kind: Number,
-                span: 39..45,
-            },
-        ),
-        is_async: false,
-        is_gen: false,
-    },
-)
+                    ],
+                },
+            ),
+            type_ann: Some(
+                TypeAnn {
+                    kind: Number,
+                    span: 39..45,
+                    inferred_type: None,
+                },
+            ),
+            is_async: false,
+            is_gen: false,
+        },
+    ),
+    span: 0..65,
+    inferred_type: None,
+}

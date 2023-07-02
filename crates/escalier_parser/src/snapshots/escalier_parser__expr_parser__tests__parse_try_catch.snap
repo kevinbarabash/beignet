@@ -2,101 +2,135 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(r#\"\n            try {\n                canThrow()\n            } catch (e) {\n                console.log(\"Error: \" + e)\n            }\n            \"#)"
 ---
-Try(
-    Try {
-        span: 13..128,
-        body: Block {
-            span: 16..59,
-            stmts: [
-                Stmt {
-                    kind: Expr {
-                        expr: Call(
-                            Call {
-                                span: 35..45,
-                                callee: Ident(
-                                    Ident {
-                                        name: "canThrow",
-                                        span: 35..43,
-                                    },
-                                ),
-                                type_args: None,
-                                args: [],
-                            },
-                        ),
-                    },
-                    span: 35..45,
-                },
-            ],
-        },
-        catch: Some(
-            CatchClause {
-                param: Some(
-                    Pattern {
-                        span: 67..68,
-                        kind: Ident(
-                            BindingIdent {
-                                name: "e",
-                                span: 67..68,
-                                mutable: false,
-                            },
-                        ),
-                    },
-                ),
-                body: Block {
-                    span: 69..128,
-                    stmts: [
-                        Stmt {
-                            kind: Expr {
-                                expr: Call(
+Expr {
+    kind: Try(
+        Try {
+            body: Block {
+                span: 16..59,
+                stmts: [
+                    Stmt {
+                        kind: Expr {
+                            expr: Expr {
+                                kind: Call(
                                     Call {
-                                        span: 88..114,
-                                        callee: Member(
-                                            Member {
-                                                span: 88..99,
-                                                object: Ident(
-                                                    Ident {
-                                                        name: "console",
-                                                        span: 88..95,
-                                                    },
-                                                ),
-                                                property: Ident(
-                                                    Ident {
-                                                        name: "log",
-                                                        span: 96..99,
-                                                    },
-                                                ),
-                                            },
-                                        ),
-                                        type_args: None,
-                                        args: [
-                                            Binary(
-                                                Binary {
-                                                    span: 100..113,
-                                                    left: Str(
-                                                        Str {
-                                                            span: 100..109,
-                                                            value: "Error: ",
-                                                        },
-                                                    ),
-                                                    op: Plus,
-                                                    right: Ident(
-                                                        Ident {
-                                                            name: "e",
-                                                            span: 112..113,
-                                                        },
-                                                    ),
+                                        callee: Expr {
+                                            kind: Ident(
+                                                Ident {
+                                                    name: "canThrow",
+                                                    span: 35..43,
                                                 },
                                             ),
-                                        ],
+                                            span: 35..43,
+                                            inferred_type: None,
+                                        },
+                                        type_args: None,
+                                        args: [],
                                     },
                                 ),
+                                span: 35..45,
+                                inferred_type: None,
                             },
-                            span: 88..114,
                         },
-                    ],
-                },
+                        span: 35..45,
+                        inferred_type: None,
+                    },
+                ],
             },
-        ),
-        finally: None,
-    },
-)
+            catch: Some(
+                CatchClause {
+                    param: Some(
+                        Pattern {
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "e",
+                                    span: 67..68,
+                                    mutable: false,
+                                },
+                            ),
+                            span: 67..68,
+                            inferred_type: None,
+                        },
+                    ),
+                    body: Block {
+                        span: 69..128,
+                        stmts: [
+                            Stmt {
+                                kind: Expr {
+                                    expr: Expr {
+                                        kind: Call(
+                                            Call {
+                                                callee: Expr {
+                                                    kind: Member(
+                                                        Member {
+                                                            object: Expr {
+                                                                kind: Ident(
+                                                                    Ident {
+                                                                        name: "console",
+                                                                        span: 88..95,
+                                                                    },
+                                                                ),
+                                                                span: 88..95,
+                                                                inferred_type: None,
+                                                            },
+                                                            property: Ident(
+                                                                Ident {
+                                                                    name: "log",
+                                                                    span: 96..99,
+                                                                },
+                                                            ),
+                                                        },
+                                                    ),
+                                                    span: 88..99,
+                                                    inferred_type: None,
+                                                },
+                                                type_args: None,
+                                                args: [
+                                                    Expr {
+                                                        kind: Binary(
+                                                            Binary {
+                                                                left: Expr {
+                                                                    kind: Str(
+                                                                        Str {
+                                                                            span: 100..109,
+                                                                            value: "Error: ",
+                                                                        },
+                                                                    ),
+                                                                    span: 100..109,
+                                                                    inferred_type: None,
+                                                                },
+                                                                op: Plus,
+                                                                right: Expr {
+                                                                    kind: Ident(
+                                                                        Ident {
+                                                                            name: "e",
+                                                                            span: 112..113,
+                                                                        },
+                                                                    ),
+                                                                    span: 112..113,
+                                                                    inferred_type: None,
+                                                                },
+                                                            },
+                                                        ),
+                                                        span: 100..113,
+                                                        inferred_type: None,
+                                                    },
+                                                ],
+                                            },
+                                        ),
+                                        span: 88..114,
+                                        inferred_type: None,
+                                    },
+                                },
+                                span: 88..114,
+                                inferred_type: None,
+                            },
+                        ],
+                    },
+                },
+            ),
+            finally: None,
+        },
+    ),
+    span: 13..128,
+    inferred_type: None,
+}

@@ -3,7 +3,6 @@ source: crates/escalier_parser/src/pattern_parser.rs
 expression: "parse(\"{x, y, z}\")"
 ---
 Pattern {
-    span: 0..9,
     kind: Object(
         ObjectPat {
             props: [
@@ -44,4 +43,6 @@ Pattern {
             optional: false,
         },
     ),
+    span: 0..9,
+    inferred_type: None,
 }

@@ -2,114 +2,141 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(r#\"\n            if (cond) {\n                {x: 5, y: 10}\n            } else {\n                {a: 1, b: 2}\n            }\n            \"#)"
 ---
-IfElse(
-    IfElse {
-        span: 13..118,
-        cond: Ident(
-            Ident {
-                name: "cond",
-                span: 17..21,
-            },
-        ),
-        consequent: Block {
-            span: 22..68,
-            stmts: [
-                Stmt {
-                    kind: Expr {
-                        expr: Object(
-                            Object {
-                                span: 24..54,
-                                properties: [
-                                    Prop(
-                                        Property {
-                                            key: Ident(
-                                                Ident {
-                                                    name: "x",
-                                                    span: 42..43,
-                                                },
-                                            ),
-                                            value: Num(
-                                                Num {
-                                                    span: 45..46,
-                                                    value: "5",
-                                                },
-                                            ),
-                                        },
-                                    ),
-                                    Prop(
-                                        Property {
-                                            key: Ident(
-                                                Ident {
-                                                    name: "y",
-                                                    span: 48..49,
-                                                },
-                                            ),
-                                            value: Num(
-                                                Num {
-                                                    span: 51..53,
-                                                    value: "10",
-                                                },
-                                            ),
-                                        },
-                                    ),
-                                ],
-                            },
-                        ),
+Expr {
+    kind: IfElse(
+        IfElse {
+            cond: Expr {
+                kind: Ident(
+                    Ident {
+                        name: "cond",
+                        span: 17..21,
                     },
-                    span: 24..54,
-                },
-            ],
-        },
-        alternate: Some(
-            Block {
-                span: 73..118,
+                ),
+                span: 17..21,
+                inferred_type: None,
+            },
+            consequent: Block {
+                span: 22..68,
                 stmts: [
                     Stmt {
                         kind: Expr {
-                            expr: Object(
-                                Object {
-                                    span: 75..104,
-                                    properties: [
-                                        Prop(
-                                            Property {
-                                                key: Ident(
-                                                    Ident {
-                                                        name: "a",
-                                                        span: 93..94,
+                            expr: Expr {
+                                kind: Object(
+                                    Object {
+                                        properties: [
+                                            Prop(
+                                                Property {
+                                                    key: Ident(
+                                                        Ident {
+                                                            name: "x",
+                                                            span: 42..43,
+                                                        },
+                                                    ),
+                                                    value: Expr {
+                                                        kind: Num(
+                                                            Num {
+                                                                value: "5",
+                                                            },
+                                                        ),
+                                                        span: 45..46,
+                                                        inferred_type: None,
                                                     },
-                                                ),
-                                                value: Num(
-                                                    Num {
-                                                        span: 96..97,
-                                                        value: "1",
+                                                },
+                                            ),
+                                            Prop(
+                                                Property {
+                                                    key: Ident(
+                                                        Ident {
+                                                            name: "y",
+                                                            span: 48..49,
+                                                        },
+                                                    ),
+                                                    value: Expr {
+                                                        kind: Num(
+                                                            Num {
+                                                                value: "10",
+                                                            },
+                                                        ),
+                                                        span: 51..53,
+                                                        inferred_type: None,
                                                     },
-                                                ),
-                                            },
-                                        ),
-                                        Prop(
-                                            Property {
-                                                key: Ident(
-                                                    Ident {
-                                                        name: "b",
-                                                        span: 99..100,
-                                                    },
-                                                ),
-                                                value: Num(
-                                                    Num {
-                                                        span: 102..103,
-                                                        value: "2",
-                                                    },
-                                                ),
-                                            },
-                                        ),
-                                    ],
-                                },
-                            ),
+                                                },
+                                            ),
+                                        ],
+                                    },
+                                ),
+                                span: 24..54,
+                                inferred_type: None,
+                            },
                         },
-                        span: 75..104,
+                        span: 24..54,
+                        inferred_type: None,
                     },
                 ],
             },
-        ),
-    },
-)
+            alternate: Some(
+                Block {
+                    span: 73..118,
+                    stmts: [
+                        Stmt {
+                            kind: Expr {
+                                expr: Expr {
+                                    kind: Object(
+                                        Object {
+                                            properties: [
+                                                Prop(
+                                                    Property {
+                                                        key: Ident(
+                                                            Ident {
+                                                                name: "a",
+                                                                span: 93..94,
+                                                            },
+                                                        ),
+                                                        value: Expr {
+                                                            kind: Num(
+                                                                Num {
+                                                                    value: "1",
+                                                                },
+                                                            ),
+                                                            span: 96..97,
+                                                            inferred_type: None,
+                                                        },
+                                                    },
+                                                ),
+                                                Prop(
+                                                    Property {
+                                                        key: Ident(
+                                                            Ident {
+                                                                name: "b",
+                                                                span: 99..100,
+                                                            },
+                                                        ),
+                                                        value: Expr {
+                                                            kind: Num(
+                                                                Num {
+                                                                    value: "2",
+                                                                },
+                                                            ),
+                                                            span: 102..103,
+                                                            inferred_type: None,
+                                                        },
+                                                    },
+                                                ),
+                                            ],
+                                        },
+                                    ),
+                                    span: 75..104,
+                                    inferred_type: None,
+                                },
+                            },
+                            span: 75..104,
+                            inferred_type: None,
+                        },
+                    ],
+                },
+            ),
+        },
+    ),
+    span: 13..118,
+    inferred_type: None,
+}

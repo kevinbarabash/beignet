@@ -3,7 +3,6 @@ source: crates/escalier_parser/src/pattern_parser.rs
 expression: "parse(\"{x, y, ...z}\")"
 ---
 Pattern {
-    span: 0..12,
     kind: Object(
         ObjectPat {
             props: [
@@ -32,7 +31,6 @@ Pattern {
                 Rest(
                     RestPat {
                         arg: Pattern {
-                            span: 10..11,
                             kind: Ident(
                                 BindingIdent {
                                     name: "z",
@@ -40,6 +38,8 @@ Pattern {
                                     mutable: false,
                                 },
                             ),
+                            span: 10..11,
+                            inferred_type: None,
                         },
                     },
                 ),
@@ -47,4 +47,6 @@ Pattern {
             optional: false,
         },
     ),
+    span: 0..12,
+    inferred_type: None,
 }

@@ -2,111 +2,113 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"fn <A: number, B: number> (a: A, b: B): A => a\")"
 ---
-Function(
-    Function {
-        span: 0..46,
-        type_params: Some(
-            [
-                TypeParam {
-                    span: 5..14,
-                    t: TypeAnn {
-                        kind: TypeRef(
-                            "A",
-                            None,
+Expr {
+    kind: Function(
+        Function {
+            type_params: Some(
+                [
+                    TypeParam {
+                        span: 5..14,
+                        name: "A",
+                        bound: Some(
+                            TypeAnn {
+                                kind: Number,
+                                span: 7..13,
+                                inferred_type: None,
+                            },
                         ),
-                        span: 4..5,
+                        default: None,
                     },
-                    bound: Some(
+                    TypeParam {
+                        span: 16..25,
+                        name: "B",
+                        bound: Some(
+                            TypeAnn {
+                                kind: Number,
+                                span: 18..24,
+                                inferred_type: None,
+                            },
+                        ),
+                        default: None,
+                    },
+                ],
+            ),
+            params: [
+                FuncParam {
+                    pattern: Pattern {
+                        kind: Ident(
+                            BindingIdent {
+                                name: "a",
+                                span: 27..28,
+                                mutable: false,
+                            },
+                        ),
+                        span: 27..28,
+                        inferred_type: None,
+                    },
+                    type_ann: Some(
                         TypeAnn {
-                            kind: Number,
-                            span: 7..13,
+                            kind: TypeRef(
+                                "A",
+                                None,
+                            ),
+                            span: 30..31,
+                            inferred_type: None,
                         },
                     ),
-                    default: None,
+                    optional: false,
                 },
-                TypeParam {
-                    span: 16..25,
-                    t: TypeAnn {
-                        kind: TypeRef(
-                            "B",
-                            None,
+                FuncParam {
+                    pattern: Pattern {
+                        kind: Ident(
+                            BindingIdent {
+                                name: "b",
+                                span: 33..34,
+                                mutable: false,
+                            },
                         ),
-                        span: 15..16,
+                        span: 33..34,
+                        inferred_type: None,
                     },
-                    bound: Some(
+                    type_ann: Some(
                         TypeAnn {
-                            kind: Number,
-                            span: 18..24,
+                            kind: TypeRef(
+                                "B",
+                                None,
+                            ),
+                            span: 36..37,
+                            inferred_type: None,
                         },
                     ),
-                    default: None,
+                    optional: false,
                 },
             ],
-        ),
-        params: [
-            FuncParam {
-                pattern: Pattern {
-                    span: 27..28,
+            body: Expr(
+                Expr {
                     kind: Ident(
-                        BindingIdent {
+                        Ident {
                             name: "a",
-                            span: 27..28,
-                            mutable: false,
+                            span: 45..46,
                         },
                     ),
-                },
-                type_ann: Some(
-                    TypeAnn {
-                        kind: TypeRef(
-                            "A",
-                            None,
-                        ),
-                        span: 30..31,
-                    },
-                ),
-                optional: false,
-            },
-            FuncParam {
-                pattern: Pattern {
-                    span: 33..34,
-                    kind: Ident(
-                        BindingIdent {
-                            name: "b",
-                            span: 33..34,
-                            mutable: false,
-                        },
-                    ),
-                },
-                type_ann: Some(
-                    TypeAnn {
-                        kind: TypeRef(
-                            "B",
-                            None,
-                        ),
-                        span: 36..37,
-                    },
-                ),
-                optional: false,
-            },
-        ],
-        body: Expr(
-            Ident(
-                Ident {
-                    name: "a",
                     span: 45..46,
+                    inferred_type: None,
                 },
             ),
-        ),
-        type_ann: Some(
-            TypeAnn {
-                kind: TypeRef(
-                    "A",
-                    None,
-                ),
-                span: 40..41,
-            },
-        ),
-        is_async: false,
-        is_gen: false,
-    },
-)
+            type_ann: Some(
+                TypeAnn {
+                    kind: TypeRef(
+                        "A",
+                        None,
+                    ),
+                    span: 40..41,
+                    inferred_type: None,
+                },
+            ),
+            is_async: false,
+            is_gen: false,
+        },
+    ),
+    span: 0..46,
+    inferred_type: None,
+}

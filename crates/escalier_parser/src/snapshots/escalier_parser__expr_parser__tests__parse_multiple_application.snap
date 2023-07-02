@@ -2,54 +2,79 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"foo()\\n(3+4) * 5\")"
 ---
-Binary(
-    Binary {
-        span: 0..15,
-        left: Call(
-            Call {
-                span: 0..11,
-                callee: Call(
+Expr {
+    kind: Binary(
+        Binary {
+            left: Expr {
+                kind: Call(
                     Call {
-                        span: 0..5,
-                        callee: Ident(
-                            Ident {
-                                name: "foo",
-                                span: 0..3,
-                            },
-                        ),
+                        callee: Expr {
+                            kind: Call(
+                                Call {
+                                    callee: Expr {
+                                        kind: Ident(
+                                            Ident {
+                                                name: "foo",
+                                                span: 0..3,
+                                            },
+                                        ),
+                                        span: 0..3,
+                                        inferred_type: None,
+                                    },
+                                    type_args: None,
+                                    args: [],
+                                },
+                            ),
+                            span: 0..5,
+                            inferred_type: None,
+                        },
                         type_args: None,
-                        args: [],
+                        args: [
+                            Expr {
+                                kind: Binary(
+                                    Binary {
+                                        left: Expr {
+                                            kind: Num(
+                                                Num {
+                                                    value: "3",
+                                                },
+                                            ),
+                                            span: 7..8,
+                                            inferred_type: None,
+                                        },
+                                        op: Plus,
+                                        right: Expr {
+                                            kind: Num(
+                                                Num {
+                                                    value: "4",
+                                                },
+                                            ),
+                                            span: 9..10,
+                                            inferred_type: None,
+                                        },
+                                    },
+                                ),
+                                span: 7..10,
+                                inferred_type: None,
+                            },
+                        ],
                     },
                 ),
-                type_args: None,
-                args: [
-                    Binary(
-                        Binary {
-                            span: 7..10,
-                            left: Num(
-                                Num {
-                                    span: 7..8,
-                                    value: "3",
-                                },
-                            ),
-                            op: Plus,
-                            right: Num(
-                                Num {
-                                    span: 9..10,
-                                    value: "4",
-                                },
-                            ),
-                        },
-                    ),
-                ],
+                span: 0..11,
+                inferred_type: None,
             },
-        ),
-        op: Times,
-        right: Num(
-            Num {
+            op: Times,
+            right: Expr {
+                kind: Num(
+                    Num {
+                        value: "5",
+                    },
+                ),
                 span: 14..15,
-                value: "5",
+                inferred_type: None,
             },
-        ),
-    },
-)
+        },
+    ),
+    span: 0..15,
+    inferred_type: None,
+}

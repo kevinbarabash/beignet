@@ -5,38 +5,54 @@ expression: "parse(r#\"foo() bar()\"#)"
 [
     Stmt {
         kind: Expr {
-            expr: Call(
-                Call {
-                    span: 0..5,
-                    callee: Ident(
-                        Ident {
-                            name: "foo",
+            expr: Expr {
+                kind: Call(
+                    Call {
+                        callee: Expr {
+                            kind: Ident(
+                                Ident {
+                                    name: "foo",
+                                    span: 0..3,
+                                },
+                            ),
                             span: 0..3,
+                            inferred_type: None,
                         },
-                    ),
-                    type_args: None,
-                    args: [],
-                },
-            ),
+                        type_args: None,
+                        args: [],
+                    },
+                ),
+                span: 0..5,
+                inferred_type: None,
+            },
         },
         span: 0..5,
+        inferred_type: None,
     },
     Stmt {
         kind: Expr {
-            expr: Call(
-                Call {
-                    span: 6..11,
-                    callee: Ident(
-                        Ident {
-                            name: "bar",
+            expr: Expr {
+                kind: Call(
+                    Call {
+                        callee: Expr {
+                            kind: Ident(
+                                Ident {
+                                    name: "bar",
+                                    span: 6..9,
+                                },
+                            ),
                             span: 6..9,
+                            inferred_type: None,
                         },
-                    ),
-                    type_args: None,
-                    args: [],
-                },
-            ),
+                        type_args: None,
+                        args: [],
+                    },
+                ),
+                span: 6..11,
+                inferred_type: None,
+            },
         },
         span: 6..11,
+        inferred_type: None,
     },
 ]

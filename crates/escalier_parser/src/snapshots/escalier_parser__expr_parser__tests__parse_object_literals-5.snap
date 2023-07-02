@@ -2,54 +2,71 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(r#\"{ \"a\": 1, [b]: 2, 0: \"zero\" }\"#)"
 ---
-Object(
-    Object {
-        span: 0..29,
-        properties: [
-            Prop(
-                Property {
-                    key: String(
-                        "a",
-                    ),
-                    value: Num(
-                        Num {
+Expr {
+    kind: Object(
+        Object {
+            properties: [
+                Prop(
+                    Property {
+                        key: String(
+                            "a",
+                        ),
+                        value: Expr {
+                            kind: Num(
+                                Num {
+                                    value: "1",
+                                },
+                            ),
                             span: 7..8,
-                            value: "1",
+                            inferred_type: None,
                         },
-                    ),
-                },
-            ),
-            Prop(
-                Property {
-                    key: Computed(
-                        Ident(
-                            Ident {
-                                name: "b",
+                    },
+                ),
+                Prop(
+                    Property {
+                        key: Computed(
+                            Expr {
+                                kind: Ident(
+                                    Ident {
+                                        name: "b",
+                                        span: 11..12,
+                                    },
+                                ),
                                 span: 11..12,
+                                inferred_type: None,
                             },
                         ),
-                    ),
-                    value: Num(
-                        Num {
+                        value: Expr {
+                            kind: Num(
+                                Num {
+                                    value: "2",
+                                },
+                            ),
                             span: 15..16,
-                            value: "2",
+                            inferred_type: None,
                         },
-                    ),
-                },
-            ),
-            Prop(
-                Property {
-                    key: Number(
-                        "0",
-                    ),
-                    value: Str(
-                        Str {
+                    },
+                ),
+                Prop(
+                    Property {
+                        key: Number(
+                            "0",
+                        ),
+                        value: Expr {
+                            kind: Str(
+                                Str {
+                                    span: 21..27,
+                                    value: "zero",
+                                },
+                            ),
                             span: 21..27,
-                            value: "zero",
+                            inferred_type: None,
                         },
-                    ),
-                },
-            ),
-        ],
-    },
-)
+                    },
+                ),
+            ],
+        },
+    ),
+    span: 0..29,
+    inferred_type: None,
+}

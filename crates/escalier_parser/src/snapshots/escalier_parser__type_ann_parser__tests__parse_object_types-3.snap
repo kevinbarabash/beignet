@@ -5,34 +5,47 @@ expression: "parse(\"{\\n  a: number,\\n  b?: string,\\n  c: boolean,\\n}\")"
 TypeAnn {
     kind: Object(
         [
-            ObjectProp {
-                name: "a",
-                optional: false,
-                mutable: false,
-                type_ann: TypeAnn {
-                    kind: Number,
-                    span: 7..13,
+            Prop(
+                Prop {
+                    span: 0..0,
+                    name: "a",
+                    optional: false,
+                    mutable: false,
+                    type_ann: TypeAnn {
+                        kind: Number,
+                        span: 7..13,
+                        inferred_type: None,
+                    },
                 },
-            },
-            ObjectProp {
-                name: "b",
-                optional: true,
-                mutable: false,
-                type_ann: TypeAnn {
-                    kind: String,
-                    span: 21..27,
+            ),
+            Prop(
+                Prop {
+                    span: 0..0,
+                    name: "b",
+                    optional: true,
+                    mutable: false,
+                    type_ann: TypeAnn {
+                        kind: String,
+                        span: 21..27,
+                        inferred_type: None,
+                    },
                 },
-            },
-            ObjectProp {
-                name: "c",
-                optional: false,
-                mutable: false,
-                type_ann: TypeAnn {
-                    kind: Boolean,
-                    span: 34..41,
+            ),
+            Prop(
+                Prop {
+                    span: 0..0,
+                    name: "c",
+                    optional: false,
+                    mutable: false,
+                    type_ann: TypeAnn {
+                        kind: Boolean,
+                        span: 34..41,
+                        inferred_type: None,
+                    },
                 },
-            },
+            ),
         ],
     ),
     span: 0..44,
+    inferred_type: None,
 }

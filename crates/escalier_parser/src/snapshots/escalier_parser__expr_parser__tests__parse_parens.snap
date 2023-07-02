@@ -2,33 +2,49 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: "parse(\"5 * (x + 1)\")"
 ---
-Binary(
-    Binary {
-        span: 0..10,
-        left: Num(
-            Num {
-                span: 0..1,
-                value: "5",
-            },
-        ),
-        op: Times,
-        right: Binary(
-            Binary {
-                span: 5..10,
-                left: Ident(
-                    Ident {
-                        name: "x",
-                        span: 5..6,
-                    },
-                ),
-                op: Plus,
-                right: Num(
+Expr {
+    kind: Binary(
+        Binary {
+            left: Expr {
+                kind: Num(
                     Num {
-                        span: 9..10,
-                        value: "1",
+                        value: "5",
                     },
                 ),
+                span: 0..1,
+                inferred_type: None,
             },
-        ),
-    },
-)
+            op: Times,
+            right: Expr {
+                kind: Binary(
+                    Binary {
+                        left: Expr {
+                            kind: Ident(
+                                Ident {
+                                    name: "x",
+                                    span: 5..6,
+                                },
+                            ),
+                            span: 5..6,
+                            inferred_type: None,
+                        },
+                        op: Plus,
+                        right: Expr {
+                            kind: Num(
+                                Num {
+                                    value: "1",
+                                },
+                            ),
+                            span: 9..10,
+                            inferred_type: None,
+                        },
+                    },
+                ),
+                span: 5..10,
+                inferred_type: None,
+            },
+        },
+    ),
+    span: 0..10,
+    inferred_type: None,
+}

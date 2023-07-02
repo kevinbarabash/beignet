@@ -5,60 +5,83 @@ expression: "parse(\"if (foo) { console.log(foo) }\")"
 [
     Stmt {
         kind: Expr {
-            expr: IfElse(
-                IfElse {
-                    span: 0..29,
-                    cond: Ident(
-                        Ident {
-                            name: "foo",
+            expr: Expr {
+                kind: IfElse(
+                    IfElse {
+                        cond: Expr {
+                            kind: Ident(
+                                Ident {
+                                    name: "foo",
+                                    span: 4..7,
+                                },
+                            ),
                             span: 4..7,
+                            inferred_type: None,
                         },
-                    ),
-                    consequent: Block {
-                        span: 8..29,
-                        stmts: [
-                            Stmt {
-                                kind: Expr {
-                                    expr: Call(
-                                        Call {
-                                            span: 11..27,
-                                            callee: Member(
-                                                Member {
-                                                    span: 11..22,
-                                                    object: Ident(
-                                                        Ident {
-                                                            name: "console",
-                                                            span: 11..18,
+                        consequent: Block {
+                            span: 8..29,
+                            stmts: [
+                                Stmt {
+                                    kind: Expr {
+                                        expr: Expr {
+                                            kind: Call(
+                                                Call {
+                                                    callee: Expr {
+                                                        kind: Member(
+                                                            Member {
+                                                                object: Expr {
+                                                                    kind: Ident(
+                                                                        Ident {
+                                                                            name: "console",
+                                                                            span: 11..18,
+                                                                        },
+                                                                    ),
+                                                                    span: 11..18,
+                                                                    inferred_type: None,
+                                                                },
+                                                                property: Ident(
+                                                                    Ident {
+                                                                        name: "log",
+                                                                        span: 19..22,
+                                                                    },
+                                                                ),
+                                                            },
+                                                        ),
+                                                        span: 11..22,
+                                                        inferred_type: None,
+                                                    },
+                                                    type_args: None,
+                                                    args: [
+                                                        Expr {
+                                                            kind: Ident(
+                                                                Ident {
+                                                                    name: "foo",
+                                                                    span: 23..26,
+                                                                },
+                                                            ),
+                                                            span: 23..26,
+                                                            inferred_type: None,
                                                         },
-                                                    ),
-                                                    property: Ident(
-                                                        Ident {
-                                                            name: "log",
-                                                            span: 19..22,
-                                                        },
-                                                    ),
+                                                    ],
                                                 },
                                             ),
-                                            type_args: None,
-                                            args: [
-                                                Ident(
-                                                    Ident {
-                                                        name: "foo",
-                                                        span: 23..26,
-                                                    },
-                                                ),
-                                            ],
+                                            span: 11..27,
+                                            inferred_type: None,
                                         },
-                                    ),
+                                    },
+                                    span: 11..27,
+                                    inferred_type: None,
                                 },
-                                span: 11..27,
-                            },
-                        ],
+                            ],
+                        },
+                        alternate: None,
                     },
-                    alternate: None,
-                },
-            ),
+                ),
+                span: 0..29,
+                inferred_type: None,
+            },
         },
         span: 0..29,
+        inferred_type: None,
     },
 ]

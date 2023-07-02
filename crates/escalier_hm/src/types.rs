@@ -3,7 +3,7 @@ use generational_arena::{Arena, Index};
 
 // TODO: create type versions of these so that we don't have to bother
 // with source locations when doing type-level stuff.
-use crate::ast::{BindingIdent, Lit};
+use escalier_ast::{BindingIdent, Literal as Lit};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Variable {

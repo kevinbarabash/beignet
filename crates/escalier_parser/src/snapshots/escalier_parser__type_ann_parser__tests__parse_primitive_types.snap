@@ -5,4 +5,5 @@ expression: "parse(\"number\")"
 TypeAnn {
     kind: Number,
     span: 0..6,
+    inferred_type: None,
 }

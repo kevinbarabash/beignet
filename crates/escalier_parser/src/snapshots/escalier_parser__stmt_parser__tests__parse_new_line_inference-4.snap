@@ -6,21 +6,29 @@ expression: "parse(\"return\\nfoo()\")"
     Stmt {
         kind: Return {
             arg: Some(
-                Call(
-                    Call {
-                        span: 7..12,
-                        callee: Ident(
-                            Ident {
-                                name: "foo",
+                Expr {
+                    kind: Call(
+                        Call {
+                            callee: Expr {
+                                kind: Ident(
+                                    Ident {
+                                        name: "foo",
+                                        span: 7..10,
+                                    },
+                                ),
                                 span: 7..10,
+                                inferred_type: None,
                             },
-                        ),
-                        type_args: None,
-                        args: [],
-                    },
-                ),
+                            type_args: None,
+                            args: [],
+                        },
+                    ),
+                    span: 7..12,
+                    inferred_type: None,
+                },
             ),
         },
         span: 7..12,
+        inferred_type: None,
     },
 ]

@@ -2,74 +2,91 @@
 source: crates/escalier_parser/src/expr_parser.rs
 expression: parse(src)
 ---
-Function(
-    Function {
-        span: 0..29,
-        type_params: None,
-        params: [
-            FuncParam {
-                pattern: Pattern {
-                    span: 4..5,
-                    kind: Ident(
-                        BindingIdent {
-                            name: "x",
-                            span: 4..5,
-                            mutable: false,
-                        },
-                    ),
+Expr {
+    kind: Function(
+        Function {
+            type_params: None,
+            params: [
+                FuncParam {
+                    pattern: Pattern {
+                        kind: Ident(
+                            BindingIdent {
+                                name: "x",
+                                span: 4..5,
+                                mutable: false,
+                            },
+                        ),
+                        span: 4..5,
+                        inferred_type: None,
+                    },
+                    type_ann: None,
+                    optional: false,
                 },
-                type_ann: None,
-                optional: false,
-            },
-            FuncParam {
-                pattern: Pattern {
-                    span: 7..8,
-                    kind: Ident(
-                        BindingIdent {
-                            name: "y",
-                            span: 7..8,
-                            mutable: false,
-                        },
-                    ),
+                FuncParam {
+                    pattern: Pattern {
+                        kind: Ident(
+                            BindingIdent {
+                                name: "y",
+                                span: 7..8,
+                                mutable: false,
+                            },
+                        ),
+                        span: 7..8,
+                        inferred_type: None,
+                    },
+                    type_ann: None,
+                    optional: false,
                 },
-                type_ann: None,
-                optional: false,
-            },
-        ],
-        body: Block(
-            Block {
-                span: 12..29,
-                stmts: [
-                    Stmt {
-                        kind: Return {
-                            arg: Some(
-                                Binary(
-                                    Binary {
+            ],
+            body: Block(
+                Block {
+                    span: 12..29,
+                    stmts: [
+                        Stmt {
+                            kind: Return {
+                                arg: Some(
+                                    Expr {
+                                        kind: Binary(
+                                            Binary {
+                                                left: Expr {
+                                                    kind: Ident(
+                                                        Ident {
+                                                            name: "x",
+                                                            span: 22..23,
+                                                        },
+                                                    ),
+                                                    span: 22..23,
+                                                    inferred_type: None,
+                                                },
+                                                op: Plus,
+                                                right: Expr {
+                                                    kind: Ident(
+                                                        Ident {
+                                                            name: "y",
+                                                            span: 26..27,
+                                                        },
+                                                    ),
+                                                    span: 26..27,
+                                                    inferred_type: None,
+                                                },
+                                            },
+                                        ),
                                         span: 22..27,
-                                        left: Ident(
-                                            Ident {
-                                                name: "x",
-                                                span: 22..23,
-                                            },
-                                        ),
-                                        op: Plus,
-                                        right: Ident(
-                                            Ident {
-                                                name: "y",
-                                                span: 26..27,
-                                            },
-                                        ),
+                                        inferred_type: None,
                                     },
                                 ),
-                            ),
+                            },
+                            span: 22..27,
+                            inferred_type: None,
                         },
-                        span: 22..27,
-                    },
-                ],
-            },
-        ),
-        type_ann: None,
-        is_async: false,
-        is_gen: false,
-    },
-)
+                    ],
+                },
+            ),
+            type_ann: None,
+            is_async: false,
+            is_gen: false,
+        },
+    ),
+    span: 0..29,
+    inferred_type: None,
+}
