@@ -416,12 +416,10 @@ dependencies = [
  "generational-arena",
  "im",
  "insta",
- "itertools 0.10.5",
+ "itertools 0.11.0",
  "swc_atoms",
  "swc_common",
  "swc_ecma_ast",
- "tree-sitter",
- "tree_sitter_escalier",
  "unescape",
 ]
 

@@ -20,18 +20,20 @@ pub struct Class {
 pub struct Method {
     pub span: Span,
     pub name: PropName,
+    pub is_public: bool,
+    pub is_async: bool,
+    pub is_gen: bool,
     pub type_params: Option<Vec<TypeParam>>,
     pub params: Vec<FuncParam>,
     pub body: Block,
     pub type_ann: Option<TypeAnn>, // return type
-    pub is_async: bool,
-    pub is_gen: bool,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Getter {
     pub span: Span,
     pub name: PropName,
+    pub is_public: bool,
     pub type_ann: Option<TypeAnn>,
     pub params: Vec<FuncParam>, // should only contain `self` param
     pub body: Block,
@@ -41,6 +43,7 @@ pub struct Getter {
 pub struct Setter {
     pub span: Span,
     pub name: PropName,
+    pub is_public: bool,
     pub type_ann: Option<TypeAnn>, // should always be `void`
     pub params: Vec<FuncParam>,    // should only contain `self`, `value` params
     pub body: Block,
@@ -57,6 +60,7 @@ pub enum PropName {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Constructor {
     pub span: Span,
+    pub is_public: bool,
     pub params: Vec<FuncParam>,
     pub body: Block,
 }
@@ -65,6 +69,7 @@ pub struct Constructor {
 pub struct Field {
     pub span: Span,
     pub name: Ident,
+    pub is_public: bool,
     pub type_ann: Option<TypeAnn>,
     pub init: Option<Box<Expr>>,
 }

@@ -64,26 +64,26 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_class_member(&mut self) -> Result<ClassMember, ParseError> {
-        // TODO:
-        // - get/set
-        // - static
-        // - async
-        // - generator
-        // - type annotations
+        let is_public = if self.peek().unwrap_or(&EOF).kind == TokenKind::Pub {
+            self.next(); // consumes 'pub'
+            true
+        } else {
+            false
+        };
 
         let token = self.peek().unwrap_or(&EOF);
         match token.kind {
-            TokenKind::Identifier(_) => self.parse_field(),
-            TokenKind::Fn => self.parse_method(),
-            TokenKind::Gen => self.parse_method(),
-            TokenKind::Async => self.parse_method(),
-            TokenKind::Get => self.parse_getter(),
-            TokenKind::Set => self.parse_setter(),
+            TokenKind::Identifier(_) => self.parse_field(is_public),
+            TokenKind::Fn => self.parse_method(is_public),
+            TokenKind::Gen => self.parse_method(is_public),
+            TokenKind::Async => self.parse_method(is_public),
+            TokenKind::Get => self.parse_getter(is_public),
+            TokenKind::Set => self.parse_setter(is_public),
             _ => panic!("unexpected token {:?}", token),
         }
     }
 
-    fn parse_field(&mut self) -> Result<ClassMember, ParseError> {
+    fn parse_field(&mut self, is_public: bool) -> Result<ClassMember, ParseError> {
         let token = self.next().unwrap_or(EOF.clone());
         let start = token.span.start;
 
@@ -107,6 +107,7 @@ impl<'a> Parser<'a> {
                 ClassMember::Field(Field {
                     span,
                     name,
+                    is_public,
                     init: None,
                     type_ann: Some(type_ann),
                 })
@@ -121,6 +122,7 @@ impl<'a> Parser<'a> {
                 ClassMember::Field(Field {
                     span,
                     name,
+                    is_public,
                     init: Some(Box::new(init)),
                     type_ann: None,
                 })
@@ -131,7 +133,7 @@ impl<'a> Parser<'a> {
         Ok(field)
     }
 
-    fn parse_getter(&mut self) -> Result<ClassMember, ParseError> {
+    fn parse_getter(&mut self, is_public: bool) -> Result<ClassMember, ParseError> {
         let token = self.next().unwrap_or(EOF.clone());
         assert_eq!(token.kind, TokenKind::Get);
         let start = token.span.start;
@@ -139,13 +141,15 @@ impl<'a> Parser<'a> {
         let name = self.parse_name()?;
         let params = self.parse_params()?;
         let body = self.parse_block()?;
+        let span = Span {
+            start,
+            end: self.scanner.cursor(),
+        };
 
         let getter = ClassMember::Getter(Getter {
-            span: Span {
-                start,
-                end: self.scanner.cursor(),
-            },
+            span,
             name,
+            is_public,
             type_ann: None,
             params,
             body,
@@ -154,7 +158,7 @@ impl<'a> Parser<'a> {
         Ok(getter)
     }
 
-    fn parse_setter(&mut self) -> Result<ClassMember, ParseError> {
+    fn parse_setter(&mut self, is_public: bool) -> Result<ClassMember, ParseError> {
         let token = self.next().unwrap_or(EOF.clone());
         assert_eq!(token.kind, TokenKind::Set);
         let start = token.span.start;
@@ -162,13 +166,15 @@ impl<'a> Parser<'a> {
         let name = self.parse_name()?;
         let params = self.parse_params()?;
         let body = self.parse_block()?;
+        let span = Span {
+            start,
+            end: self.scanner.cursor(),
+        };
 
         let setter = ClassMember::Setter(Setter {
-            span: Span {
-                start,
-                end: self.scanner.cursor(),
-            },
+            span,
             name,
+            is_public,
             type_ann: None,
             params,
             body,
@@ -177,7 +183,7 @@ impl<'a> Parser<'a> {
         Ok(setter)
     }
 
-    fn parse_method(&mut self) -> Result<ClassMember, ParseError> {
+    fn parse_method(&mut self, is_public: bool) -> Result<ClassMember, ParseError> {
         let start = self.peek().unwrap_or(&EOF).span.start;
 
         let is_async = if self.peek().unwrap_or(&EOF).kind == TokenKind::Async {
@@ -208,19 +214,29 @@ impl<'a> Parser<'a> {
 
         let body = self.parse_block()?;
         let end = self.scanner.cursor();
-
         let span = Span { start, end };
 
-        let method = ClassMember::Method(Method {
-            span,
-            name,
-            params,
-            body,
-            is_async,
-            is_gen,
-            type_params,
-            type_ann,
-        });
+        let method = match name {
+            PropName::Ident(ident) if ident.name == "new" => {
+                ClassMember::Constructor(Constructor {
+                    span,
+                    is_public,
+                    params,
+                    body,
+                })
+            }
+            _ => ClassMember::Method(Method {
+                span,
+                name,
+                is_public,
+                is_async,
+                is_gen,
+                params,
+                body,
+                type_params,
+                type_ann,
+            }),
+        };
 
         Ok(method)
     }
