@@ -5,7 +5,8 @@ expression: "parse(\"let {x: x1, y: y1} = p1\")"
 [
     Stmt {
         kind: Let {
-            declare: false,
+            is_declare: false,
+            is_mut: false,
             pattern: Pattern {
                 kind: Object(
                     ObjectPat {

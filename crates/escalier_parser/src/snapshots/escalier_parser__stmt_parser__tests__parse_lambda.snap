@@ -5,7 +5,8 @@ expression: "parse(\"let add = fn (x, y) => x + y\")"
 [
     Stmt {
         kind: Let {
-            declare: false,
+            is_declare: false,
+            is_mut: false,
             pattern: Pattern {
                 kind: Ident(
                     BindingIdent {

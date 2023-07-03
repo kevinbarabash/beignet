@@ -5,7 +5,6 @@ expression: "parse(r#\"type Point<T> = {x: T, y: T}\"#)"
 [
     Stmt {
         kind: TypeDecl {
-            declare: false,
             name: "Point",
             type_ann: TypeAnn {
                 kind: Object(

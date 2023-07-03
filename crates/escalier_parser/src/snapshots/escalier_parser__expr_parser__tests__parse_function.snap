@@ -13,7 +13,8 @@ Expr {
                     stmts: [
                         Stmt {
                             kind: Let {
-                                declare: false,
+                                is_declare: false,
+                                is_mut: false,
                                 pattern: Pattern {
                                     kind: Ident(
                                         BindingIdent {
@@ -43,7 +44,8 @@ Expr {
                         },
                         Stmt {
                             kind: Let {
-                                declare: false,
+                                is_declare: false,
+                                is_mut: false,
                                 pattern: Pattern {
                                     kind: Ident(
                                         BindingIdent {
