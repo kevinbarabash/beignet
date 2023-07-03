@@ -12,7 +12,9 @@ pub enum StmtKind {
         expr: Expr,
     },
     Let {
-        declare: bool,
+        is_declare: bool,
+        is_var: bool,
+        is_mut: bool,
         pattern: Pattern,
         expr: Option<Expr>,
         type_ann: Option<TypeAnn>,
@@ -21,7 +23,6 @@ pub enum StmtKind {
         arg: Option<Expr>,
     },
     TypeDecl {
-        declare: bool,
         name: String,
         type_ann: TypeAnn,
         type_params: Option<Vec<TypeParam>>,

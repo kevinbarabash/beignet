@@ -595,15 +595,15 @@ pub fn infer_statement(
 ) -> Result<Index, Errors> {
     let t = match &mut statement.kind {
         StmtKind::Let {
+            is_declare,
             pattern,
             expr: init,
             type_ann,
-            declare,
             ..
         } => {
             let (pat_bindings, pat_type) = infer_pattern(arena, pattern, ctx)?;
 
-            match (declare, init, type_ann) {
+            match (is_declare, init, type_ann) {
                 (false, Some(init), type_ann) => {
                     let init_idx = infer_expression(arena, init, ctx)?;
 
@@ -696,7 +696,6 @@ pub fn infer_statement(
         }
         // StmtKind::ClassDecl(_) => todo!(),
         StmtKind::TypeDecl {
-            declare: _,
             name,
             type_ann,
             type_params,

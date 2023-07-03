@@ -5,7 +5,6 @@ expression: "parse(r#\"type Foo = Bar\"#)"
 [
     Stmt {
         kind: TypeDecl {
-            declare: false,
             name: "Foo",
             type_ann: TypeAnn {
                 kind: TypeRef(

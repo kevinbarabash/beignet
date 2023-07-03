@@ -9,7 +9,8 @@ impl<'a> Parser<'a> {
         let mut token = self.peek().unwrap_or(&EOF).clone();
         let start = token.span.start;
 
-        let declare = match &token.kind {
+        // TODO: only allow `declare` in front of `let`
+        let is_declare = match &token.kind {
             TokenKind::Declare => {
                 self.next(); // consumes 'declare'
                 token = self.peek().unwrap_or(&EOF).clone();
@@ -19,8 +20,19 @@ impl<'a> Parser<'a> {
         };
 
         let stmt = match &token.kind {
-            TokenKind::Let => {
-                self.next(); // consumes 'let'
+            TokenKind::Let | TokenKind::Var => {
+                let token = self.next().unwrap_or(EOF.clone()); // consumes 'let' or 'var'
+
+                let is_var = token.kind == TokenKind::Var;
+
+                let is_mut = match self.peek().unwrap_or(&EOF).kind {
+                    TokenKind::Mut => {
+                        self.next(); // consumes 'mut'
+                        true
+                    }
+                    _ => false,
+                };
+
                 let pattern = self.parse_pattern()?;
 
                 let type_ann = match self.peek().unwrap_or(&EOF).kind {
@@ -53,7 +65,9 @@ impl<'a> Parser<'a> {
                 // TODO: check invariants in semantic analysis pass
                 Stmt {
                     kind: StmtKind::Let {
-                        declare,
+                        is_declare,
+                        is_var,
+                        is_mut,
                         pattern,
                         expr,
                         type_ann,
@@ -103,7 +117,6 @@ impl<'a> Parser<'a> {
 
                 Stmt {
                     kind: StmtKind::TypeDecl {
-                        declare,
                         name,
                         type_ann,
                         type_params,
@@ -255,5 +268,15 @@ mod tests {
     fn parse_type_alias() {
         insta::assert_debug_snapshot!(parse(r#"type Foo = Bar"#));
         insta::assert_debug_snapshot!(parse(r#"type Point<T> = {x: T, y: T}"#));
+    }
+
+    #[test]
+    fn parse_var_decls() {
+        insta::assert_debug_snapshot!(parse(r#"let mut p = {x: 5, y: 10}"#));
+        insta::assert_debug_snapshot!(parse(r#"var i = 0"#));
+        insta::assert_debug_snapshot!(parse(r#"var mut p = {x: 5, y: 10}"#));
+        insta::assert_debug_snapshot!(parse(
+            r#"declare let scale: fn (p: mut Point, scale: number) => void"#
+        ));
     }
 }

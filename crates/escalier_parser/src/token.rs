@@ -26,8 +26,10 @@ pub enum TokenKind {
     // Keywords
     Declare,
     Let,
-    Return,
+    Mut, // denotes a binding to a mutable reference
+    Var, // denotes a re-assignable binding
     Fn,
+    Return,
     Get,
     Set,
     Pub,
@@ -37,8 +39,6 @@ pub enum TokenKind {
     Yield,
     If,
     Else,
-    Mut, // denotes a binding to a mutable reference
-    Var, // denotes a re-assignable binding
     Match,
     Is,
     Try,

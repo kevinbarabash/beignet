@@ -1,0 +1,77 @@
+---
+source: crates/escalier_parser/src/stmt_parser.rs
+expression: "parse(r#\"var mut p = {x: 5, y: 10}\"#)"
+---
+[
+    Stmt {
+        kind: Let {
+            is_declare: false,
+            is_var: true,
+            is_mut: true,
+            pattern: Pattern {
+                kind: Ident(
+                    BindingIdent {
+                        name: "p",
+                        span: 8..9,
+                        mutable: false,
+                    },
+                ),
+                span: 8..9,
+                inferred_type: None,
+            },
+            expr: Some(
+                Expr {
+                    kind: Object(
+                        Object {
+                            properties: [
+                                Prop(
+                                    Property {
+                                        key: Ident(
+                                            Ident {
+                                                name: "x",
+                                                span: 13..14,
+                                            },
+                                        ),
+                                        value: Expr {
+                                            kind: Num(
+                                                Num {
+                                                    value: "5",
+                                                },
+                                            ),
+                                            span: 16..17,
+                                            inferred_type: None,
+                                        },
+                                    },
+                                ),
+                                Prop(
+                                    Property {
+                                        key: Ident(
+                                            Ident {
+                                                name: "y",
+                                                span: 19..20,
+                                            },
+                                        ),
+                                        value: Expr {
+                                            kind: Num(
+                                                Num {
+                                                    value: "10",
+                                                },
+                                            ),
+                                            span: 22..24,
+                                            inferred_type: None,
+                                        },
+                                    },
+                                ),
+                            ],
+                        },
+                    ),
+                    span: 11..25,
+                    inferred_type: None,
+                },
+            ),
+            type_ann: None,
+        },
+        span: 0..25,
+        inferred_type: None,
+    },
+]
