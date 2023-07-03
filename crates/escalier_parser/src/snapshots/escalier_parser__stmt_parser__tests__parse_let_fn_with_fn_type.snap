@@ -6,6 +6,7 @@ expression: "parse(r#\"let add: fn (a: number, b: number) => number = fn (a, b) 
     Stmt {
         kind: Let {
             is_declare: false,
+            is_var: false,
             is_mut: false,
             pattern: Pattern {
                 kind: Ident(

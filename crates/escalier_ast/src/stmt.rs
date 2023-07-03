@@ -13,6 +13,7 @@ pub enum StmtKind {
     },
     Let {
         is_declare: bool,
+        is_var: bool,
         is_mut: bool,
         pattern: Pattern,
         expr: Option<Expr>,

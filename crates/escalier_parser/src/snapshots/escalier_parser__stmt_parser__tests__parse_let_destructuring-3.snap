@@ -6,6 +6,7 @@ expression: "parse(\"let [p1, p2] = line\")"
     Stmt {
         kind: Let {
             is_declare: false,
+            is_var: false,
             is_mut: false,
             pattern: Pattern {
                 kind: Tuple(

@@ -6,6 +6,7 @@ expression: "parse(r#\"let y: number = m*x + b\"#)"
     Stmt {
         kind: Let {
             is_declare: false,
+            is_var: false,
             is_mut: false,
             pattern: Pattern {
                 kind: Ident(

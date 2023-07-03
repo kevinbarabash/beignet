@@ -6,6 +6,7 @@ expression: "parse(r#\"declare let foo: number\"#)"
     Stmt {
         kind: Let {
             is_declare: true,
+            is_var: false,
             is_mut: false,
             pattern: Pattern {
                 kind: Ident(

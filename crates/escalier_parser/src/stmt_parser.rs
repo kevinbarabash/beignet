@@ -20,8 +20,10 @@ impl<'a> Parser<'a> {
         };
 
         let stmt = match &token.kind {
-            TokenKind::Let => {
-                self.next(); // consumes 'let'
+            TokenKind::Let | TokenKind::Var => {
+                let token = self.next().unwrap_or(EOF.clone()); // consumes 'let' or 'var'
+
+                let is_var = token.kind == TokenKind::Var;
 
                 let is_mut = match self.peek().unwrap_or(&EOF).kind {
                     TokenKind::Mut => {
@@ -64,6 +66,7 @@ impl<'a> Parser<'a> {
                 Stmt {
                     kind: StmtKind::Let {
                         is_declare,
+                        is_var,
                         is_mut,
                         pattern,
                         expr,
@@ -268,8 +271,10 @@ mod tests {
     }
 
     #[test]
-    fn parse_mut() {
+    fn parse_var_decls() {
         insta::assert_debug_snapshot!(parse(r#"let mut p = {x: 5, y: 10}"#));
+        insta::assert_debug_snapshot!(parse(r#"var i = 0"#));
+        insta::assert_debug_snapshot!(parse(r#"var mut p = {x: 5, y: 10}"#));
         insta::assert_debug_snapshot!(parse(
             r#"declare let scale: fn (p: mut Point, scale: number) => void"#
         ));
