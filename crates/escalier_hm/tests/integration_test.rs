@@ -3045,7 +3045,7 @@ fn test_mutable() -> Result<(), Errors> {
     let src = r#"
     type Point = {x: number, y: number}
     declare let scale: fn (p: mut Point, factor: number) => Point
-    let mut p: Point = {x: 5, y: 10}
+    let p: mut Point = {x: 5, y: 10}
     let q = scale(p, 2)
     "#;
     let mut program = parse(src).unwrap();
@@ -3053,10 +3053,7 @@ fn test_mutable() -> Result<(), Errors> {
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("p").unwrap();
-    assert_eq!(
-        arena[binding.index].as_string(&arena),
-        r#"mut {x: number, y: number}"#
-    );
+    assert_eq!(arena[binding.index].as_string(&arena), r#"mut Point"#);
 
     let binding = my_ctx.values.get("q").unwrap();
     assert_eq!(
@@ -3067,9 +3064,7 @@ fn test_mutable() -> Result<(), Errors> {
     Ok(())
 }
 
-// TODO: figure out how to make this pass
 #[test]
-#[ignore]
 fn test_passing_literal_as_mutable() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 

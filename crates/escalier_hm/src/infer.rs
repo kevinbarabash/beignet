@@ -125,7 +125,9 @@ pub fn infer_expression(
                 .iter_mut()
                 .map(|arg| {
                     // TODO: handle spreads
-                    infer_expression(arena, arg, ctx)
+                    let t = infer_expression(arena, arg, ctx)?;
+                    let arg: &Expr = arg;
+                    Ok((arg, t))
                 })
                 .collect::<Result<Vec<_>, _>>()?;
 
@@ -617,11 +619,8 @@ pub fn infer_statement(
                         _ => init_idx,
                     };
 
-                    // TODO:
-                    // - if `is_mut` is true, then wrap `init_idx` in a mutable type
-                    // if *is_mut {
-                    //     init_idx = new_mutable_type(arena, init_idx);
-                    // }
+                    let can_be_mutable =
+                        matches!(&init.kind, ExprKind::Object(_) | ExprKind::Tuple(_));
 
                     let idx = match type_ann {
                         Some(type_ann) => {
@@ -629,7 +628,15 @@ pub fn infer_statement(
 
                             // The initializer must conform to the type annotation's
                             // inferred type.
-                            unify(arena, ctx, init_idx, type_ann_idx)?;
+                            if can_be_mutable {
+                                let type_ann_idx = match &arena[type_ann_idx].kind {
+                                    TypeKind::Mutable(Mutable { t }) => *t,
+                                    _ => type_ann_idx,
+                                };
+                                unify(arena, ctx, init_idx, type_ann_idx)?;
+                            } else {
+                                unify(arena, ctx, init_idx, type_ann_idx)?;
+                            }
                             // Results in bindings introduced by the LHS pattern
                             // having their types inferred.
                             // It's okay for pat_type to be the super type here

@@ -3,7 +3,7 @@ use generational_arena::{Arena, Index};
 use itertools::Itertools;
 use std::collections::BTreeSet;
 
-use escalier_ast::{BindingIdent, Literal as Lit, Span};
+use escalier_ast::{BindingIdent, Expr, ExprKind, Literal as Lit, Span};
 
 use crate::context::*;
 use crate::errors::*;
@@ -531,7 +531,7 @@ fn unify_mut(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
 pub fn unify_call(
     arena: &mut Arena<Type>,
     ctx: &Context,
-    arg_types: &[Index],
+    arg_types: &[(&Expr, Index)],
     type_args: Option<&[Index]>,
     t2: Index,
 ) -> Result<Index, Errors> {
@@ -545,7 +545,7 @@ pub fn unify_call(
             let arg_types: Vec<FuncParam> = arg_types
                 .iter()
                 .enumerate()
-                .map(|(i, t)| FuncParam {
+                .map(|(i, (_, t))| FuncParam {
                     pattern: TPat::Ident(BindingIdent {
                         name: format!("arg{i}"),
                         mutable: false,
@@ -624,8 +624,17 @@ pub fn unify_call(
                 )));
             }
 
-            for (p, q) in arg_types.iter().zip(func.params.iter()) {
-                unify(arena, ctx, *p, q.t)?;
+            for ((expr, p), q) in arg_types.iter().zip(func.params.iter()) {
+                let can_be_mutable = matches!(&expr.kind, ExprKind::Object(_) | ExprKind::Tuple(_));
+                if can_be_mutable {
+                    let q_t = match &arena[q.t].kind {
+                        TypeKind::Mutable(Mutable { t }) => *t,
+                        _ => q.t,
+                    };
+                    unify(arena, ctx, *p, q_t)?;
+                } else {
+                    unify(arena, ctx, *p, q.t)?;
+                }
             }
             unify(arena, ctx, ret_type, func.ret)?;
         }
