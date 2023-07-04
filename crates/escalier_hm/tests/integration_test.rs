@@ -2977,68 +2977,6 @@ fn test_type_alias_with_undefined_def() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_tuple_type_equality() {
-    let (mut arena, _) = test_env();
-
-    let number = new_constructor(&mut arena, "number", &[]);
-    let string = new_constructor(&mut arena, "string", &[]);
-    let t1 = new_tuple_type(&mut arena, &[number, string]);
-    let t2 = new_tuple_type(&mut arena, &[number, string]);
-
-    let t1 = arena[t1].clone();
-    let t2 = arena[t2].clone();
-
-    assert!(t1.equals(&t2, &arena));
-}
-
-#[test]
-fn test_object_type_equality() {
-    let (mut arena, _) = test_env();
-
-    let number = new_constructor(&mut arena, "number", &[]);
-    let string = new_constructor(&mut arena, "number", &[]);
-    let t1 = new_object_type(
-        &mut arena,
-        &[
-            TObjElem::Prop(TProp {
-                name: TPropKey::StringKey("x".to_string()),
-                optional: false,
-                mutable: false,
-                t: number,
-            }),
-            TObjElem::Prop(TProp {
-                name: TPropKey::StringKey("y".to_string()),
-                optional: false,
-                mutable: false,
-                t: string,
-            }),
-        ],
-    );
-    let t2 = new_object_type(
-        &mut arena,
-        &[
-            TObjElem::Prop(TProp {
-                name: TPropKey::StringKey("x".to_string()),
-                optional: false,
-                mutable: false,
-                t: number,
-            }),
-            TObjElem::Prop(TProp {
-                name: TPropKey::StringKey("y".to_string()),
-                optional: false,
-                mutable: false,
-                t: string,
-            }),
-        ],
-    );
-
-    let t1 = arena[t1].clone();
-    let t2 = arena[t2].clone();
-
-    assert!(t1.equals(&t2, &arena));
-}
-
-#[test]
 fn test_mutable() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
@@ -3130,6 +3068,95 @@ fn test_sub_objects_are_mutable() -> Result<(), Errors> {
 
     let binding = my_ctx.values.get("b2").unwrap();
     assert_eq!(arena[binding.index].as_string(&arena), r#"mut {c: string}"#);
+
+    Ok(())
+}
+
+#[test]
+fn test_tuple_type_equality() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let a: [number, string]
+    declare let b: [number, string]
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let a = my_ctx.values.get("a").unwrap();
+    let a_t = arena[a.index].clone();
+    let b = my_ctx.values.get("b").unwrap();
+    let b_t = arena[b.index].clone();
+
+    assert!(a_t.equals(&b_t, &arena));
+
+    Ok(())
+}
+
+#[test]
+fn test_function_type_equality() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let add: fn(a: number, b: number) => number
+    declare let sub: fn(a: number, b: number) => number
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let add = my_ctx.values.get("add").unwrap();
+    let add_t = arena[add.index].clone();
+    let sub = my_ctx.values.get("sub").unwrap();
+    let sub_t = arena[sub.index].clone();
+
+    assert!(add_t.equals(&sub_t, &arena));
+
+    Ok(())
+}
+
+#[test]
+fn test_literal_type_equality() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let a = 5
+    let b = 5
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let a = my_ctx.values.get("a").unwrap();
+    let a_t = arena[a.index].clone();
+    let b = my_ctx.values.get("b").unwrap();
+    let b_t = arena[b.index].clone();
+
+    assert!(a_t.equals(&b_t, &arena));
+
+    Ok(())
+}
+
+#[test]
+fn test_mutable_object_type_equality() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Point = {x: number, y: number}
+    let p: mut Point = {x: 5, y: 10}
+    let q: mut Point = {x: 0, y: 1}
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let p = my_ctx.values.get("p").unwrap();
+    let p_t = arena[p.index].clone();
+    let q = my_ctx.values.get("q").unwrap();
+    let q_t = arena[q.index].clone();
+
+    assert!(p_t.equals(&q_t, &arena));
 
     Ok(())
 }

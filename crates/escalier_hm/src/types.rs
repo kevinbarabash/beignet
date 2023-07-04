@@ -516,7 +516,15 @@ pub fn new_mutable_type(arena: &mut Arena<Type>, t: Index) -> Index {
 impl Type {
     pub fn equals(&self, other: &Type, arena: &Arena<Type>) -> bool {
         match (&self.kind, &other.kind) {
-            (TypeKind::Variable(v1), TypeKind::Variable(v2)) => v1.id == v2.id,
+            (TypeKind::Variable(v1), TypeKind::Variable(v2)) => {
+                let (a, b) = match (v1.instance, v2.instance) {
+                    (Some(a), Some(b)) => (&arena[a], &arena[b]),
+                    (Some(a), None) => (&arena[a], other),
+                    (None, Some(b)) => (self, &arena[b]),
+                    (None, None) => return v1.id == v2.id,
+                };
+                a.equals(b, arena)
+            }
             (TypeKind::Constructor(c1), TypeKind::Constructor(c2)) => {
                 c1.name == c2.name
                     && c1.types.len() == c2.types.len()
@@ -528,6 +536,7 @@ impl Type {
             }
             (TypeKind::Literal(l1), TypeKind::Literal(l2)) => l1 == l2,
             (TypeKind::Function(f1), TypeKind::Function(f2)) => {
+                eprintln!("checking function types");
                 let ret1 = &arena[f1.ret];
                 let ret2 = &arena[f2.ret];
                 f1.params.len() == f2.params.len()
