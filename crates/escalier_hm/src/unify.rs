@@ -10,6 +10,34 @@ use crate::errors::*;
 use crate::types::*;
 use crate::util::*;
 
+fn expand(arena: &mut Arena<Type>, ctx: &Context, a: Index) -> Result<Index, Errors> {
+    let a_t = arena[a].clone();
+
+    match &a_t.kind {
+        TypeKind::Constructor(Constructor {
+            name,
+            types: type_args,
+        }) if !name.starts_with("@@")
+            && ![
+                "string",
+                "boolean",
+                "number",
+                "undefined",
+                "unknown",
+                "Promise",
+                "Array",
+            ]
+            .contains(&name.as_str()) =>
+        {
+            match ctx.schemes.get(name) {
+                Some(scheme) => expand_alias(arena, name, scheme, type_args),
+                None => Err(Errors::InferenceError(format!("Unbound type name: {name}"))),
+            }
+        }
+        _ => Ok(a),
+    }
+}
+
 /// Unify the two types t1 and t2.
 ///
 /// Makes the types t1 and t2 the same.
@@ -28,6 +56,8 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
     let b = prune(arena, t2);
     let a_t = arena[a].clone();
     let b_t = arena[b].clone();
+
+    eprintln!("unify({}, {})", a_t.as_string(arena), b_t.as_string(arena));
 
     // TODO: create helper functions for these
     let (a_t, a) = match &a_t.kind {
@@ -108,6 +138,19 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
     match (&a_t.kind, &b_t.kind) {
         (TypeKind::Variable(_), _) => bind(arena, ctx, a, b),
         (_, TypeKind::Variable(_)) => bind(arena, ctx, b, a),
+
+        (TypeKind::Mutable(Mutable { t: t1 }), TypeKind::Mutable(Mutable { t: t2 })) => {
+            unify_mut(arena, ctx, *t1, *t2)
+        }
+
+        // It's okay to use a mutable reference as if it were immutable
+        (TypeKind::Mutable(Mutable { t: t1 }), _) => unify(arena, ctx, *t1, b),
+
+        (_, TypeKind::Mutable(_)) => Err(Errors::InferenceError(format!(
+            "type mismatch: unify({}, {}) failed",
+            a_t.as_string(arena),
+            b_t.as_string(arena)
+        ))),
 
         (_, TypeKind::Constructor(unknown)) if unknown.name == "unknown" => {
             // All types are assignable to `unknown`
@@ -448,6 +491,42 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
     }
 }
 
+// fn unify_mut(&self, t1: &Type, t2: &Type) -> Result<Subst, Vec<TypeError>> {
+fn unify_mut(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Result<(), Errors> {
+    let t1 = prune(arena, t1);
+    let t2 = prune(arena, t2);
+
+    let t1 = expand(arena, ctx, t1)?;
+    let t2 = expand(arena, ctx, t2)?;
+
+    let t1 = arena.get(t1).unwrap();
+    let t2 = arena.get(t2).unwrap();
+
+    // TODO: write our own comparison method that will look up (or prune) indexes
+
+    // TODO: expand aliases and utilities before comparing
+    // assert_eq!(t1, t2);
+
+    if t1.equals(t2, arena) {
+        eprintln!(
+            "unify_mut: {} == {}",
+            t1.as_string(arena),
+            t2.as_string(arena)
+        );
+        Ok(())
+    } else {
+        eprintln!("--------");
+        eprintln!("t1 = {t1:#?}");
+        eprintln!("t2 = {t2:#?}");
+        eprintln!("--------");
+        Err(Errors::InferenceError(format!(
+            "unify_mut: {} != {}",
+            t1.as_string(arena),
+            t2.as_string(arena)
+        )))
+    }
+}
+
 // This function unifies and infers the return type of a function call.
 pub fn unify_call(
     arena: &mut Arena<Type>,
@@ -554,6 +633,9 @@ pub fn unify_call(
             return Err(Errors::InferenceError(
                 "Utility types are not callable".to_string(),
             ))
+        }
+        TypeKind::Mutable(Mutable { t }) => {
+            unify_call(arena, ctx, arg_types, type_args, t)?;
         }
     }
 

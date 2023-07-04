@@ -7,10 +7,16 @@ use crate::types::*;
 use crate::util::*;
 use crate::visitor::{KeyValueStore, Visitor};
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Binding {
+    pub index: Index,
+    pub is_mut: bool,
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct Context {
     // Maps variables to their types.
-    pub values: HashMap<String, Index>,
+    pub values: HashMap<String, Binding>,
     // Maps type aliases to type types definitions.
     // TODO: figure out how we want to track types and schemes
     pub schemes: HashMap<String, Scheme>,
@@ -33,7 +39,7 @@ pub struct Context {
 ///         environment.
 pub fn get_type(arena: &mut Arena<Type>, name: &str, ctx: &Context) -> Result<Index, Errors> {
     if let Some(value) = ctx.values.get(name) {
-        Ok(fresh(arena, *value, ctx))
+        Ok(fresh(arena, value.index, ctx))
     } else {
         Err(Errors::InferenceError(format!(
             "Undefined symbol {:?}",
@@ -85,14 +91,14 @@ impl<'a> Visitor for Fresh<'a> {
 /// Args:
 ///     t: A type to be copied.
 ///     non_generic: A set of non-generic TypeVariables
-pub fn fresh(arena: &mut Arena<Type>, t: Index, ctx: &Context) -> Index {
+pub fn fresh(arena: &mut Arena<Type>, index: Index, ctx: &Context) -> Index {
     let mut fresh = Fresh {
         arena,
         ctx,
         mapping: HashMap::default(),
     };
 
-    fresh.visit_index(&t)
+    fresh.visit_index(&index)
 }
 
 pub struct Instantiate<'a> {
