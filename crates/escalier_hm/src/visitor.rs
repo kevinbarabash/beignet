@@ -92,6 +92,12 @@ pub trait Visitor: KeyValueStore<Index, Type> {
         self.put_type(t)
     }
 
+    fn visit_mutable(&mut self, mutable: &Mutable) -> Mutable {
+        Mutable {
+            t: self.visit_index(&mutable.t),
+        }
+    }
+
     fn visit_index(&mut self, idx: &Index) -> Index {
         let (idx, t) = self.get_type(idx);
         let kind = match &t.kind {
@@ -102,6 +108,7 @@ pub trait Visitor: KeyValueStore<Index, Type> {
             TypeKind::Object(obj) => TypeKind::Object(self.visit_object(obj)),
             TypeKind::Rest(rest) => TypeKind::Rest(self.visit_rest(rest)),
             TypeKind::Utility(utility) => return self.visit_utility(utility),
+            TypeKind::Mutable(mutable) => TypeKind::Mutable(self.visit_mutable(mutable)),
         };
         let new_t = Type { kind };
         self.put_type(new_t)

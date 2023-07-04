@@ -49,6 +49,7 @@ pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
         }
         TypeKind::Constructor(Constructor { types, .. }) => occurs_in(arena, v, &types),
         TypeKind::Utility(Utility { types, .. }) => occurs_in(arena, v, &types),
+        TypeKind::Mutable(Mutable { t }) => occurs_in_type(arena, v, t),
     }
 }
 
@@ -307,6 +308,10 @@ pub fn get_computed_member(
                 "Can't find type alias for {alias_name}"
             ))),
         },
+        TypeKind::Mutable(Mutable { t, .. }) => {
+            let idx = get_computed_member(arena, ctx, *t, key_idx)?;
+            Ok(new_mutable_type(arena, idx))
+        }
         _ => {
             // TODO: provide a more specific error message for type variables
             Err(Errors::InferenceError(

@@ -125,7 +125,9 @@ pub fn infer_expression(
                 .iter_mut()
                 .map(|arg| {
                     // TODO: handle spreads
-                    infer_expression(arena, arg, ctx)
+                    let t = infer_expression(arena, arg, ctx)?;
+                    let arg: &Expr = arg;
+                    Ok((arg, t))
                 })
                 .collect::<Result<Vec<_>, _>>()?;
 
@@ -171,8 +173,8 @@ pub fn infer_expression(
                 unify(arena, &sig_ctx, param_t, type_ann_t)?;
 
                 for (name, binding) in assumps {
-                    sig_ctx.values.insert(name.to_owned(), binding.t);
-                    sig_ctx.non_generic.insert(binding.t);
+                    sig_ctx.non_generic.insert(binding.index);
+                    sig_ctx.values.insert(name.to_owned(), binding);
                 }
 
                 func_params.push(types::FuncParam {
@@ -350,7 +352,7 @@ pub fn infer_expression(
                 for (name, binding) in pat_bindings {
                     // TODO: Update .env to store bindings so that we can handle
                     // mutability correctly
-                    new_ctx.values.insert(name, binding.t);
+                    new_ctx.values.insert(name, binding);
                 }
 
                 let body_type = match arm.body {
@@ -569,7 +571,10 @@ pub fn infer_type_ann(
         TypeAnnKind::TypeOf(expr) => {
             infer_expression(arena, expr, ctx)?
         }
-        TypeAnnKind::Mutable(_) => todo!(),
+        TypeAnnKind::Mutable(type_ann) => {
+            let t = infer_type_ann(arena, type_ann, ctx)?;
+            new_mutable_type(arena, t)
+        },
 
         // TODO: Create types for all of these
         TypeAnnKind::KeyOf(type_ann) => {
@@ -596,6 +601,7 @@ pub fn infer_statement(
     let t = match &mut statement.kind {
         StmtKind::Let {
             is_declare,
+            is_mut, // TODO: move `is_mut` to `BindingIdent` in pattern
             pattern,
             expr: init,
             type_ann,
@@ -613,13 +619,24 @@ pub fn infer_statement(
                         _ => init_idx,
                     };
 
+                    let can_be_mutable =
+                        matches!(&init.kind, ExprKind::Object(_) | ExprKind::Tuple(_));
+
                     let idx = match type_ann {
                         Some(type_ann) => {
                             let type_ann_idx = infer_type_ann(arena, type_ann, ctx)?;
 
                             // The initializer must conform to the type annotation's
                             // inferred type.
-                            unify(arena, ctx, init_idx, type_ann_idx)?;
+                            if can_be_mutable {
+                                let type_ann_idx = match &arena[type_ann_idx].kind {
+                                    TypeKind::Mutable(Mutable { t }) => *t,
+                                    _ => type_ann_idx,
+                                };
+                                unify(arena, ctx, init_idx, type_ann_idx)?;
+                            } else {
+                                unify(arena, ctx, init_idx, type_ann_idx)?;
+                            }
                             // Results in bindings introduced by the LHS pattern
                             // having their types inferred.
                             // It's okay for pat_type to be the super type here
@@ -643,8 +660,14 @@ pub fn infer_statement(
                         }
                     };
 
-                    for (name, binding) in &pat_bindings {
-                        ctx.values.insert(name.clone(), binding.t);
+                    for (name, mut binding) in pat_bindings {
+                        if *is_mut {
+                            binding.index = new_mutable_type(arena, binding.index);
+                            ctx.values.insert(name.clone(), binding);
+                        } else {
+                            ctx.values.insert(name.clone(), binding);
+                        }
+                        // eprintln!("setting {name} to {binding:#?}");
                     }
 
                     pattern.inferred_type = Some(idx);
@@ -662,8 +685,8 @@ pub fn infer_statement(
 
                     unify(arena, ctx, idx, pat_type)?;
 
-                    for (name, binding) in &pat_bindings {
-                        ctx.values.insert(name.clone(), binding.t);
+                    for (name, binding) in pat_bindings {
+                        ctx.values.insert(name.clone(), binding);
                     }
 
                     idx
@@ -752,8 +775,8 @@ pub fn infer_program(
             let (bindings, _) = infer_pattern(arena, pattern, ctx)?;
 
             for (name, binding) in bindings {
-                ctx.non_generic.insert(binding.t);
-                if ctx.values.insert(name.to_owned(), binding.t).is_some() {
+                ctx.non_generic.insert(binding.index);
+                if ctx.values.insert(name.to_owned(), binding).is_some() {
                     return Err(Errors::InferenceError(format!(
                         "{name} cannot be redeclared at the top-level"
                     )));
@@ -916,6 +939,10 @@ fn get_ident_member(
                 "Can't find type alias for Array".to_string(),
             )),
         },
+        TypeKind::Mutable(types::Mutable { t, .. }) => {
+            let idx = get_ident_member(arena, ctx, *t, key_idx)?;
+            Ok(new_mutable_type(arena, idx))
+        }
         _ => Err(Errors::InferenceError(
             "Can only access properties on objects/tuples".to_string(),
         )),

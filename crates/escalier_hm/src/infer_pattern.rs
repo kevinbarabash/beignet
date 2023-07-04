@@ -3,15 +3,15 @@ use std::collections::HashMap;
 
 use escalier_ast::{self as ast, *};
 
-use crate::context::{get_type, Context};
+use crate::context::{get_type, Binding, Context};
 use crate::errors::*;
 use crate::types::{self, *};
 
-#[derive(Clone, Debug)]
-pub struct Binding {
-    pub mutable: bool,
-    pub t: Index,
-}
+// #[derive(Clone, Debug)]
+// pub struct Binding {
+//     pub mutable: bool,
+//     pub t: Index,
+// }
 
 type Assump = HashMap<String, Binding>;
 
@@ -33,8 +33,8 @@ pub fn infer_pattern(
                     .insert(
                         name.to_owned(),
                         Binding {
-                            mutable: *mutable,
-                            t,
+                            index: t,
+                            is_mut: *mutable,
                         },
                     )
                     .is_some()
@@ -78,7 +78,13 @@ pub fn infer_pattern(
 
                             let t = new_var_type(arena, None);
                             if assump
-                                .insert(ident.name.to_owned(), Binding { mutable: false, t })
+                                .insert(
+                                    ident.name.to_owned(),
+                                    Binding {
+                                        index: t,
+                                        is_mut: false,
+                                    },
+                                )
                                 .is_some()
                             {
                                 todo!("return an error");
@@ -143,7 +149,13 @@ pub fn infer_pattern(
                     name => get_type(arena, name, ctx)?,
                 };
 
-                assump.insert(ident.name.to_owned(), Binding { t, mutable: false });
+                assump.insert(
+                    ident.name.to_owned(),
+                    Binding {
+                        index: t,
+                        is_mut: false,
+                    },
+                );
 
                 t
             }

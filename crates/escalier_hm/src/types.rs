@@ -172,6 +172,11 @@ pub struct Utility {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Mutable {
+    pub t: Index,
+}
+
+#[derive(Debug, Clone, Hash)]
 pub enum TypeKind {
     Variable(Variable),       // TODO: rename to TypeVar
     Constructor(Constructor), // TODO: rename to TypeRef
@@ -180,9 +185,10 @@ pub enum TypeKind {
     Object(Object),
     Rest(Rest),
     Utility(Utility),
+    Mutable(Mutable),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone)]
 pub struct Type {
     // pub id: Index,
     pub kind: TypeKind,
@@ -352,6 +358,7 @@ impl Type {
                 ),
                 _ => unimplemented!(),
             },
+            TypeKind::Mutable(Mutable { t }) => format!("mut {}", arena[*t].as_string(arena)),
         }
     }
 }
@@ -498,6 +505,97 @@ pub fn new_utility_type(arena: &mut Arena<Type>, name: &str, types: &[Index]) ->
             types: types.to_vec(),
         }),
     })
+}
+
+pub fn new_mutable_type(arena: &mut Arena<Type>, t: Index) -> Index {
+    arena.insert(Type {
+        kind: TypeKind::Mutable(Mutable { t }),
+    })
+}
+
+impl Type {
+    pub fn equals(&self, other: &Type, arena: &Arena<Type>) -> bool {
+        match (&self.kind, &other.kind) {
+            (TypeKind::Variable(v1), TypeKind::Variable(v2)) => {
+                let (a, b) = match (v1.instance, v2.instance) {
+                    (Some(a), Some(b)) => (&arena[a], &arena[b]),
+                    (Some(a), None) => (&arena[a], other),
+                    (None, Some(b)) => (self, &arena[b]),
+                    (None, None) => return v1.id == v2.id,
+                };
+                a.equals(b, arena)
+            }
+            (TypeKind::Constructor(c1), TypeKind::Constructor(c2)) => {
+                c1.name == c2.name
+                    && c1.types.len() == c2.types.len()
+                    && c1.types.iter().zip(c2.types.iter()).all(|(a, b)| {
+                        let a = &arena[*a];
+                        let b = &arena[*b];
+                        a.equals(b, arena)
+                    })
+            }
+            (TypeKind::Literal(l1), TypeKind::Literal(l2)) => l1 == l2,
+            (TypeKind::Function(f1), TypeKind::Function(f2)) => {
+                eprintln!("checking function types");
+                let ret1 = &arena[f1.ret];
+                let ret2 = &arena[f2.ret];
+                f1.params.len() == f2.params.len()
+                    && f1.params.iter().zip(f2.params.iter()).all(|(a, b)| {
+                        let a = &arena[a.t];
+                        let b = &arena[b.t];
+                        a.equals(b, arena)
+                    })
+                    && ret1.equals(ret2, arena)
+            }
+            (TypeKind::Object(o1), TypeKind::Object(o2)) => {
+                o1.props.len() == o2.props.len()
+                    && o1
+                        .props
+                        .iter()
+                        .all(|p1| o2.props.iter().any(|p2| obj_elem_equals(arena, p1, p2)))
+            }
+            (TypeKind::Rest(r1), TypeKind::Rest(r2)) => {
+                let t1 = &arena[r1.arg];
+                let t2 = &arena[r2.arg];
+                t1.equals(t2, arena)
+            }
+            (TypeKind::Utility(_), TypeKind::Utility(_)) => {
+                todo!()
+            }
+            (TypeKind::Mutable(m1), TypeKind::Mutable(m2)) => {
+                let t1 = &arena[m1.t];
+                let t2 = &arena[m2.t];
+                t1.equals(t2, arena)
+            }
+            _ => false,
+        }
+    }
+}
+
+fn obj_elem_equals(arena: &Arena<Type>, elem1: &TObjElem, elem2: &TObjElem) -> bool {
+    match (elem1, elem2) {
+        (TObjElem::Method(m1), TObjElem::Method(m2)) => {
+            m1.name == m2.name
+                && m1.params.len() == m2.params.len()
+                && m1.params.iter().zip(m2.params.iter()).all(|(a, b)| {
+                    let a = &arena[a.t];
+                    let b = &arena[b.t];
+                    a.equals(b, arena)
+                })
+        }
+        (TObjElem::Index(i1), TObjElem::Index(i2)) => {
+            // TODO: compare key types as well
+            let t1 = &arena[i1.t];
+            let t2 = &arena[i2.t];
+            t1.equals(t2, arena)
+        }
+        (TObjElem::Prop(p1), TObjElem::Prop(p2)) => {
+            let t1 = &arena[p1.t];
+            let t2 = &arena[p2.t];
+            t1.equals(t2, arena)
+        }
+        _ => false,
+    }
 }
 
 //impl fmt::Debug for Type {
