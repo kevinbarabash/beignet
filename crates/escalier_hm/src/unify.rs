@@ -10,34 +10,6 @@ use crate::errors::*;
 use crate::types::*;
 use crate::util::*;
 
-fn expand(arena: &mut Arena<Type>, ctx: &Context, a: Index) -> Result<Index, Errors> {
-    let a_t = arena[a].clone();
-
-    match &a_t.kind {
-        TypeKind::Constructor(Constructor {
-            name,
-            types: type_args,
-        }) if !name.starts_with("@@")
-            && ![
-                "string",
-                "boolean",
-                "number",
-                "undefined",
-                "unknown",
-                "Promise",
-                "Array",
-            ]
-            .contains(&name.as_str()) =>
-        {
-            match ctx.schemes.get(name) {
-                Some(scheme) => expand_alias(arena, name, scheme, type_args),
-                None => Err(Errors::InferenceError(format!("Unbound type name: {name}"))),
-            }
-        }
-        _ => Ok(a),
-    }
-}
-
 /// Unify the two types t1 and t2.
 ///
 /// Makes the types t1 and t2 the same.
@@ -54,86 +26,12 @@ fn expand(arena: &mut Arena<Type>, ctx: &Context, a: Index) -> Result<Index, Err
 pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Result<(), Errors> {
     let a = prune(arena, t1);
     let b = prune(arena, t2);
+
+    let a = expand(arena, ctx, a)?;
+    let b = expand(arena, ctx, b)?;
+
     let a_t = arena[a].clone();
     let b_t = arena[b].clone();
-
-    eprintln!("unify({}, {})", a_t.as_string(arena), b_t.as_string(arena));
-
-    // TODO: create helper functions for these
-    let (a_t, a) = match &a_t.kind {
-        TypeKind::Constructor(Constructor {
-            name,
-            types: type_args,
-        }) if !name.starts_with("@@")
-            && ![
-                "string",
-                "boolean",
-                "number",
-                "undefined",
-                "unknown",
-                "Promise",
-                "Array",
-            ]
-            .contains(&name.as_str()) =>
-        {
-            match ctx.schemes.get(name) {
-                Some(scheme) => {
-                    let idx = expand_alias(arena, name, scheme, type_args)?;
-                    let t = arena.get(idx).unwrap().clone();
-                    Ok((t, idx))
-                }
-                None => Err(Errors::InferenceError(format!("Unbound type name: {name}"))),
-            }
-        }
-        _ => Ok((a_t, a)),
-    }?;
-
-    let (b_t, b) = match &b_t.kind {
-        TypeKind::Constructor(Constructor {
-            name,
-            types: type_args,
-        }) if !name.starts_with("@@")
-            && ![
-                "string",
-                "boolean",
-                "number",
-                "undefined",
-                "unknown",
-                "Promise",
-                "Array",
-            ]
-            .contains(&name.as_str()) =>
-        {
-            match ctx.schemes.get(name) {
-                Some(scheme) => {
-                    let idx = expand_alias(arena, name, scheme, type_args)?;
-                    let t = arena.get(idx).unwrap().clone();
-                    Ok((t, idx))
-                }
-                None => Err(Errors::InferenceError(format!("Unbound type name: {name}"))),
-            }
-        }
-        _ => Ok((b_t, b)),
-    }?;
-
-    // TODO: create helper functions for these
-    let (a_t, a) = match &a_t.kind {
-        TypeKind::Utility(_) => {
-            let idx = expand_type(arena, ctx, a)?;
-            let t = arena.get(idx).unwrap().clone();
-            Ok((t, idx))
-        }
-        _ => Ok((a_t, a)),
-    }?;
-
-    let (b_t, b) = match &b_t.kind {
-        TypeKind::Utility(_) => {
-            let idx = expand_type(arena, ctx, b)?;
-            let t = arena.get(idx).unwrap().clone();
-            Ok((t, idx))
-        }
-        _ => Ok((b_t, b)),
-    }?;
 
     match (&a_t.kind, &b_t.kind) {
         (TypeKind::Variable(_), _) => bind(arena, ctx, a, b),
@@ -491,7 +389,6 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
     }
 }
 
-// fn unify_mut(&self, t1: &Type, t2: &Type) -> Result<Subst, Vec<TypeError>> {
 fn unify_mut(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Result<(), Errors> {
     let t1 = prune(arena, t1);
     let t2 = prune(arena, t2);
@@ -502,23 +399,9 @@ fn unify_mut(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
     let t1 = arena.get(t1).unwrap();
     let t2 = arena.get(t2).unwrap();
 
-    // TODO: write our own comparison method that will look up (or prune) indexes
-
-    // TODO: expand aliases and utilities before comparing
-    // assert_eq!(t1, t2);
-
     if t1.equals(t2, arena) {
-        eprintln!(
-            "unify_mut: {} == {}",
-            t1.as_string(arena),
-            t2.as_string(arena)
-        );
         Ok(())
     } else {
-        eprintln!("--------");
-        eprintln!("t1 = {t1:#?}");
-        eprintln!("t2 = {t2:#?}");
-        eprintln!("--------");
         Err(Errors::InferenceError(format!(
             "unify_mut: {} != {}",
             t1.as_string(arena),
@@ -767,5 +650,43 @@ pub fn simplify_intersection(arena: &mut Arena<Type>, in_types: &[Index]) -> Ind
         out_types[0]
     } else {
         new_intersection_type(arena, &out_types)
+    }
+}
+
+fn expand(arena: &mut Arena<Type>, ctx: &Context, a: Index) -> Result<Index, Errors> {
+    let a_t = arena[a].clone();
+
+    let a = match &a_t.kind {
+        TypeKind::Constructor(Constructor {
+            name,
+            types: type_args,
+        }) if !name.starts_with("@@")
+            && ![
+                "string",
+                "boolean",
+                "number",
+                "undefined",
+                "unknown",
+                "Promise",
+                "Array",
+            ]
+            .contains(&name.as_str()) =>
+        {
+            match ctx.schemes.get(name) {
+                Some(scheme) => expand_alias(arena, name, scheme, type_args),
+                None => Err(Errors::InferenceError(format!("Unbound type name: {name}"))),
+            }
+        }
+        _ => Ok(a),
+    }?;
+
+    let a_t = arena[a].clone();
+
+    match &a_t.kind {
+        TypeKind::Utility(_) => {
+            let idx = expand_type(arena, ctx, a)?;
+            Ok(idx)
+        }
+        _ => Ok(a),
     }
 }
