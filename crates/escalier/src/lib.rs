@@ -2,8 +2,8 @@ use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_void};
 use std::str;
 
-use escalier_infer::*;
-use escalier_interop::parse::parse_dts;
+use escalier_old_infer::*;
+use escalier_old_interop::parse::parse_dts;
 
 pub mod compile_error;
 pub mod diagnostics;

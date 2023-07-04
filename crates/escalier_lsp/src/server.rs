@@ -11,11 +11,11 @@ use lsp_types::notification::{DidChangeTextDocument, DidOpenTextDocument};
 use lsp_types::request::{HoverRequest, SemanticTokensFullRequest};
 use lsp_types::*;
 
-use escalier_interop::parse::parse_dts;
 use escalier_old_ast::types::Type;
 use escalier_old_ast::values::{
     Expr, Pattern, Position, Program, SourceLocation, Statement, TypeAnn,
 };
+use escalier_old_interop::parse::parse_dts;
 use escalier_old_parser::parse;
 
 use crate::semantic_tokens::get_semantic_tokens;
@@ -91,7 +91,7 @@ impl LanguageServer {
 
                 // Update TypeError to implement Error + Sync + Send
                 eprintln!("inferring types");
-                escalier_infer::infer_prog(&mut prog, &mut checker).unwrap();
+                escalier_old_infer::infer_prog(&mut prog, &mut checker).unwrap();
 
                 let end = SystemTime::now()
                     .duration_since(UNIX_EPOCH)

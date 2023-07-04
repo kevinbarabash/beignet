@@ -1,7 +1,7 @@
 use escalier_codegen::*;
-use escalier_infer::TypeError;
-use escalier_infer::*;
 use escalier_old_ast::values::{Program, StmtKind};
+use escalier_old_infer::TypeError;
+use escalier_old_infer::*;
 use escalier_old_parser::parse;
 
 pub fn current_report_message(checker: &Checker) -> String {
@@ -44,9 +44,9 @@ fn infer_prog(src: &str) -> (Program, Checker) {
         }
     };
     // println!("prog = {:#?}", &prog);
-    let mut checker = escalier_infer::Checker::default();
+    let mut checker = escalier_old_infer::Checker::default();
 
-    match escalier_infer::infer_prog(&mut prog, &mut checker) {
+    match escalier_old_infer::infer_prog(&mut prog, &mut checker) {
         Ok(()) => (prog, checker),
         Err(error) => {
             let message = error

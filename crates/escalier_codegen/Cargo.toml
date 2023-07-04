@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 escalier_old_ast = { version = "0.1.0", path = "../escalier_old_ast" }
-escalier_infer = { version = "0.1.0", path = "../escalier_infer" }
+escalier_old_infer = { version = "0.1.0", path = "../escalier_old_infer" }
 itertools = "0.10.3"
 sourcemap = "6"
 swc_atoms = "0.5.6"

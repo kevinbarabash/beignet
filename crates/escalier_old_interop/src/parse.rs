@@ -6,13 +6,13 @@ use swc_ecma_ast::*;
 use swc_ecma_parser::{error::Error, parse_file_as_module, Syntax, TsConfig};
 use swc_ecma_visit::*;
 
-use escalier_infer::{self, get_sub_and_type_params, Checker, Scheme, Subst, Substitutable};
 use escalier_old_ast::types::{
     self as types, RestPat, TCallable, TConditionalType, TFnParam, TIndex, TIndexAccess, TIndexKey,
     TKeyword, TLam, TMappedType, TMappedTypeChangeProp, TObjElem, TObject, TPat, TProp, TPropKey,
     TRef, Type, TypeKind, TypeParam,
 };
 use escalier_old_ast::values::{Lit, DUMMY_LOC};
+use escalier_old_infer::{self, get_sub_and_type_params, Checker, Scheme, Subst, Substitutable};
 
 use crate::overrides::maybe_override_string_methods;
 use crate::util;
@@ -833,7 +833,7 @@ impl Visit for InterfaceCollector {
     }
 }
 
-pub fn parse_dts(d_ts_source: &str) -> Result<escalier_infer::Checker, Error> {
+pub fn parse_dts(d_ts_source: &str) -> Result<escalier_old_infer::Checker, Error> {
     let cm = Arc::<SourceMap>::default();
     let fm = cm.new_source_file(FileName::Anon, d_ts_source.to_owned());
 
@@ -896,10 +896,10 @@ pub fn parse_dts(d_ts_source: &str) -> Result<escalier_infer::Checker, Error> {
         }
     }
 
-    let checker = escalier_infer::Checker {
+    let checker = escalier_old_infer::Checker {
         next_id: collector.checker.next_id,
         current_scope: collector.checker.current_scope,
-        ..escalier_infer::Checker::default()
+        ..escalier_old_infer::Checker::default()
     };
     Ok(checker)
 }

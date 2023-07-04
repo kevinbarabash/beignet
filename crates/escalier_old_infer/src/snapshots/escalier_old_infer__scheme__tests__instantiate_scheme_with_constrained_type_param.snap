@@ -1,0 +1,65 @@
+---
+source: crates/escalier_old_infer/src/scheme.rs
+expression: t
+---
+Type {
+    kind: Object(
+        TObject {
+            elems: [
+                Prop(
+                    TProp {
+                        name: StringKey(
+                            "a",
+                        ),
+                        optional: false,
+                        mutable: false,
+                        t: Type {
+                            kind: Var(
+                                TVar {
+                                    id: 5,
+                                    constraint: None,
+                                },
+                            ),
+                            id: 1,
+                            mutable: false,
+                            provenance: None,
+                        },
+                    },
+                ),
+                Prop(
+                    TProp {
+                        name: StringKey(
+                            "b",
+                        ),
+                        optional: false,
+                        mutable: false,
+                        t: Type {
+                            kind: Var(
+                                TVar {
+                                    id: 7,
+                                    constraint: Some(
+                                        Type {
+                                            kind: Keyword(
+                                                String,
+                                            ),
+                                            id: 4,
+                                            mutable: false,
+                                            provenance: None,
+                                        },
+                                    ),
+                                },
+                            ),
+                            id: 2,
+                            mutable: false,
+                            provenance: None,
+                        },
+                    },
+                ),
+            ],
+            is_interface: false,
+        },
+    ),
+    id: 3,
+    mutable: false,
+    provenance: None,
+}

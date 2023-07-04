@@ -5,8 +5,8 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::str;
 
-use escalier_infer::*;
-use escalier_interop::parse::parse_dts;
+use escalier_old_infer::*;
+use escalier_old_interop::parse::parse_dts;
 
 use escalier::diagnostics::type_errors_to_string;
 

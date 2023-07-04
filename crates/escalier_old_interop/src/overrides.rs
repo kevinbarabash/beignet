@@ -1,8 +1,8 @@
 use derive_visitor::{Drive, DriveMut, Visitor, VisitorMut};
 use swc_ecma_ast::TsInterfaceDecl;
 
-use escalier_infer::Checker;
 use escalier_old_ast::types::*;
+use escalier_old_infer::Checker;
 
 pub fn maybe_override_string_methods(
     decl: &TsInterfaceDecl,

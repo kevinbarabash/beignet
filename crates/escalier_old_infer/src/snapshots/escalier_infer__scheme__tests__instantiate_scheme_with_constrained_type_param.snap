@@ -1,5 +1,5 @@
 ---
-source: crates/escalier_infer/src/scheme.rs
+source: crates/escalier_old_infer/src/scheme.rs
 expression: t
 ---
 Type {

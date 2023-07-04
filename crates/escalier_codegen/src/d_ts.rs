@@ -6,12 +6,12 @@ use swc_common::{SourceMap, DUMMY_SP};
 use swc_ecma_ast::*;
 use swc_ecma_codegen::*;
 
-use escalier_infer::{immutable_obj_type, Context, Scope, TypeError};
 use escalier_old_ast::types::{
     TConditionalType, TFnParam, TGetter, TIndexAccess, TInferType, TMappedType, TObjElem, TObject,
     TPat, TPropKey, TSetter, TVar, Type, TypeKind, TypeParam,
 };
 use escalier_old_ast::{types, values};
+use escalier_old_infer::{immutable_obj_type, Context, Scope, TypeError};
 
 pub fn codegen_d_ts(
     program: &values::Program,

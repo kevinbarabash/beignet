@@ -1,6 +1,6 @@
 use std::fmt;
 
-use escalier_infer::{Diagnostic, TypeError};
+use escalier_old_infer::{Diagnostic, TypeError};
 use escalier_old_parser::ParseError;
 
 #[derive(Debug, PartialEq, Eq)]

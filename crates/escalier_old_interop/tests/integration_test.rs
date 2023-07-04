@@ -1,8 +1,8 @@
 use std::fs;
 
-use escalier_infer::{Checker, Context, TypeError};
-use escalier_interop::parse::*;
 use escalier_old_ast::values::Program;
+use escalier_old_infer::{Checker, Context, TypeError};
+use escalier_old_interop::parse::*;
 use escalier_old_parser::parse;
 
 pub fn messages(report: &[TypeError]) -> Vec<String> {
@@ -11,7 +11,7 @@ pub fn messages(report: &[TypeError]) -> Vec<String> {
 
 static LIB_ES5_D_TS: &str = "../../node_modules/typescript/lib/lib.es5.d.ts";
 
-fn infer_prog(src: &str) -> (Program, escalier_infer::Scope) {
+fn infer_prog(src: &str) -> (Program, escalier_old_infer::Scope) {
     let lib = fs::read_to_string(LIB_ES5_D_TS).unwrap();
     let mut checker = parse_dts(&lib).unwrap();
 
@@ -23,7 +23,7 @@ fn infer_prog(src: &str) -> (Program, escalier_infer::Scope) {
             panic!("Error parsing expression");
         }
     };
-    match escalier_infer::infer_prog(&mut prog, &mut checker) {
+    match escalier_old_infer::infer_prog(&mut prog, &mut checker) {
         Ok(_) => {
             if !checker.current_report.is_empty() {
                 panic!("was expect infer_prog() to return no errors");
@@ -52,7 +52,7 @@ fn infer_prog_with_type_error(lib: &str, src: &str) -> Vec<String> {
             panic!("Error parsing expression");
         }
     };
-    match escalier_infer::infer_prog(&mut prog, &mut checker) {
+    match escalier_old_infer::infer_prog(&mut prog, &mut checker) {
         Ok(_) => panic!("was expect infer_prog() to return an error"),
         Err(report) => messages(&report),
     }
@@ -194,7 +194,7 @@ fn infer_callable_results_on_interface() {
             panic!("Error parsing expression");
         }
     };
-    escalier_infer::infer_prog(&mut prog, &mut checker).unwrap();
+    escalier_old_infer::infer_prog(&mut prog, &mut checker).unwrap();
 
     let result = format!("{}", checker.lookup_value("num").unwrap());
     assert_eq!(result, "number");
@@ -230,7 +230,7 @@ fn infer_index_value_on_interface() {
         }
     };
 
-    escalier_infer::infer_prog(&mut prog, &mut checker).unwrap();
+    escalier_old_infer::infer_prog(&mut prog, &mut checker).unwrap();
 
     let result = format!("{}", checker.lookup_value("num").unwrap());
     assert_eq!(result, "number | undefined");
@@ -261,11 +261,11 @@ fn infer_generic_index_value_on_interface() {
         }
     };
 
-    escalier_infer::infer_prog(&mut prog, &mut checker).unwrap();
+    escalier_old_infer::infer_prog(&mut prog, &mut checker).unwrap();
 
     let result = format!("{}", checker.lookup_value("id").unwrap());
     // NOTE: The type variables aren't normalized.  See comment inside
-    // norm_type() in escalier_infer/src/util.rs.
+    // norm_type() in escalier_old_infer/src/util.rs.
     assert_eq!(result, "<T>(arg: T) => T | undefined");
 }
 
@@ -316,7 +316,7 @@ fn instantiating_generic_interfaces() {
         }
     };
 
-    escalier_infer::infer_prog(&mut prog, &mut checker).unwrap();
+    escalier_old_infer::infer_prog(&mut prog, &mut checker).unwrap();
 
     let result = format!("{}", checker.lookup_value("bar").unwrap());
     assert_eq!(result, "<A>(x: number) => A");
@@ -345,7 +345,7 @@ fn interface_with_generic_method() {
         }
     };
 
-    escalier_infer::infer_prog(&mut prog, &mut checker).unwrap();
+    escalier_old_infer::infer_prog(&mut prog, &mut checker).unwrap();
 
     let result = format!("{}", checker.lookup_value("bar").unwrap());
     assert_eq!(result, "<U>(x: U) => U");
@@ -376,7 +376,7 @@ fn merging_generic_interfaces() {
         }
     };
 
-    escalier_infer::infer_prog(&mut prog, &mut checker).unwrap();
+    escalier_old_infer::infer_prog(&mut prog, &mut checker).unwrap();
 
     let result = format!("{}", checker.lookup_scheme("Foo").unwrap());
     assert_eq!(
@@ -585,7 +585,7 @@ fn infer_out_of_order_exclude() {
             panic!("Error parsing expression");
         }
     };
-    escalier_infer::infer_prog(&mut prog, &mut checker).unwrap();
+    escalier_old_infer::infer_prog(&mut prog, &mut checker).unwrap();
 
     let t = checker.lookup_type("T1").unwrap();
     let t = checker.expand_type(&t).unwrap();

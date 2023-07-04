@@ -12,8 +12,8 @@ lsp-types = "0.93.2"
 serde = "1.0.152"
 serde_json = "1.0.91"
 escalier_old_ast = { version = "0.1.0", path = "../escalier_old_ast" }
-escalier_interop = { version = "0.1.0", path = "../escalier_interop" }
-escalier_infer = { version = "0.1.0", path = "../escalier_infer" }
+escalier_old_interop = { version = "0.1.0", path = "../escalier_old_interop" }
+escalier_old_infer = { version = "0.1.0", path = "../escalier_old_infer" }
 escalier_old_parser = { version = "0.1.0", path = "../escalier_old_parser" }
 
 [dev-dependencies]

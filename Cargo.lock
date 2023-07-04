@@ -352,9 +352,9 @@ version = "0.1.0"
 dependencies = [
  "ariadne 0.1.5",
  "escalier_codegen",
- "escalier_infer",
- "escalier_interop",
  "escalier_old_ast",
+ "escalier_old_infer",
+ "escalier_old_interop",
  "escalier_old_parser",
  "insta",
  "pretty_assertions",
@@ -376,9 +376,9 @@ name = "escalier_cli"
 version = "0.1.0"
 dependencies = [
  "escalier_codegen",
- "escalier_infer",
- "escalier_interop",
  "escalier_old_ast",
+ "escalier_old_infer",
+ "escalier_old_interop",
  "escalier_old_parser",
  "insta",
  "pretty_assertions",
@@ -390,8 +390,8 @@ dependencies = [
 name = "escalier_codegen"
 version = "0.1.0"
 dependencies = [
- "escalier_infer",
  "escalier_old_ast",
+ "escalier_old_infer",
  "escalier_old_parser",
  "insta",
  "itertools 0.10.5",
@@ -424,48 +424,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "escalier_infer"
-version = "0.1.0"
-dependencies = [
- "ariadne 0.3.0",
- "array_tool",
- "defaultmap",
- "derive-visitor",
- "escalier_old_ast",
- "escalier_old_parser",
- "im",
- "insta",
- "itertools 0.11.0",
- "regex-syntax",
-]
-
-[[package]]
-name = "escalier_interop"
-version = "0.1.0"
-dependencies = [
- "defaultmap",
- "derive-visitor",
- "escalier_infer",
- "escalier_old_ast",
- "escalier_old_parser",
- "insta",
- "memoize",
- "swc_atoms",
- "swc_common",
- "swc_ecma_ast",
- "swc_ecma_parser",
- "swc_ecma_visit",
-]
-
-[[package]]
 name = "escalier_lsp"
 version = "0.1.0"
 dependencies = [
  "crossbeam",
  "derive-visitor",
- "escalier_infer",
- "escalier_interop",
  "escalier_old_ast",
+ "escalier_old_infer",
+ "escalier_old_interop",
  "escalier_old_parser",
  "insta",
  "lsp-server",
@@ -484,6 +450,40 @@ dependencies = [
  "swc_common",
  "swc_ecma_ast",
  "tree-sitter",
+]
+
+[[package]]
+name = "escalier_old_infer"
+version = "0.1.0"
+dependencies = [
+ "ariadne 0.3.0",
+ "array_tool",
+ "defaultmap",
+ "derive-visitor",
+ "escalier_old_ast",
+ "escalier_old_parser",
+ "im",
+ "insta",
+ "itertools 0.11.0",
+ "regex-syntax",
+]
+
+[[package]]
+name = "escalier_old_interop"
+version = "0.1.0"
+dependencies = [
+ "defaultmap",
+ "derive-visitor",
+ "escalier_old_ast",
+ "escalier_old_infer",
+ "escalier_old_parser",
+ "insta",
+ "memoize",
+ "swc_atoms",
+ "swc_common",
+ "swc_ecma_ast",
+ "swc_ecma_parser",
+ "swc_ecma_visit",
 ]
 
 [[package]]

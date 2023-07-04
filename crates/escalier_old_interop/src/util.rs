@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
-use escalier_infer::{Checker, Scheme};
 use escalier_old_ast::types::{TObjElem, TObject, TPropKey, TypeKind};
+use escalier_old_infer::{Checker, Scheme};
 
 pub fn merge_schemes(old_scheme: &Scheme, new_scheme: &Scheme, checker: &mut Checker) -> Scheme {
     let type_params_1 = &old_scheme.type_params;
