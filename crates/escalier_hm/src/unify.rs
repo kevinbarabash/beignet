@@ -50,7 +50,19 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             b_t.as_string(arena)
         ))),
 
-        (_, TypeKind::Constructor(unknown)) if unknown.name == "unknown" => {
+        (TypeKind::Keyword(kw1), TypeKind::Keyword(kw2)) => {
+            if kw1 == kw2 {
+                Ok(())
+            } else {
+                Err(Errors::InferenceError(format!(
+                    "type mismatch: {} != {}",
+                    a_t.as_string(arena),
+                    b_t.as_string(arena)
+                )))
+            }
+        }
+
+        (_, TypeKind::Keyword(Keyword::Unknown)) => {
             // All types are assignable to `unknown`
             Ok(())
         }
@@ -139,7 +151,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
         {
             let p = array.types[0];
             for q in &tuple.types {
-                let undefined = new_constructor(arena, "undefined", &[]);
+                let undefined = new_keyword(arena, Keyword::Undefined);
                 let p_or_undefined = new_union_type(arena, &[p, undefined]);
 
                 match &arena[*q].kind {
@@ -210,21 +222,9 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             }
             Ok(())
         }
-        (TypeKind::Literal(Lit::Number(_)), TypeKind::Constructor(Constructor { name, .. }))
-            if name == "number" =>
-        {
-            Ok(())
-        }
-        (TypeKind::Literal(Lit::String(_)), TypeKind::Constructor(Constructor { name, .. }))
-            if name == "string" =>
-        {
-            Ok(())
-        }
-        (TypeKind::Literal(Lit::Boolean(_)), TypeKind::Constructor(Constructor { name, .. }))
-            if name == "boolean" =>
-        {
-            Ok(())
-        }
+        (TypeKind::Literal(Lit::Number(_)), TypeKind::Keyword(Keyword::Number)) => Ok(()),
+        (TypeKind::Literal(Lit::String(_)), TypeKind::Keyword(Keyword::String)) => Ok(()),
+        (TypeKind::Literal(Lit::Boolean(_)), TypeKind::Keyword(Keyword::Boolean)) => Ok(()),
         (TypeKind::Object(object1), TypeKind::Object(object2)) => {
             // object1 must have atleast as the same properties as object2
             'outer: for prop2 in &object2.props {
@@ -235,14 +235,14 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                         {
                             let p1_t = match prop1.optional {
                                 true => {
-                                    let undefined = new_constructor(arena, "undefined", &[]);
+                                    let undefined = new_keyword(arena, Keyword::Undefined);
                                     new_union_type(arena, &[prop1.t, undefined])
                                 }
                                 false => prop1.t,
                             };
                             let p2_t = match prop2.optional {
                                 true => {
-                                    let undefined = new_constructor(arena, "undefined", &[]);
+                                    let undefined = new_keyword(arena, Keyword::Undefined);
                                     new_union_type(arena, &[prop2.t, undefined])
                                 }
                                 false => prop2.t,
@@ -529,6 +529,9 @@ pub fn unify_call(
         TypeKind::Mutable(Mutable { t }) => {
             unify_call(arena, ctx, arg_types, type_args, t)?;
         }
+        TypeKind::Keyword(keyword) => {
+            return Err(Errors::InferenceError(format!("{keyword} is not callable")))
+        }
     }
 
     // We need to prune the return type, because it might be a type variable.
@@ -660,18 +663,7 @@ fn expand(arena: &mut Arena<Type>, ctx: &Context, a: Index) -> Result<Index, Err
         TypeKind::Constructor(Constructor {
             name,
             types: type_args,
-        }) if !name.starts_with("@@")
-            && ![
-                "string",
-                "boolean",
-                "number",
-                "undefined",
-                "unknown",
-                "Promise",
-                "Array",
-            ]
-            .contains(&name.as_str()) =>
-        {
+        }) if !name.starts_with("@@") && !["Promise", "Array"].contains(&name.as_str()) => {
             match ctx.schemes.get(name) {
                 Some(scheme) => expand_alias(arena, name, scheme, type_args),
                 None => Err(Errors::InferenceError(format!("Unbound type name: {name}"))),

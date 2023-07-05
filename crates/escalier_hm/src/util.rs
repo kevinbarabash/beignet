@@ -28,6 +28,7 @@ pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
     match arena.get(pruned_type2).unwrap().clone().kind {
         TypeKind::Variable(_) => false, // leaf node
         TypeKind::Literal(_) => false,  // leaf node
+        TypeKind::Keyword(_) => false,  // leaf node
         TypeKind::Object(Object { props }) => props.iter().any(|prop| match prop {
             TObjElem::Method(method) => {
                 // TODO: check constraints and default on type_params
@@ -159,25 +160,9 @@ pub fn expand_type(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<I
         TypeKind::Constructor(Constructor { name, types }) if !name.starts_with("@@") => {
             match ctx.schemes.get(name) {
                 Some(scheme) => expand_alias(arena, name, scheme, types),
-                None => {
-                    if [
-                        "number",
-                        "string",
-                        "boolean",
-                        "symbol",
-                        "null",
-                        "undefined",
-                        "never",
-                    ]
-                    .contains(&name.as_str())
-                    {
-                        Ok(t)
-                    } else {
-                        Err(Errors::InferenceError(format!(
-                            "Can't find type alias for {name}"
-                        )))
-                    }
-                }
+                None => Err(Errors::InferenceError(format!(
+                    "Can't find type alias for {name}"
+                ))),
             }
         }
         TypeKind::Utility(Utility { kind, types }) => match kind {
@@ -209,7 +194,7 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
             }
 
             match keys.len() {
-                0 => Ok(new_constructor(arena, "never", &[])),
+                0 => Ok(new_keyword(arena, Keyword::Never)),
                 1 => Ok(keys[0].to_owned()),
                 _ => Ok(new_union_type(arena, &keys)),
             }
@@ -257,9 +242,9 @@ pub fn get_computed_member(
                     // to the union of all types in the tuple
                     get_prop(arena, ctx, obj_idx, key_idx)
                 }
-                TypeKind::Constructor(constructor) if constructor.name == "number" => {
+                TypeKind::Keyword(Keyword::Number) => {
                     let mut types = tuple.types.clone();
-                    types.push(new_constructor(arena, "undefined", &[]));
+                    types.push(new_keyword(arena, Keyword::Undefined));
                     Ok(new_union_type(arena, &types))
                 }
                 _ => Err(Errors::InferenceError(
@@ -279,7 +264,7 @@ pub fn get_computed_member(
                         // TODO: check what the error is, we may want to propagate
                         // certain errors
                         if undefined_count == 0 {
-                            let undefined = new_constructor(arena, "undefined", &[]);
+                            let undefined = new_keyword(arena, Keyword::Undefined);
                             result_types.push(undefined);
                         }
                         undefined_count += 1;
@@ -327,17 +312,17 @@ pub fn get_prop(
     obj_idx: Index,
     key_idx: Index,
 ) -> Result<Index, Errors> {
-    let undefined = new_constructor(arena, "undefined", &[]);
+    let undefined = new_keyword(arena, Keyword::Undefined);
     // It's fine to clone here because we aren't mutating
     let obj_type = arena[obj_idx].clone();
     let key_type = arena[key_idx].clone();
 
     if let TypeKind::Object(object) = &obj_type.kind {
         match &key_type.kind {
-            TypeKind::Constructor(constructor)
-                if constructor.name == "number"
-                    || constructor.name == "string"
-                    || constructor.name == "symbol" =>
+            TypeKind::Keyword(keyword)
+                if keyword == &Keyword::Number
+                    || keyword == &Keyword::String
+                    || keyword == &Keyword::Symbol =>
             {
                 let mut maybe_index: Option<&TIndex> = None;
                 let mut values: Vec<Index> = vec![];
@@ -346,8 +331,8 @@ pub fn get_prop(
                     match prop {
                         TObjElem::Method(method) => {
                             match &method.name {
-                                TPropKey::StringKey(_) if constructor.name == "string" => (),
-                                TPropKey::NumberKey(_) if constructor.name == "number" => (),
+                                TPropKey::StringKey(_) if keyword == &Keyword::String => (),
+                                TPropKey::NumberKey(_) if keyword == &Keyword::Number => (),
                                 _ => continue,
                             };
 
@@ -367,8 +352,8 @@ pub fn get_prop(
                         }
                         TObjElem::Prop(prop) => {
                             match &prop.name {
-                                TPropKey::StringKey(_) if constructor.name == "string" => (),
-                                TPropKey::NumberKey(_) if constructor.name == "number" => (),
+                                TPropKey::StringKey(_) if keyword == &Keyword::String => (),
+                                TPropKey::NumberKey(_) if keyword == &Keyword::Number => (),
                                 _ => continue,
                             };
 
@@ -385,7 +370,7 @@ pub fn get_prop(
                 if let Some(indexer) = maybe_index {
                     match unify(arena, ctx, key_idx, indexer.key.t) {
                         Ok(_) => {
-                            let undefined = new_constructor(arena, "undefined", &[]);
+                            let undefined = new_keyword(arena, Keyword::Undefined);
                             Ok(new_union_type(arena, &[indexer.t, undefined]))
                         }
                         Err(_) => Err(Errors::InferenceError(format!(
@@ -450,7 +435,7 @@ pub fn get_prop(
                 if let Some(indexer) = maybe_index {
                     match unify(arena, ctx, key_idx, indexer.key.t) {
                         Ok(_) => {
-                            let undefined = new_constructor(arena, "undefined", &[]);
+                            let undefined = new_keyword(arena, Keyword::Undefined);
                             Ok(new_union_type(arena, &[indexer.t, undefined]))
                         }
                         Err(_) => Err(Errors::InferenceError(format!(
@@ -482,7 +467,7 @@ pub fn get_prop(
                 if let Some(indexer) = maybe_index {
                     match unify(arena, ctx, key_idx, indexer.key.t) {
                         Ok(_) => {
-                            let undefined = new_constructor(arena, "undefined", &[]);
+                            let undefined = new_keyword(arena, Keyword::Undefined);
                             Ok(new_union_type(arena, &[indexer.t, undefined]))
                         }
                         Err(_) => Err(Errors::InferenceError(format!(

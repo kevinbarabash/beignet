@@ -21,7 +21,7 @@ fn test_env() -> (Arena<Type>, Context) {
     let mut arena = Arena::new();
     let mut context = Context::default();
 
-    let number = new_constructor(&mut arena, "number", &[]);
+    let number = new_keyword(&mut arena, Keyword::Number);
     let type_param_t = new_constructor(&mut arena, "T", &[]);
 
     let array_interface = new_object_type(
@@ -501,8 +501,8 @@ fn test_union_subtype() -> Result<(), Errors> {
 fn test_calling_a_union() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
-    let bool = new_constructor(&mut arena, "boolean", &[]);
-    let str = new_constructor(&mut arena, "string", &[]);
+    let bool = new_keyword(&mut arena, Keyword::Boolean);
+    let str = new_keyword(&mut arena, Keyword::String);
     let fn1 = new_func_type(&mut arena, &[], bool, None);
     let fn2 = new_func_type(&mut arena, &[], str, None);
     my_ctx.values.insert(
@@ -1589,7 +1589,7 @@ fn member_access_on_unknown_type() -> Result<(), Errors> {
     assert_eq!(
         result,
         Err(Errors::InferenceError(
-            "Can't find type alias for unknown".to_string()
+            "Can't access properties on unknown".to_string()
         ))
     );
 
@@ -1610,7 +1610,7 @@ fn member_access_on_type_variable() -> Result<(), Errors> {
     assert_eq!(
         result,
         Err(Errors::InferenceError(
-            "Can only access properties on objects/tuples".to_string()
+            "Can't access properties on t5".to_string()
         ))
     );
 
@@ -2900,7 +2900,7 @@ fn test_keyof_unknown() -> Result<(), Errors> {
     assert_eq!(
         result,
         Err(Errors::InferenceError(
-            "Can't find type alias for unknown".to_string()
+            "unknown isn't an object".to_string()
         ))
     );
 

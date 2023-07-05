@@ -22,6 +22,10 @@ pub trait Visitor: KeyValueStore<Index, Type> {
         self.put_type(t)
     }
 
+    fn visit_keyword(&self, keyword: &Keyword) -> Keyword {
+        keyword.clone()
+    }
+
     fn visit_literal(&self, lit: &Lit) -> Lit {
         lit.clone()
     }
@@ -103,6 +107,7 @@ pub trait Visitor: KeyValueStore<Index, Type> {
         let kind = match &t.kind {
             TypeKind::Variable(tvar) => return self.visit_type_var(tvar, &idx),
             TypeKind::Constructor(tref) => return self.visit_type_ref(tref, &idx),
+            TypeKind::Keyword(keyword) => TypeKind::Keyword(self.visit_keyword(keyword)),
             TypeKind::Literal(lit) => TypeKind::Literal(self.visit_literal(lit)),
             TypeKind::Function(func) => TypeKind::Function(self.visit_function(func)),
             TypeKind::Object(obj) => TypeKind::Object(self.visit_object(obj)),

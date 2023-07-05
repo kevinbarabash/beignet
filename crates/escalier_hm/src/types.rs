@@ -1,6 +1,7 @@
 // Types and type constructors
 use generational_arena::{Arena, Index};
 use std::convert::From;
+use std::fmt;
 
 // TODO: create type versions of these so that we don't have to bother
 // with source locations when doing type-level stuff.
@@ -19,6 +20,34 @@ pub struct Constructor {
     pub name: String,
     // TODO: rename this to type_args
     pub types: Vec<Index>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Keyword {
+    Number,
+    Boolean,
+    String,
+    Symbol,
+    Null,
+    Undefined,
+    Unknown,
+    Never,
+}
+
+impl fmt::Display for Keyword {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let result = match self {
+            Keyword::Number => "number",
+            Keyword::Boolean => "boolean",
+            Keyword::String => "string",
+            Keyword::Symbol => "symbol",
+            Keyword::Null => "null",
+            Keyword::Undefined => "undefined",
+            Keyword::Unknown => "unknown",
+            Keyword::Never => "never",
+        };
+        write!(f, "{result}")
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -188,6 +217,7 @@ pub struct Mutable {
 pub enum TypeKind {
     Variable(Variable),       // TODO: rename to TypeVar
     Constructor(Constructor), // TODO: rename to TypeRef
+    Keyword(Keyword),
     Literal(Lit),
     Function(Function),
     Object(Object),
@@ -258,6 +288,7 @@ impl Type {
                     }
                 }
             },
+            TypeKind::Keyword(keyword) => keyword.to_string(),
             TypeKind::Literal(lit) => lit.to_string(),
             TypeKind::Object(object) => {
                 let mut fields = vec![];
@@ -491,6 +522,10 @@ pub fn new_constructor(arena: &mut Arena<Type>, name: &str, types: &[Index]) -> 
     })))
 }
 
+pub fn new_keyword(arena: &mut Arena<Type>, keyword: Keyword) -> Index {
+    arena.insert(Type::from(TypeKind::Keyword(keyword)))
+}
+
 pub fn new_rest_type(arena: &mut Arena<Type>, t: Index) -> Index {
     arena.insert(Type::from(TypeKind::Rest(Rest { arg: t })))
 }
@@ -531,6 +566,7 @@ impl Type {
                         a.equals(b, arena)
                     })
             }
+            (TypeKind::Keyword(kw1), TypeKind::Keyword(kw2)) => kw1 == kw2,
             (TypeKind::Literal(l1), TypeKind::Literal(l2)) => l1 == l2,
             (TypeKind::Function(f1), TypeKind::Function(f2)) => {
                 eprintln!("checking function types");

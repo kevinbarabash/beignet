@@ -199,7 +199,7 @@ pub fn infer_expression(
 
                         // If we don't encounter a return statement, we assume
                         // the return type is `undefined`.
-                        new_constructor(arena, "undefined", &[])
+                        new_keyword(arena, Keyword::Undefined)
                     }
                     BlockOrExpr::Expr(expr) => infer_expression(arena, expr, &mut body_ctx)?,
                 }
@@ -227,7 +227,7 @@ pub fn infer_expression(
             alternate,
         }) => {
             let cond_type = infer_expression(arena, cond, ctx)?;
-            let bool_type = new_constructor(arena, "boolean", &[]);
+            let bool_type = new_keyword(arena, Keyword::Boolean);
             unify(arena, ctx, cond_type, bool_type)?;
             let consequent_type = infer_block(arena, consequent, ctx)?;
             // TODO: handle the case where there is no alternate
@@ -256,8 +256,8 @@ pub fn infer_expression(
         // ExprKind::LetExpr(_) => todo!(),
         // ExprKind::Keyword(_) => todo!(), // null, undefined, etc.
         ExprKind::Binary(Binary { op, left, right }) => {
-            let number = new_constructor(arena, "number", &[]);
-            let boolean = new_constructor(arena, "boolean", &[]);
+            let number = new_keyword(arena, Keyword::Number);
+            let boolean = new_keyword(arena, Keyword::Boolean);
             let left_type = infer_expression(arena, left, ctx)?;
             let right_type = infer_expression(arena, right, ctx)?;
 
@@ -297,8 +297,8 @@ pub fn infer_expression(
             op,
             right: arg, // TODO: rename `right` to `arg`
         }) => {
-            let number = new_constructor(arena, "number", &[]);
-            let boolean = new_constructor(arena, "boolean", &[]);
+            let number = new_keyword(arena, Keyword::Number);
+            let boolean = new_keyword(arena, Keyword::Boolean);
             let arg_type = infer_expression(arena, arg, ctx)?;
 
             match op {
@@ -397,7 +397,7 @@ pub fn infer_block(
     ctx: &mut Context,
 ) -> Result<Index, Errors> {
     let mut new_ctx = ctx.clone();
-    let mut result_t = new_constructor(arena, "undefined", &[]);
+    let mut result_t = new_keyword(arena, Keyword::Undefined);
 
     for stmt in &mut block.stmts.iter_mut() {
         result_t = infer_statement(arena, stmt, &mut new_ctx, false)?;
@@ -463,25 +463,14 @@ pub fn infer_type_ann(
         //     kind: TypeKind::Literal(syntax::Literal::Undefined),
         // }),
         // TypeAnnKind::Lit(lit) => new_lit_type(arena, lit),
-        TypeAnnKind::Number => new_constructor(arena, "number", &[]),
-        TypeAnnKind::Boolean => new_constructor(arena, "boolean", &[]),
-        TypeAnnKind::String => new_constructor(arena, "string", &[]),
-        TypeAnnKind::Null => new_constructor(arena, "null", &[]),
-        TypeAnnKind::Symbol => new_constructor(arena, "symbol", &[]),
-        TypeAnnKind::Undefined => new_constructor(arena, "undefined", &[]),
-        TypeAnnKind::Unknown => new_constructor(arena, "unknown", &[]),
-        TypeAnnKind::Never => new_constructor(arena, "never", &[]),
-        // TypeAnnKind::Keyword(KeywordType { keyword }) => match keyword {
-        //     Keyword::Number => new_constructor(arena, "number", &[]),
-        //     Keyword::Boolean => new_constructor(arena, "boolean", &[]),
-        //     Keyword::String => new_constructor(arena, "string", &[]),
-        //     Keyword::Null => new_constructor(arena, "null", &[]),
-        //     Keyword::Self_ => todo!(),
-        //     Keyword::Symbol => new_constructor(arena, "symbol", &[]),
-        //     Keyword::Undefined => new_constructor(arena, "undefined", &[]),
-        //     Keyword::Never => new_constructor(arena, "never", &[]),
-        //     Keyword::Unkwnown => new_constructor(arena, "unknown", &[]),
-        // },
+        TypeAnnKind::Number => new_keyword(arena, Keyword::Number),
+        TypeAnnKind::Boolean => new_keyword(arena, Keyword::Boolean),
+        TypeAnnKind::String => new_keyword(arena, Keyword::String),
+        TypeAnnKind::Null => new_keyword(arena, Keyword::Null),
+        TypeAnnKind::Symbol => new_keyword(arena, Keyword::Symbol),
+        TypeAnnKind::Undefined => new_keyword(arena, Keyword::Undefined),
+        TypeAnnKind::Unknown => new_keyword(arena, Keyword::Unknown),
+        TypeAnnKind::Never => new_keyword(arena, Keyword::Never),
         TypeAnnKind::Object(obj) => {
             let mut props: Vec<types::TObjElem> = Vec::new();
             for elem in obj.iter_mut() {
@@ -746,7 +735,7 @@ pub fn infer_program(
     for stmt in &node.stmts {
         if let StmtKind::TypeDecl { name, .. } = &stmt.kind {
             let placeholder_scheme = Scheme {
-                t: new_constructor(arena, "unknown", &[]),
+                t: new_keyword(arena, Keyword::Unknown),
                 type_params: None,
             };
             let name = name.to_owned();
@@ -888,7 +877,7 @@ fn get_ident_member(
                         // TODO: check what the error is, we may want to propagate
                         // certain errors
                         if undefined_count == 0 {
-                            let undefined = new_constructor(arena, "undefined", &[]);
+                            let undefined = new_keyword(arena, Keyword::Undefined);
                             result_types.push(undefined);
                         }
                         undefined_count += 1;
@@ -935,9 +924,10 @@ fn get_ident_member(
             let idx = get_ident_member(arena, ctx, *t, key_idx)?;
             Ok(new_mutable_type(arena, idx))
         }
-        _ => Err(Errors::InferenceError(
-            "Can only access properties on objects/tuples".to_string(),
-        )),
+        _ => Err(Errors::InferenceError(format!(
+            "Can't access properties on {}",
+            obj_type.as_string(arena)
+        ))),
     }
 }
 
@@ -958,7 +948,7 @@ fn infer_type_params(
             let scheme = Scheme {
                 t: match constraint {
                     Some(constraint) => constraint,
-                    None => new_constructor(arena, "unknown", &[]),
+                    None => new_keyword(arena, Keyword::Unknown),
                 },
                 type_params: None,
             };
