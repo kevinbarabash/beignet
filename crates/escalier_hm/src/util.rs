@@ -180,11 +180,11 @@ pub fn expand_type(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<I
                 }
             }
         }
-        TypeKind::Utility(Utility { name, types }) => match name.as_str() {
-            "@@index" => get_computed_member(arena, ctx, types[0], types[1]),
-            "@@keyof" => expand_keyof(arena, ctx, types[0]),
+        TypeKind::Utility(Utility { kind, types }) => match kind {
+            UtilityKind::Index => get_computed_member(arena, ctx, types[0], types[1]),
+            UtilityKind::KeyOf => expand_keyof(arena, ctx, types[0]),
             _ => Err(Errors::InferenceError(format!(
-                "Can't find utility type for {name}"
+                "Can't find utility type for {kind:#?}"
             ))),
         },
         _ => Ok(t),
@@ -351,13 +351,11 @@ pub fn get_prop(
                                 _ => continue,
                             };
 
-                            values.push(arena.insert(Type {
-                                kind: TypeKind::Function(Function {
-                                    params: method.params.clone(),
-                                    ret: method.ret,
-                                    type_params: method.type_params.clone(),
-                                }),
-                            }));
+                            values.push(arena.insert(Type::from(TypeKind::Function(Function {
+                                params: method.params.clone(),
+                                ret: method.ret,
+                                type_params: method.type_params.clone(),
+                            }))));
                         }
                         TObjElem::Index(index) => {
                             if maybe_index.is_some() {
@@ -416,13 +414,13 @@ pub fn get_prop(
                                 TPropKey::NumberKey(key) => key,
                             };
                             if key == name {
-                                return Ok(arena.insert(Type {
-                                    kind: TypeKind::Function(Function {
+                                return Ok(arena.insert(Type::from(TypeKind::Function(
+                                    Function {
                                         params: method.params.clone(),
                                         ret: method.ret,
                                         type_params: method.type_params.clone(),
-                                    }),
-                                }));
+                                    },
+                                ))));
                             }
                         }
                         TObjElem::Index(index) => {

@@ -39,21 +39,19 @@ pub fn infer_expression(
 ) -> Result<Index, Errors> {
     let t: Index = match &mut node.kind {
         ExprKind::Ident(Ident { name, .. }) => get_type(arena, name, ctx)?,
-        ExprKind::Str(str) => arena.insert(Type {
-            kind: TypeKind::Literal(syntax::Literal::String(str.value.to_owned())),
-        }),
-        ExprKind::Num(num) => arena.insert(Type {
-            kind: TypeKind::Literal(syntax::Literal::Number(num.value.to_owned())),
-        }),
-        ExprKind::Bool(bool) => arena.insert(Type {
-            kind: TypeKind::Literal(syntax::Literal::Boolean(bool.value)),
-        }),
-        ExprKind::Null(_) => arena.insert(Type {
-            kind: TypeKind::Literal(syntax::Literal::Null),
-        }),
-        ExprKind::Undefined(_) => arena.insert(Type {
-            kind: TypeKind::Literal(syntax::Literal::Undefined),
-        }),
+        ExprKind::Str(str) => arena.insert(Type::from(TypeKind::Literal(syntax::Literal::String(
+            str.value.to_owned(),
+        )))),
+        ExprKind::Num(num) => arena.insert(Type::from(TypeKind::Literal(syntax::Literal::Number(
+            num.value.to_owned(),
+        )))),
+        ExprKind::Bool(bool) => arena.insert(Type::from(TypeKind::Literal(
+            syntax::Literal::Boolean(bool.value),
+        ))),
+        ExprKind::Null(_) => arena.insert(Type::from(TypeKind::Literal(syntax::Literal::Null))),
+        ExprKind::Undefined(_) => {
+            arena.insert(Type::from(TypeKind::Literal(syntax::Literal::Undefined)))
+        }
         // ExprKind::Lit(literal) => new_lit_type(arena, literal),
         ExprKind::Tuple(syntax::Tuple {
             elements: elems, ..
@@ -450,19 +448,13 @@ pub fn infer_type_ann(
             new_func_type(arena, &func_params, ret_idx, type_params)
         }
         TypeAnnKind::NumLit(value) => {
-            arena.insert(Type {
-                kind: TypeKind::Literal(syntax::Literal::Number(value.to_owned())),
-            })
+            arena.insert(Type::from(TypeKind::Literal(syntax::Literal::Number(value.to_owned()))))
         }
         TypeAnnKind::StrLit(value) => {
-            arena.insert(Type {
-                kind: TypeKind::Literal(syntax::Literal::String(value.to_owned())),
-            })
+            arena.insert(Type::from(TypeKind::Literal(syntax::Literal::String(value.to_owned()))))
         }
         TypeAnnKind::BoolLit(value) => {
-            arena.insert(Type {
-                kind: TypeKind::Literal(syntax::Literal::Boolean(value.to_owned())),
-            })
+            arena.insert(Type::from(TypeKind::Literal(syntax::Literal::Boolean(value.to_owned()))))
         }
         // TypeAnnKind::Null => arena.insert(Type {
         //     kind: TypeKind::Literal(syntax::Literal::Null),
@@ -566,7 +558,7 @@ pub fn infer_type_ann(
         ) => {
             let obj_idx = infer_type_ann(arena, obj_type, ctx)?;
             let index_idx = infer_type_ann(arena, index_type, ctx)?;
-            new_utility_type(arena, "@@index", &[obj_idx, index_idx])
+            new_utility_type(arena, UtilityKind::Index, &[obj_idx, index_idx])
         }
         TypeAnnKind::TypeOf(expr) => {
             infer_expression(arena, expr, ctx)?
@@ -579,7 +571,7 @@ pub fn infer_type_ann(
         // TODO: Create types for all of these
         TypeAnnKind::KeyOf(type_ann) => {
             let t = infer_type_ann(arena, type_ann, ctx)?;
-            let t = new_utility_type(arena, "@@keyof", &[t]);
+            let t = new_utility_type(arena, UtilityKind::KeyOf, &[t]);
             expand_type(arena, ctx, t)?
         }
         // TypeAnnKind::Mapped(_) => todo!(),

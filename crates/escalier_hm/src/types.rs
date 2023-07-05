@@ -1,5 +1,6 @@
 // Types and type constructors
 use generational_arena::{Arena, Index};
+use std::convert::From;
 
 // TODO: create type versions of these so that we don't have to bother
 // with source locations when doing type-level stuff.
@@ -166,8 +167,15 @@ pub struct Rest {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum UtilityKind {
+    KeyOf,
+    Index,
+    Cond,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Utility {
-    pub name: String, // @@keyof, @@index, @@cond
+    pub kind: UtilityKind,
     pub types: Vec<Index>,
 }
 
@@ -190,8 +198,14 @@ pub enum TypeKind {
 
 #[derive(Debug, Clone)]
 pub struct Type {
-    // pub id: Index,
     pub kind: TypeKind,
+    // TODO: add `provenance` to support error reporting
+}
+
+impl From<TypeKind> for Type {
+    fn from(kind: TypeKind) -> Self {
+        Self { kind }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -342,21 +356,20 @@ impl Type {
                     arena[func.ret].as_string(arena),
                 )
             }
-            TypeKind::Utility(Utility { name, types }) => match name.as_str() {
-                "@@keyof" => format!("keyof {}", arena[types[0]].as_string(arena)),
-                "@@index" => format!(
+            TypeKind::Utility(Utility { kind: name, types }) => match name {
+                UtilityKind::KeyOf => format!("keyof {}", arena[types[0]].as_string(arena)),
+                UtilityKind::Index => format!(
                     "{}[{}]",
                     arena[types[0]].as_string(arena),
                     arena[types[1]].as_string(arena)
                 ),
-                "@@cond" => format!(
+                UtilityKind::Cond => format!(
                     "{} extends {} ? {} : {}",
                     arena[types[0]].as_string(arena),
                     arena[types[1]].as_string(arena),
                     arena[types[2]].as_string(arena),
                     arena[types[3]].as_string(arena),
                 ),
-                _ => unimplemented!(),
             },
             TypeKind::Mutable(Mutable { t }) => format!("mut {}", arena[*t].as_string(arena)),
         }
@@ -436,13 +449,11 @@ pub fn new_func_type(
     ret: Index,
     type_params: Option<Vec<TypeParam>>,
 ) -> Index {
-    arena.insert(Type {
-        kind: TypeKind::Function(Function {
-            params: params.to_vec(),
-            ret: ret.to_owned(),
-            type_params,
-        }),
-    })
+    arena.insert(Type::from(TypeKind::Function(Function {
+        params: params.to_vec(),
+        ret: ret.to_owned(),
+        type_params,
+    })))
 }
 
 pub fn new_union_type(arena: &mut Arena<Type>, types: &[Index]) -> Index {
@@ -458,59 +469,45 @@ pub fn new_tuple_type(arena: &mut Arena<Type>, types: &[Index]) -> Index {
 }
 
 pub fn new_object_type(arena: &mut Arena<Type>, elems: &[TObjElem]) -> Index {
-    arena.insert(Type {
-        kind: TypeKind::Object(Object {
-            props: elems.to_vec(),
-        }),
-    })
+    arena.insert(Type::from(TypeKind::Object(Object {
+        props: elems.to_vec(),
+    })))
 }
 
 /// A binary type constructor which builds function types
 pub fn new_var_type(arena: &mut Arena<Type>, constraint: Option<Index>) -> Index {
-    arena.insert(Type {
-        kind: TypeKind::Variable(Variable {
-            id: arena.len(), // use for debugging purposes only
-            instance: None,
-            constraint,
-        }),
-    })
+    arena.insert(Type::from(TypeKind::Variable(Variable {
+        id: arena.len(), // use for debugging purposes only
+        instance: None,
+        constraint,
+    })))
 }
 
 /// A binary type constructor which builds function types
 pub fn new_constructor(arena: &mut Arena<Type>, name: &str, types: &[Index]) -> Index {
-    arena.insert(Type {
-        kind: TypeKind::Constructor(Constructor {
-            name: name.to_string(),
-            types: types.to_vec(),
-        }),
-    })
+    arena.insert(Type::from(TypeKind::Constructor(Constructor {
+        name: name.to_string(),
+        types: types.to_vec(),
+    })))
 }
 
 pub fn new_rest_type(arena: &mut Arena<Type>, t: Index) -> Index {
-    arena.insert(Type {
-        kind: TypeKind::Rest(Rest { arg: t }),
-    })
+    arena.insert(Type::from(TypeKind::Rest(Rest { arg: t })))
 }
 
 pub fn new_lit_type(arena: &mut Arena<Type>, lit: &Lit) -> Index {
-    arena.insert(Type {
-        kind: TypeKind::Literal(lit.clone()),
-    })
+    arena.insert(Type::from(TypeKind::Literal(lit.clone())))
 }
 
-pub fn new_utility_type(arena: &mut Arena<Type>, name: &str, types: &[Index]) -> Index {
-    arena.insert(Type {
-        kind: TypeKind::Utility(Utility {
-            name: name.to_string(),
-            types: types.to_vec(),
-        }),
-    })
+pub fn new_utility_type(arena: &mut Arena<Type>, kind: UtilityKind, types: &[Index]) -> Index {
+    arena.insert(Type::from(TypeKind::Utility(Utility {
+        kind,
+        types: types.to_vec(),
+    })))
 }
 
 pub fn new_mutable_type(arena: &mut Arena<Type>, t: Index) -> Index {
-    arena.insert(Type {
-        kind: TypeKind::Mutable(Mutable { t }),
-    })
+    arena.insert(Type::from(TypeKind::Mutable(Mutable { t })))
 }
 
 impl Type {

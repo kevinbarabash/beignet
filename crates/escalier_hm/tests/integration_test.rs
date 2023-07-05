@@ -10,15 +10,11 @@ use escalier_hm::types::{self, *};
 use escalier_hm::util::expand_type;
 
 fn new_num_lit_type(arena: &mut Arena<Type>, value: &str) -> Index {
-    arena.insert(Type {
-        kind: TypeKind::Literal(Lit::Number(value.to_owned())),
-    })
+    arena.insert(Type::from(TypeKind::Literal(Lit::Number(value.to_owned()))))
 }
 
 fn new_str_lit_type(arena: &mut Arena<Type>, value: &str) -> Index {
-    arena.insert(Type {
-        kind: TypeKind::Literal(Lit::String(value.to_owned())),
-    })
+    arena.insert(Type::from(TypeKind::Literal(Lit::String(value.to_owned()))))
 }
 
 fn test_env() -> (Arena<Type>, Context) {
