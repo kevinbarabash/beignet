@@ -18,6 +18,7 @@ use crate::unify::*;
 ///
 /// Returns:
 ///     True if v occurs in type2, otherwise False
+// TODO: reimplement as a fold operation
 pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
     let pruned_type2 = prune(arena, type2);
     if pruned_type2 == v {
@@ -48,6 +49,9 @@ pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
             let param_types: Vec<_> = params.iter().map(|param| param.t).collect();
             occurs_in(arena, v, &param_types) || occurs_in_type(arena, v, ret)
         }
+        TypeKind::Union(Union { types }) => occurs_in(arena, v, &types),
+        TypeKind::Intersection(Intersection { types }) => occurs_in(arena, v, &types),
+        TypeKind::Tuple(Tuple { types }) => occurs_in(arena, v, &types),
         TypeKind::Constructor(Constructor { types, .. }) => occurs_in(arena, v, &types),
         TypeKind::Utility(Utility { types, .. }) => occurs_in(arena, v, &types),
         TypeKind::Mutable(Mutable { t }) => occurs_in_type(arena, v, t),
@@ -221,7 +225,7 @@ pub fn get_computed_member(
         TypeKind::Object(_) => get_prop(arena, ctx, obj_idx, key_idx),
         // let tuple = [5, "hello", true]
         // tuple[1]; // "hello"
-        TypeKind::Constructor(tuple) if tuple.name == "@@tuple" => {
+        TypeKind::Tuple(tuple) => {
             match &key_type.kind {
                 TypeKind::Literal(Lit::Number(value)) => {
                     let index: usize = str::parse(value).map_err(|_| {
@@ -254,7 +258,7 @@ pub fn get_computed_member(
         }
         // declare let tuple: [number, number] | [string, string]
         // tuple[1]; // number | string
-        TypeKind::Constructor(union) if union.name == "@@union" => {
+        TypeKind::Union(union) => {
             let mut result_types = vec![];
             let mut undefined_count = 0;
             for idx in &union.types {

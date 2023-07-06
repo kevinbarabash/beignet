@@ -120,21 +120,6 @@ pub struct Call {
     pub ret: Index,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Union {
-    pub types: Vec<Index>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Intersection {
-    pub types: Vec<Index>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Tuple {
-    pub types: Vec<Index>,
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TMethod {
     pub name: TPropKey,
@@ -213,10 +198,28 @@ pub struct Mutable {
     pub t: Index,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Union {
+    pub types: Vec<Index>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Intersection {
+    pub types: Vec<Index>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Tuple {
+    pub types: Vec<Index>,
+}
+
 #[derive(Debug, Clone, Hash)]
 pub enum TypeKind {
     Variable(Variable),       // TODO: rename to TypeVar
     Constructor(Constructor), // TODO: rename to TypeRef
+    Union(Union),
+    Intersection(Intersection),
+    Tuple(Tuple),
     Keyword(Keyword),
     Literal(Lit),
     Function(Function),
@@ -271,23 +274,20 @@ impl Type {
                 Some(constraint) => format!("t{id}:{}", arena[*constraint].as_string(arena)),
                 None => format!("t{id}"),
             },
-            TypeKind::Constructor(Constructor { name, types }) => match name.as_str() {
-                "@@tuple" => format!("[{}]", types_to_strings(arena, types).join(", ")),
-                "@@union" => types_to_strings(arena, types).join(" | "),
-                "@@intersection" => types_to_strings(arena, types).join(" & "),
-                _ => {
-                    let mut coll = vec![];
-                    for v in types {
-                        coll.push(arena[*v].as_string(arena));
-                    }
-
-                    if coll.is_empty() {
-                        name.to_string()
-                    } else {
-                        format!("{}<{}>", name, coll.join(", "))
-                    }
+            TypeKind::Union(Union { types }) => types_to_strings(arena, types).join(" | "),
+            TypeKind::Intersection(Intersection { types }) => {
+                types_to_strings(arena, types).join(" & ")
+            }
+            TypeKind::Tuple(Tuple { types }) => {
+                format!("[{}]", types_to_strings(arena, types).join(", "))
+            }
+            TypeKind::Constructor(Constructor { name, types }) => {
+                if types.is_empty() {
+                    name.to_string()
+                } else {
+                    format!("{}<{}>", name, types_to_strings(arena, types).join(", "))
                 }
-            },
+            }
             TypeKind::Keyword(keyword) => keyword.to_string(),
             TypeKind::Literal(lit) => lit.to_string(),
             TypeKind::Object(object) => {
@@ -488,15 +488,21 @@ pub fn new_func_type(
 }
 
 pub fn new_union_type(arena: &mut Arena<Type>, types: &[Index]) -> Index {
-    new_constructor(arena, "@@union", types)
+    arena.insert(Type::from(TypeKind::Union(Union {
+        types: types.to_owned(),
+    })))
 }
 
 pub fn new_intersection_type(arena: &mut Arena<Type>, types: &[Index]) -> Index {
-    new_constructor(arena, "@@intersection", types)
+    arena.insert(Type::from(TypeKind::Intersection(Intersection {
+        types: types.to_owned(),
+    })))
 }
 
 pub fn new_tuple_type(arena: &mut Arena<Type>, types: &[Index]) -> Index {
-    new_constructor(arena, "@@tuple", types)
+    arena.insert(Type::from(TypeKind::Tuple(Tuple {
+        types: types.to_owned(),
+    })))
 }
 
 pub fn new_object_type(arena: &mut Arena<Type>, elems: &[TObjElem]) -> Index {
@@ -558,13 +564,16 @@ impl Type {
                 a.equals(b, arena)
             }
             (TypeKind::Constructor(c1), TypeKind::Constructor(c2)) => {
-                c1.name == c2.name
-                    && c1.types.len() == c2.types.len()
-                    && c1.types.iter().zip(c2.types.iter()).all(|(a, b)| {
-                        let a = &arena[*a];
-                        let b = &arena[*b];
-                        a.equals(b, arena)
-                    })
+                c1.name == c2.name && types_equal(arena, &c1.types, &c2.types)
+            }
+            (TypeKind::Union(union1), TypeKind::Union(union2)) => {
+                types_equal(arena, &union1.types, &union2.types)
+            }
+            (TypeKind::Intersection(int1), TypeKind::Intersection(int2)) => {
+                types_equal(arena, &int1.types, &int2.types)
+            }
+            (TypeKind::Tuple(tuple1), TypeKind::Tuple(tuple2)) => {
+                types_equal(arena, &tuple1.types, &tuple2.types)
             }
             (TypeKind::Keyword(kw1), TypeKind::Keyword(kw2)) => kw1 == kw2,
             (TypeKind::Literal(l1), TypeKind::Literal(l2)) => l1 == l2,
@@ -603,6 +612,15 @@ impl Type {
             _ => false,
         }
     }
+}
+
+fn types_equal(arena: &Arena<Type>, types1: &[Index], types2: &[Index]) -> bool {
+    types1.len() == types2.len()
+        && types1.iter().zip(types2.iter()).all(|(a, b)| {
+            let a = &arena[*a];
+            let b = &arena[*b];
+            a.equals(b, arena)
+        })
 }
 
 fn obj_elem_equals(arena: &Arena<Type>, elem1: &TObjElem, elem2: &TObjElem) -> bool {

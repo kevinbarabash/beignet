@@ -867,7 +867,7 @@ fn get_ident_member(
         TypeKind::Object(_) => get_prop(arena, ctx, obj_idx, key_idx),
         // declare let obj: {x: number} | {x: string}
         // obj.x; // number | string
-        TypeKind::Constructor(union) if union.name == "@@union" => {
+        TypeKind::Union(union) => {
             let mut result_types = vec![];
             let mut undefined_count = 0;
             for idx in &union.types {
@@ -906,11 +906,7 @@ fn get_ident_member(
                 "Can't find type alias for {alias_name}"
             ))),
         },
-        TypeKind::Constructor(types::Constructor {
-            name: alias_name,
-            types,
-            ..
-        }) if alias_name == "@@tuple" => match ctx.schemes.get("Array") {
+        TypeKind::Tuple(types::Tuple { types }) => match ctx.schemes.get("Array") {
             Some(scheme) => {
                 let t = new_union_type(arena, types);
                 let obj_idx = expand_alias(arena, "Array", scheme, &[t])?;
