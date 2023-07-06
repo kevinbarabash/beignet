@@ -647,12 +647,10 @@ fn expand(arena: &mut Arena<Type>, ctx: &Context, a: Index) -> Result<Index, Err
         TypeKind::Constructor(Constructor {
             name,
             types: type_args,
-        }) if !name.starts_with("@@") && !["Promise", "Array"].contains(&name.as_str()) => {
-            match ctx.schemes.get(name) {
-                Some(scheme) => expand_alias(arena, name, scheme, type_args),
-                None => Err(Errors::InferenceError(format!("Unbound type name: {name}"))),
-            }
-        }
+        }) if !["Promise", "Array"].contains(&name.as_str()) => match ctx.schemes.get(name) {
+            Some(scheme) => expand_alias(arena, name, scheme, type_args),
+            None => Err(Errors::InferenceError(format!("Unbound type name: {name}"))),
+        },
         _ => Ok(a),
     }?;
 

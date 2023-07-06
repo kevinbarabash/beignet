@@ -897,7 +897,7 @@ fn get_ident_member(
             name: alias_name,
             types,
             ..
-        }) if !alias_name.starts_with("@@") => match ctx.schemes.get(alias_name) {
+        }) => match ctx.schemes.get(alias_name) {
             Some(scheme) => {
                 let obj_idx = expand_alias(arena, alias_name, scheme, types)?;
                 get_ident_member(arena, ctx, obj_idx, key_idx)

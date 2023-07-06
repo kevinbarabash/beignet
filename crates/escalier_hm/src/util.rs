@@ -161,14 +161,12 @@ pub fn expand_type(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<I
     let t = prune(arena, t);
     // It's okay to clone here because we aren't mutating the type
     match &arena[t].clone().kind {
-        TypeKind::Constructor(Constructor { name, types }) if !name.starts_with("@@") => {
-            match ctx.schemes.get(name) {
-                Some(scheme) => expand_alias(arena, name, scheme, types),
-                None => Err(Errors::InferenceError(format!(
-                    "Can't find type alias for {name}"
-                ))),
-            }
-        }
+        TypeKind::Constructor(Constructor { name, types }) => match ctx.schemes.get(name) {
+            Some(scheme) => expand_alias(arena, name, scheme, types),
+            None => Err(Errors::InferenceError(format!(
+                "Can't find type alias for {name}"
+            ))),
+        },
         TypeKind::Utility(Utility { kind, types }) => match kind {
             UtilityKind::Index => get_computed_member(arena, ctx, types[0], types[1]),
             UtilityKind::KeyOf => expand_keyof(arena, ctx, types[0]),
@@ -288,7 +286,7 @@ pub fn get_computed_member(
             name: alias_name,
             types,
             ..
-        }) if !alias_name.starts_with("@@") => match ctx.schemes.get(alias_name) {
+        }) => match ctx.schemes.get(alias_name) {
             Some(scheme) => {
                 let obj_idx = expand_alias(arena, alias_name, scheme, types)?;
                 get_computed_member(arena, ctx, obj_idx, key_idx)
