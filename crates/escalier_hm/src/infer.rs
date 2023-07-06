@@ -39,21 +39,19 @@ pub fn infer_expression(
 ) -> Result<Index, Errors> {
     let t: Index = match &mut node.kind {
         ExprKind::Ident(Ident { name, .. }) => get_type(arena, name, ctx)?,
-        ExprKind::Str(str) => arena.insert(Type {
-            kind: TypeKind::Literal(syntax::Literal::String(str.value.to_owned())),
-        }),
-        ExprKind::Num(num) => arena.insert(Type {
-            kind: TypeKind::Literal(syntax::Literal::Number(num.value.to_owned())),
-        }),
-        ExprKind::Bool(bool) => arena.insert(Type {
-            kind: TypeKind::Literal(syntax::Literal::Boolean(bool.value)),
-        }),
-        ExprKind::Null(_) => arena.insert(Type {
-            kind: TypeKind::Literal(syntax::Literal::Null),
-        }),
-        ExprKind::Undefined(_) => arena.insert(Type {
-            kind: TypeKind::Literal(syntax::Literal::Undefined),
-        }),
+        ExprKind::Str(str) => arena.insert(Type::from(TypeKind::Literal(syntax::Literal::String(
+            str.value.to_owned(),
+        )))),
+        ExprKind::Num(num) => arena.insert(Type::from(TypeKind::Literal(syntax::Literal::Number(
+            num.value.to_owned(),
+        )))),
+        ExprKind::Bool(bool) => arena.insert(Type::from(TypeKind::Literal(
+            syntax::Literal::Boolean(bool.value),
+        ))),
+        ExprKind::Null(_) => arena.insert(Type::from(TypeKind::Literal(syntax::Literal::Null))),
+        ExprKind::Undefined(_) => {
+            arena.insert(Type::from(TypeKind::Literal(syntax::Literal::Undefined)))
+        }
         // ExprKind::Lit(literal) => new_lit_type(arena, literal),
         ExprKind::Tuple(syntax::Tuple {
             elements: elems, ..
@@ -201,7 +199,7 @@ pub fn infer_expression(
 
                         // If we don't encounter a return statement, we assume
                         // the return type is `undefined`.
-                        new_constructor(arena, "undefined", &[])
+                        new_keyword(arena, Keyword::Undefined)
                     }
                     BlockOrExpr::Expr(expr) => infer_expression(arena, expr, &mut body_ctx)?,
                 }
@@ -229,7 +227,7 @@ pub fn infer_expression(
             alternate,
         }) => {
             let cond_type = infer_expression(arena, cond, ctx)?;
-            let bool_type = new_constructor(arena, "boolean", &[]);
+            let bool_type = new_keyword(arena, Keyword::Boolean);
             unify(arena, ctx, cond_type, bool_type)?;
             let consequent_type = infer_block(arena, consequent, ctx)?;
             // TODO: handle the case where there is no alternate
@@ -258,8 +256,8 @@ pub fn infer_expression(
         // ExprKind::LetExpr(_) => todo!(),
         // ExprKind::Keyword(_) => todo!(), // null, undefined, etc.
         ExprKind::Binary(Binary { op, left, right }) => {
-            let number = new_constructor(arena, "number", &[]);
-            let boolean = new_constructor(arena, "boolean", &[]);
+            let number = new_keyword(arena, Keyword::Number);
+            let boolean = new_keyword(arena, Keyword::Boolean);
             let left_type = infer_expression(arena, left, ctx)?;
             let right_type = infer_expression(arena, right, ctx)?;
 
@@ -299,8 +297,8 @@ pub fn infer_expression(
             op,
             right: arg, // TODO: rename `right` to `arg`
         }) => {
-            let number = new_constructor(arena, "number", &[]);
-            let boolean = new_constructor(arena, "boolean", &[]);
+            let number = new_keyword(arena, Keyword::Number);
+            let boolean = new_keyword(arena, Keyword::Boolean);
             let arg_type = infer_expression(arena, arg, ctx)?;
 
             match op {
@@ -399,7 +397,7 @@ pub fn infer_block(
     ctx: &mut Context,
 ) -> Result<Index, Errors> {
     let mut new_ctx = ctx.clone();
-    let mut result_t = new_constructor(arena, "undefined", &[]);
+    let mut result_t = new_keyword(arena, Keyword::Undefined);
 
     for stmt in &mut block.stmts.iter_mut() {
         result_t = infer_statement(arena, stmt, &mut new_ctx, false)?;
@@ -450,19 +448,13 @@ pub fn infer_type_ann(
             new_func_type(arena, &func_params, ret_idx, type_params)
         }
         TypeAnnKind::NumLit(value) => {
-            arena.insert(Type {
-                kind: TypeKind::Literal(syntax::Literal::Number(value.to_owned())),
-            })
+            arena.insert(Type::from(TypeKind::Literal(syntax::Literal::Number(value.to_owned()))))
         }
         TypeAnnKind::StrLit(value) => {
-            arena.insert(Type {
-                kind: TypeKind::Literal(syntax::Literal::String(value.to_owned())),
-            })
+            arena.insert(Type::from(TypeKind::Literal(syntax::Literal::String(value.to_owned()))))
         }
         TypeAnnKind::BoolLit(value) => {
-            arena.insert(Type {
-                kind: TypeKind::Literal(syntax::Literal::Boolean(value.to_owned())),
-            })
+            arena.insert(Type::from(TypeKind::Literal(syntax::Literal::Boolean(value.to_owned()))))
         }
         // TypeAnnKind::Null => arena.insert(Type {
         //     kind: TypeKind::Literal(syntax::Literal::Null),
@@ -471,25 +463,14 @@ pub fn infer_type_ann(
         //     kind: TypeKind::Literal(syntax::Literal::Undefined),
         // }),
         // TypeAnnKind::Lit(lit) => new_lit_type(arena, lit),
-        TypeAnnKind::Number => new_constructor(arena, "number", &[]),
-        TypeAnnKind::Boolean => new_constructor(arena, "boolean", &[]),
-        TypeAnnKind::String => new_constructor(arena, "string", &[]),
-        TypeAnnKind::Null => new_constructor(arena, "null", &[]),
-        TypeAnnKind::Symbol => new_constructor(arena, "symbol", &[]),
-        TypeAnnKind::Undefined => new_constructor(arena, "undefined", &[]),
-        TypeAnnKind::Unknown => new_constructor(arena, "unknown", &[]),
-        TypeAnnKind::Never => new_constructor(arena, "never", &[]),
-        // TypeAnnKind::Keyword(KeywordType { keyword }) => match keyword {
-        //     Keyword::Number => new_constructor(arena, "number", &[]),
-        //     Keyword::Boolean => new_constructor(arena, "boolean", &[]),
-        //     Keyword::String => new_constructor(arena, "string", &[]),
-        //     Keyword::Null => new_constructor(arena, "null", &[]),
-        //     Keyword::Self_ => todo!(),
-        //     Keyword::Symbol => new_constructor(arena, "symbol", &[]),
-        //     Keyword::Undefined => new_constructor(arena, "undefined", &[]),
-        //     Keyword::Never => new_constructor(arena, "never", &[]),
-        //     Keyword::Unkwnown => new_constructor(arena, "unknown", &[]),
-        // },
+        TypeAnnKind::Number => new_keyword(arena, Keyword::Number),
+        TypeAnnKind::Boolean => new_keyword(arena, Keyword::Boolean),
+        TypeAnnKind::String => new_keyword(arena, Keyword::String),
+        TypeAnnKind::Null => new_keyword(arena, Keyword::Null),
+        TypeAnnKind::Symbol => new_keyword(arena, Keyword::Symbol),
+        TypeAnnKind::Undefined => new_keyword(arena, Keyword::Undefined),
+        TypeAnnKind::Unknown => new_keyword(arena, Keyword::Unknown),
+        TypeAnnKind::Never => new_keyword(arena, Keyword::Never),
         TypeAnnKind::Object(obj) => {
             let mut props: Vec<types::TObjElem> = Vec::new();
             for elem in obj.iter_mut() {
@@ -566,7 +547,7 @@ pub fn infer_type_ann(
         ) => {
             let obj_idx = infer_type_ann(arena, obj_type, ctx)?;
             let index_idx = infer_type_ann(arena, index_type, ctx)?;
-            new_utility_type(arena, "@@index", &[obj_idx, index_idx])
+            new_utility_type(arena, UtilityKind::Index, &[obj_idx, index_idx])
         }
         TypeAnnKind::TypeOf(expr) => {
             infer_expression(arena, expr, ctx)?
@@ -579,7 +560,7 @@ pub fn infer_type_ann(
         // TODO: Create types for all of these
         TypeAnnKind::KeyOf(type_ann) => {
             let t = infer_type_ann(arena, type_ann, ctx)?;
-            let t = new_utility_type(arena, "@@keyof", &[t]);
+            let t = new_utility_type(arena, UtilityKind::KeyOf, &[t]);
             expand_type(arena, ctx, t)?
         }
         // TypeAnnKind::Mapped(_) => todo!(),
@@ -754,7 +735,7 @@ pub fn infer_program(
     for stmt in &node.stmts {
         if let StmtKind::TypeDecl { name, .. } = &stmt.kind {
             let placeholder_scheme = Scheme {
-                t: new_constructor(arena, "unknown", &[]),
+                t: new_keyword(arena, Keyword::Unknown),
                 type_params: None,
             };
             let name = name.to_owned();
@@ -886,7 +867,7 @@ fn get_ident_member(
         TypeKind::Object(_) => get_prop(arena, ctx, obj_idx, key_idx),
         // declare let obj: {x: number} | {x: string}
         // obj.x; // number | string
-        TypeKind::Constructor(union) if union.name == "@@union" => {
+        TypeKind::Union(union) => {
             let mut result_types = vec![];
             let mut undefined_count = 0;
             for idx in &union.types {
@@ -896,7 +877,7 @@ fn get_ident_member(
                         // TODO: check what the error is, we may want to propagate
                         // certain errors
                         if undefined_count == 0 {
-                            let undefined = new_constructor(arena, "undefined", &[]);
+                            let undefined = new_keyword(arena, Keyword::Undefined);
                             result_types.push(undefined);
                         }
                         undefined_count += 1;
@@ -916,7 +897,7 @@ fn get_ident_member(
             name: alias_name,
             types,
             ..
-        }) if !alias_name.starts_with("@@") => match ctx.schemes.get(alias_name) {
+        }) => match ctx.schemes.get(alias_name) {
             Some(scheme) => {
                 let obj_idx = expand_alias(arena, alias_name, scheme, types)?;
                 get_ident_member(arena, ctx, obj_idx, key_idx)
@@ -925,11 +906,7 @@ fn get_ident_member(
                 "Can't find type alias for {alias_name}"
             ))),
         },
-        TypeKind::Constructor(types::Constructor {
-            name: alias_name,
-            types,
-            ..
-        }) if alias_name == "@@tuple" => match ctx.schemes.get("Array") {
+        TypeKind::Tuple(types::Tuple { types }) => match ctx.schemes.get("Array") {
             Some(scheme) => {
                 let t = new_union_type(arena, types);
                 let obj_idx = expand_alias(arena, "Array", scheme, &[t])?;
@@ -943,9 +920,10 @@ fn get_ident_member(
             let idx = get_ident_member(arena, ctx, *t, key_idx)?;
             Ok(new_mutable_type(arena, idx))
         }
-        _ => Err(Errors::InferenceError(
-            "Can only access properties on objects/tuples".to_string(),
-        )),
+        _ => Err(Errors::InferenceError(format!(
+            "Can't access properties on {}",
+            obj_type.as_string(arena)
+        ))),
     }
 }
 
@@ -966,7 +944,7 @@ fn infer_type_params(
             let scheme = Scheme {
                 t: match constraint {
                     Some(constraint) => constraint,
-                    None => new_constructor(arena, "unknown", &[]),
+                    None => new_keyword(arena, Keyword::Unknown),
                 },
                 type_params: None,
             };

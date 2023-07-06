@@ -50,19 +50,31 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             b_t.as_string(arena)
         ))),
 
-        (_, TypeKind::Constructor(unknown)) if unknown.name == "unknown" => {
+        (TypeKind::Keyword(kw1), TypeKind::Keyword(kw2)) => {
+            if kw1 == kw2 {
+                Ok(())
+            } else {
+                Err(Errors::InferenceError(format!(
+                    "type mismatch: {} != {}",
+                    a_t.as_string(arena),
+                    b_t.as_string(arena)
+                )))
+            }
+        }
+
+        (_, TypeKind::Keyword(Keyword::Unknown)) => {
             // All types are assignable to `unknown`
             Ok(())
         }
 
-        (TypeKind::Constructor(union), _) if union.name == "@@union" => {
+        (TypeKind::Union(union), _) => {
             // All types in the union must be subtypes of t2
             for t in union.types.iter() {
                 unify(arena, ctx, *t, b)?;
             }
             Ok(())
         }
-        (_, TypeKind::Constructor(union)) if union.name == "@@union" => {
+        (_, TypeKind::Union(union)) => {
             // If t1 is a subtype of any of the types in the union, then it is a
             // subtype of the union.
             for t2 in union.types.iter() {
@@ -77,9 +89,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 b_t.as_string(arena)
             )))
         }
-        (TypeKind::Constructor(tuple1), TypeKind::Constructor(tuple2))
-            if tuple1.name == "@@tuple" && tuple2.name == "@@tuple" =>
-        {
+        (TypeKind::Tuple(tuple1), TypeKind::Tuple(tuple2)) => {
             'outer: {
                 if tuple1.types.len() < tuple2.types.len() {
                     // If there's a rest pattern in tuple1, then it can unify
@@ -119,9 +129,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             }
             Ok(())
         }
-        (TypeKind::Constructor(tuple), TypeKind::Constructor(array))
-            if tuple.name == "@@tuple" && array.name == "Array" =>
-        {
+        (TypeKind::Tuple(tuple), TypeKind::Constructor(array)) if array.name == "Array" => {
             let q = array.types[0];
             for p in &tuple.types {
                 match &arena[*p].kind {
@@ -134,12 +142,10 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             }
             Ok(())
         }
-        (TypeKind::Constructor(array), TypeKind::Constructor(tuple))
-            if array.name == "Array" && tuple.name == "@@tuple" =>
-        {
+        (TypeKind::Constructor(array), TypeKind::Tuple(tuple)) if array.name == "Array" => {
             let p = array.types[0];
             for q in &tuple.types {
-                let undefined = new_constructor(arena, "undefined", &[]);
+                let undefined = new_keyword(arena, Keyword::Undefined);
                 let p_or_undefined = new_union_type(arena, &[p, undefined]);
 
                 match &arena[*q].kind {
@@ -149,16 +155,14 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             }
             Ok(())
         }
-        (TypeKind::Rest(rest), TypeKind::Constructor(array))
-            if (array.name == "Array" || array.name == "@@tuple") =>
-        {
+        (TypeKind::Rest(rest), TypeKind::Constructor(array)) if (array.name == "Array") => {
             unify(arena, ctx, rest.arg, b)
         }
-        (TypeKind::Constructor(array), TypeKind::Rest(rest))
-            if (array.name == "Array" || array.name == "@@tuple") =>
-        {
+        (TypeKind::Rest(rest), TypeKind::Tuple(_)) => unify(arena, ctx, rest.arg, b),
+        (TypeKind::Constructor(array), TypeKind::Rest(rest)) if (array.name == "Array") => {
             unify(arena, ctx, a, rest.arg)
         }
+        (TypeKind::Tuple(_), TypeKind::Rest(rest)) => unify(arena, ctx, a, rest.arg),
         (TypeKind::Constructor(con_a), TypeKind::Constructor(con_b)) => {
             // TODO: support type constructors with optional and default type params
             if con_a.name != con_b.name || con_a.types.len() != con_b.types.len() {
@@ -210,21 +214,9 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             }
             Ok(())
         }
-        (TypeKind::Literal(Lit::Number(_)), TypeKind::Constructor(Constructor { name, .. }))
-            if name == "number" =>
-        {
-            Ok(())
-        }
-        (TypeKind::Literal(Lit::String(_)), TypeKind::Constructor(Constructor { name, .. }))
-            if name == "string" =>
-        {
-            Ok(())
-        }
-        (TypeKind::Literal(Lit::Boolean(_)), TypeKind::Constructor(Constructor { name, .. }))
-            if name == "boolean" =>
-        {
-            Ok(())
-        }
+        (TypeKind::Literal(Lit::Number(_)), TypeKind::Keyword(Keyword::Number)) => Ok(()),
+        (TypeKind::Literal(Lit::String(_)), TypeKind::Keyword(Keyword::String)) => Ok(()),
+        (TypeKind::Literal(Lit::Boolean(_)), TypeKind::Keyword(Keyword::Boolean)) => Ok(()),
         (TypeKind::Object(object1), TypeKind::Object(object2)) => {
             // object1 must have atleast as the same properties as object2
             'outer: for prop2 in &object2.props {
@@ -235,14 +227,14 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                         {
                             let p1_t = match prop1.optional {
                                 true => {
-                                    let undefined = new_constructor(arena, "undefined", &[]);
+                                    let undefined = new_keyword(arena, Keyword::Undefined);
                                     new_union_type(arena, &[prop1.t, undefined])
                                 }
                                 false => prop1.t,
                             };
                             let p2_t = match prop2.optional {
                                 true => {
-                                    let undefined = new_constructor(arena, "undefined", &[]);
+                                    let undefined = new_keyword(arena, Keyword::Undefined);
                                     new_union_type(arena, &[prop2.t, undefined])
                                 }
                                 false => prop2.t,
@@ -282,9 +274,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             }
             Ok(())
         }
-        (TypeKind::Object(object1), TypeKind::Constructor(intersection))
-            if intersection.name == "@@intersection" =>
-        {
+        (TypeKind::Object(object1), TypeKind::Intersection(intersection)) => {
             let obj_types: Vec<_> = intersection
                 .types
                 .iter()
@@ -332,9 +322,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 )),
             }
         }
-        (TypeKind::Constructor(intersection), TypeKind::Object(object2))
-            if intersection.name == "@@intersection" =>
-        {
+        (TypeKind::Intersection(intersection), TypeKind::Object(object2)) => {
             let obj_types: Vec<_> = intersection
                 .types
                 .iter()
@@ -443,42 +431,38 @@ pub fn unify_call(
             let call_type = new_func_type(arena, &arg_types, ret_type, None);
             bind(arena, ctx, b, call_type)?
         }
-        TypeKind::Constructor(Constructor { name, types }) => {
-            match name.as_str() {
-                "@@tuple" => {
-                    return Err(Errors::InferenceError("tuple is not callable".to_string()));
-                }
-                "@@union" => {
-                    let mut ret_types = vec![];
-                    for t in types.iter() {
-                        let ret_type = unify_call(arena, ctx, arg_types, type_args, *t)?;
-                        ret_types.push(ret_type);
-                    }
+        TypeKind::Union(Union { types }) => {
+            let mut ret_types = vec![];
+            for t in types.iter() {
+                let ret_type = unify_call(arena, ctx, arg_types, type_args, *t)?;
+                ret_types.push(ret_type);
+            }
 
-                    return Ok(new_union_type(
-                        arena,
-                        &ret_types.into_iter().unique().collect_vec(),
-                    ));
-                }
-                "@@intersection" => {
-                    for t in types.iter() {
-                        // TODO: if there are multiple overloads that unify, pick the
-                        // best one.
-                        let result = unify_call(arena, ctx, arg_types, type_args, *t);
-                        match result {
-                            Ok(ret_type) => return Ok(ret_type),
-                            Err(_) => continue,
-                        }
-                    }
-                    return Err(Errors::InferenceError(
-                        "no valid overload for args".to_string(),
-                    ));
-                }
-                _ => {
-                    // TODO: lookup name in scope, and see if it has any callable signatures
-                    todo!("check if {name} has any callable signatures");
+            return Ok(new_union_type(
+                arena,
+                &ret_types.into_iter().unique().collect_vec(),
+            ));
+        }
+        TypeKind::Intersection(Intersection { types }) => {
+            for t in types.iter() {
+                // TODO: if there are multiple overloads that unify, pick the
+                // best one.
+                let result = unify_call(arena, ctx, arg_types, type_args, *t);
+                match result {
+                    Ok(ret_type) => return Ok(ret_type),
+                    Err(_) => continue,
                 }
             }
+            return Err(Errors::InferenceError(
+                "no valid overload for args".to_string(),
+            ));
+        }
+        TypeKind::Tuple(_) => {
+            return Err(Errors::InferenceError("tuple is not callable".to_string()))
+        }
+        TypeKind::Constructor(Constructor { name, types: _ }) => {
+            // TODO: lookup name in scope, and see if it has any callable signatures
+            todo!("check if {name} has any callable signatures");
         }
         TypeKind::Literal(lit) => {
             return Err(Errors::InferenceError(format!(
@@ -528,6 +512,9 @@ pub fn unify_call(
         }
         TypeKind::Mutable(Mutable { t }) => {
             unify_call(arena, ctx, arg_types, type_args, t)?;
+        }
+        TypeKind::Keyword(keyword) => {
+            return Err(Errors::InferenceError(format!("{keyword} is not callable")))
         }
     }
 
@@ -660,23 +647,10 @@ fn expand(arena: &mut Arena<Type>, ctx: &Context, a: Index) -> Result<Index, Err
         TypeKind::Constructor(Constructor {
             name,
             types: type_args,
-        }) if !name.starts_with("@@")
-            && ![
-                "string",
-                "boolean",
-                "number",
-                "undefined",
-                "unknown",
-                "Promise",
-                "Array",
-            ]
-            .contains(&name.as_str()) =>
-        {
-            match ctx.schemes.get(name) {
-                Some(scheme) => expand_alias(arena, name, scheme, type_args),
-                None => Err(Errors::InferenceError(format!("Unbound type name: {name}"))),
-            }
-        }
+        }) if !["Promise", "Array"].contains(&name.as_str()) => match ctx.schemes.get(name) {
+            Some(scheme) => expand_alias(arena, name, scheme, type_args),
+            None => Err(Errors::InferenceError(format!("Unbound type name: {name}"))),
+        },
         _ => Ok(a),
     }?;
 

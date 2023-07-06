@@ -133,7 +133,7 @@ pub fn infer_pattern(
                             // - check for multiple rest patterns
                             infer_pattern_rec(arena, &mut elem.pattern, assump, ctx)?
                         }
-                        None => new_constructor(arena, "undefined", &[]),
+                        None => new_keyword(arena, Keyword::Undefined),
                     };
                     elem_types.push(t);
                 }
@@ -143,9 +143,9 @@ pub fn infer_pattern(
             PatternKind::Lit(LitPat { lit }) => new_lit_type(arena, lit),
             PatternKind::Is(IsPat { ident, is_id }) => {
                 let t = match is_id.name.as_str() {
-                    "number" => new_constructor(arena, "number", &[]),
-                    "string" => new_constructor(arena, "string", &[]),
-                    "boolean" => new_constructor(arena, "boolean", &[]),
+                    "number" => new_keyword(arena, Keyword::Number),
+                    "string" => new_keyword(arena, Keyword::String),
+                    "boolean" => new_keyword(arena, Keyword::Boolean),
                     name => get_type(arena, name, ctx)?,
                 };
 

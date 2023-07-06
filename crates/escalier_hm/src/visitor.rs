@@ -22,6 +22,28 @@ pub trait Visitor: KeyValueStore<Index, Type> {
         self.put_type(t)
     }
 
+    fn visit_union(&mut self, union: &Union) -> Union {
+        Union {
+            types: self.visit_indexes(&union.types),
+        }
+    }
+
+    fn visit_intersection(&mut self, union: &Intersection) -> Intersection {
+        Intersection {
+            types: self.visit_indexes(&union.types),
+        }
+    }
+
+    fn visit_tuple(&mut self, tuple: &Tuple) -> Tuple {
+        Tuple {
+            types: self.visit_indexes(&tuple.types),
+        }
+    }
+
+    fn visit_keyword(&self, keyword: &Keyword) -> Keyword {
+        keyword.clone()
+    }
+
     fn visit_literal(&self, lit: &Lit) -> Lit {
         lit.clone()
     }
@@ -102,7 +124,13 @@ pub trait Visitor: KeyValueStore<Index, Type> {
         let (idx, t) = self.get_type(idx);
         let kind = match &t.kind {
             TypeKind::Variable(tvar) => return self.visit_type_var(tvar, &idx),
+            TypeKind::Union(union) => TypeKind::Union(self.visit_union(union)),
+            TypeKind::Intersection(intersection) => {
+                TypeKind::Intersection(self.visit_intersection(intersection))
+            }
+            TypeKind::Tuple(tuple) => TypeKind::Tuple(self.visit_tuple(tuple)),
             TypeKind::Constructor(tref) => return self.visit_type_ref(tref, &idx),
+            TypeKind::Keyword(keyword) => TypeKind::Keyword(self.visit_keyword(keyword)),
             TypeKind::Literal(lit) => TypeKind::Literal(self.visit_literal(lit)),
             TypeKind::Function(func) => TypeKind::Function(self.visit_function(func)),
             TypeKind::Object(obj) => TypeKind::Object(self.visit_object(obj)),

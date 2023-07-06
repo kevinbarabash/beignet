@@ -18,6 +18,7 @@ use crate::unify::*;
 ///
 /// Returns:
 ///     True if v occurs in type2, otherwise False
+// TODO: reimplement as a fold operation
 pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
     let pruned_type2 = prune(arena, type2);
     if pruned_type2 == v {
@@ -28,6 +29,7 @@ pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
     match arena.get(pruned_type2).unwrap().clone().kind {
         TypeKind::Variable(_) => false, // leaf node
         TypeKind::Literal(_) => false,  // leaf node
+        TypeKind::Keyword(_) => false,  // leaf node
         TypeKind::Object(Object { props }) => props.iter().any(|prop| match prop {
             TObjElem::Method(method) => {
                 // TODO: check constraints and default on type_params
@@ -47,6 +49,9 @@ pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
             let param_types: Vec<_> = params.iter().map(|param| param.t).collect();
             occurs_in(arena, v, &param_types) || occurs_in_type(arena, v, ret)
         }
+        TypeKind::Union(Union { types }) => occurs_in(arena, v, &types),
+        TypeKind::Intersection(Intersection { types }) => occurs_in(arena, v, &types),
+        TypeKind::Tuple(Tuple { types }) => occurs_in(arena, v, &types),
         TypeKind::Constructor(Constructor { types, .. }) => occurs_in(arena, v, &types),
         TypeKind::Utility(Utility { types, .. }) => occurs_in(arena, v, &types),
         TypeKind::Mutable(Mutable { t }) => occurs_in_type(arena, v, t),
@@ -156,35 +161,17 @@ pub fn expand_type(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<I
     let t = prune(arena, t);
     // It's okay to clone here because we aren't mutating the type
     match &arena[t].clone().kind {
-        TypeKind::Constructor(Constructor { name, types }) if !name.starts_with("@@") => {
-            match ctx.schemes.get(name) {
-                Some(scheme) => expand_alias(arena, name, scheme, types),
-                None => {
-                    if [
-                        "number",
-                        "string",
-                        "boolean",
-                        "symbol",
-                        "null",
-                        "undefined",
-                        "never",
-                    ]
-                    .contains(&name.as_str())
-                    {
-                        Ok(t)
-                    } else {
-                        Err(Errors::InferenceError(format!(
-                            "Can't find type alias for {name}"
-                        )))
-                    }
-                }
-            }
-        }
-        TypeKind::Utility(Utility { name, types }) => match name.as_str() {
-            "@@index" => get_computed_member(arena, ctx, types[0], types[1]),
-            "@@keyof" => expand_keyof(arena, ctx, types[0]),
+        TypeKind::Constructor(Constructor { name, types }) => match ctx.schemes.get(name) {
+            Some(scheme) => expand_alias(arena, name, scheme, types),
+            None => Err(Errors::InferenceError(format!(
+                "Can't find type alias for {name}"
+            ))),
+        },
+        TypeKind::Utility(Utility { kind, types }) => match kind {
+            UtilityKind::Index => get_computed_member(arena, ctx, types[0], types[1]),
+            UtilityKind::KeyOf => expand_keyof(arena, ctx, types[0]),
             _ => Err(Errors::InferenceError(format!(
-                "Can't find utility type for {name}"
+                "Can't find utility type for {kind:#?}"
             ))),
         },
         _ => Ok(t),
@@ -209,7 +196,7 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
             }
 
             match keys.len() {
-                0 => Ok(new_constructor(arena, "never", &[])),
+                0 => Ok(new_keyword(arena, Keyword::Never)),
                 1 => Ok(keys[0].to_owned()),
                 _ => Ok(new_union_type(arena, &keys)),
             }
@@ -236,7 +223,7 @@ pub fn get_computed_member(
         TypeKind::Object(_) => get_prop(arena, ctx, obj_idx, key_idx),
         // let tuple = [5, "hello", true]
         // tuple[1]; // "hello"
-        TypeKind::Constructor(tuple) if tuple.name == "@@tuple" => {
+        TypeKind::Tuple(tuple) => {
             match &key_type.kind {
                 TypeKind::Literal(Lit::Number(value)) => {
                     let index: usize = str::parse(value).map_err(|_| {
@@ -257,9 +244,9 @@ pub fn get_computed_member(
                     // to the union of all types in the tuple
                     get_prop(arena, ctx, obj_idx, key_idx)
                 }
-                TypeKind::Constructor(constructor) if constructor.name == "number" => {
+                TypeKind::Keyword(Keyword::Number) => {
                     let mut types = tuple.types.clone();
-                    types.push(new_constructor(arena, "undefined", &[]));
+                    types.push(new_keyword(arena, Keyword::Undefined));
                     Ok(new_union_type(arena, &types))
                 }
                 _ => Err(Errors::InferenceError(
@@ -269,7 +256,7 @@ pub fn get_computed_member(
         }
         // declare let tuple: [number, number] | [string, string]
         // tuple[1]; // number | string
-        TypeKind::Constructor(union) if union.name == "@@union" => {
+        TypeKind::Union(union) => {
             let mut result_types = vec![];
             let mut undefined_count = 0;
             for idx in &union.types {
@@ -279,7 +266,7 @@ pub fn get_computed_member(
                         // TODO: check what the error is, we may want to propagate
                         // certain errors
                         if undefined_count == 0 {
-                            let undefined = new_constructor(arena, "undefined", &[]);
+                            let undefined = new_keyword(arena, Keyword::Undefined);
                             result_types.push(undefined);
                         }
                         undefined_count += 1;
@@ -299,7 +286,7 @@ pub fn get_computed_member(
             name: alias_name,
             types,
             ..
-        }) if !alias_name.starts_with("@@") => match ctx.schemes.get(alias_name) {
+        }) => match ctx.schemes.get(alias_name) {
             Some(scheme) => {
                 let obj_idx = expand_alias(arena, alias_name, scheme, types)?;
                 get_computed_member(arena, ctx, obj_idx, key_idx)
@@ -327,17 +314,17 @@ pub fn get_prop(
     obj_idx: Index,
     key_idx: Index,
 ) -> Result<Index, Errors> {
-    let undefined = new_constructor(arena, "undefined", &[]);
+    let undefined = new_keyword(arena, Keyword::Undefined);
     // It's fine to clone here because we aren't mutating
     let obj_type = arena[obj_idx].clone();
     let key_type = arena[key_idx].clone();
 
     if let TypeKind::Object(object) = &obj_type.kind {
         match &key_type.kind {
-            TypeKind::Constructor(constructor)
-                if constructor.name == "number"
-                    || constructor.name == "string"
-                    || constructor.name == "symbol" =>
+            TypeKind::Keyword(keyword)
+                if keyword == &Keyword::Number
+                    || keyword == &Keyword::String
+                    || keyword == &Keyword::Symbol =>
             {
                 let mut maybe_index: Option<&TIndex> = None;
                 let mut values: Vec<Index> = vec![];
@@ -346,18 +333,16 @@ pub fn get_prop(
                     match prop {
                         TObjElem::Method(method) => {
                             match &method.name {
-                                TPropKey::StringKey(_) if constructor.name == "string" => (),
-                                TPropKey::NumberKey(_) if constructor.name == "number" => (),
+                                TPropKey::StringKey(_) if keyword == &Keyword::String => (),
+                                TPropKey::NumberKey(_) if keyword == &Keyword::Number => (),
                                 _ => continue,
                             };
 
-                            values.push(arena.insert(Type {
-                                kind: TypeKind::Function(Function {
-                                    params: method.params.clone(),
-                                    ret: method.ret,
-                                    type_params: method.type_params.clone(),
-                                }),
-                            }));
+                            values.push(arena.insert(Type::from(TypeKind::Function(Function {
+                                params: method.params.clone(),
+                                ret: method.ret,
+                                type_params: method.type_params.clone(),
+                            }))));
                         }
                         TObjElem::Index(index) => {
                             if maybe_index.is_some() {
@@ -369,8 +354,8 @@ pub fn get_prop(
                         }
                         TObjElem::Prop(prop) => {
                             match &prop.name {
-                                TPropKey::StringKey(_) if constructor.name == "string" => (),
-                                TPropKey::NumberKey(_) if constructor.name == "number" => (),
+                                TPropKey::StringKey(_) if keyword == &Keyword::String => (),
+                                TPropKey::NumberKey(_) if keyword == &Keyword::Number => (),
                                 _ => continue,
                             };
 
@@ -387,7 +372,7 @@ pub fn get_prop(
                 if let Some(indexer) = maybe_index {
                     match unify(arena, ctx, key_idx, indexer.key.t) {
                         Ok(_) => {
-                            let undefined = new_constructor(arena, "undefined", &[]);
+                            let undefined = new_keyword(arena, Keyword::Undefined);
                             Ok(new_union_type(arena, &[indexer.t, undefined]))
                         }
                         Err(_) => Err(Errors::InferenceError(format!(
@@ -416,13 +401,13 @@ pub fn get_prop(
                                 TPropKey::NumberKey(key) => key,
                             };
                             if key == name {
-                                return Ok(arena.insert(Type {
-                                    kind: TypeKind::Function(Function {
+                                return Ok(arena.insert(Type::from(TypeKind::Function(
+                                    Function {
                                         params: method.params.clone(),
                                         ret: method.ret,
                                         type_params: method.type_params.clone(),
-                                    }),
-                                }));
+                                    },
+                                ))));
                             }
                         }
                         TObjElem::Index(index) => {
@@ -452,7 +437,7 @@ pub fn get_prop(
                 if let Some(indexer) = maybe_index {
                     match unify(arena, ctx, key_idx, indexer.key.t) {
                         Ok(_) => {
-                            let undefined = new_constructor(arena, "undefined", &[]);
+                            let undefined = new_keyword(arena, Keyword::Undefined);
                             Ok(new_union_type(arena, &[indexer.t, undefined]))
                         }
                         Err(_) => Err(Errors::InferenceError(format!(
@@ -484,7 +469,7 @@ pub fn get_prop(
                 if let Some(indexer) = maybe_index {
                     match unify(arena, ctx, key_idx, indexer.key.t) {
                         Ok(_) => {
-                            let undefined = new_constructor(arena, "undefined", &[]);
+                            let undefined = new_keyword(arena, Keyword::Undefined);
                             Ok(new_union_type(arena, &[indexer.t, undefined]))
                         }
                         Err(_) => Err(Errors::InferenceError(format!(
