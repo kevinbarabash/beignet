@@ -53,6 +53,8 @@ pub trait Visitor: KeyValueStore<Index, Type> {
             .props
             .iter()
             .map(|prop| match prop {
+                TObjElem::Constructor(_) => todo!(),
+                TObjElem::Call(_) => todo!(),
                 TObjElem::Method(method) => {
                     let params = method
                         .params
@@ -68,6 +70,8 @@ pub trait Visitor: KeyValueStore<Index, Type> {
                         ..method.to_owned()
                     })
                 }
+                TObjElem::Getter(_) => todo!(),
+                TObjElem::Setter(_) => todo!(),
                 TObjElem::Index(index) => TObjElem::Index(TIndex {
                     t: self.visit_index(&index.t),
                     ..index.clone()

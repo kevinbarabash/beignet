@@ -157,12 +157,32 @@ pub struct TProp {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TCallable {
+    pub params: Vec<FuncParam>,
+    pub ret: Index,
+    pub type_params: Option<Vec<TypeParam>>,
+    // TODO: support mutating callables? ...they'd still need have the same type
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TGetter {
+    pub name: TPropKey,
+    pub ret: Index,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TSetter {
+    pub name: TPropKey,
+    pub param: FuncParam,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TObjElem {
-    // Call(TCallable),
-    // Constructor(TCallable),
+    Call(TCallable),
+    Constructor(TCallable),
     Method(TMethod),
-    // Getter(TGetter),
-    // Setter(TSetter),
+    Getter(TGetter),
+    Setter(TSetter),
     Index(TIndex),
     Prop(TProp),
     // RestSpread - we can use this instead of converting {a, ...x} to {a} & tvar
@@ -294,6 +314,20 @@ impl Type {
                 let mut fields = vec![];
                 for prop in &object.props {
                     match prop {
+                        TObjElem::Constructor(TCallable {
+                            params,
+                            ret,
+                            type_params,
+                        }) => {
+                            todo!()
+                        }
+                        TObjElem::Call(TCallable {
+                            params,
+                            ret,
+                            type_params,
+                        }) => {
+                            todo!()
+                        }
                         TObjElem::Method(TMethod {
                             name,
                             params,
@@ -328,6 +362,12 @@ impl Type {
                                 params_to_strings(arena, params).join(", "),
                                 arena[*ret].as_string(arena)
                             ));
+                        }
+                        TObjElem::Getter(TGetter { name, ret }) => {
+                            todo!()
+                        }
+                        TObjElem::Setter(TSetter { name, param }) => {
+                            todo!()
                         }
                         TObjElem::Index(TIndex { key, mutable, t }) => {
                             let t = arena[*t].as_string(arena);

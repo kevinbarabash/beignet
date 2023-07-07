@@ -219,6 +219,10 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
         (TypeKind::Literal(Lit::Boolean(_)), TypeKind::Keyword(Keyword::Boolean)) => Ok(()),
         (TypeKind::Object(object1), TypeKind::Object(object2)) => {
             // object1 must have atleast as the same properties as object2
+            // This is pretyt inefficient... we should have some way of hashing
+            // each object element so that we can look them.  The problem comes
+            // in with functions where different signatures can expand to be the
+            // same.  Do these kinds of checks is going to be really slow.
             'outer: for prop2 in &object2.props {
                 for prop1 in &object1.props {
                     match (prop1, prop2) {
@@ -249,6 +253,8 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 // If we haven't found a matching property, then we report an
                 // appropriate type error.
                 match prop2 {
+                    TObjElem::Constructor(_) => todo!(),
+                    TObjElem::Call(_) => todo!(),
                     TObjElem::Method(method) => {
                         let name = match &method.name {
                             TPropKey::NumberKey(name) => name.to_string(),
@@ -259,6 +265,8 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                             a_t.as_string(arena),
                         )));
                     }
+                    TObjElem::Getter(_) => todo!(),
+                    TObjElem::Setter(_) => todo!(),
                     TObjElem::Index(_) => todo!(),
                     TObjElem::Prop(prop) => {
                         let name = match &prop.name {
@@ -570,11 +578,11 @@ pub fn simplify_intersection(arena: &mut Arena<Type>, in_types: &[Index]) -> Ind
         for elem in &obj.props {
             match elem {
                 // What do we do with Call and Index signatures
-                // TObjElem::Call(_) => todo!(),
-                // TObjElem::Constructor(_) => todo!(),
+                TObjElem::Call(_) => todo!(),
+                TObjElem::Constructor(_) => todo!(),
                 TObjElem::Method(_) => todo!(),
-                // TObjElem::Getter(_) => todo!(),
-                // TObjElem::Setter(_) => todo!(),
+                TObjElem::Getter(_) => todo!(),
+                TObjElem::Setter(_) => todo!(),
                 TObjElem::Index(_) => todo!(),
                 TObjElem::Prop(prop) => {
                     let key = match &prop.name {
@@ -610,11 +618,11 @@ pub fn simplify_intersection(arena: &mut Arena<Type>, in_types: &[Index]) -> Ind
         .collect();
     // How do we sort call and index signatures?
     elems.sort_by_key(|elem| match elem {
-        // TObjElem::Call(_) => todo!(),
-        // TObjElem::Constructor(_) => todo!(),
+        TObjElem::Call(_) => todo!(),
+        TObjElem::Constructor(_) => todo!(),
         TObjElem::Method(_) => todo!(),
-        // TObjElem::Getter(_) => todo!(),
-        // TObjElem::Setter(_) => todo!(),
+        TObjElem::Getter(_) => todo!(),
+        TObjElem::Setter(_) => todo!(),
         TObjElem::Index(_) => todo!(),
         TObjElem::Prop(prop) => prop.name.clone(),
     }); // ensure a stable order
