@@ -320,6 +320,7 @@ pub fn get_computed_member(
     }
 }
 
+// TODO(#624) - to behave differently when used to look up an lvalue vs a rvalue
 pub fn get_prop(
     arena: &mut Arena<Type>,
     ctx: &Context,

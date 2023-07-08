@@ -148,6 +148,15 @@ pub enum TPropKey {
     NumberKey(String),
 }
 
+impl fmt::Display for TPropKey {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            TPropKey::StringKey(key) => write!(f, "{key}"),
+            TPropKey::NumberKey(key) => write!(f, "{key}"),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TProp {
     pub name: TPropKey,
@@ -574,12 +583,12 @@ pub fn new_func_type(
     arena: &mut Arena<Type>,
     params: &[FuncParam],
     ret: Index,
-    type_params: Option<Vec<TypeParam>>,
+    type_params: &Option<Vec<TypeParam>>,
 ) -> Index {
     arena.insert(Type::from(TypeKind::Function(Function {
         params: params.to_vec(),
         ret: ret.to_owned(),
-        type_params,
+        type_params: type_params.to_owned(),
     })))
 }
 
@@ -705,6 +714,8 @@ impl Type {
                 let t2 = &arena[m2.t];
                 t1.equals(t2, arena)
             }
+            // TODO:
+            // - unification of object and intersection
             _ => false,
         }
     }

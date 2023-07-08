@@ -503,8 +503,8 @@ fn test_calling_a_union() -> Result<(), Errors> {
 
     let bool = new_keyword(&mut arena, Keyword::Boolean);
     let str = new_keyword(&mut arena, Keyword::String);
-    let fn1 = new_func_type(&mut arena, &[], bool, None);
-    let fn2 = new_func_type(&mut arena, &[], str, None);
+    let fn1 = new_func_type(&mut arena, &[], bool, &None);
+    let fn2 = new_func_type(&mut arena, &[], str, &None);
     my_ctx.values.insert(
         "foo".to_string(),
         Binding {

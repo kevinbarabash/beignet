@@ -216,9 +216,9 @@ pub fn infer_expression(
                     // the type params added to sig_ctx.schemes so that they can
                     // be looked up.
                     unify(arena, &sig_ctx, body_t, ret_t)?;
-                    new_func_type(arena, &func_params, ret_t, type_params)
+                    new_func_type(arena, &func_params, ret_t, &type_params)
                 }
-                None => new_func_type(arena, &func_params, body_t, type_params),
+                None => new_func_type(arena, &func_params, body_t, &type_params),
             }
         }
         ExprKind::IfElse(IfElse {
@@ -445,7 +445,7 @@ pub fn infer_type_ann(
 
             let ret_idx = infer_type_ann(arena, ret.as_mut(), &mut sig_ctx)?;
 
-            new_func_type(arena, &func_params, ret_idx, type_params)
+            new_func_type(arena, &func_params, ret_idx, &type_params)
         }
         TypeAnnKind::NumLit(value) => {
             arena.insert(Type::from(TypeKind::Literal(syntax::Literal::Number(value.to_owned()))))
@@ -848,9 +848,9 @@ pub fn generalize_func(arena: &'_ mut Arena<Type>, func: &types::Function) -> In
     }
 
     if type_params.is_empty() {
-        new_func_type(arena, &params, ret, None)
+        new_func_type(arena, &params, ret, &None)
     } else {
-        new_func_type(arena, &params, ret, Some(type_params))
+        new_func_type(arena, &params, ret, &Some(type_params))
     }
 }
 
