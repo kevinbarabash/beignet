@@ -559,7 +559,6 @@ fn bind(arena: &mut Arena<Type>, ctx: &Context, a: Index, b: Index) -> Result<()
     Ok(())
 }
 
-// TODO: make this recursive
 // TODO: handle optional properties correctly
 // Maybe we can have a function that will canonicalize objects by converting
 // `x: T | undefined` to `x?: T`
