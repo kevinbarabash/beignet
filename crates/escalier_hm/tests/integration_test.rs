@@ -868,6 +868,217 @@ fn object_signatures() -> Result<(), Errors> {
 }
 
 #[test]
+fn object_callable_subtyping() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let foo: {
+        fn (self, a: number | string): string,
+    }
+    let bar: {
+        fn (self, a: number): number | string,
+    } = foo
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    Ok(())
+}
+
+// TODO: This fail, we need to check unify callable siagntures in
+// object types
+#[test]
+#[ignore]
+fn object_callable_subtyping_failure_case() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let foo: {
+        fn (self, a: string): string,
+    }
+    let bar: {
+        fn (self, a: number): number,
+    } = foo
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    Err(Errors::InferenceError(
+        "Expected type number, found type string".to_string(),
+    ))
+}
+
+#[test]
+fn object_method_subtyping() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let foo: {
+        fn method(self, a: number | string): string,
+    }
+    let bar: {
+        fn method(self, a: number): number | string,
+    } = foo
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    Ok(())
+}
+
+#[test]
+fn object_property_subtyping() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let foo: {
+        fn method(self, a: number): string,
+        x: number,
+        y: boolean,
+    }
+    let bar: {
+        fn method(self, a: number): string,
+        x: number | string,
+    } = foo
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    Ok(())
+}
+
+#[test]
+fn object_indexer_subtyping() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let foo: {
+        [key: string | number]: number,
+    }
+    let bar: {
+        [key: string]: number | string,
+    } = foo
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    Ok(())
+}
+
+// TODO
+#[test]
+#[ignore]
+fn object_methods_and_properties_should_unify() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let foo: {
+        fn foo(self, a: number): string,
+    }
+    let bar: {
+        foo: fn (a: number) => string,
+    } = foo
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    Ok(())
+}
+
+// TODO
+#[test]
+#[ignore]
+fn object_indexers_and_properties_should_unify() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let foo: {
+        x: number,
+        y: number,
+    };
+    let bar: {
+        [key: string]: number,
+    } = foo;
+    "#;
+
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    Ok(())
+}
+
+// TODO
+#[test]
+#[ignore]
+fn object_properties_and_getter_should_unify() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let foo: {
+        fn foo(self, a: number): string,
+    }
+    let bar: {
+        foo: (self, a: number) => string,
+    } = foo
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    Ok(())
+}
+
+#[test]
+fn mutable_object_properties_unify() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let foo: mut {
+        a: number,
+        b: string,
+    }
+    let bar: mut {
+        a: number,
+        b: string,
+    } = foo
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    Ok(())
+}
+
+// TODO
+#[test]
+#[ignore]
+fn mutable_object_properties_unify_with_getters_setters() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let foo: mut {
+        x: number,
+    }
+    let bar: mut {
+        get x(self): number,
+        set x(self, value: number): undefined,
+    } = foo
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    Ok(())
+}
+
+#[test]
 fn object_subtyping_missing_prop() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 

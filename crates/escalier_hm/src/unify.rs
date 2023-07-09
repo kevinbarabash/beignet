@@ -1,5 +1,4 @@
 use defaultmap::*;
-use escalier_ast::Getter;
 use generational_arena::{Arena, Index};
 use itertools::Itertools;
 use std::collections::BTreeSet;
@@ -227,11 +226,21 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             // We could also try bucketing the different object element types
             // to reduce the size of the n^2.
 
+            // NOTES:
+            // - we don't bother unifying setters because they aren't available
+            //   on immutable objects (setters need to be unified inside of
+            //   unify_mut() below)
+            // - we unify all of the other named elements all at once because
+            //   a property could be a function and we want that to unify with
+            //   a method of the same name
+            // - we should also unify indexers with other named values since
+            //   they can be accessed by name as well but are optional
+
             let mut calls_1: Vec<&TCallable> = vec![];
             let mut constructors_1: Vec<&TCallable> = vec![];
             let mut methods_1: Vec<&TMethod> = vec![];
             let mut getters_1: Vec<&TGetter> = vec![];
-            let mut setters_1: Vec<&TSetter> = vec![];
+            // let mut setters_1: Vec<&TSetter> = vec![];
             let mut indexes_1: Vec<&TIndex> = vec![];
             let mut props_1: Vec<&TProp> = vec![];
 
@@ -239,7 +248,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             let mut constructors_2: Vec<&TCallable> = vec![];
             let mut methods_2: Vec<&TMethod> = vec![];
             let mut getters_2: Vec<&TGetter> = vec![];
-            let mut setters_2: Vec<&TSetter> = vec![];
+            // let mut setters_2: Vec<&TSetter> = vec![];
             let mut indexes_2: Vec<&TIndex> = vec![];
             let mut props_2: Vec<&TProp> = vec![];
 
@@ -249,7 +258,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                     TObjElem::Constructor(constructor) => constructors_1.push(constructor),
                     TObjElem::Method(method) => methods_1.push(method),
                     TObjElem::Getter(getter) => getters_1.push(getter),
-                    TObjElem::Setter(setter) => setters_1.push(setter),
+                    TObjElem::Setter(_) => (),
                     TObjElem::Index(indexer) => indexes_1.push(indexer),
                     TObjElem::Prop(prop) => props_1.push(prop),
                 }
@@ -261,7 +270,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                     TObjElem::Constructor(constructor) => constructors_2.push(constructor),
                     TObjElem::Method(method) => methods_2.push(method),
                     TObjElem::Getter(getter) => getters_2.push(getter),
-                    TObjElem::Setter(setter) => setters_2.push(setter),
+                    TObjElem::Setter(_) => (),
                     TObjElem::Index(indexer) => indexes_2.push(indexer),
                     TObjElem::Prop(prop) => props_2.push(prop),
                 }
@@ -346,27 +355,6 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 return Err(Errors::InferenceError(format!(
                     "get '{}' is missing in {}",
                     getter2.name,
-                    a_t.as_string(arena),
-                )));
-            }
-
-            // object1 must have at least as the same getters as object2
-            'outer: for setter2 in &setters_2 {
-                for setter1 in &setters_1 {
-                    if setter1.name == setter2.name {
-                        // NOTE: the order is reverse here because setter1
-                        // needs to accept at least everything that setter2
-                        // accepts, but could accept more.
-                        unify(arena, ctx, setter2.param.t, setter1.param.t)?;
-                        continue 'outer;
-                    }
-                }
-
-                // If we haven't found a matching getter, then we report an
-                // appropriate type error.
-                return Err(Errors::InferenceError(format!(
-                    "get '{}' is missing in {}",
-                    setter2.name,
                     a_t.as_string(arena),
                 )));
             }
