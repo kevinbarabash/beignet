@@ -219,59 +219,183 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
         (TypeKind::Literal(Lit::Boolean(_)), TypeKind::Keyword(Keyword::Boolean)) => Ok(()),
         (TypeKind::Object(object1), TypeKind::Object(object2)) => {
             // object1 must have atleast as the same properties as object2
-            'outer: for prop2 in &object2.props {
-                for prop1 in &object1.props {
-                    match (prop1, prop2) {
-                        (TObjElem::Prop(prop1), TObjElem::Prop(prop2))
-                            if prop1.name == prop2.name =>
-                        {
-                            let p1_t = match prop1.optional {
-                                true => {
-                                    let undefined = new_keyword(arena, Keyword::Undefined);
-                                    new_union_type(arena, &[prop1.t, undefined])
-                                }
-                                false => prop1.t,
-                            };
-                            let p2_t = match prop2.optional {
-                                true => {
-                                    let undefined = new_keyword(arena, Keyword::Undefined);
-                                    new_union_type(arena, &[prop2.t, undefined])
-                                }
-                                false => prop2.t,
-                            };
-                            unify(arena, ctx, p1_t, p2_t)?;
-                            continue 'outer;
-                        }
-                        _ => (),
+            // This is pretty inefficient... we should have some way of hashing
+            // each object element so that we can look them.  The problem comes
+            // in with functions where different signatures can expand to be the
+            // same.  Do these kinds of checks is going to be really slow.
+            // We could also try bucketing the different object element types
+            // to reduce the size of the n^2.
+
+            // NOTES:
+            // - we don't bother unifying setters because they aren't available
+            //   on immutable objects (setters need to be unified inside of
+            //   unify_mut() below)
+            // - we unify all of the other named elements all at once because
+            //   a property could be a function and we want that to unify with
+            //   a method of the same name
+            // - we should also unify indexers with other named values since
+            //   they can be accessed by name as well but are optional
+
+            let mut calls_1: Vec<&TCallable> = vec![];
+            let mut constructors_1: Vec<&TCallable> = vec![];
+            let mut methods_1: Vec<&TMethod> = vec![];
+            let mut getters_1: Vec<&TGetter> = vec![];
+            // let mut setters_1: Vec<&TSetter> = vec![];
+            let mut indexes_1: Vec<&TIndex> = vec![];
+            let mut props_1: Vec<&TProp> = vec![];
+
+            let mut calls_2: Vec<&TCallable> = vec![];
+            let mut constructors_2: Vec<&TCallable> = vec![];
+            let mut methods_2: Vec<&TMethod> = vec![];
+            let mut getters_2: Vec<&TGetter> = vec![];
+            // let mut setters_2: Vec<&TSetter> = vec![];
+            let mut indexes_2: Vec<&TIndex> = vec![];
+            let mut props_2: Vec<&TProp> = vec![];
+
+            for prop1 in &object1.props {
+                match prop1 {
+                    TObjElem::Call(call) => calls_1.push(call),
+                    TObjElem::Constructor(constructor) => constructors_1.push(constructor),
+                    TObjElem::Method(method) => methods_1.push(method),
+                    TObjElem::Getter(getter) => getters_1.push(getter),
+                    TObjElem::Setter(_) => (),
+                    TObjElem::Index(indexer) => indexes_1.push(indexer),
+                    TObjElem::Prop(prop) => props_1.push(prop),
+                }
+            }
+
+            for prop2 in &object2.props {
+                match prop2 {
+                    TObjElem::Call(call) => calls_2.push(call),
+                    TObjElem::Constructor(constructor) => constructors_2.push(constructor),
+                    TObjElem::Method(method) => methods_2.push(method),
+                    TObjElem::Getter(getter) => getters_2.push(getter),
+                    TObjElem::Setter(_) => (),
+                    TObjElem::Index(indexer) => indexes_2.push(indexer),
+                    TObjElem::Prop(prop) => props_2.push(prop),
+                }
+            }
+
+            // TODO: what about unifying properties with getters, setters, and
+            // methods?
+
+            // object1 must have at least as the same properties as object2
+            'outer: for prop2 in &props_2 {
+                for prop1 in &props_1 {
+                    if prop1.name == prop2.name {
+                        let p1_t = match prop1.optional {
+                            true => {
+                                let undefined = new_keyword(arena, Keyword::Undefined);
+                                new_union_type(arena, &[prop1.t, undefined])
+                            }
+                            false => prop1.t,
+                        };
+                        let p2_t = match prop2.optional {
+                            true => {
+                                let undefined = new_keyword(arena, Keyword::Undefined);
+                                new_union_type(arena, &[prop2.t, undefined])
+                            }
+                            false => prop2.t,
+                        };
+                        unify(arena, ctx, p1_t, p2_t)?;
+                        continue 'outer;
                     }
                 }
 
                 // If we haven't found a matching property, then we report an
                 // appropriate type error.
-                match prop2 {
-                    TObjElem::Method(method) => {
-                        let name = match &method.name {
-                            TPropKey::NumberKey(name) => name.to_string(),
-                            TPropKey::StringKey(name) => name.to_string(),
-                        };
-                        return Err(Errors::InferenceError(format!(
-                            "'{name}' is missing in {}",
-                            a_t.as_string(arena),
-                        )));
-                    }
-                    TObjElem::Index(_) => todo!(),
-                    TObjElem::Prop(prop) => {
-                        let name = match &prop.name {
-                            TPropKey::NumberKey(name) => name.to_string(),
-                            TPropKey::StringKey(name) => name.to_string(),
-                        };
-                        return Err(Errors::InferenceError(format!(
-                            "'{name}' is missing in {}",
-                            a_t.as_string(arena),
-                        )));
-                    }
-                };
+                return Err(Errors::InferenceError(format!(
+                    "'{}' is missing in {}",
+                    prop2.name,
+                    a_t.as_string(arena),
+                )));
             }
+
+            // object1 must have at least as the same methods as object2
+            'outer: for method2 in &methods_2 {
+                for method1 in &methods_1 {
+                    if method1.name == method2.name {
+                        let fn1 = new_func_type(
+                            arena,
+                            &method1.params,
+                            method1.ret,
+                            &method1.type_params,
+                        );
+                        let fn2 = new_func_type(
+                            arena,
+                            &method2.params,
+                            method2.ret,
+                            &method2.type_params,
+                        );
+                        unify(arena, ctx, fn1, fn2)?;
+                        continue 'outer;
+                    }
+                }
+
+                // If we haven't found a matching property, then we report an
+                // appropriate type error.
+                return Err(Errors::InferenceError(format!(
+                    "'{}' is missing in {}", // TODO: write out the full method
+                    method2.name,
+                    a_t.as_string(arena),
+                )));
+            }
+
+            // object1 must have at least as the same getters as object2
+            'outer: for getter2 in &getters_2 {
+                for getter1 in &getters_1 {
+                    if getter1.name == getter2.name {
+                        unify(arena, ctx, getter1.ret, getter2.ret)?;
+                        continue 'outer;
+                    }
+                }
+
+                // If we haven't found a matching getter, then we report an
+                // appropriate type error.
+                return Err(Errors::InferenceError(format!(
+                    "get '{}' is missing in {}",
+                    getter2.name,
+                    a_t.as_string(arena),
+                )));
+            }
+
+            match indexes_2.len() {
+                0 => (),
+                1 => {
+                    match indexes_1.len() {
+                        0 => {
+                            return Err(Errors::InferenceError(format!(
+                                "{} has no indexers but should",
+                                a_t.as_string(arena)
+                            )))
+                        }
+                        1 => {
+                            unify(arena, ctx, indexes_1[0].t, indexes_2[0].t)?;
+                            // NOTE: the order is reverse here because object1
+                            // has to have at least the same keys as object2,
+                            // but it can have more.
+                            unify(arena, ctx, indexes_2[0].key.t, indexes_1[0].key.t)?;
+                        }
+                        _ => {
+                            return Err(Errors::InferenceError(format!(
+                                "{} has multiple indexers",
+                                a_t.as_string(arena)
+                            )))
+                        }
+                    }
+                }
+                _ => {
+                    return Err(Errors::InferenceError(format!(
+                        "{} has multiple indexers",
+                        b_t.as_string(arena)
+                    )))
+                }
+            }
+
+            // TODO:
+            // - call (all calls in object1 must cover the calls in object2)
+            // - constructor (all constructors in object1 must cover the
+            //   constructors in object2)
             Ok(())
         }
         (TypeKind::Object(object1), TypeKind::Intersection(intersection)) => {
@@ -428,7 +552,7 @@ pub fn unify_call(
                     optional: false,
                 })
                 .collect();
-            let call_type = new_func_type(arena, &arg_types, ret_type, None);
+            let call_type = new_func_type(arena, &arg_types, ret_type, &None);
             bind(arena, ctx, b, call_type)?
         }
         TypeKind::Union(Union { types }) => {
@@ -551,7 +675,6 @@ fn bind(arena: &mut Arena<Type>, ctx: &Context, a: Index, b: Index) -> Result<()
     Ok(())
 }
 
-// TODO: make this recursive
 // TODO: handle optional properties correctly
 // Maybe we can have a function that will canonicalize objects by converting
 // `x: T | undefined` to `x?: T`
@@ -570,11 +693,11 @@ pub fn simplify_intersection(arena: &mut Arena<Type>, in_types: &[Index]) -> Ind
         for elem in &obj.props {
             match elem {
                 // What do we do with Call and Index signatures
-                // TObjElem::Call(_) => todo!(),
-                // TObjElem::Constructor(_) => todo!(),
+                TObjElem::Call(_) => todo!(),
+                TObjElem::Constructor(_) => todo!(),
                 TObjElem::Method(_) => todo!(),
-                // TObjElem::Getter(_) => todo!(),
-                // TObjElem::Setter(_) => todo!(),
+                TObjElem::Getter(_) => todo!(),
+                TObjElem::Setter(_) => todo!(),
                 TObjElem::Index(_) => todo!(),
                 TObjElem::Prop(prop) => {
                     let key = match &prop.name {
@@ -610,11 +733,11 @@ pub fn simplify_intersection(arena: &mut Arena<Type>, in_types: &[Index]) -> Ind
         .collect();
     // How do we sort call and index signatures?
     elems.sort_by_key(|elem| match elem {
-        // TObjElem::Call(_) => todo!(),
-        // TObjElem::Constructor(_) => todo!(),
+        TObjElem::Call(_) => todo!(),
+        TObjElem::Constructor(_) => todo!(),
         TObjElem::Method(_) => todo!(),
-        // TObjElem::Getter(_) => todo!(),
-        // TObjElem::Setter(_) => todo!(),
+        TObjElem::Getter(_) => todo!(),
+        TObjElem::Setter(_) => todo!(),
         TObjElem::Index(_) => todo!(),
         TObjElem::Prop(prop) => prop.name.clone(),
     }); // ensure a stable order

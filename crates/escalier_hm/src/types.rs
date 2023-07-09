@@ -148,6 +148,15 @@ pub enum TPropKey {
     NumberKey(String),
 }
 
+impl fmt::Display for TPropKey {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            TPropKey::StringKey(key) => write!(f, "{key}"),
+            TPropKey::NumberKey(key) => write!(f, "{key}"),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TProp {
     pub name: TPropKey,
@@ -157,12 +166,34 @@ pub struct TProp {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TCallable {
+    pub params: Vec<FuncParam>,
+    pub ret: Index,
+    pub type_params: Option<Vec<TypeParam>>,
+    // TODO: support mutating callables? ...they'd still need have the same type
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TGetter {
+    pub name: TPropKey,
+    pub ret: Index,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TSetter {
+    pub name: TPropKey,
+    pub param: FuncParam,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TObjElem {
-    // Call(TCallable),
-    // Constructor(TCallable),
+    Call(TCallable),
+    // NOTE: type_params on constructors should be a subset of type_params on
+    // the object scheme in which they live
+    Constructor(TCallable),
     Method(TMethod),
-    // Getter(TGetter),
-    // Setter(TSetter),
+    Getter(TGetter),
+    Setter(TSetter),
     Index(TIndex),
     Prop(TProp),
     // RestSpread - we can use this instead of converting {a, ...x} to {a} & tvar
@@ -294,18 +325,12 @@ impl Type {
                 let mut fields = vec![];
                 for prop in &object.props {
                     match prop {
-                        TObjElem::Method(TMethod {
-                            name,
+                        TObjElem::Constructor(TCallable {
                             params,
                             ret,
                             type_params,
-                            is_mutating: _, // TODO
                         }) => {
-                            let name = match name {
-                                TPropKey::StringKey(s) => s,
-                                TPropKey::NumberKey(n) => n,
-                            };
-                            let mut result = name.to_string();
+                            let mut result = "fn".to_string();
                             match type_params {
                                 Some(type_params) if !type_params.is_empty() => {
                                     let type_params = type_params
@@ -328,6 +353,93 @@ impl Type {
                                 params_to_strings(arena, params).join(", "),
                                 arena[*ret].as_string(arena)
                             ));
+                            fields.push(result);
+                        }
+                        TObjElem::Call(TCallable {
+                            params,
+                            ret,
+                            type_params,
+                        }) => {
+                            let mut result = "fn".to_string();
+                            match type_params {
+                                Some(type_params) if !type_params.is_empty() => {
+                                    let type_params = type_params
+                                        .iter()
+                                        .map(|tp| match &tp.constraint {
+                                            Some(constraint) => format!(
+                                                "{}:{}",
+                                                tp.name.clone(),
+                                                arena[*constraint].as_string(arena)
+                                            ),
+                                            None => tp.name.clone(),
+                                        })
+                                        .collect::<Vec<_>>();
+                                    result.push_str(&format!("<{}>", type_params.join(", ")))
+                                }
+                                _ => (),
+                            };
+                            result.push_str(&format!(
+                                "({}): {}",
+                                params_to_strings(arena, params).join(", "),
+                                arena[*ret].as_string(arena)
+                            ));
+                            fields.push(result);
+                        }
+                        TObjElem::Method(TMethod {
+                            name,
+                            params,
+                            ret,
+                            type_params,
+                            is_mutating: _, // TODO
+                        }) => {
+                            let name = match name {
+                                TPropKey::StringKey(s) => s,
+                                TPropKey::NumberKey(n) => n,
+                            };
+                            let mut result = format!("fn {name}");
+                            match type_params {
+                                Some(type_params) if !type_params.is_empty() => {
+                                    let type_params = type_params
+                                        .iter()
+                                        .map(|tp| match &tp.constraint {
+                                            Some(constraint) => format!(
+                                                "{}:{}",
+                                                tp.name.clone(),
+                                                arena[*constraint].as_string(arena)
+                                            ),
+                                            None => tp.name.clone(),
+                                        })
+                                        .collect::<Vec<_>>();
+                                    result.push_str(&format!("<{}>", type_params.join(", ")))
+                                }
+                                _ => (),
+                            };
+                            result.push_str(&format!(
+                                "({}): {}",
+                                params_to_strings(arena, params).join(", "),
+                                arena[*ret].as_string(arena)
+                            ));
+                            fields.push(result);
+                        }
+                        TObjElem::Getter(TGetter { name, ret }) => {
+                            let name = match name {
+                                TPropKey::StringKey(s) => s,
+                                TPropKey::NumberKey(n) => n,
+                            };
+                            fields.push(format!(
+                                "get {name}(self): {}",
+                                arena[*ret].as_string(arena)
+                            ))
+                        }
+                        TObjElem::Setter(TSetter { name, param }) => {
+                            let name = match name {
+                                TPropKey::StringKey(s) => s,
+                                TPropKey::NumberKey(n) => n,
+                            };
+                            fields.push(format!(
+                                "set {name}(self, {}): undefined",
+                                param_to_string(arena, param)
+                            ))
                         }
                         TObjElem::Index(TIndex { key, mutable, t }) => {
                             let t = arena[*t].as_string(arena);
@@ -415,19 +527,18 @@ fn types_to_strings(a: &Arena<Type>, types: &[Index]) -> Vec<String> {
     strings
 }
 
+fn param_to_string(arena: &Arena<Type>, param: &FuncParam) -> String {
+    let name = tpat_to_string(arena, &param.pattern);
+    match param.optional {
+        true => format!("{name}?: {}", arena[param.t].as_string(arena)),
+        false => format!("{name}: {}", arena[param.t].as_string(arena)),
+    }
+}
+
 fn params_to_strings(arena: &Arena<Type>, params: &[FuncParam]) -> Vec<String> {
     let mut strings = vec![];
-    for FuncParam {
-        pattern,
-        t,
-        optional,
-    } in params
-    {
-        let name = tpat_to_string(arena, pattern);
-        strings.push(match optional {
-            true => format!("{name}?: {}", arena[*t].as_string(arena)),
-            false => format!("{name}: {}", arena[*t].as_string(arena)),
-        });
+    for param in params {
+        strings.push(param_to_string(arena, param))
     }
     strings
 }
@@ -478,12 +589,12 @@ pub fn new_func_type(
     arena: &mut Arena<Type>,
     params: &[FuncParam],
     ret: Index,
-    type_params: Option<Vec<TypeParam>>,
+    type_params: &Option<Vec<TypeParam>>,
 ) -> Index {
     arena.insert(Type::from(TypeKind::Function(Function {
         params: params.to_vec(),
         ret: ret.to_owned(),
-        type_params,
+        type_params: type_params.to_owned(),
     })))
 }
 
@@ -609,6 +720,8 @@ impl Type {
                 let t2 = &arena[m2.t];
                 t1.equals(t2, arena)
             }
+            // TODO:
+            // - unification of object and intersection
             _ => false,
         }
     }

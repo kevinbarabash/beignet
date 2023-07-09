@@ -48,26 +48,90 @@ pub trait Visitor: KeyValueStore<Index, Type> {
         lit.clone()
     }
 
+    fn visit_type_param(&mut self, type_param: &TypeParam) -> TypeParam {
+        TypeParam {
+            name: type_param.name.to_owned(),
+            constraint: type_param
+                .constraint
+                .as_ref()
+                .map(|constraint| self.visit_index(constraint)),
+            default: type_param
+                .default
+                .as_ref()
+                .map(|default| self.visit_index(default)),
+        }
+    }
+
+    fn visit_type_params(
+        &mut self,
+        type_params: &Option<Vec<TypeParam>>,
+    ) -> Option<Vec<TypeParam>> {
+        type_params.as_ref().map(|type_params| {
+            type_params
+                .iter()
+                .map(|type_param| self.visit_type_param(type_param))
+                .collect::<Vec<_>>()
+        })
+    }
+
+    fn visit_func_param(&mut self, func_param: &FuncParam) -> FuncParam {
+        FuncParam {
+            t: self.visit_index(&func_param.t),
+            ..func_param.to_owned()
+        }
+    }
+
+    fn visit_func_params(&mut self, params: &[FuncParam]) -> Vec<FuncParam> {
+        params
+            .iter()
+            .map(|param| self.visit_func_param(param))
+            .collect::<Vec<_>>()
+    }
+
     fn visit_object(&mut self, obj: &Object) -> Object {
         let props: Vec<_> = obj
             .props
             .iter()
             .map(|prop| match prop {
-                TObjElem::Method(method) => {
-                    let params = method
-                        .params
-                        .iter()
-                        .map(|param| FuncParam {
-                            t: self.visit_index(&param.t),
-                            ..param.to_owned()
-                        })
-                        .collect::<Vec<_>>();
-                    TObjElem::Method(TMethod {
-                        params,
-                        ret: self.visit_index(&method.ret),
-                        ..method.to_owned()
-                    })
-                }
+                TObjElem::Constructor(TCallable {
+                    params,
+                    ret,
+                    type_params,
+                }) => TObjElem::Constructor(TCallable {
+                    params: self.visit_func_params(params),
+                    ret: self.visit_index(ret),
+                    type_params: self.visit_type_params(type_params),
+                }),
+                TObjElem::Call(TCallable {
+                    params,
+                    ret,
+                    type_params,
+                }) => TObjElem::Call(TCallable {
+                    params: self.visit_func_params(params),
+                    ret: self.visit_index(ret),
+                    type_params: self.visit_type_params(type_params),
+                }),
+                TObjElem::Method(TMethod {
+                    name,
+                    params,
+                    ret,
+                    type_params,
+                    is_mutating,
+                }) => TObjElem::Method(TMethod {
+                    name: name.to_owned(),
+                    params: self.visit_func_params(params),
+                    ret: self.visit_index(ret),
+                    type_params: self.visit_type_params(type_params),
+                    is_mutating: *is_mutating,
+                }),
+                TObjElem::Getter(TGetter { name, ret }) => TObjElem::Getter(TGetter {
+                    name: name.to_owned(),
+                    ret: self.visit_index(ret),
+                }),
+                TObjElem::Setter(TSetter { name, param }) => TObjElem::Setter(TSetter {
+                    name: name.to_owned(),
+                    param: self.visit_func_param(param),
+                }),
                 TObjElem::Index(index) => TObjElem::Index(TIndex {
                     t: self.visit_index(&index.t),
                     ..index.clone()
@@ -86,15 +150,14 @@ pub trait Visitor: KeyValueStore<Index, Type> {
         let params = func
             .params
             .iter()
-            .map(|param| FuncParam {
-                t: self.visit_index(&param.t),
-                ..param.to_owned()
-            })
+            .map(|param| self.visit_func_param(param))
             .collect::<Vec<_>>();
+        let ret = self.visit_index(&func.ret);
+        let type_params = self.visit_type_params(&func.type_params);
         Function {
             params,
-            ret: self.visit_index(&func.ret),
-            ..func.clone()
+            ret,
+            type_params,
         }
     }
 
