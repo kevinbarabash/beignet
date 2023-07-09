@@ -73,7 +73,6 @@ impl<'a> Parser<'a> {
                 let mut props: Vec<ObjectProp> = vec![];
 
                 while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
-                    eprintln!("self.peek() = {:?}", self.peek().unwrap_or(&EOF));
                     match self.next().unwrap_or(EOF.clone()).kind {
                         TokenKind::Identifier(name) => {
                             let optional =
@@ -122,6 +121,93 @@ impl<'a> Parser<'a> {
                                 key,
                                 mutable: false, // TODO
                                 type_ann: Box::new(type_ann),
+                                span: Span { start: 0, end: 0 }, // TODO
+                            }));
+                        }
+                        TokenKind::Fn => {
+                            match self.peek().unwrap_or(&EOF).kind.clone() {
+                                TokenKind::Identifier(name) => {
+                                    self.next(); // consume identifier
+
+                                    let type_params = self.maybe_parse_type_params()?;
+                                    let params = self.parse_params()?;
+                                    assert_eq!(
+                                        self.next().unwrap_or(EOF.clone()).kind,
+                                        TokenKind::Colon
+                                    );
+                                    let ret = self.parse_type_ann()?;
+
+                                    props.push(ObjectProp::Method(ObjMethod {
+                                        name,
+                                        type_params,
+                                        params,
+                                        ret: Box::new(ret),
+                                        span: Span { start: 0, end: 0 }, // TODO
+                                    }));
+                                }
+                                TokenKind::LeftParen => {
+                                    let type_params = self.maybe_parse_type_params()?;
+                                    let params = self.parse_params()?;
+                                    assert_eq!(
+                                        self.next().unwrap_or(EOF.clone()).kind,
+                                        TokenKind::Colon
+                                    );
+                                    let ret = self.parse_type_ann()?;
+
+                                    props.push(ObjectProp::Call(ObjCallable {
+                                        type_params,
+                                        params,
+                                        ret: Box::new(ret),
+                                        span: Span { start: 0, end: 0 }, // TODO
+                                    }));
+                                }
+                                _ => {
+                                    return Err(ParseError {
+                                        message: "expected identifier or left paren".to_string(),
+                                    })
+                                }
+                            }
+                        }
+                        TokenKind::Get => {
+                            let name = match self.next().unwrap_or(EOF.clone()).kind {
+                                TokenKind::Identifier(name) => name,
+                                _ => {
+                                    return Err(ParseError {
+                                        message: "expected identifier".to_string(),
+                                    })
+                                }
+                            };
+
+                            let params = self.parse_params()?;
+                            assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
+                            let ret = self.parse_type_ann()?;
+
+                            props.push(ObjectProp::Getter(ObjGetter {
+                                name,
+                                ret: Box::new(ret),
+                                params,
+                                span: Span { start: 0, end: 0 }, // TODO
+                            }));
+                        }
+                        TokenKind::Set => {
+                            let name = match self.next().unwrap_or(EOF.clone()).kind {
+                                TokenKind::Identifier(name) => name,
+                                _ => {
+                                    return Err(ParseError {
+                                        message: "expected identifier".to_string(),
+                                    })
+                                }
+                            };
+
+                            let params = self.parse_params()?;
+                            assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
+                            let _ret = self.parse_type_ann()?;
+
+                            // TODO: check that _ret is undefined
+
+                            props.push(ObjectProp::Setter(ObjSetter {
+                                name,
+                                params,
                                 span: Span { start: 0, end: 0 }, // TODO
                             }));
                         }
@@ -441,6 +527,26 @@ mod tests {
         insta::assert_debug_snapshot!(parse("{a: number, b?: string, c: boolean}"));
         insta::assert_debug_snapshot!(parse("{a: {b: {c: boolean}}}"));
         insta::assert_debug_snapshot!(parse("{\n  a: number,\n  b?: string,\n  c: boolean,\n}"));
+    }
+
+    #[test]
+    fn parse_object_type_all_sig_types() -> Result<(), ParseError> {
+        let input = r#"
+            {
+                fn (a: number): string,
+                fn foo(a: number): string,
+                fn bar(self, a: number): string,
+                get baz(): string,
+                set baz(value: string): undefined,
+                [key: string]: number,
+                qux: string,
+            }
+        "#;
+        let mut parser = Parser::new(input);
+        let result = parser.parse_type_ann()?;
+        insta::assert_debug_snapshot!(result);
+
+        Ok(())
     }
 
     #[test]

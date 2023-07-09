@@ -838,6 +838,36 @@ fn object_subtyping() -> Result<(), Errors> {
 }
 
 #[test]
+fn object_signatures() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    // Each prop must be a subtype of the expected element type
+    // It's okay to pass an object with extra props
+    let src = r#"
+    declare let obj: {
+        fn (a: number): string,
+        fn foo(a: number): string,
+        fn bar(self, a: number): string,
+        get baz(self): string,
+        set baz(self, value: string): undefined,
+        [key: string]: number,
+        qux: string,
+    }
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    let binding = my_ctx.values.get("obj").unwrap();
+
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        "{fn(a: number): string, fn foo(a: number): string, fn bar(self: t9, a: number): string, get baz(self): string, set baz(self, value: string): undefined, [key: string]: number, qux: string}".to_string(),
+    );
+
+    Ok(())
+}
+
+#[test]
 fn object_subtyping_missing_prop() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 

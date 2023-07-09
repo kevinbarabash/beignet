@@ -1,0 +1,204 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: result
+---
+TypeAnn {
+    kind: Object(
+        [
+            Call(
+                ObjCallable {
+                    span: 0..0,
+                    type_params: None,
+                    params: [
+                        FuncParam {
+                            pattern: Pattern {
+                                kind: Ident(
+                                    BindingIdent {
+                                        name: "a",
+                                        span: 35..36,
+                                        mutable: false,
+                                    },
+                                ),
+                                span: 35..36,
+                                inferred_type: None,
+                            },
+                            type_ann: Some(
+                                TypeAnn {
+                                    kind: Number,
+                                    span: 38..44,
+                                    inferred_type: None,
+                                },
+                            ),
+                            optional: false,
+                        },
+                    ],
+                    ret: TypeAnn {
+                        kind: String,
+                        span: 47..53,
+                        inferred_type: None,
+                    },
+                },
+            ),
+            Method(
+                ObjMethod {
+                    span: 0..0,
+                    name: "foo",
+                    type_params: None,
+                    params: [
+                        FuncParam {
+                            pattern: Pattern {
+                                kind: Ident(
+                                    BindingIdent {
+                                        name: "a",
+                                        span: 78..79,
+                                        mutable: false,
+                                    },
+                                ),
+                                span: 78..79,
+                                inferred_type: None,
+                            },
+                            type_ann: Some(
+                                TypeAnn {
+                                    kind: Number,
+                                    span: 81..87,
+                                    inferred_type: None,
+                                },
+                            ),
+                            optional: false,
+                        },
+                    ],
+                    ret: TypeAnn {
+                        kind: String,
+                        span: 90..96,
+                        inferred_type: None,
+                    },
+                },
+            ),
+            Method(
+                ObjMethod {
+                    span: 0..0,
+                    name: "bar",
+                    type_params: None,
+                    params: [
+                        FuncParam {
+                            pattern: Pattern {
+                                kind: Ident(
+                                    BindingIdent {
+                                        name: "self",
+                                        span: 121..125,
+                                        mutable: false,
+                                    },
+                                ),
+                                span: 121..125,
+                                inferred_type: None,
+                            },
+                            type_ann: None,
+                            optional: false,
+                        },
+                        FuncParam {
+                            pattern: Pattern {
+                                kind: Ident(
+                                    BindingIdent {
+                                        name: "a",
+                                        span: 127..128,
+                                        mutable: false,
+                                    },
+                                ),
+                                span: 127..128,
+                                inferred_type: None,
+                            },
+                            type_ann: Some(
+                                TypeAnn {
+                                    kind: Number,
+                                    span: 130..136,
+                                    inferred_type: None,
+                                },
+                            ),
+                            optional: false,
+                        },
+                    ],
+                    ret: TypeAnn {
+                        kind: String,
+                        span: 139..145,
+                        inferred_type: None,
+                    },
+                },
+            ),
+            Getter(
+                ObjGetter {
+                    span: 0..0,
+                    name: "baz",
+                    params: [],
+                    ret: TypeAnn {
+                        kind: String,
+                        span: 174..180,
+                        inferred_type: None,
+                    },
+                },
+            ),
+            Setter(
+                ObjSetter {
+                    span: 0..0,
+                    name: "baz",
+                    params: [
+                        FuncParam {
+                            pattern: Pattern {
+                                kind: Ident(
+                                    BindingIdent {
+                                        name: "value",
+                                        span: 206..211,
+                                        mutable: false,
+                                    },
+                                ),
+                                span: 206..211,
+                                inferred_type: None,
+                            },
+                            type_ann: Some(
+                                TypeAnn {
+                                    kind: String,
+                                    span: 213..219,
+                                    inferred_type: None,
+                                },
+                            ),
+                            optional: false,
+                        },
+                    ],
+                },
+            ),
+            Indexer(
+                Indexer {
+                    span: 0..0,
+                    key: IndexerKey {
+                        name: "key",
+                        type_ann: TypeAnn {
+                            kind: String,
+                            span: 255..261,
+                            inferred_type: None,
+                        },
+                    },
+                    mutable: false,
+                    type_ann: TypeAnn {
+                        kind: Number,
+                        span: 264..270,
+                        inferred_type: None,
+                    },
+                },
+            ),
+            Prop(
+                Prop {
+                    span: 0..0,
+                    name: "qux",
+                    optional: false,
+                    mutable: false,
+                    type_ann: TypeAnn {
+                        kind: String,
+                        span: 293..299,
+                        inferred_type: None,
+                    },
+                },
+            ),
+        ],
+    ),
+    span: 0..314,
+    inferred_type: None,
+}

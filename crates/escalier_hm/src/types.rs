@@ -379,7 +379,7 @@ impl Type {
                                 _ => (),
                             };
                             result.push_str(&format!(
-                                "(self, {}): {}",
+                                "({}): {}",
                                 params_to_strings(arena, params).join(", "),
                                 arena[*ret].as_string(arena)
                             ));
@@ -426,14 +426,20 @@ impl Type {
                                 TPropKey::StringKey(s) => s,
                                 TPropKey::NumberKey(n) => n,
                             };
-                            fields.push(format!("get {name}():{}", arena[*ret].as_string(arena)))
+                            fields.push(format!(
+                                "get {name}(self): {}",
+                                arena[*ret].as_string(arena)
+                            ))
                         }
                         TObjElem::Setter(TSetter { name, param }) => {
                             let name = match name {
                                 TPropKey::StringKey(s) => s,
                                 TPropKey::NumberKey(n) => n,
                             };
-                            fields.push(format!("set {name}({})", param_to_string(arena, param)))
+                            fields.push(format!(
+                                "set {name}(self, {}): undefined",
+                                param_to_string(arena, param)
+                            ))
                         }
                         TObjElem::Index(TIndex { key, mutable, t }) => {
                             let t = arena[*t].as_string(arena);

@@ -7,8 +7,48 @@ use crate::type_param::TypeParam;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ObjectProp {
+    Call(ObjCallable),
+    Constructor(ObjCallable),
+    Method(ObjMethod),
+    Getter(ObjGetter),
+    Setter(ObjSetter),
     Indexer(Indexer),
     Prop(Prop),
+}
+
+// TODO: dedupe with `FunctionType` below
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct ObjCallable {
+    pub span: Span,
+    pub type_params: Option<Vec<TypeParam>>,
+    pub params: Vec<FuncParam>,
+    pub ret: Box<TypeAnn>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct ObjMethod {
+    pub span: Span,
+    pub name: String, // TODO: allow computed names, e.g. `Symbol.iterator`
+    pub type_params: Option<Vec<TypeParam>>,
+    pub params: Vec<FuncParam>,
+    pub ret: Box<TypeAnn>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct ObjGetter {
+    pub span: Span,
+    pub name: String, // TODO: allow computed names, e.g. `Symbol.iterator`
+    // The first param must always be self and there should only be a single param
+    pub params: Vec<FuncParam>,
+    pub ret: Box<TypeAnn>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct ObjSetter {
+    pub span: Span,
+    pub name: String, // TODO: allow computed names, e.g. `Symbol.iterator`
+    // The first param must always be self and there should only be two params
+    pub params: Vec<FuncParam>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

@@ -12,5 +12,25 @@
     "editor.defaultFormatter": "rust-lang.rust-analyzer",
     "editor.formatOnSave": true,
     "editor.formatOnSaveMode": "file"
-  }
+  },
+  "workbench.colorCustomizations": {
+    "activityBar.activeBackground": "#d78ab0",
+    "activityBar.background": "#d78ab0",
+    "activityBar.foreground": "#15202b",
+    "activityBar.inactiveForeground": "#15202b99",
+    "activityBarBadge.background": "#4f7729",
+    "activityBarBadge.foreground": "#e7e7e7",
+    "commandCenter.border": "#15202b99",
+    "sash.hoverBorder": "#d78ab0",
+    "statusBar.background": "#ca6496",
+    "statusBar.foreground": "#15202b",
+    "statusBarItem.hoverBackground": "#bb407c",
+    "statusBarItem.remoteBackground": "#ca6496",
+    "statusBarItem.remoteForeground": "#15202b",
+    "titleBar.activeBackground": "#ca6496",
+    "titleBar.activeForeground": "#15202b",
+    "titleBar.inactiveBackground": "#ca649699",
+    "titleBar.inactiveForeground": "#15202b99"
+  },
+  "peacock.color": "#ca6496"
 }

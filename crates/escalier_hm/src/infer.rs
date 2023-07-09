@@ -475,7 +475,7 @@ pub fn infer_type_ann(
             let mut props: Vec<types::TObjElem> = Vec::new();
             for elem in obj.iter_mut() {
                 match elem {
-                    syntax::ObjectProp::Indexer(syntax::Indexer { key, type_ann, .. }) => {
+                    ObjectProp::Indexer(Indexer { key, type_ann, .. }) => {
                         let key = types::TIndexKey {
                             name: key.name.to_owned(),
                             t: infer_type_ann(arena, &mut key.type_ann, ctx)?,
@@ -486,7 +486,7 @@ pub fn infer_type_ann(
                             mutable: false,
                         }));
                     }
-                    syntax::ObjectProp::Prop(prop) => {
+                    ObjectProp::Prop(prop) => {
                         props.push(types::TObjElem::Prop(types::TProp {
                             name: TPropKey::StringKey(prop.name.to_owned()),
                             t: infer_type_ann(arena, &mut prop.type_ann, ctx)?,
@@ -494,6 +494,149 @@ pub fn infer_type_ann(
                             optional: prop.optional,
                         }));
                     }
+                    ObjectProp::Call(ObjCallable { span: _, type_params, params, ret }) => {
+                        // TODO: dedupe with `Function` inference code above
+                        // NOTE: We clone `ctx` so that type params don't escape the signature
+                        let mut sig_ctx = ctx.clone();
+
+                        let type_params = infer_type_params(arena, type_params, &mut sig_ctx)?;
+
+                        let func_params = params
+                            .iter_mut()
+                            .enumerate()
+                            .map(|(i, param)| {
+                                let t = match &mut param.type_ann {
+                                    Some(type_ann) => infer_type_ann(arena, type_ann, &mut sig_ctx)?,
+                                    None => new_var_type(arena, None),
+                                };
+
+                                Ok(types::FuncParam {
+                                    pattern: TPat::Ident(BindingIdent {
+                                        name: param.pattern.get_name(&i),
+                                        mutable: false,
+                                        span: Span { start: 0, end: 0 },
+                                    }),
+                                    t,
+                                    optional: param.optional,
+                                })
+                            })
+                            .collect::<Result<Vec<_>, _>>()?;
+
+                        let ret_idx = infer_type_ann(arena, ret.as_mut(), &mut sig_ctx)?;
+
+                        props.push(TObjElem::Call(TCallable { params: func_params, ret: ret_idx, type_params }))
+                    },
+                    ObjectProp::Constructor(ObjCallable { span: _, type_params, params, ret }) => {
+                        // TODO: dedupe with `Function` inference code above
+                        // NOTE: We clone `ctx` so that type params don't escape the signature
+                        let mut sig_ctx = ctx.clone();
+
+                        let type_params = infer_type_params(arena, type_params, &mut sig_ctx)?;
+
+                        let func_params = params
+                            .iter_mut()
+                            .enumerate()
+                            .map(|(i, param)| {
+                                let t = match &mut param.type_ann {
+                                    Some(type_ann) => infer_type_ann(arena, type_ann, &mut sig_ctx)?,
+                                    None => new_var_type(arena, None),
+                                };
+
+                                Ok(types::FuncParam {
+                                    pattern: TPat::Ident(BindingIdent {
+                                        name: param.pattern.get_name(&i),
+                                        mutable: false,
+                                        span: Span { start: 0, end: 0 },
+                                    }),
+                                    t,
+                                    optional: param.optional,
+                                })
+                            })
+                            .collect::<Result<Vec<_>, _>>()?;
+
+                        let ret_idx = infer_type_ann(arena, ret.as_mut(), &mut sig_ctx)?;
+
+                        props.push(TObjElem::Constructor(TCallable { params: func_params, ret: ret_idx, type_params }))
+                    },
+                    ObjectProp::Method(ObjMethod { span: _, name, type_params, params, ret }) => {
+                        // TODO: dedupe with `Function` inference code above
+                        // NOTE: We clone `ctx` so that type params don't escape the signature
+                        let mut sig_ctx = ctx.clone();
+
+                        let type_params = infer_type_params(arena, type_params, &mut sig_ctx)?;
+
+                        let func_params = params
+                            .iter_mut()
+                            .enumerate()
+                            .map(|(i, param)| {
+                                let t = match &mut param.type_ann {
+                                    Some(type_ann) => infer_type_ann(arena, type_ann, &mut sig_ctx)?,
+                                    None => new_var_type(arena, None),
+                                };
+
+                                Ok(types::FuncParam {
+                                    pattern: TPat::Ident(BindingIdent {
+                                        name: param.pattern.get_name(&i),
+                                        mutable: false,
+                                        span: Span { start: 0, end: 0 },
+                                    }),
+                                    t,
+                                    optional: param.optional,
+                                })
+                            })
+                            .collect::<Result<Vec<_>, _>>()?;
+
+                        let ret_idx = infer_type_ann(arena, ret.as_mut(), &mut sig_ctx)?;
+
+                        props.push(TObjElem::Method(TMethod {
+                            name: TPropKey::StringKey(name.to_owned()),
+                            params: func_params,
+                            ret: ret_idx,
+                            type_params,
+                            is_mutating: false,
+                        }))
+                    },
+                    ObjectProp::Getter(ObjGetter { span: _, name, params, ret }) => {
+                        // NOTE: We clone `ctx` so that type params don't escape the signature
+                        let mut sig_ctx = ctx.clone();
+                        let ret_idx = infer_type_ann(arena, ret.as_mut(), &mut sig_ctx)?;
+
+                        let _self = &params[0];
+
+                        props.push(TObjElem::Getter(TGetter {
+                            name: TPropKey::StringKey(name.to_owned()),
+                            ret: ret_idx
+                        }));
+                    },
+                    ObjectProp::Setter(ObjSetter { span: _, name, params }) => {
+                        // NOTE: We clone `ctx` so that type params don't escape the signature
+                        let mut sig_ctx = ctx.clone();
+
+                        let t = match &mut params[1].type_ann {
+                            Some(type_ann) => infer_type_ann(arena, type_ann, &mut sig_ctx)?,
+                            None => new_var_type(arena, None),
+                        };
+
+                        let _self = &params[0];
+
+                        // TODO: add `self` to `sig_ctx` before inferring the body
+                        // TODO: when inferring the body of the setter, `ret` should be `void`
+
+                        let func_param = types::FuncParam {
+                            pattern: TPat::Ident(BindingIdent {
+                                name: params[1].pattern.get_name(&0),
+                                mutable: false,
+                                span: Span { start: 0, end: 0 },
+                            }),
+                            t,
+                            optional: params[1].optional, // TODO: This should never be optional
+                        };
+
+                        props.push(TObjElem::Setter(TSetter {
+                            name: TPropKey::StringKey(name.to_owned()), 
+                            param: func_param,
+                        }));
+                    },
                 }
             }
             new_object_type(arena, &props)
