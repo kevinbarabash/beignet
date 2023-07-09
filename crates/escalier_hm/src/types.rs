@@ -201,7 +201,7 @@ pub enum TObjElem {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Object {
-    pub props: Vec<TObjElem>,
+    pub elems: Vec<TObjElem>,
 }
 
 // NOTE: this is only used for the rest element in array patterns since we
@@ -323,7 +323,7 @@ impl Type {
             TypeKind::Literal(lit) => lit.to_string(),
             TypeKind::Object(object) => {
                 let mut fields = vec![];
-                for prop in &object.props {
+                for prop in &object.elems {
                     match prop {
                         TObjElem::Constructor(TCallable {
                             params,
@@ -618,7 +618,7 @@ pub fn new_tuple_type(arena: &mut Arena<Type>, types: &[Index]) -> Index {
 
 pub fn new_object_type(arena: &mut Arena<Type>, elems: &[TObjElem]) -> Index {
     arena.insert(Type::from(TypeKind::Object(Object {
-        props: elems.to_vec(),
+        elems: elems.to_vec(),
     })))
 }
 
@@ -701,11 +701,11 @@ impl Type {
                     && ret1.equals(ret2, arena)
             }
             (TypeKind::Object(o1), TypeKind::Object(o2)) => {
-                o1.props.len() == o2.props.len()
+                o1.elems.len() == o2.elems.len()
                     && o1
-                        .props
+                        .elems
                         .iter()
-                        .all(|p1| o2.props.iter().any(|p2| obj_elem_equals(arena, p1, p2)))
+                        .all(|p1| o2.elems.iter().any(|p2| obj_elem_equals(arena, p1, p2)))
             }
             (TypeKind::Rest(r1), TypeKind::Rest(r2)) => {
                 let t1 = &arena[r1.arg];

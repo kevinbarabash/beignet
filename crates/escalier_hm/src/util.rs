@@ -30,7 +30,7 @@ pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
         TypeKind::Variable(_) => false, // leaf node
         TypeKind::Literal(_) => false,  // leaf node
         TypeKind::Keyword(_) => false,  // leaf node
-        TypeKind::Object(Object { props }) => props.iter().any(|prop| match prop {
+        TypeKind::Object(Object { elems }) => elems.iter().any(|elem| match elem {
             TObjElem::Constructor(constructor) => {
                 // TODO: check constraints and default on type_params
                 let param_types: Vec<_> = constructor.params.iter().map(|param| param.t).collect();
@@ -194,16 +194,12 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
     let obj = expand_type(arena, ctx, t)?;
 
     match &arena[obj].kind.clone() {
-        TypeKind::Object(Object { props }) => {
+        TypeKind::Object(Object { elems }) => {
             let mut keys = Vec::new();
-            for prop in props {
+            for elem in elems {
                 // TODO: include indexers as well
-                if let TObjElem::Prop(TProp { name, .. }) = prop {
-                    let name = match name {
-                        TPropKey::StringKey(value) => value,
-                        TPropKey::NumberKey(value) => value,
-                    };
-                    keys.push(new_lit_type(arena, &Lit::String(name.to_owned())));
+                if let TObjElem::Prop(TProp { name, .. }) = elem {
+                    keys.push(new_lit_type(arena, &Lit::String(name.to_string())));
                 }
             }
 
@@ -342,8 +338,8 @@ pub fn get_prop(
                 let mut maybe_index: Option<&TIndex> = None;
                 let mut values: Vec<Index> = vec![];
 
-                for prop in &object.props {
-                    match prop {
+                for elem in &object.elems {
+                    match elem {
                         // Callable signatures have no name so we ignore them.
                         TObjElem::Constructor(constructor) => continue,
                         TObjElem::Call(call) => continue,
@@ -421,8 +417,8 @@ pub fn get_prop(
             }
             TypeKind::Literal(Lit::String(name)) => {
                 let mut maybe_index: Option<&TIndex> = None;
-                for prop in &object.props {
-                    match prop {
+                for elem in &object.elems {
+                    match elem {
                         // Callable signatures have no name so we ignore them.
                         TObjElem::Constructor(_) => continue,
                         TObjElem::Call(_) => continue,
@@ -514,8 +510,8 @@ pub fn get_prop(
             }
             TypeKind::Literal(Lit::Number(name)) => {
                 let mut maybe_index: Option<&TIndex> = None;
-                for prop in &object.props {
-                    if let TObjElem::Index(index) = prop {
+                for elem in &object.elems {
+                    if let TObjElem::Index(index) = elem {
                         if maybe_index.is_some() {
                             return Err(Errors::InferenceError(
                                 "Object types can only have a single indexer".to_string(),

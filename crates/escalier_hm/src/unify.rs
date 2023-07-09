@@ -252,7 +252,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             let mut indexes_2: Vec<&TIndex> = vec![];
             let mut props_2: Vec<&TProp> = vec![];
 
-            for prop1 in &object1.props {
+            for prop1 in &object1.elems {
                 match prop1 {
                     TObjElem::Call(call) => calls_1.push(call),
                     TObjElem::Constructor(constructor) => constructors_1.push(constructor),
@@ -264,7 +264,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 }
             }
 
-            for prop2 in &object2.props {
+            for prop2 in &object2.elems {
                 match prop2 {
                     TObjElem::Call(call) => calls_2.push(call),
                     TObjElem::Constructor(constructor) => constructors_2.push(constructor),
@@ -419,12 +419,12 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 0 => unify(arena, ctx, t1, obj_type),
                 1 => {
                     let all_obj_elems = match &arena[obj_type].kind {
-                        TypeKind::Object(obj) => obj.props.to_owned(),
+                        TypeKind::Object(obj) => obj.elems.to_owned(),
                         _ => vec![],
                     };
 
                     let (obj_elems, rest_elems): (Vec<_>, Vec<_>) =
-                        object1.props.iter().cloned().partition(|e| {
+                        object1.elems.iter().cloned().partition(|e| {
                             all_obj_elems.iter().any(|oe| match (oe, e) {
                                 // What to do about Call signatures?
                                 // (TObjElem::Call(_), TObjElem::Call(_)) => todo!(),
@@ -466,12 +466,12 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 0 => unify(arena, ctx, t1, obj_type),
                 1 => {
                     let all_obj_elems = match &arena[obj_type].kind {
-                        TypeKind::Object(obj) => obj.props.to_owned(),
+                        TypeKind::Object(obj) => obj.elems.to_owned(),
                         _ => vec![],
                     };
 
                     let (obj_elems, rest_elems): (Vec<_>, Vec<_>) =
-                        object2.props.iter().cloned().partition(|e| {
+                        object2.elems.iter().cloned().partition(|e| {
                             all_obj_elems.iter().any(|oe| match (oe, e) {
                                 // What to do about Call signatures?
                                 // (TObjElem::Call(_), TObjElem::Call(_)) => todo!(),
@@ -690,7 +690,7 @@ pub fn simplify_intersection(arena: &mut Arena<Type>, in_types: &[Index]) -> Ind
     // The use of HashSet<Type> here is to avoid duplicate types
     let mut props_map: DefaultHashMap<String, BTreeSet<Index>> = defaulthashmap!();
     for obj in obj_types {
-        for elem in &obj.props {
+        for elem in &obj.elems {
             match elem {
                 // What do we do with Call and Index signatures
                 TObjElem::Call(_) => todo!(),

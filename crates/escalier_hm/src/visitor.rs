@@ -89,10 +89,10 @@ pub trait Visitor: KeyValueStore<Index, Type> {
     }
 
     fn visit_object(&mut self, obj: &Object) -> Object {
-        let props: Vec<_> = obj
-            .props
+        let elems: Vec<_> = obj
+            .elems
             .iter()
-            .map(|prop| match prop {
+            .map(|elem| match elem {
                 TObjElem::Constructor(TCallable {
                     params,
                     ret,
@@ -143,7 +143,7 @@ pub trait Visitor: KeyValueStore<Index, Type> {
             })
             .collect();
 
-        Object { props }
+        Object { elems }
     }
 
     fn visit_function(&mut self, func: &Function) -> Function {
