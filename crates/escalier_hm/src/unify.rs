@@ -360,8 +360,10 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 1 => {
                     match indexes_1.len() {
                         0 => {
-                            for (_, elem_2) in named_elems_2 {
-                                let t2 = match elem_2 {
+                            for (_, elem_1) in named_elems_1 {
+                                let undefined = new_keyword(arena, Keyword::Undefined);
+
+                                let t1 = match elem_1 {
                                     NamedElem::Getter(getter) => getter.ret,
                                     NamedElem::Method(TMethod {
                                         params,
@@ -370,15 +372,12 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                                         ..
                                     }) => new_func_type(arena, &params[1..], *ret, type_params),
                                     NamedElem::Prop(prop) => match prop.optional {
-                                        true => {
-                                            let undefined = new_keyword(arena, Keyword::Undefined);
-                                            new_union_type(arena, &[prop.t, undefined])
-                                        }
+                                        true => new_union_type(arena, &[prop.t, undefined]),
                                         false => prop.t,
                                     },
                                 };
 
-                                let t1 = indexes_2[0].t;
+                                let t2 = new_union_type(arena, &[indexes_2[0].t, undefined]);
 
                                 unify(arena, ctx, t1, t2)?;
                             }

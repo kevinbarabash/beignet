@@ -1013,6 +1013,33 @@ fn object_indexers_and_properties_should_unify() -> Result<(), Errors> {
 }
 
 #[test]
+fn object_indexers_and_properties_unify_failure() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let foo: {
+        x: number,
+    }
+    let bar: {
+        [key: string]: boolean,
+    } = foo
+    "#;
+
+    let mut program = parse(src).unwrap();
+
+    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "type mismatch: unify(number, boolean | undefined) failed".to_string()
+        ))
+    );
+
+    Ok(())
+}
+
+#[test]
 fn object_properties_and_getter_should_unify() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
