@@ -1,7 +1,7 @@
 use defaultmap::*;
 use generational_arena::{Arena, Index};
 use itertools::Itertools;
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 
 use escalier_ast::{BindingIdent, Expr, ExprKind, Literal as Lit, Span};
 
@@ -238,29 +238,111 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
 
             let mut calls_1: Vec<&TCallable> = vec![];
             let mut constructors_1: Vec<&TCallable> = vec![];
-            let mut methods_1: Vec<&TMethod> = vec![];
-            let mut getters_1: Vec<&TGetter> = vec![];
-            // let mut setters_1: Vec<&TSetter> = vec![];
             let mut indexes_1: Vec<&TIndex> = vec![];
-            let mut props_1: Vec<&TProp> = vec![];
 
             let mut calls_2: Vec<&TCallable> = vec![];
             let mut constructors_2: Vec<&TCallable> = vec![];
-            let mut methods_2: Vec<&TMethod> = vec![];
-            let mut getters_2: Vec<&TGetter> = vec![];
-            // let mut setters_2: Vec<&TSetter> = vec![];
             let mut indexes_2: Vec<&TIndex> = vec![];
-            let mut props_2: Vec<&TProp> = vec![];
+
+            enum NamedElem<'a> {
+                Getter(&'a TGetter),
+                Method(&'a TMethod),
+                Prop(&'a TProp),
+            }
+
+            let named_elems_1: HashMap<_, _> = object1
+                .elems
+                .iter()
+                .filter_map(|elem| match elem {
+                    TObjElem::Call(_) => None,
+                    TObjElem::Constructor(_) => None,
+                    TObjElem::Method(method) => {
+                        Some((method.name.to_string(), NamedElem::Method(method)))
+                    }
+                    TObjElem::Getter(getter) => {
+                        Some((getter.name.to_string(), NamedElem::Getter(getter)))
+                    }
+                    TObjElem::Setter(_) => None,
+                    TObjElem::Index(_) => None,
+                    TObjElem::Prop(prop) => Some((prop.name.to_string(), NamedElem::Prop(prop))),
+                })
+                .collect();
+
+            let named_elems_2: HashMap<_, _> = object2
+                .elems
+                .iter()
+                .filter_map(|elem| match elem {
+                    TObjElem::Call(_) => None,
+                    TObjElem::Constructor(_) => None,
+                    TObjElem::Method(method) => {
+                        Some((method.name.to_string(), NamedElem::Method(method)))
+                    }
+                    TObjElem::Getter(getter) => {
+                        Some((getter.name.to_string(), NamedElem::Getter(getter)))
+                    }
+                    TObjElem::Setter(_) => None,
+                    TObjElem::Index(_) => None,
+                    TObjElem::Prop(prop) => Some((prop.name.to_string(), NamedElem::Prop(prop))),
+                })
+                .collect();
+
+            // object1 must have at least as the same named elements as object2
+            // TODO: handle the case where object1 has an indexer that covers
+            // some of the named elements of object2
+            for (name, elem_2) in &named_elems_2 {
+                match named_elems_1.get(name) {
+                    Some(elem_1) => {
+                        let t1 = match elem_1 {
+                            NamedElem::Getter(getter) => getter.ret,
+                            NamedElem::Method(TMethod {
+                                params,
+                                ret,
+                                type_params,
+                                ..
+                            }) => new_func_type(arena, &params[1..], *ret, type_params),
+                            NamedElem::Prop(prop) => match prop.optional {
+                                true => {
+                                    let undefined = new_keyword(arena, Keyword::Undefined);
+                                    new_union_type(arena, &[prop.t, undefined])
+                                }
+                                false => prop.t,
+                            },
+                        };
+                        let t2 = match elem_2 {
+                            NamedElem::Getter(getter) => getter.ret,
+                            NamedElem::Method(TMethod {
+                                params,
+                                ret,
+                                type_params,
+                                ..
+                            }) => new_func_type(arena, &params[1..], *ret, type_params),
+                            NamedElem::Prop(prop) => match prop.optional {
+                                true => {
+                                    let undefined = new_keyword(arena, Keyword::Undefined);
+                                    new_union_type(arena, &[prop.t, undefined])
+                                }
+                                false => prop.t,
+                            },
+                        };
+
+                        unify(arena, ctx, t1, t2)?;
+                    }
+                    None => {
+                        return Err(Errors::InferenceError(format!(
+                            "'{}' is missing in {}",
+                            name,
+                            a_t.as_string(arena),
+                        )));
+                    }
+                }
+            }
 
             for prop1 in &object1.elems {
                 match prop1 {
                     TObjElem::Call(call) => calls_1.push(call),
                     TObjElem::Constructor(constructor) => constructors_1.push(constructor),
-                    TObjElem::Method(method) => methods_1.push(method),
-                    TObjElem::Getter(getter) => getters_1.push(getter),
-                    TObjElem::Setter(_) => (),
                     TObjElem::Index(indexer) => indexes_1.push(indexer),
-                    TObjElem::Prop(prop) => props_1.push(prop),
+                    _ => (),
                 }
             }
 
@@ -268,95 +350,9 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 match prop2 {
                     TObjElem::Call(call) => calls_2.push(call),
                     TObjElem::Constructor(constructor) => constructors_2.push(constructor),
-                    TObjElem::Method(method) => methods_2.push(method),
-                    TObjElem::Getter(getter) => getters_2.push(getter),
-                    TObjElem::Setter(_) => (),
                     TObjElem::Index(indexer) => indexes_2.push(indexer),
-                    TObjElem::Prop(prop) => props_2.push(prop),
+                    _ => (),
                 }
-            }
-
-            // TODO: what about unifying properties with getters, setters, and
-            // methods?
-
-            // object1 must have at least as the same properties as object2
-            'outer: for prop2 in &props_2 {
-                for prop1 in &props_1 {
-                    if prop1.name == prop2.name {
-                        let p1_t = match prop1.optional {
-                            true => {
-                                let undefined = new_keyword(arena, Keyword::Undefined);
-                                new_union_type(arena, &[prop1.t, undefined])
-                            }
-                            false => prop1.t,
-                        };
-                        let p2_t = match prop2.optional {
-                            true => {
-                                let undefined = new_keyword(arena, Keyword::Undefined);
-                                new_union_type(arena, &[prop2.t, undefined])
-                            }
-                            false => prop2.t,
-                        };
-                        unify(arena, ctx, p1_t, p2_t)?;
-                        continue 'outer;
-                    }
-                }
-
-                // If we haven't found a matching property, then we report an
-                // appropriate type error.
-                return Err(Errors::InferenceError(format!(
-                    "'{}' is missing in {}",
-                    prop2.name,
-                    a_t.as_string(arena),
-                )));
-            }
-
-            // object1 must have at least as the same methods as object2
-            'outer: for method2 in &methods_2 {
-                for method1 in &methods_1 {
-                    if method1.name == method2.name {
-                        let fn1 = new_func_type(
-                            arena,
-                            &method1.params,
-                            method1.ret,
-                            &method1.type_params,
-                        );
-                        let fn2 = new_func_type(
-                            arena,
-                            &method2.params,
-                            method2.ret,
-                            &method2.type_params,
-                        );
-                        unify(arena, ctx, fn1, fn2)?;
-                        continue 'outer;
-                    }
-                }
-
-                // If we haven't found a matching property, then we report an
-                // appropriate type error.
-                return Err(Errors::InferenceError(format!(
-                    "'{}' is missing in {}", // TODO: write out the full method
-                    method2.name,
-                    a_t.as_string(arena),
-                )));
-            }
-
-            // object1 must have at least as the same getters as object2
-            'outer: for getter2 in &getters_2 {
-                for getter1 in &getters_1 {
-                    if getter1.name == getter2.name {
-                        unify(arena, ctx, getter1.ret, getter2.ret)?;
-                        continue 'outer;
-                    }
-                }
-
-                // If we haven't found a matching getter, then we report an
-                // appropriate type error.
-                return Err(Errors::InferenceError(format!(
-                    "get '{}' is missing in {}",
-                    getter2.name,
-                    a_t.as_string(arena),
-                )));
             }
 
             match indexes_2.len() {
@@ -364,10 +360,28 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 1 => {
                     match indexes_1.len() {
                         0 => {
-                            return Err(Errors::InferenceError(format!(
-                                "{} has no indexers but should",
-                                a_t.as_string(arena)
-                            )))
+                            for (_, elem_2) in named_elems_2 {
+                                let t2 = match elem_2 {
+                                    NamedElem::Getter(getter) => getter.ret,
+                                    NamedElem::Method(TMethod {
+                                        params,
+                                        ret,
+                                        type_params,
+                                        ..
+                                    }) => new_func_type(arena, &params[1..], *ret, type_params),
+                                    NamedElem::Prop(prop) => match prop.optional {
+                                        true => {
+                                            let undefined = new_keyword(arena, Keyword::Undefined);
+                                            new_union_type(arena, &[prop.t, undefined])
+                                        }
+                                        false => prop.t,
+                                    },
+                                };
+
+                                let t1 = indexes_2[0].t;
+
+                                unify(arena, ctx, t1, t2)?;
+                            }
                         }
                         1 => {
                             unify(arena, ctx, indexes_1[0].t, indexes_2[0].t)?;

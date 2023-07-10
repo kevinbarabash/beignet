@@ -972,7 +972,6 @@ fn object_indexer_subtyping() -> Result<(), Errors> {
 
 // TODO
 #[test]
-#[ignore]
 fn object_methods_and_properties_should_unify() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
@@ -991,20 +990,19 @@ fn object_methods_and_properties_should_unify() -> Result<(), Errors> {
     Ok(())
 }
 
-// TODO
 #[test]
-#[ignore]
 fn object_indexers_and_properties_should_unify() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
     declare let foo: {
         x: number,
-        y: number,
-    };
+        y?: number,
+        z: number | undefined,
+    }
     let bar: {
         [key: string]: number,
-    } = foo;
+    } = foo
     "#;
 
     let mut program = parse(src).unwrap();
@@ -1014,18 +1012,16 @@ fn object_indexers_and_properties_should_unify() -> Result<(), Errors> {
     Ok(())
 }
 
-// TODO
 #[test]
-#[ignore]
 fn object_properties_and_getter_should_unify() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
     declare let foo: {
-        fn foo(self, a: number): string,
+        get foo(self): number,
     }
     let bar: {
-        foo: (self, a: number) => string,
+        foo: number,
     } = foo
     "#;
     let mut program = parse(src).unwrap();
