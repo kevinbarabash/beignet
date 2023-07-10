@@ -991,17 +991,18 @@ fn object_methods_and_properties_should_unify() -> Result<(), Errors> {
 }
 
 #[test]
-fn object_indexers_and_properties_should_unify() -> Result<(), Errors> {
+fn object_indexers_should_unify_with_all_named_obj_elems() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
     declare let foo: {
-        x: number,
-        y?: number,
-        z: number | undefined,
+        a: fn () => number,
+        b?: fn () => number,
+        get c(self): fn () => number,
+        fn d(self): number,
     }
     let bar: {
-        [key: string]: number,
+        [key: string]: fn () => number,
     } = foo
     "#;
 
