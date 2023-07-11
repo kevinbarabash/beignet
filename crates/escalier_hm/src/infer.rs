@@ -447,15 +447,15 @@ pub fn infer_type_ann(
 
             new_func_type(arena, &func_params, ret_idx, &type_params)
         }
-        TypeAnnKind::NumLit(value) => {
-            arena.insert(Type::from(TypeKind::Literal(syntax::Literal::Number(value.to_owned()))))
-        }
-        TypeAnnKind::StrLit(value) => {
-            arena.insert(Type::from(TypeKind::Literal(syntax::Literal::String(value.to_owned()))))
-        }
-        TypeAnnKind::BoolLit(value) => {
-            arena.insert(Type::from(TypeKind::Literal(syntax::Literal::Boolean(value.to_owned()))))
-        }
+        TypeAnnKind::NumLit(value) => arena.insert(Type::from(TypeKind::Literal(
+            syntax::Literal::Number(value.to_owned()),
+        ))),
+        TypeAnnKind::StrLit(value) => arena.insert(Type::from(TypeKind::Literal(
+            syntax::Literal::String(value.to_owned()),
+        ))),
+        TypeAnnKind::BoolLit(value) => arena.insert(Type::from(TypeKind::Literal(
+            syntax::Literal::Boolean(value.to_owned()),
+        ))),
         // TypeAnnKind::Null => arena.insert(Type {
         //     kind: TypeKind::Literal(syntax::Literal::Null),
         // }),
@@ -494,7 +494,12 @@ pub fn infer_type_ann(
                             optional: prop.optional,
                         }));
                     }
-                    ObjectProp::Call(ObjCallable { span: _, type_params, params, ret }) => {
+                    ObjectProp::Call(ObjCallable {
+                        span: _,
+                        type_params,
+                        params,
+                        ret,
+                    }) => {
                         // TODO: dedupe with `Function` inference code above
                         // NOTE: We clone `ctx` so that type params don't escape the signature
                         let mut sig_ctx = ctx.clone();
@@ -506,7 +511,9 @@ pub fn infer_type_ann(
                             .enumerate()
                             .map(|(i, param)| {
                                 let t = match &mut param.type_ann {
-                                    Some(type_ann) => infer_type_ann(arena, type_ann, &mut sig_ctx)?,
+                                    Some(type_ann) => {
+                                        infer_type_ann(arena, type_ann, &mut sig_ctx)?
+                                    }
                                     None => new_var_type(arena, None),
                                 };
 
@@ -524,9 +531,18 @@ pub fn infer_type_ann(
 
                         let ret_idx = infer_type_ann(arena, ret.as_mut(), &mut sig_ctx)?;
 
-                        props.push(TObjElem::Call(TCallable { params: func_params, ret: ret_idx, type_params }))
-                    },
-                    ObjectProp::Constructor(ObjCallable { span: _, type_params, params, ret }) => {
+                        props.push(TObjElem::Call(TCallable {
+                            params: func_params,
+                            ret: ret_idx,
+                            type_params,
+                        }))
+                    }
+                    ObjectProp::Constructor(ObjCallable {
+                        span: _,
+                        type_params,
+                        params,
+                        ret,
+                    }) => {
                         // TODO: dedupe with `Function` inference code above
                         // NOTE: We clone `ctx` so that type params don't escape the signature
                         let mut sig_ctx = ctx.clone();
@@ -538,7 +554,9 @@ pub fn infer_type_ann(
                             .enumerate()
                             .map(|(i, param)| {
                                 let t = match &mut param.type_ann {
-                                    Some(type_ann) => infer_type_ann(arena, type_ann, &mut sig_ctx)?,
+                                    Some(type_ann) => {
+                                        infer_type_ann(arena, type_ann, &mut sig_ctx)?
+                                    }
                                     None => new_var_type(arena, None),
                                 };
 
@@ -556,9 +574,19 @@ pub fn infer_type_ann(
 
                         let ret_idx = infer_type_ann(arena, ret.as_mut(), &mut sig_ctx)?;
 
-                        props.push(TObjElem::Constructor(TCallable { params: func_params, ret: ret_idx, type_params }))
-                    },
-                    ObjectProp::Method(ObjMethod { span: _, name, type_params, params, ret }) => {
+                        props.push(TObjElem::Constructor(TCallable {
+                            params: func_params,
+                            ret: ret_idx,
+                            type_params,
+                        }))
+                    }
+                    ObjectProp::Method(ObjMethod {
+                        span: _,
+                        name,
+                        type_params,
+                        params,
+                        ret,
+                    }) => {
                         // TODO: dedupe with `Function` inference code above
                         // NOTE: We clone `ctx` so that type params don't escape the signature
                         let mut sig_ctx = ctx.clone();
@@ -570,7 +598,9 @@ pub fn infer_type_ann(
                             .enumerate()
                             .map(|(i, param)| {
                                 let t = match &mut param.type_ann {
-                                    Some(type_ann) => infer_type_ann(arena, type_ann, &mut sig_ctx)?,
+                                    Some(type_ann) => {
+                                        infer_type_ann(arena, type_ann, &mut sig_ctx)?
+                                    }
                                     None => new_var_type(arena, None),
                                 };
 
@@ -595,8 +625,13 @@ pub fn infer_type_ann(
                             type_params,
                             is_mutating: false,
                         }))
-                    },
-                    ObjectProp::Getter(ObjGetter { span: _, name, params, ret }) => {
+                    }
+                    ObjectProp::Getter(ObjGetter {
+                        span: _,
+                        name,
+                        params,
+                        ret,
+                    }) => {
                         // NOTE: We clone `ctx` so that type params don't escape the signature
                         let mut sig_ctx = ctx.clone();
                         let ret_idx = infer_type_ann(arena, ret.as_mut(), &mut sig_ctx)?;
@@ -605,10 +640,14 @@ pub fn infer_type_ann(
 
                         props.push(TObjElem::Getter(TGetter {
                             name: TPropKey::StringKey(name.to_owned()),
-                            ret: ret_idx
+                            ret: ret_idx,
                         }));
-                    },
-                    ObjectProp::Setter(ObjSetter { span: _, name, params }) => {
+                    }
+                    ObjectProp::Setter(ObjSetter {
+                        span: _,
+                        name,
+                        params,
+                    }) => {
                         // NOTE: We clone `ctx` so that type params don't escape the signature
                         let mut sig_ctx = ctx.clone();
 
@@ -633,10 +672,10 @@ pub fn infer_type_ann(
                         };
 
                         props.push(TObjElem::Setter(TSetter {
-                            name: TPropKey::StringKey(name.to_owned()), 
+                            name: TPropKey::StringKey(name.to_owned()),
                             param: func_param,
                         }));
-                    },
+                    }
                 }
             }
             new_object_type(arena, &props)
@@ -684,26 +723,21 @@ pub fn infer_type_ann(
             let idx = infer_type_ann(arena, elem_type, ctx)?;
             new_constructor(arena, "Array", &[idx])
         }
-        TypeAnnKind::IndexedAccess(
-            obj_type,
-            index_type,
-        ) => {
+        TypeAnnKind::IndexedAccess(obj_type, index_type) => {
             let obj_idx = infer_type_ann(arena, obj_type, ctx)?;
             let index_idx = infer_type_ann(arena, index_type, ctx)?;
-            new_utility_type(arena, UtilityKind::Index, &[obj_idx, index_idx])
+            new_indexed_access_type(arena, obj_idx, index_idx)
         }
-        TypeAnnKind::TypeOf(expr) => {
-            infer_expression(arena, expr, ctx)?
-        }
+        TypeAnnKind::TypeOf(expr) => infer_expression(arena, expr, ctx)?,
         TypeAnnKind::Mutable(type_ann) => {
             let t = infer_type_ann(arena, type_ann, ctx)?;
             new_mutable_type(arena, t)
-        },
+        }
 
         // TODO: Create types for all of these
         TypeAnnKind::KeyOf(type_ann) => {
             let t = infer_type_ann(arena, type_ann, ctx)?;
-            let t = new_utility_type(arena, UtilityKind::KeyOf, &[t]);
+            let t = new_keyof_type(arena, t);
             expand_type(arena, ctx, t)?
         }
         // TypeAnnKind::Mapped(_) => todo!(),

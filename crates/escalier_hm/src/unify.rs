@@ -645,11 +645,6 @@ pub fn unify_call(
             }
             unify(arena, ctx, ret_type, func.ret)?;
         }
-        TypeKind::Utility(_) => {
-            return Err(Errors::InferenceError(
-                "Utility types are not callable".to_string(),
-            ))
-        }
         TypeKind::Mutable(Mutable { t }) => {
             unify_call(arena, ctx, arg_types, type_args, t)?;
         }
@@ -811,13 +806,5 @@ fn expand(arena: &mut Arena<Type>, ctx: &Context, a: Index) -> Result<Index, Err
         _ => Ok(a),
     }?;
 
-    let a_t = arena[a].clone();
-
-    match &a_t.kind {
-        TypeKind::Utility(_) => {
-            let idx = expand_type(arena, ctx, a)?;
-            Ok(idx)
-        }
-        _ => Ok(a),
-    }
+    expand_type(arena, ctx, a)
 }
