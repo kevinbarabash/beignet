@@ -244,6 +244,25 @@ pub struct Tuple {
     pub types: Vec<Index>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct KeyOf {
+    pub t: Index,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct IndexedAccess {
+    pub obj: Index,
+    pub index: Index,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Conditional {
+    pub check: Index,
+    pub extends: Index,
+    pub true_type: Index,
+    pub false_type: Index,
+}
+
 #[derive(Debug, Clone, Hash)]
 pub enum TypeKind {
     Variable(Variable),       // TODO: rename to TypeVar
@@ -255,9 +274,12 @@ pub enum TypeKind {
     Literal(Lit),
     Function(Function),
     Object(Object),
-    Rest(Rest),
+    Rest(Rest), // Why is this its own type?
     Utility(Utility),
-    Mutable(Mutable),
+    Mutable(Mutable), // Should this be moved to `Type` as a field?
+    KeyOf(KeyOf),
+    IndexedAccess(IndexedAccess),
+    Conditional(Conditional),
 }
 
 #[derive(Debug, Clone)]
@@ -515,6 +537,26 @@ impl Type {
                 ),
             },
             TypeKind::Mutable(Mutable { t }) => format!("mut {}", arena[*t].as_string(arena)),
+            TypeKind::KeyOf(KeyOf { t }) => format!("keyof {}", arena[*t].as_string(arena)),
+            TypeKind::IndexedAccess(IndexedAccess { obj, index }) => format!(
+                "{}[{}]",
+                arena[*obj].as_string(arena),
+                arena[*index].as_string(arena)
+            ),
+            TypeKind::Conditional(Conditional {
+                check,
+                extends,
+                true_type,
+                false_type,
+            }) => {
+                format!(
+                    "{} extends {} ? {} : {}",
+                    arena[*check].as_string(arena),
+                    arena[*extends].as_string(arena),
+                    arena[*true_type].as_string(arena),
+                    arena[*false_type].as_string(arena),
+                )
+            }
         }
     }
 }

@@ -67,6 +67,21 @@ pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
         TypeKind::Constructor(Constructor { types, .. }) => occurs_in(arena, v, &types),
         TypeKind::Utility(Utility { types, .. }) => occurs_in(arena, v, &types),
         TypeKind::Mutable(Mutable { t }) => occurs_in_type(arena, v, t),
+        TypeKind::KeyOf(KeyOf { t }) => occurs_in_type(arena, v, t),
+        TypeKind::IndexedAccess(IndexedAccess { obj, index }) => {
+            occurs_in_type(arena, v, obj) || occurs_in_type(arena, v, index)
+        }
+        TypeKind::Conditional(Conditional {
+            check,
+            extends,
+            true_type,
+            false_type,
+        }) => {
+            occurs_in_type(arena, v, check)
+                || occurs_in_type(arena, v, extends)
+                || occurs_in_type(arena, v, true_type)
+                || occurs_in_type(arena, v, false_type)
+        }
     }
 }
 

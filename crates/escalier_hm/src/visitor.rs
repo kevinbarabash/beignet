@@ -183,6 +183,28 @@ pub trait Visitor: KeyValueStore<Index, Type> {
         }
     }
 
+    fn visit_keyof(&mut self, keyof: &KeyOf) -> KeyOf {
+        KeyOf {
+            t: self.visit_index(&keyof.t),
+        }
+    }
+
+    fn visit_indexed_access(&mut self, indexed_access: &IndexedAccess) -> IndexedAccess {
+        IndexedAccess {
+            obj: self.visit_index(&indexed_access.obj),
+            index: self.visit_index(&indexed_access.index),
+        }
+    }
+
+    fn visit_conditional(&mut self, conditional: &Conditional) -> Conditional {
+        Conditional {
+            check: self.visit_index(&conditional.check),
+            extends: self.visit_index(&conditional.extends),
+            true_type: self.visit_index(&conditional.true_type),
+            false_type: self.visit_index(&conditional.false_type),
+        }
+    }
+
     fn visit_index(&mut self, idx: &Index) -> Index {
         let (idx, t) = self.get_type(idx);
         let kind = match &t.kind {
@@ -200,6 +222,13 @@ pub trait Visitor: KeyValueStore<Index, Type> {
             TypeKind::Rest(rest) => TypeKind::Rest(self.visit_rest(rest)),
             TypeKind::Utility(utility) => return self.visit_utility(utility),
             TypeKind::Mutable(mutable) => TypeKind::Mutable(self.visit_mutable(mutable)),
+            TypeKind::KeyOf(keyof) => TypeKind::KeyOf(self.visit_keyof(keyof)),
+            TypeKind::IndexedAccess(indexed_access) => {
+                TypeKind::IndexedAccess(self.visit_indexed_access(indexed_access))
+            }
+            TypeKind::Conditional(conditional) => {
+                TypeKind::Conditional(self.visit_conditional(conditional))
+            }
         };
         let new_t = Type { kind };
         self.put_type(new_t)

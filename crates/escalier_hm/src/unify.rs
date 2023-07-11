@@ -606,6 +606,9 @@ pub fn unify_call(
                 "literal {lit:#?} is not callable"
             )));
         }
+        TypeKind::Keyword(keyword) => {
+            return Err(Errors::InferenceError(format!("{keyword} is not callable")))
+        }
         TypeKind::Object(_) => {
             // TODO: check if the object has a callbale signature
             return Err(Errors::InferenceError("object is not callable".to_string()));
@@ -650,8 +653,26 @@ pub fn unify_call(
         TypeKind::Mutable(Mutable { t }) => {
             unify_call(arena, ctx, arg_types, type_args, t)?;
         }
-        TypeKind::Keyword(keyword) => {
-            return Err(Errors::InferenceError(format!("{keyword} is not callable")))
+        TypeKind::KeyOf(KeyOf { t }) => {
+            return Err(Errors::InferenceError(format!(
+                "keyof {} is not callable",
+                arena[t].as_string(arena)
+            )));
+        }
+        TypeKind::IndexedAccess(IndexedAccess { obj, index }) => {
+            let t = get_prop(arena, ctx, obj, index)?;
+            unify_call(arena, ctx, arg_types, type_args, t)?;
+        }
+        TypeKind::Conditional(Conditional {
+            check,
+            extends,
+            true_type,
+            false_type,
+        }) => {
+            match unify(arena, ctx, check, extends) {
+                Ok(_) => unify_call(arena, ctx, arg_types, type_args, true_type)?,
+                Err(_) => unify_call(arena, ctx, arg_types, type_args, false_type)?,
+            };
         }
     }
 
