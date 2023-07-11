@@ -65,8 +65,22 @@ pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
         TypeKind::Intersection(Intersection { types }) => occurs_in(arena, v, &types),
         TypeKind::Tuple(Tuple { types }) => occurs_in(arena, v, &types),
         TypeKind::Constructor(Constructor { types, .. }) => occurs_in(arena, v, &types),
-        TypeKind::Utility(Utility { types, .. }) => occurs_in(arena, v, &types),
         TypeKind::Mutable(Mutable { t }) => occurs_in_type(arena, v, t),
+        TypeKind::KeyOf(KeyOf { t }) => occurs_in_type(arena, v, t),
+        TypeKind::IndexedAccess(IndexedAccess { obj, index }) => {
+            occurs_in_type(arena, v, obj) || occurs_in_type(arena, v, index)
+        }
+        TypeKind::Conditional(Conditional {
+            check,
+            extends,
+            true_type,
+            false_type,
+        }) => {
+            occurs_in_type(arena, v, check)
+                || occurs_in_type(arena, v, extends)
+                || occurs_in_type(arena, v, true_type)
+                || occurs_in_type(arena, v, false_type)
+        }
     }
 }
 
@@ -173,19 +187,13 @@ pub fn expand_type(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<I
     let t = prune(arena, t);
     // It's okay to clone here because we aren't mutating the type
     match &arena[t].clone().kind {
-        TypeKind::Constructor(Constructor { name, types }) => match ctx.schemes.get(name) {
-            Some(scheme) => expand_alias(arena, name, scheme, types),
-            None => Err(Errors::InferenceError(format!(
-                "Can't find type alias for {name}"
-            ))),
-        },
-        TypeKind::Utility(Utility { kind, types }) => match kind {
-            UtilityKind::Index => get_computed_member(arena, ctx, types[0], types[1]),
-            UtilityKind::KeyOf => expand_keyof(arena, ctx, types[0]),
-            _ => Err(Errors::InferenceError(format!(
-                "Can't find utility type for {kind:#?}"
-            ))),
-        },
+        TypeKind::KeyOf(KeyOf { t }) => expand_keyof(arena, ctx, *t),
+        TypeKind::IndexedAccess(IndexedAccess { obj, index }) => {
+            get_computed_member(arena, ctx, *obj, *index)
+        }
+        TypeKind::Conditional(_) => {
+            todo!()
+        }
         _ => Ok(t),
     }
 }
@@ -539,10 +547,6 @@ pub fn get_prop(
                         "Couldn't find property '{name}' on object",
                     )))
                 }
-            }
-            TypeKind::Utility(_) => {
-                // expand the utilty type and then check again
-                todo!()
             }
             _ => Err(Errors::InferenceError(format!(
                 "{} is not a valid key",

@@ -244,6 +244,25 @@ pub struct Tuple {
     pub types: Vec<Index>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct KeyOf {
+    pub t: Index,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct IndexedAccess {
+    pub obj: Index,
+    pub index: Index,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Conditional {
+    pub check: Index,
+    pub extends: Index,
+    pub true_type: Index,
+    pub false_type: Index,
+}
+
 #[derive(Debug, Clone, Hash)]
 pub enum TypeKind {
     Variable(Variable),       // TODO: rename to TypeVar
@@ -255,9 +274,12 @@ pub enum TypeKind {
     Literal(Lit),
     Function(Function),
     Object(Object),
-    Rest(Rest),
-    Utility(Utility),
-    Mutable(Mutable),
+    Rest(Rest), // Why is this its own type?
+    // Utility(Utility),
+    Mutable(Mutable), // Should this be moved to `Type` as a field?
+    KeyOf(KeyOf),
+    IndexedAccess(IndexedAccess),
+    Conditional(Conditional),
 }
 
 #[derive(Debug, Clone)]
@@ -499,22 +521,27 @@ impl Type {
                     arena[func.ret].as_string(arena),
                 )
             }
-            TypeKind::Utility(Utility { kind: name, types }) => match name {
-                UtilityKind::KeyOf => format!("keyof {}", arena[types[0]].as_string(arena)),
-                UtilityKind::Index => format!(
-                    "{}[{}]",
-                    arena[types[0]].as_string(arena),
-                    arena[types[1]].as_string(arena)
-                ),
-                UtilityKind::Cond => format!(
-                    "{} extends {} ? {} : {}",
-                    arena[types[0]].as_string(arena),
-                    arena[types[1]].as_string(arena),
-                    arena[types[2]].as_string(arena),
-                    arena[types[3]].as_string(arena),
-                ),
-            },
             TypeKind::Mutable(Mutable { t }) => format!("mut {}", arena[*t].as_string(arena)),
+            TypeKind::KeyOf(KeyOf { t }) => format!("keyof {}", arena[*t].as_string(arena)),
+            TypeKind::IndexedAccess(IndexedAccess { obj, index }) => format!(
+                "{}[{}]",
+                arena[*obj].as_string(arena),
+                arena[*index].as_string(arena)
+            ),
+            TypeKind::Conditional(Conditional {
+                check,
+                extends,
+                true_type,
+                false_type,
+            }) => {
+                format!(
+                    "{} extends {} ? {} : {}",
+                    arena[*check].as_string(arena),
+                    arena[*extends].as_string(arena),
+                    arena[*true_type].as_string(arena),
+                    arena[*false_type].as_string(arena),
+                )
+            }
         }
     }
 }
@@ -651,15 +678,34 @@ pub fn new_lit_type(arena: &mut Arena<Type>, lit: &Lit) -> Index {
     arena.insert(Type::from(TypeKind::Literal(lit.clone())))
 }
 
-pub fn new_utility_type(arena: &mut Arena<Type>, kind: UtilityKind, types: &[Index]) -> Index {
-    arena.insert(Type::from(TypeKind::Utility(Utility {
-        kind,
-        types: types.to_vec(),
+pub fn new_mutable_type(arena: &mut Arena<Type>, t: Index) -> Index {
+    arena.insert(Type::from(TypeKind::Mutable(Mutable { t })))
+}
+
+pub fn new_keyof_type(arena: &mut Arena<Type>, t: Index) -> Index {
+    arena.insert(Type::from(TypeKind::KeyOf(KeyOf { t })))
+}
+
+pub fn new_indexed_access_type(arena: &mut Arena<Type>, obj: Index, index: Index) -> Index {
+    arena.insert(Type::from(TypeKind::IndexedAccess(IndexedAccess {
+        obj,
+        index,
     })))
 }
 
-pub fn new_mutable_type(arena: &mut Arena<Type>, t: Index) -> Index {
-    arena.insert(Type::from(TypeKind::Mutable(Mutable { t })))
+pub fn new_conditional_type(
+    arena: &mut Arena<Type>,
+    check: Index,
+    extends: Index,
+    true_type: Index,
+    false_type: Index,
+) -> Index {
+    arena.insert(Type::from(TypeKind::Conditional(Conditional {
+        check,
+        extends,
+        true_type,
+        false_type,
+    })))
 }
 
 impl Type {
@@ -711,9 +757,6 @@ impl Type {
                 let t1 = &arena[r1.arg];
                 let t2 = &arena[r2.arg];
                 t1.equals(t2, arena)
-            }
-            (TypeKind::Utility(_), TypeKind::Utility(_)) => {
-                todo!()
             }
             (TypeKind::Mutable(m1), TypeKind::Mutable(m2)) => {
                 let t1 = &arena[m1.t];
