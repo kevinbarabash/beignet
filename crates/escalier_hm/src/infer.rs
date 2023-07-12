@@ -759,7 +759,6 @@ pub fn infer_statement(
     let t = match &mut statement.kind {
         StmtKind::Let {
             is_declare,
-            is_mut, // TODO: move `is_mut` to `BindingIdent` in pattern
             pattern,
             expr: init,
             type_ann,
@@ -818,13 +817,8 @@ pub fn infer_statement(
                         }
                     };
 
-                    for (name, mut binding) in pat_bindings {
-                        if *is_mut {
-                            binding.index = new_mutable_type(arena, binding.index);
-                            ctx.values.insert(name.clone(), binding);
-                        } else {
-                            ctx.values.insert(name.clone(), binding);
-                        }
+                    for (name, binding) in pat_bindings {
+                        ctx.values.insert(name.clone(), binding);
                         // eprintln!("setting {name} to {binding:#?}");
                     }
 

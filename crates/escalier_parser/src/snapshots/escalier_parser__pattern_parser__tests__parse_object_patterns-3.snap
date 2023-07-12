@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/pattern_parser.rs
-expression: "parse(\"{x: a, y: b, z: c}\")"
+expression: "parse(\"{x: a, y: b, z: mut c}\")"
 ---
 Pattern {
     kind: Object(
@@ -50,7 +50,7 @@ Pattern {
                 ),
                 KeyValue(
                     KeyValuePatProp {
-                        span: 13..17,
+                        span: 13..19,
                         key: Ident {
                             name: "z",
                             span: 13..14,
@@ -59,11 +59,11 @@ Pattern {
                             kind: Ident(
                                 BindingIdent {
                                     name: "c",
-                                    span: 16..17,
-                                    mutable: false,
+                                    span: 16..19,
+                                    mutable: true,
                                 },
                             ),
-                            span: 16..17,
+                            span: 16..19,
                             inferred_type: None,
                         },
                         init: None,
@@ -73,6 +73,6 @@ Pattern {
             optional: false,
         },
     ),
-    span: 0..18,
+    span: 0..22,
     inferred_type: None,
 }

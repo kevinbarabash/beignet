@@ -7,7 +7,6 @@ expression: "parse(\"let [head, ...tail] = polygon\")"
         kind: Let {
             is_declare: false,
             is_var: false,
-            is_mut: false,
             pattern: Pattern {
                 kind: Tuple(
                     TuplePat {

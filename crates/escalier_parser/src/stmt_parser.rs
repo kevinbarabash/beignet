@@ -25,14 +25,6 @@ impl<'a> Parser<'a> {
 
                 let is_var = token.kind == TokenKind::Var;
 
-                let is_mut = match self.peek().unwrap_or(&EOF).kind {
-                    TokenKind::Mut => {
-                        self.next(); // consumes 'mut'
-                        true
-                    }
-                    _ => false,
-                };
-
                 let pattern = self.parse_pattern()?;
 
                 let type_ann = match self.peek().unwrap_or(&EOF).kind {
@@ -67,7 +59,6 @@ impl<'a> Parser<'a> {
                     kind: StmtKind::Let {
                         is_declare,
                         is_var,
-                        is_mut,
                         pattern,
                         expr,
                         type_ann,

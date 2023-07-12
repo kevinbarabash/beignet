@@ -7,16 +7,15 @@ expression: "parse(r#\"var mut p = {x: 5, y: 10}\"#)"
         kind: Let {
             is_declare: false,
             is_var: true,
-            is_mut: true,
             pattern: Pattern {
                 kind: Ident(
                     BindingIdent {
                         name: "p",
-                        span: 8..9,
-                        mutable: false,
+                        span: 4..7,
+                        mutable: true,
                     },
                 ),
-                span: 8..9,
+                span: 4..7,
                 inferred_type: None,
             },
             expr: Some(

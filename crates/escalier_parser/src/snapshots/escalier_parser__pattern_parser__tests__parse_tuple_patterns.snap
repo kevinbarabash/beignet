@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/pattern_parser.rs
-expression: "parse(\"[a, b, c]\")"
+expression: "parse(\"[a, b, mut c]\")"
 ---
 Pattern {
     kind: Tuple(
@@ -44,11 +44,11 @@ Pattern {
                             kind: Ident(
                                 BindingIdent {
                                     name: "c",
-                                    span: 7..8,
-                                    mutable: false,
+                                    span: 7..10,
+                                    mutable: true,
                                 },
                             ),
-                            span: 7..8,
+                            span: 7..10,
                             inferred_type: None,
                         },
                         init: None,
@@ -58,6 +58,6 @@ Pattern {
             optional: false,
         },
     ),
-    span: 0..9,
+    span: 0..13,
     inferred_type: None,
 }

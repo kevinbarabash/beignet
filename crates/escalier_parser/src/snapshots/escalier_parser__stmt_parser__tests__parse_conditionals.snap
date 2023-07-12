@@ -7,7 +7,6 @@ expression: "parse(\"let max = if (x > y) { x } else { y }\")"
         kind: Let {
             is_declare: false,
             is_var: false,
-            is_mut: false,
             pattern: Pattern {
                 kind: Ident(
                     BindingIdent {

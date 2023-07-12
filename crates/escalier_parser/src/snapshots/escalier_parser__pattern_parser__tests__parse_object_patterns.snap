@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/pattern_parser.rs
-expression: "parse(\"{x, y, z}\")"
+expression: "parse(\"{x, y, mut z}\")"
 ---
 Pattern {
     kind: Object(
@@ -30,11 +30,11 @@ Pattern {
                 ),
                 Shorthand(
                     ShorthandPatProp {
-                        span: 7..8,
+                        span: 7..10,
                         ident: BindingIdent {
                             name: "z",
-                            span: 7..8,
-                            mutable: false,
+                            span: 7..10,
+                            mutable: true,
                         },
                         init: None,
                     },
@@ -43,6 +43,6 @@ Pattern {
             optional: false,
         },
     ),
-    span: 0..9,
+    span: 0..13,
     inferred_type: None,
 }

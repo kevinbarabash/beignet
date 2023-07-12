@@ -52,6 +52,14 @@ impl<'a> Parser<'a> {
                     }),
                 }
             }
+            TokenKind::Mut => match self.next().unwrap_or(EOF.clone()).kind {
+                TokenKind::Identifier(name) => PatternKind::Ident(BindingIdent {
+                    name,
+                    span,
+                    mutable: true,
+                }),
+                _ => panic!("expected identifier after 'mut'"),
+            },
             TokenKind::StrLit(value) => PatternKind::Lit(LitPat {
                 lit: Literal::String(value),
             }),
@@ -171,6 +179,20 @@ impl<'a> Parser<'a> {
                                 _ => panic!("expected comma or right brace"),
                             }
                         }
+                        TokenKind::Mut => match &self.next().unwrap_or(EOF.clone()).kind {
+                            TokenKind::Identifier(name) => {
+                                props.push(ObjectPatProp::Shorthand(ShorthandPatProp {
+                                    span: first_span,
+                                    ident: BindingIdent {
+                                        name: name.clone(),
+                                        span: first_span,
+                                        mutable: true,
+                                    },
+                                    init: None,
+                                }))
+                            }
+                            _ => panic!("expected identifier after 'mut'"),
+                        },
                         _ => panic!("expected identifier or rest pattern"),
                     }
                 }
@@ -226,7 +248,7 @@ mod tests {
 
     #[test]
     fn parse_tuple_patterns() {
-        insta::assert_debug_snapshot!(parse("[a, b, c]"));
+        insta::assert_debug_snapshot!(parse("[a, b, mut c]"));
         insta::assert_debug_snapshot!(parse("[a, b, ...c]"));
     }
 
@@ -238,9 +260,9 @@ mod tests {
 
     #[test]
     fn parse_object_patterns() {
-        insta::assert_debug_snapshot!(parse("{x, y, z}"));
+        insta::assert_debug_snapshot!(parse("{x, y, mut z}"));
         insta::assert_debug_snapshot!(parse("{x, y, ...z}"));
-        insta::assert_debug_snapshot!(parse("{x: a, y: b, z: c}"));
+        insta::assert_debug_snapshot!(parse("{x: a, y: b, z: mut c}"));
         insta::assert_debug_snapshot!(parse("{x: {y: {z}}}"));
     }
 

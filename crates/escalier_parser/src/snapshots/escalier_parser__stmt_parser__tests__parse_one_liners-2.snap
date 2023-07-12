@@ -7,7 +7,6 @@ expression: "parse(r#\"let add = fn(a, b) => a + b add(5, 10)\"#)"
         kind: Let {
             is_declare: false,
             is_var: false,
-            is_mut: false,
             pattern: Pattern {
                 kind: Ident(
                     BindingIdent {
