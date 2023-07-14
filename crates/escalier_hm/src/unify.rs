@@ -34,6 +34,10 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
     let b_t = arena[b].clone();
 
     match (&a_t.kind, &b_t.kind) {
+        // TODO: how can we handle type variables that were creating for binding types
+        (TypeKind::Variable(_), _) => bind(arena, ctx, a, b),
+        (_, TypeKind::Variable(_)) => bind(arena, ctx, b, a),
+
         (TypeKind::Binding(binding1), TypeKind::Binding(binding2)) => {
             match (&binding1.is_mut, &binding1.is_mut) {
                 (true, true) => unify_mut(arena, ctx, binding1.t, binding2.t),
@@ -48,9 +52,6 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 (false, false) => unify(arena, ctx, binding1.t, binding2.t),
             }
         }
-
-        (TypeKind::Variable(_), _) => bind(arena, ctx, a, b),
-        (_, TypeKind::Variable(_)) => bind(arena, ctx, b, a),
 
         // binding types can be unified with non-binding types in the usual way
         // by unwrapped the binding type
@@ -674,6 +675,14 @@ pub fn unify_call(
 }
 
 fn bind(arena: &mut Arena<Type>, ctx: &Context, a: Index, b: Index) -> Result<(), Errors> {
+    // let a = match &arena[a].kind {
+    //     TypeKind::Binding(binding) => binding.t,
+    //     _ => a,
+    // };
+    // let b = match &arena[b].kind {
+    //     TypeKind::Binding(binding) => binding.t,
+    //     _ => b,
+    // };
     eprintln!(
         "bind({:#?}, {:#?})",
         arena[a].as_string(arena),

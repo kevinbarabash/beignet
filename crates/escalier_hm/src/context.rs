@@ -10,7 +10,7 @@ use crate::visitor::{KeyValueStore, Visitor};
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Binding {
     pub index: Index,
-    pub is_mut: bool,
+    // pub is_mut: bool,
 }
 
 #[derive(Clone, Debug, Default)]

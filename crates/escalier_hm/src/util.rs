@@ -119,8 +119,14 @@ where
 ///
 /// Returns:
 ///     An uninstantiated TypeVariable or a TypeOperator
-pub fn prune(a: &mut Arena<Type>, t: Index) -> Index {
-    let v2 = match a.get(t).unwrap().kind {
+pub fn prune(arena: &mut Arena<Type>, t: Index) -> Index {
+    // eprintln!("t = {:#?}", arena[t]);
+    // This has the downside of ignoring the mutability of the binding.
+    if let TypeKind::Binding(binding) = &arena.get(t).unwrap().kind {
+        return prune(arena, binding.t);
+    }
+
+    let v2 = match arena.get(t).unwrap().kind {
         // TODO: handle .unwrap() panicing
         TypeKind::Variable(Variable {
             instance: Some(value),
@@ -131,8 +137,8 @@ pub fn prune(a: &mut Arena<Type>, t: Index) -> Index {
         }
     };
 
-    let value = prune(a, v2);
-    match &mut a.get_mut(t).unwrap().kind {
+    let value = prune(arena, v2);
+    match &mut arena.get_mut(t).unwrap().kind {
         // TODO: handle .unwrap() panicing
         TypeKind::Variable(Variable {
             ref mut instance, ..

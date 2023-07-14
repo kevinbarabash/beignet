@@ -168,9 +168,19 @@ pub fn infer_expression(
                 pattern.inferred_type = Some(type_ann_t);
 
                 let (assumps, param_t) = infer_pattern(arena, pattern, &sig_ctx)?;
+
                 unify(arena, &sig_ctx, param_t, type_ann_t)?;
 
                 for (name, binding) in assumps {
+                    // match &arena[binding.index].kind {
+                    //     TypeKind::Binding(binding) => {
+                    //         eprintln!("unwrapping binding type");
+                    //         sig_ctx.non_generic.insert(binding.t);
+                    //     }
+                    //     _ => {
+                    //         sig_ctx.non_generic.insert(binding.index);
+                    //     }
+                    // }
                     sig_ctx.non_generic.insert(binding.index);
                     sig_ctx.values.insert(name.to_owned(), binding);
                 }
@@ -203,10 +213,11 @@ pub fn infer_expression(
                     }
                     BlockOrExpr::Expr(expr) => {
                         let idx = infer_expression(arena, expr, &mut body_ctx)?;
-                        match &arena[idx].kind {
-                            TypeKind::Binding(binding) => binding.t,
-                            _ => idx,
-                        }
+                        idx
+                        // match &arena[idx].kind {
+                        //     TypeKind::Binding(binding) => binding.t,
+                        //     _ => idx,
+                        // }
                     }
                 }
             };

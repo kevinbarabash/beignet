@@ -39,7 +39,7 @@ pub fn infer_pattern(
                         name.to_owned(),
                         Binding {
                             index: t,
-                            is_mut: *is_mut,
+                            // is_mut: *is_mut,
                         },
                     )
                     .is_some()
@@ -89,7 +89,7 @@ pub fn infer_pattern(
                                     ident.name.to_owned(),
                                     Binding {
                                         index: t,
-                                        is_mut: false,
+                                        // is_mut: false,
                                     },
                                 )
                                 .is_some()
@@ -160,7 +160,7 @@ pub fn infer_pattern(
                     ident.name.to_owned(),
                     Binding {
                         index: t,
-                        is_mut: false,
+                        // is_mut: false,
                     },
                 );
 
