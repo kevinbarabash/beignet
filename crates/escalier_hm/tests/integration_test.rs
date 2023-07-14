@@ -2803,9 +2803,7 @@ fn test_func_param_patterns() -> Result<(), Errors> {
     Ok(())
 }
 
-// TODO: fix this test, it current gets into an infinite loop
 #[test]
-#[ignore]
 fn test_func_param_object_rest_patterns() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 

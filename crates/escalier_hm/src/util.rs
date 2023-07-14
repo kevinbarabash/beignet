@@ -24,6 +24,13 @@ pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
     if pruned_type2 == v {
         return true;
     }
+    // Since we unwrap TypeKind::Binding in `prune` we also need to check for
+    // TypeKind::Bindings here as well.
+    if let TypeKind::Binding(binding) = &arena[pruned_type2].kind {
+        if binding.t == v {
+            return true;
+        }
+    }
     // We clone here because we can't move out of a shared reference.
     // TODO: Consider using Rc<RefCell<Type>> to avoid unnecessary cloning.
     match arena.get(pruned_type2).unwrap().clone().kind {
@@ -120,9 +127,9 @@ where
 /// Returns:
 ///     An uninstantiated TypeVariable or a TypeOperator
 pub fn prune(arena: &mut Arena<Type>, t: Index) -> Index {
-    // eprintln!("t = {:#?}", arena[t]);
     // This has the downside of ignoring the mutability of the binding.
     if let TypeKind::Binding(binding) = &arena.get(t).unwrap().kind {
+        // TODO: rewrap the pruned type in a binding with the same mutability
         return prune(arena, binding.t);
     }
 
