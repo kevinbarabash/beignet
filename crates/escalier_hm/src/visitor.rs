@@ -167,9 +167,10 @@ pub trait Visitor: KeyValueStore<Index, Type> {
         }
     }
 
-    fn visit_mutable(&mut self, mutable: &Mutable) -> Mutable {
-        Mutable {
-            t: self.visit_index(&mutable.t),
+    fn visit_type_binding(&mut self, type_binding: &TypeBinding) -> TypeBinding {
+        TypeBinding {
+            t: self.visit_index(&type_binding.t),
+            is_mut: type_binding.is_mut,
         }
     }
 
@@ -210,7 +211,7 @@ pub trait Visitor: KeyValueStore<Index, Type> {
             TypeKind::Function(func) => TypeKind::Function(self.visit_function(func)),
             TypeKind::Object(obj) => TypeKind::Object(self.visit_object(obj)),
             TypeKind::Rest(rest) => TypeKind::Rest(self.visit_rest(rest)),
-            TypeKind::Mutable(mutable) => TypeKind::Mutable(self.visit_mutable(mutable)),
+            TypeKind::Binding(mutable) => TypeKind::Binding(self.visit_type_binding(mutable)),
             TypeKind::KeyOf(keyof) => TypeKind::KeyOf(self.visit_keyof(keyof)),
             TypeKind::IndexedAccess(indexed_access) => {
                 TypeKind::IndexedAccess(self.visit_indexed_access(indexed_access))

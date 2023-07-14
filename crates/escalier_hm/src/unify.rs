@@ -34,21 +34,28 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
     let b_t = arena[b].clone();
 
     match (&a_t.kind, &b_t.kind) {
+        (TypeKind::Binding(binding1), TypeKind::Binding(binding2)) => {
+            match (&binding1.is_mut, &binding1.is_mut) {
+                (true, true) => unify_mut(arena, ctx, binding1.t, binding2.t),
+                // It's okay to use a mutable reference as if it were immutable
+                (true, false) => unify(arena, ctx, binding1.t, binding2.t),
+                // It's not okay to use an immutable reference as if it were mutable
+                (false, true) => Err(Errors::InferenceError(format!(
+                    "type mismatch: unify({}, {}) failed",
+                    a_t.as_string(arena),
+                    b_t.as_string(arena)
+                ))),
+                (false, false) => unify(arena, ctx, binding1.t, binding2.t),
+            }
+        }
+
         (TypeKind::Variable(_), _) => bind(arena, ctx, a, b),
         (_, TypeKind::Variable(_)) => bind(arena, ctx, b, a),
 
-        (TypeKind::Mutable(Mutable { t: t1 }), TypeKind::Mutable(Mutable { t: t2 })) => {
-            unify_mut(arena, ctx, *t1, *t2)
-        }
-
-        // It's okay to use a mutable reference as if it were immutable
-        (TypeKind::Mutable(Mutable { t: t1 }), _) => unify(arena, ctx, *t1, b),
-
-        (_, TypeKind::Mutable(_)) => Err(Errors::InferenceError(format!(
-            "type mismatch: unify({}, {}) failed",
-            a_t.as_string(arena),
-            b_t.as_string(arena)
-        ))),
+        // binding types can be unified with non-binding types in the usual way
+        // by unwrapped the binding type
+        (TypeKind::Binding(binding), _) => unify(arena, ctx, binding.t, b),
+        (_, TypeKind::Binding(binding)) => unify(arena, ctx, a, binding.t),
 
         (TypeKind::Keyword(kw1), TypeKind::Keyword(kw2)) => {
             if kw1 == kw2 {
@@ -632,20 +639,11 @@ pub fn unify_call(
             }
 
             for ((expr, p), q) in arg_types.iter().zip(func.params.iter()) {
-                let can_be_mutable = matches!(&expr.kind, ExprKind::Object(_) | ExprKind::Tuple(_));
-                if can_be_mutable {
-                    let q_t = match &arena[q.t].kind {
-                        TypeKind::Mutable(Mutable { t }) => *t,
-                        _ => q.t,
-                    };
-                    unify(arena, ctx, *p, q_t)?;
-                } else {
-                    unify(arena, ctx, *p, q.t)?;
-                }
+                unify(arena, ctx, *p, q.t)?;
             }
             unify(arena, ctx, ret_type, func.ret)?;
         }
-        TypeKind::Mutable(Mutable { t }) => {
+        TypeKind::Binding(TypeBinding { t, is_mut: _ }) => {
             unify_call(arena, ctx, arg_types, type_args, t)?;
         }
         TypeKind::KeyOf(KeyOf { t }) => {

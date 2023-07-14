@@ -201,7 +201,13 @@ pub fn infer_expression(
                         // the return type is `undefined`.
                         new_keyword(arena, Keyword::Undefined)
                     }
-                    BlockOrExpr::Expr(expr) => infer_expression(arena, expr, &mut body_ctx)?,
+                    BlockOrExpr::Expr(expr) => {
+                        let idx = infer_expression(arena, expr, &mut body_ctx)?;
+                        match &arena[idx].kind {
+                            TypeKind::Binding(binding) => binding.t,
+                            _ => idx,
+                        }
+                    }
                 }
             };
 
@@ -729,10 +735,6 @@ pub fn infer_type_ann(
             new_indexed_access_type(arena, obj_idx, index_idx)
         }
         TypeAnnKind::TypeOf(expr) => infer_expression(arena, expr, ctx)?,
-        TypeAnnKind::Mutable(type_ann) => {
-            let t = infer_type_ann(arena, type_ann, ctx)?;
-            new_mutable_type(arena, t)
-        }
 
         // TODO: Create types for all of these
         TypeAnnKind::KeyOf(type_ann) => {
@@ -765,6 +767,7 @@ pub fn infer_statement(
             ..
         } => {
             let (pat_bindings, pat_type) = infer_pattern(arena, pattern, ctx)?;
+            eprintln!("pat_bindings = {pat_bindings:#?}");
 
             match (is_declare, init, type_ann) {
                 (false, Some(init), type_ann) => {
@@ -776,24 +779,14 @@ pub fn infer_statement(
                         _ => init_idx,
                     };
 
-                    let can_be_mutable =
-                        matches!(&init.kind, ExprKind::Object(_) | ExprKind::Tuple(_));
-
                     let idx = match type_ann {
                         Some(type_ann) => {
                             let type_ann_idx = infer_type_ann(arena, type_ann, ctx)?;
 
                             // The initializer must conform to the type annotation's
                             // inferred type.
-                            if can_be_mutable {
-                                let type_ann_idx = match &arena[type_ann_idx].kind {
-                                    TypeKind::Mutable(Mutable { t }) => *t,
-                                    _ => type_ann_idx,
-                                };
-                                unify(arena, ctx, init_idx, type_ann_idx)?;
-                            } else {
-                                unify(arena, ctx, init_idx, type_ann_idx)?;
-                            }
+                            unify(arena, ctx, init_idx, type_ann_idx)?;
+
                             // Results in bindings introduced by the LHS pattern
                             // having their types inferred.
                             // It's okay for pat_type to be the super type here
@@ -1087,9 +1080,9 @@ fn get_ident_member(
                 "Can't find type alias for Array".to_string(),
             )),
         },
-        TypeKind::Mutable(types::Mutable { t, .. }) => {
+        TypeKind::Binding(types::TypeBinding { t, .. }) => {
             let idx = get_ident_member(arena, ctx, *t, key_idx)?;
-            Ok(new_mutable_type(arena, idx))
+            Ok(idx)
         }
         _ => Err(Errors::InferenceError(format!(
             "Can't access properties on {}",

@@ -27,14 +27,19 @@ pub fn infer_pattern(
         ctx: &Context,
     ) -> Result<Index, Errors> {
         let t = match &mut pattern.kind {
-            PatternKind::Ident(BindingIdent { name, mutable, .. }) => {
+            PatternKind::Ident(BindingIdent {
+                name,
+                mutable: is_mut,
+                ..
+            }) => {
                 let t = new_var_type(arena, None);
+                let t = new_type_binding_type(arena, t, *is_mut);
                 if assump
                     .insert(
                         name.to_owned(),
                         Binding {
                             index: t,
-                            is_mut: *mutable,
+                            is_mut: *is_mut,
                         },
                     )
                     .is_some()
@@ -77,6 +82,8 @@ pub fn infer_pattern(
                             // TODO: handle default values
 
                             let t = new_var_type(arena, None);
+                            // TODO: handle mutable shorthand bindings
+                            let t = new_type_binding_type(arena, t, false);
                             if assump
                                 .insert(
                                     ident.name.to_owned(),

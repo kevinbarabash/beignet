@@ -105,7 +105,6 @@ pub enum TypeAnnKind {
     IndexedAccess(Box<TypeAnn>, Box<TypeAnn>),
     KeyOf(Box<TypeAnn>),
     TypeOf(Box<Expr>),
-    Mutable(Box<TypeAnn>),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
