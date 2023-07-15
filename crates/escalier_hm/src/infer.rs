@@ -171,9 +171,9 @@ pub fn infer_expression(
                 let (assumps, param_t) = infer_pattern(arena, pattern, &sig_ctx)?;
                 unify(arena, &sig_ctx, param_t, type_ann_t)?;
 
-                for (name, binding) in assumps {
-                    sig_ctx.non_generic.insert(binding.index);
-                    sig_ctx.values.insert(name.to_owned(), binding);
+                for (name, idx) in assumps {
+                    sig_ctx.non_generic.insert(idx);
+                    sig_ctx.values.insert(name.to_owned(), idx);
                 }
 
                 func_params.push(types::FuncParam {
@@ -392,6 +392,7 @@ fn is_promise(t: &Type) -> bool {
         Type {
             kind: TypeKind::Constructor(types::Constructor { name, .. }),
             provenance: _,
+            mutable: _,
         } if name == "Promise"
     )
 }
@@ -934,9 +935,9 @@ pub fn infer_program(
         if let StmtKind::Let { pattern, .. } = &mut stmt.kind {
             let (bindings, _) = infer_pattern(arena, pattern, ctx)?;
 
-            for (name, binding) in bindings {
-                ctx.non_generic.insert(binding.index);
-                if ctx.values.insert(name.to_owned(), binding).is_some() {
+            for (name, idx) in bindings {
+                ctx.non_generic.insert(idx);
+                if ctx.values.insert(name.to_owned(), idx).is_some() {
                     return Err(Errors::InferenceError(format!(
                         "{name} cannot be redeclared at the top-level"
                     )));

@@ -20,6 +20,7 @@ pub trait Visitor: KeyValueStore<Index, Type> {
                 ..tref.to_owned()
             }),
             provenance: t.provenance,
+            mutable: t.mutable,
         };
         self.put_type(t)
     }
@@ -224,6 +225,7 @@ pub trait Visitor: KeyValueStore<Index, Type> {
         let new_t = Type {
             kind,
             provenance: t.provenance,
+            mutable: t.mutable,
         };
         self.put_type(new_t)
     }

@@ -288,6 +288,7 @@ pub enum TypeKind {
 pub struct Type {
     pub kind: TypeKind,
     pub provenance: Option<Provenance>,
+    pub mutable: Option<bool>,
 }
 
 impl From<TypeKind> for Type {
@@ -295,6 +296,7 @@ impl From<TypeKind> for Type {
         Self {
             kind,
             provenance: None,
+            mutable: None,
         }
     }
 }

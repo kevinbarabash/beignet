@@ -7,16 +7,15 @@ use crate::types::*;
 use crate::util::*;
 use crate::visitor::{KeyValueStore, Visitor};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Binding {
-    pub index: Index,
-    pub is_mut: bool,
-}
+// #[derive(Clone, Debug, PartialEq, Eq)]
+// pub struct Binding {
+//     pub index: Index,
+// }
 
 #[derive(Clone, Debug, Default)]
 pub struct Context {
     // Maps variables to their types.
-    pub values: HashMap<String, Binding>,
+    pub values: HashMap<String, Index>,
     // Maps type aliases to type types definitions.
     // TODO: figure out how we want to track types and schemes
     pub schemes: HashMap<String, Scheme>,
@@ -38,8 +37,8 @@ pub struct Context {
 ///     ParseError: Raised if name is an undefined symbol in the type
 ///         environment.
 pub fn get_type(arena: &mut Arena<Type>, name: &str, ctx: &Context) -> Result<Index, Errors> {
-    if let Some(value) = ctx.values.get(name) {
-        Ok(fresh(arena, value.index, ctx))
+    if let Some(idx) = ctx.values.get(name) {
+        Ok(fresh(arena, *idx, ctx))
     } else {
         Err(Errors::InferenceError(format!(
             "Undefined symbol {:?}",

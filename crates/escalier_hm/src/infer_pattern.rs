@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use escalier_ast::{self as ast, *};
 
-use crate::context::{get_type, Binding, Context};
+use crate::context::{get_type, Context};
 use crate::errors::*;
 use crate::types::{self, *};
 
@@ -13,7 +13,7 @@ use crate::types::{self, *};
 //     pub t: Index,
 // }
 
-type Assump = HashMap<String, Binding>;
+type Assump = HashMap<String, Index>;
 
 pub fn infer_pattern(
     arena: &mut Arena<Type>,
@@ -26,24 +26,17 @@ pub fn infer_pattern(
         assump: &mut Assump,
         ctx: &Context,
     ) -> Result<Index, Errors> {
-        let t = match &mut pattern.kind {
-            PatternKind::Ident(BindingIdent { name, mutable, .. }) => {
-                let t = new_var_type(arena, None);
-                if assump
-                    .insert(
-                        name.to_owned(),
-                        Binding {
-                            index: t,
-                            is_mut: *mutable,
-                        },
-                    )
-                    .is_some()
-                {
+        let idx = match &mut pattern.kind {
+            PatternKind::Ident(BindingIdent {
+                name, mutable: _, ..
+            }) => {
+                let idx = new_var_type(arena, None);
+                if assump.insert(name.to_owned(), idx).is_some() {
                     return Err(Errors::InferenceError(
                         "Duplicate identifier in pattern".to_string(),
                     ));
                 }
-                t
+                idx
             }
             PatternKind::Rest(ast::RestPat { arg }) => {
                 let arg_type = infer_pattern_rec(arena, arg.as_mut(), assump, ctx)?;
@@ -76,17 +69,8 @@ pub fn infer_pattern(
                             // default values.
                             // TODO: handle default values
 
-                            let t = new_var_type(arena, None);
-                            if assump
-                                .insert(
-                                    ident.name.to_owned(),
-                                    Binding {
-                                        index: t,
-                                        is_mut: false,
-                                    },
-                                )
-                                .is_some()
-                            {
+                            let idx = new_var_type(arena, None);
+                            if assump.insert(ident.name.to_owned(), idx).is_some() {
                                 todo!("return an error");
                             }
 
@@ -94,7 +78,7 @@ pub fn infer_pattern(
                                 name: TPropKey::StringKey(ident.name.to_owned()),
                                 optional: false,
                                 mutable: false,
-                                t,
+                                t: idx,
                             }))
                         }
                         ObjectPatProp::Rest(rest) => {
@@ -142,27 +126,21 @@ pub fn infer_pattern(
             }
             PatternKind::Lit(LitPat { lit }) => new_lit_type(arena, lit),
             PatternKind::Is(IsPat { ident, is_id }) => {
-                let t = match is_id.name.as_str() {
+                let idx = match is_id.name.as_str() {
                     "number" => new_keyword(arena, Keyword::Number),
                     "string" => new_keyword(arena, Keyword::String),
                     "boolean" => new_keyword(arena, Keyword::Boolean),
                     name => get_type(arena, name, ctx)?,
                 };
 
-                assump.insert(
-                    ident.name.to_owned(),
-                    Binding {
-                        index: t,
-                        is_mut: false,
-                    },
-                );
+                assump.insert(ident.name.to_owned(), idx);
 
-                t
+                idx
             }
             PatternKind::Wildcard => new_var_type(arena, None),
         };
 
-        Ok(t)
+        Ok(idx)
     }
 
     let mut assump = Assump::default();
