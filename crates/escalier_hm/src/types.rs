@@ -7,6 +7,8 @@ use std::fmt;
 // with source locations when doing type-level stuff.
 use escalier_ast::{BindingIdent, Literal as Lit};
 
+use crate::provenance::Provenance;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Variable {
     pub id: usize,
@@ -285,12 +287,15 @@ pub enum TypeKind {
 #[derive(Debug, Clone)]
 pub struct Type {
     pub kind: TypeKind,
-    // TODO: add `provenance` to support error reporting
+    pub provenance: Option<Provenance>,
 }
 
 impl From<TypeKind> for Type {
     fn from(kind: TypeKind) -> Self {
-        Self { kind }
+        Self {
+            kind,
+            provenance: None,
+        }
     }
 }
 
@@ -793,12 +798,3 @@ fn obj_elem_equals(arena: &Arena<Type>, elem1: &TObjElem, elem2: &TObjElem) -> b
         _ => false,
     }
 }
-
-//impl fmt::Debug for Type {
-//    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//        match self {
-//            write!(f, "TypeVariable(id = {})", self.id)
-//            write!(f, "TypeOperator(name, )", self.id)
-//        }
-//    }
-//}

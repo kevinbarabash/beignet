@@ -7,6 +7,7 @@ use escalier_ast::{BindingIdent, Expr, ExprKind, Literal as Lit, Span};
 
 use crate::context::*;
 use crate::errors::*;
+use crate::provenance;
 use crate::types::*;
 use crate::util::*;
 
@@ -676,11 +677,16 @@ pub fn unify_call(
 }
 
 fn bind(arena: &mut Arena<Type>, ctx: &Context, a: Index, b: Index) -> Result<(), Errors> {
-    eprintln!(
-        "bind({:#?}, {:#?})",
-        arena[a].as_string(arena),
-        arena[b].as_string(arena)
-    );
+    eprint!("bind(");
+    eprint!("{:#?}", arena[a].as_string(arena));
+    if let Some(provenance) = &arena[a].provenance {
+        eprint!(" : {:#?}", provenance);
+    }
+    eprint!(", {:#?}", arena[b].as_string(arena));
+    if let Some(provenance) = &arena[b].provenance {
+        eprint!(" : {:#?}", provenance);
+    }
+    eprintln!(")");
 
     if a != b {
         if occurs_in_type(arena, a, b) {
