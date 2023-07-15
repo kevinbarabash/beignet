@@ -681,24 +681,25 @@ fn bind(arena: &mut Arena<Type>, ctx: &Context, a: Index, b: Index) -> Result<()
         arena[a].as_string(arena),
         arena[b].as_string(arena)
     );
+
     if a != b {
         if occurs_in_type(arena, a, b) {
             return Err(Errors::InferenceError("recursive unification".to_string()));
         }
-        let t = &arena[a];
 
-        match &t.kind {
-            TypeKind::Variable(avar) => {
-                if let Some(constraint) = avar.constraint {
-                    unify(arena, ctx, b, constraint)?;
+        match arena.get_mut(a) {
+            Some(t) => match &mut t.kind {
+                TypeKind::Variable(avar) => {
+                    avar.instance = Some(b);
+                    if let Some(constraint) = avar.constraint {
+                        unify(arena, ctx, b, constraint)?;
+                    }
                 }
-
-                let t = &mut arena[a];
-                t.set_instance(b);
-            }
-            _ => {
-                unimplemented!("bind not implemented for {:#?}", t.kind);
-            }
+                _ => {
+                    unimplemented!("bind not implemented for {:#?}", t.kind);
+                }
+            },
+            None => todo!(),
         }
     }
     Ok(())

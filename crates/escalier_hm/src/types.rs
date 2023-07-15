@@ -306,17 +306,6 @@ pub struct Scheme {
 /// only assigned lazily, when required.
 
 impl Type {
-    pub fn set_instance(&mut self, instance: Index) {
-        match &mut self.kind {
-            TypeKind::Variable(var) => {
-                var.instance = Some(instance);
-            }
-            _ => {
-                unimplemented!()
-            }
-        }
-    }
-
     pub fn as_string(&self, arena: &Arena<Type>) -> String {
         match &self.kind {
             TypeKind::Variable(Variable {
