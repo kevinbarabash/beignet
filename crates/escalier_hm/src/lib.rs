@@ -3,6 +3,7 @@ pub mod context;
 pub mod errors;
 pub mod infer;
 mod infer_pattern;
+mod provenance;
 pub mod types;
 mod unify;
 pub mod util;

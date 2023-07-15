@@ -12,12 +12,14 @@ pub trait KeyValueStore<K, V> {
 pub trait Visitor: KeyValueStore<Index, Type> {
     fn visit_type_var(&mut self, _: &Variable, idx: &Index) -> Index;
 
-    fn visit_type_ref(&mut self, tref: &Constructor, _: &Index) -> Index {
+    fn visit_type_ref(&mut self, tref: &Constructor, idx: &Index) -> Index {
+        let t = self.get_type(idx).1;
         let t = Type {
             kind: TypeKind::Constructor(Constructor {
                 types: self.visit_indexes(&tref.types),
                 ..tref.to_owned()
             }),
+            provenance: t.provenance,
         };
         self.put_type(t)
     }
@@ -219,7 +221,10 @@ pub trait Visitor: KeyValueStore<Index, Type> {
                 TypeKind::Conditional(self.visit_conditional(conditional))
             }
         };
-        let new_t = Type { kind };
+        let new_t = Type {
+            kind,
+            provenance: t.provenance,
+        };
         self.put_type(new_t)
     }
 

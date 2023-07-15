@@ -6,6 +6,7 @@ use escalier_ast::{self as syntax, *};
 use crate::context::*;
 use crate::errors::*;
 use crate::infer_pattern::*;
+use crate::provenance::Provenance;
 use crate::types::{self, *};
 use crate::unify::*;
 use crate::util::*;
@@ -37,7 +38,7 @@ pub fn infer_expression(
     node: &mut Expr,
     ctx: &mut Context,
 ) -> Result<Index, Errors> {
-    let t: Index = match &mut node.kind {
+    let idx: Index = match &mut node.kind {
         ExprKind::Ident(Ident { name, .. }) => get_type(arena, name, ctx)?,
         ExprKind::Str(str) => arena.insert(Type::from(TypeKind::Literal(syntax::Literal::String(
             str.value.to_owned(),
@@ -377,16 +378,20 @@ pub fn infer_expression(
         ExprKind::JSXFragment(_) => todo!(),
     };
 
-    node.inferred_type = Some(t);
+    let t = &mut arena[idx];
+    t.provenance = Some(Provenance::Expr(Box::new(node.to_owned())));
 
-    Ok(t)
+    node.inferred_type = Some(idx);
+
+    Ok(idx)
 }
 
 fn is_promise(t: &Type) -> bool {
     matches!(
         t,
         Type {
-            kind: TypeKind::Constructor(types::Constructor { name, .. })
+            kind: TypeKind::Constructor(types::Constructor { name, .. }),
+            provenance: _,
         } if name == "Promise"
     )
 }
@@ -744,6 +749,9 @@ pub fn infer_type_ann(
         // TypeAnnKind::Conditional(_) => todo!(),
         // TypeAnnKind::Infer(_) => todo!(),
     };
+
+    let t = &mut arena[idx];
+    t.provenance = Some(Provenance::TypeAnn(Box::new(type_ann.to_owned())));
 
     type_ann.inferred_type = Some(idx);
 
