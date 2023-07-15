@@ -3296,14 +3296,18 @@ fn test_passing_literal_as_mutable() -> Result<(), Errors> {
 }
 
 #[test]
-#[ignore]
-fn test_mutable_error() -> Result<(), Errors> {
+fn test_mutable_error_param_mismatch() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
+
+    // TODO: check that we're handling function type annotations correctly
+    // declare let scale: fn (mut p: Point, factor: number) => Point
 
     let src = r#"
     type Point = {x: number, y: number}
-    declare let scale: fn (mut p: Point, factor: number) => Point
-    let p: Point = {x: 5, y: 10}
+    let scale = fn (mut p: Point, factor: number): Point => {
+        return p
+    }
+    let p = {x: 5, y: 10}
     scale(p, 2)
     "#;
     let mut program = parse(src).unwrap();
@@ -3313,9 +3317,27 @@ fn test_mutable_error() -> Result<(), Errors> {
     assert_eq!(
         result,
         Err(Errors::InferenceError(
-            "type mismatch: unify({x: number, y: number}, mut Point) failed".to_string()
+            "type mismatch: unify({x: 5, y: 10}, mut Point) failed".to_string()
         ))
     );
+
+    Ok(())
+}
+
+#[test]
+fn test_mutable_unifies_with_non_binding_expr() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Point = {x: number, y: number}
+    let scale = fn (mut p: Point, factor: number): Point => {
+        return p
+    }
+    scale({x: 5, y: 10}, 2)
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
     Ok(())
 }

@@ -24,6 +24,12 @@ use crate::util::*;
 /// Raises:
 ///     InferenceError: Raised if the types cannot be unified.
 pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Result<(), Errors> {
+    eprintln!(
+        "before prune - unify({}, {})",
+        arena[t1].as_string(arena),
+        arena[t2].as_string(arena)
+    );
+
     let a = prune(arena, t1);
     let b = prune(arena, t2);
 
@@ -33,13 +39,19 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
     let a_t = arena[a].clone();
     let b_t = arena[b].clone();
 
+    eprintln!(
+        "after prune - unify({}, {})",
+        a_t.as_string(arena),
+        b_t.as_string(arena)
+    );
+
     match (&a_t.kind, &b_t.kind) {
         // TODO: how can we handle type variables that were creating for binding types
         (TypeKind::Variable(_), _) => bind(arena, ctx, a, b),
         (_, TypeKind::Variable(_)) => bind(arena, ctx, b, a),
 
         (TypeKind::Binding(binding1), TypeKind::Binding(binding2)) => {
-            match (&binding1.is_mut, &binding1.is_mut) {
+            match (&binding1.is_mut, &binding2.is_mut) {
                 (true, true) => unify_mut(arena, ctx, binding1.t, binding2.t),
                 // It's okay to use a mutable reference as if it were immutable
                 (true, false) => unify(arena, ctx, binding1.t, binding2.t),
@@ -683,11 +695,11 @@ fn bind(arena: &mut Arena<Type>, ctx: &Context, a: Index, b: Index) -> Result<()
     //     TypeKind::Binding(binding) => binding.t,
     //     _ => b,
     // };
-    eprintln!(
-        "bind({:#?}, {:#?})",
-        arena[a].as_string(arena),
-        arena[b].as_string(arena)
-    );
+    // eprintln!(
+    //     "bind({:#?}, {:#?})",
+    //     arena[a].as_string(arena),
+    //     arena[b].as_string(arena)
+    // );
     if a != b {
         if occurs_in_type(arena, a, b) {
             return Err(Errors::InferenceError("recursive unification".to_string()));

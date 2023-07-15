@@ -128,9 +128,11 @@ where
 ///     An uninstantiated TypeVariable or a TypeOperator
 pub fn prune(arena: &mut Arena<Type>, t: Index) -> Index {
     // This has the downside of ignoring the mutability of the binding.
-    if let TypeKind::Binding(binding) = &arena.get(t).unwrap().kind {
+    if let TypeKind::Binding(binding) = &arena.get(t).unwrap().kind.clone() {
         // TODO: rewrap the pruned type in a binding with the same mutability
-        return prune(arena, binding.t);
+        let t = prune(arena, binding.t);
+        let result = new_type_binding_type(arena, t, binding.is_mut);
+        return result;
     }
 
     let v2 = match arena.get(t).unwrap().kind {

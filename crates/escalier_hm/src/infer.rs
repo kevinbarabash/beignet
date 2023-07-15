@@ -168,6 +168,12 @@ pub fn infer_expression(
                 pattern.inferred_type = Some(type_ann_t);
 
                 let (assumps, param_t) = infer_pattern(arena, pattern, &sig_ctx)?;
+                for (name, binding) in &assumps {
+                    eprintln!("{name} = {:#?}", arena[binding.index].as_string(arena));
+                    // sig_ctx.non_generic.insert(binding.index);
+                    // sig_ctx.values.insert(name.to_owned(), binding);
+                }
+                // eprintln!("assumps = {assumps:#?}");
 
                 unify(arena, &sig_ctx, param_t, type_ann_t)?;
 
@@ -185,8 +191,19 @@ pub fn infer_expression(
                     sig_ctx.values.insert(name.to_owned(), binding);
                 }
 
+                let pat = pattern_to_tpat(pattern);
+
+                let type_ann_t = match &pat {
+                    TPat::Ident(binding) => {
+                        new_type_binding_type(arena, type_ann_t, binding.mutable)
+                    }
+                    _ => type_ann_t,
+                };
+
+                // eprintln!("pat = {pat:#?}");
+                eprintln!("type_ann_t = {:#?}", arena[type_ann_t].as_string(arena));
                 func_params.push(types::FuncParam {
-                    pattern: pattern_to_tpat(pattern),
+                    pattern: pat,
                     t: type_ann_t,
                     optional: *optional,
                 });
@@ -778,7 +795,7 @@ pub fn infer_statement(
             ..
         } => {
             let (pat_bindings, pat_type) = infer_pattern(arena, pattern, ctx)?;
-            eprintln!("pat_bindings = {pat_bindings:#?}");
+            // eprintln!("pat_bindings = {pat_bindings:#?}");
 
             match (is_declare, init, type_ann) {
                 (false, Some(init), type_ann) => {
