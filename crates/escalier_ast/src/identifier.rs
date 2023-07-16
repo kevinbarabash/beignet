@@ -1,6 +1,6 @@
 use crate::span::*;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Ident {
     pub name: String,
     pub span: Span,

@@ -1998,7 +1998,6 @@ fn test_array_destructuring_assignment_with_rest() -> Result<(), Errors> {
 }
 
 #[test]
-#[ignore = "TODO: make this test pass by update TPat to handle all patterns"]
 fn test_tuple_nested_destrcuturing_assignment() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 

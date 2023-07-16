@@ -223,25 +223,30 @@ pub fn pattern_to_tpat(pattern: &Pattern, is_func_param: bool) -> TPat {
                     .collect(),
             })
         }
-        PatternKind::Lit(_) => {
+        PatternKind::Lit(LitPat { lit }) => {
             if is_func_param {
                 panic!("Literal patterns not allowed in function params")
             } else {
-                todo!()
+                TPat::Lit(TLitPat {
+                    lit: lit.to_owned(),
+                })
             }
         }
-        PatternKind::Is(_) => {
+        PatternKind::Is(IsPat { ident, is_id }) => {
             if is_func_param {
                 panic!("'is' patterns not allowed in function params")
             } else {
-                todo!()
+                TPat::Is(TIsPat {
+                    ident: ident.name.to_owned(),
+                    is_id: is_id.name.to_owned(),
+                })
             }
         }
         PatternKind::Wildcard => {
             if is_func_param {
                 panic!("Wildcard patterns not allowed in function params")
             } else {
-                todo!()
+                TPat::Wildcard
             }
         }
     }

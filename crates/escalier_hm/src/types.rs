@@ -5,7 +5,7 @@ use std::fmt;
 
 // TODO: create type versions of these so that we don't have to bother
 // with source locations when doing type-level stuff.
-use escalier_ast::{BindingIdent, Literal as Lit};
+use escalier_ast::{BindingIdent, Ident, Literal as Lit};
 
 use crate::provenance::Provenance;
 
@@ -72,6 +72,9 @@ pub enum TPat {
     Rest(RestPat),
     Tuple(TuplePat),
     Object(TObjectPat),
+    Lit(TLitPat),
+    Is(TIsPat),
+    Wildcard,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -107,6 +110,17 @@ pub struct TObjectKeyValuePatProp {
 pub struct TObjectAssignPatProp {
     pub key: String,
     pub value: Option<Index>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct TLitPat {
+    pub lit: Lit,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct TIsPat {
+    pub ident: String,
+    pub is_id: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -599,6 +613,11 @@ fn tpat_to_string(_arena: &Arena<Type>, pattern: &TPat) -> String {
                 .collect();
             format!("{{{}}}", props.join(", "))
         }
+        TPat::Lit(TLitPat { lit }) => lit.to_string(),
+        TPat::Is(TIsPat { ident, is_id }) => {
+            format!("{ident} is {is_id}")
+        }
+        TPat::Wildcard => "_".to_string(),
     }
 }
 
