@@ -171,7 +171,7 @@ pub fn infer_pattern(
     Ok((assump, pat_type))
 }
 
-pub fn pattern_to_tpat(pattern: &Pattern) -> TPat {
+pub fn pattern_to_tpat(pattern: &Pattern, is_func_param: bool) -> TPat {
     match &pattern.kind {
         PatternKind::Ident(binding_ident) => TPat::Ident(ast::BindingIdent {
             name: binding_ident.name.to_owned(),
@@ -179,7 +179,7 @@ pub fn pattern_to_tpat(pattern: &Pattern) -> TPat {
             span: Span { start: 0, end: 0 },
         }),
         PatternKind::Rest(e_rest) => TPat::Rest(types::RestPat {
-            arg: Box::from(pattern_to_tpat(e_rest.arg.as_ref())),
+            arg: Box::from(pattern_to_tpat(e_rest.arg.as_ref(), is_func_param)),
         }),
         PatternKind::Object(e_obj) => {
             // TODO: replace TProp with the type equivalent of EFnParamObjectPatProp
@@ -191,7 +191,7 @@ pub fn pattern_to_tpat(pattern: &Pattern) -> TPat {
                         ObjectPatProp::KeyValue(kv) => {
                             types::TObjectPatProp::KeyValue(types::TObjectKeyValuePatProp {
                                 key: kv.key.name.to_owned(),
-                                value: pattern_to_tpat(&kv.value),
+                                value: pattern_to_tpat(&kv.value, is_func_param),
                             })
                         }
                         ObjectPatProp::Shorthand(ShorthandPatProp { ident, .. }) => {
@@ -202,7 +202,7 @@ pub fn pattern_to_tpat(pattern: &Pattern) -> TPat {
                             })
                         }
                         ObjectPatProp::Rest(rest) => types::TObjectPatProp::Rest(types::RestPat {
-                            arg: Box::from(pattern_to_tpat(rest.arg.as_ref())),
+                            arg: Box::from(pattern_to_tpat(rest.arg.as_ref(), is_func_param)),
                         }),
                     }
                 })
@@ -216,12 +216,33 @@ pub fn pattern_to_tpat(pattern: &Pattern) -> TPat {
                 elems: e_array
                     .elems
                     .iter()
-                    .map(|elem| elem.as_ref().map(|elem| pattern_to_tpat(&elem.pattern)))
+                    .map(|elem| {
+                        elem.as_ref()
+                            .map(|elem| pattern_to_tpat(&elem.pattern, is_func_param))
+                    })
                     .collect(),
             })
         }
-        PatternKind::Lit(_) => panic!("Literal patterns not allowed in function params"),
-        PatternKind::Is(_) => panic!("'is' patterns not allowed in function params"),
-        PatternKind::Wildcard => panic!("Wildcard patterns not allowed in function params"),
+        PatternKind::Lit(_) => {
+            if is_func_param {
+                panic!("Literal patterns not allowed in function params")
+            } else {
+                todo!()
+            }
+        }
+        PatternKind::Is(_) => {
+            if is_func_param {
+                panic!("'is' patterns not allowed in function params")
+            } else {
+                todo!()
+            }
+        }
+        PatternKind::Wildcard => {
+            if is_func_param {
+                panic!("Wildcard patterns not allowed in function params")
+            } else {
+                todo!()
+            }
+        }
     }
 }

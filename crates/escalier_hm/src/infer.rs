@@ -1,5 +1,5 @@
 use generational_arena::{Arena, Index};
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashSet};
 
 use escalier_ast::{self as syntax, *};
 
@@ -120,16 +120,6 @@ pub fn infer_expression(
         }) => {
             let func_type = infer_expression(arena, func, ctx)?;
 
-            let arg_types = args
-                .iter_mut()
-                .map(|arg| {
-                    // TODO: handle spreads
-                    let t = infer_expression(arena, arg, ctx)?;
-                    let arg: &Expr = arg;
-                    Ok((arg, t))
-                })
-                .collect::<Result<Vec<_>, _>>()?;
-
             match type_args {
                 Some(type_args) => {
                     let type_args = type_args
@@ -137,9 +127,9 @@ pub fn infer_expression(
                         .map(|type_arg| infer_type_ann(arena, type_arg, ctx))
                         .collect::<Result<Vec<_>, _>>()?;
 
-                    unify_call(arena, ctx, &arg_types, Some(&type_args), func_type)?
+                    unify_call(arena, ctx, args, Some(&type_args), func_type)?
                 }
-                None => unify_call(arena, ctx, &arg_types, None, func_type)?,
+                None => unify_call(arena, ctx, args, None, func_type)?,
             }
         }
         // TODO: Add support for explicit type parameters
@@ -177,7 +167,7 @@ pub fn infer_expression(
                 }
 
                 func_params.push(types::FuncParam {
-                    pattern: pattern_to_tpat(pattern),
+                    pattern: pattern_to_tpat(pattern, true),
                     t: type_ann_t,
                     optional: *optional,
                 });
@@ -825,7 +815,8 @@ pub fn infer_statement(
                         }
                     };
 
-                    check_mutability(ctx, &pat_bindings, init)?;
+                    let tpat = pattern_to_tpat(pattern, false);
+                    check_mutability(ctx, &tpat, init)?;
 
                     for (name, binding) in pat_bindings {
                         ctx.values.insert(name.clone(), binding);
@@ -1168,14 +1159,12 @@ fn infer_type_params(
 // NOTE: It's possible to have a mix of mutable and immutable bindings be
 // introduced.  In that situation, we only need to check certain parts of
 // the initializer for mutability.
-fn check_mutability(
-    ctx: &Context,
-    pat_bindings: &HashMap<String, Binding>,
-    init: &Expr,
-) -> Result<(), Errors> {
+pub fn check_mutability(ctx: &Context, tpat: &TPat, init: &Expr) -> Result<(), Errors> {
     let mut lhs_mutable = false;
-    for binding in pat_bindings.values() {
-        lhs_mutable = lhs_mutable || binding.is_mut;
+
+    // TODO: handle other patterns
+    if let TPat::Ident(binding) = tpat {
+        lhs_mutable = lhs_mutable || binding.mutable;
     }
 
     let idents = find_identifiers(init)?;
@@ -1203,11 +1192,8 @@ fn check_mutability(
 fn find_identifiers(expr: &Expr) -> Result<Vec<Ident>, Errors> {
     let mut idents = vec![];
 
-    match &expr.kind {
-        ExprKind::Ident(ident) => {
-            idents.push(ident.to_owned());
-        }
-        _ => (),
+    if let ExprKind::Ident(ident) = &expr.kind {
+        idents.push(ident.to_owned());
     }
 
     Ok(idents)
