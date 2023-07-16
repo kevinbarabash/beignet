@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/stmt_parser.rs
-expression: "parse(r#\"declare let scale: fn (p: mut Point, scale: number) => void\"#)"
+expression: "parse(r#\"declare let scale: fn (mut p: Point, scale: number) => void\"#)"
 ---
 [
     Stmt {
@@ -30,26 +30,20 @@ expression: "parse(r#\"declare let scale: fn (p: mut Point, scale: number) => vo
                                         kind: Ident(
                                             BindingIdent {
                                                 name: "p",
-                                                span: 23..24,
-                                                mutable: false,
+                                                span: 23..26,
+                                                mutable: true,
                                             },
                                         ),
-                                        span: 23..24,
+                                        span: 23..26,
                                         inferred_type: None,
                                     },
                                     type_ann: Some(
                                         TypeAnn {
-                                            kind: Mutable(
-                                                TypeAnn {
-                                                    kind: TypeRef(
-                                                        "Point",
-                                                        None,
-                                                    ),
-                                                    span: 30..35,
-                                                    inferred_type: None,
-                                                },
+                                            kind: TypeRef(
+                                                "Point",
+                                                None,
                                             ),
-                                            span: 26..29,
+                                            span: 30..35,
                                             inferred_type: None,
                                         },
                                     ),

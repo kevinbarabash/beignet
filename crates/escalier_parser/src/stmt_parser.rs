@@ -267,7 +267,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse(r#"var i = 0"#));
         insta::assert_debug_snapshot!(parse(r#"var mut p = {x: 5, y: 10}"#));
         insta::assert_debug_snapshot!(parse(
-            r#"declare let scale: fn (p: mut Point, scale: number) => void"#
+            r#"declare let scale: fn (mut p: Point, scale: number) => void"#
         ));
     }
 }
