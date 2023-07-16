@@ -427,11 +427,7 @@ pub fn infer_type_ann(
                     };
 
                     Ok(types::FuncParam {
-                        pattern: TPat::Ident(BindingIdent {
-                            name: param.pattern.get_name(&i),
-                            mutable: false,
-                            span: Span { start: 0, end: 0 },
-                        }),
+                        pattern: pattern_to_tpat(&param.pattern, true),
                         t,
                         optional: param.optional,
                     })
@@ -769,9 +765,6 @@ pub fn infer_statement(
                         TypeKind::Function(func) if top_level => generalize_func(arena, func),
                         _ => init_idx,
                     };
-
-                    let can_be_mutable =
-                        matches!(&init.kind, ExprKind::Object(_) | ExprKind::Tuple(_));
 
                     let idx = match type_ann {
                         Some(type_ann) => {

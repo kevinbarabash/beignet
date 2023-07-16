@@ -3279,6 +3279,61 @@ fn test_mutable_ok_arg_passing() -> Result<(), Errors> {
 }
 
 #[test]
+fn test_mutable_error_arg_passing_declared_fn() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Point = {x: number, y: number}
+    declare let scale: fn (mut p: Point, factor: number) => Point
+    let p: Point = {x: 5, y: 10}
+    scale(p, 2)
+    "#;
+    let mut program = parse(src).unwrap();
+
+    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "Can't assign immutable value to mutable binding".to_string()
+        ))
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_mutable_ok_arg_passing_declared_fns() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    // TODO: handle `declare let scale: fn(mut p: Point, ...);
+    let src = r#"
+    type Point = {x: number, y: number}
+    declare let mut_scale: fn (mut p: Point, factor: number) => Point
+    declare let scale: fn (p: Point, factor: number) => Point
+
+    let main = fn () => {
+        let mut p: Point = {x: 5, y: 10}
+        mut_scale(p, 2)
+        mut_scale({x: 5, y: 10}, 2)
+
+        let p: Point = {x: 5, y: 10}
+        let mut q: Point = {x: 5, y: 10}
+        scale(p, 2)
+        scale(q, 2)
+        scale({x: 5, y: 10}, 2)
+
+        let mut p = scale(p, 2)
+    }
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    Ok(())
+}
+
+#[test]
 fn test_mutable_error_assignment() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
