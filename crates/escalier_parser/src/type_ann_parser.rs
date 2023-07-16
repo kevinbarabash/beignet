@@ -317,13 +317,6 @@ impl<'a> Parser<'a> {
 
                 TypeAnnKind::KeyOf(Box::new(type_ann))
             }
-            TokenKind::Mut => {
-                self.next(); // consumes 'mut'
-
-                let type_ann = self.parse_type_ann()?;
-
-                TypeAnnKind::Mutable(Box::new(type_ann))
-            }
             TokenKind::TypeOf => {
                 self.next(); // consumes 'typeof'
 

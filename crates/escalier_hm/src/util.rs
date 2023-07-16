@@ -65,7 +65,6 @@ pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
         TypeKind::Intersection(Intersection { types }) => occurs_in(arena, v, &types),
         TypeKind::Tuple(Tuple { types }) => occurs_in(arena, v, &types),
         TypeKind::Constructor(Constructor { types, .. }) => occurs_in(arena, v, &types),
-        TypeKind::Mutable(Mutable { t }) => occurs_in_type(arena, v, t),
         TypeKind::KeyOf(KeyOf { t }) => occurs_in_type(arena, v, t),
         TypeKind::IndexedAccess(IndexedAccess { obj, index }) => {
             occurs_in_type(arena, v, obj) || occurs_in_type(arena, v, index)
@@ -311,10 +310,6 @@ pub fn get_computed_member(
                 "Can't find type alias for {alias_name}"
             ))),
         },
-        TypeKind::Mutable(Mutable { t, .. }) => {
-            let idx = get_computed_member(arena, ctx, *t, key_idx)?;
-            Ok(new_mutable_type(arena, idx))
-        }
         _ => {
             // TODO: provide a more specific error message for type variables
             Err(Errors::InferenceError(

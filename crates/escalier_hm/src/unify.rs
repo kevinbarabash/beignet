@@ -38,19 +38,6 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
         (TypeKind::Variable(_), _) => bind(arena, ctx, a, b),
         (_, TypeKind::Variable(_)) => bind(arena, ctx, b, a),
 
-        (TypeKind::Mutable(Mutable { t: t1 }), TypeKind::Mutable(Mutable { t: t2 })) => {
-            unify_mut(arena, ctx, *t1, *t2)
-        }
-
-        // It's okay to use a mutable reference as if it were immutable
-        (TypeKind::Mutable(Mutable { t: t1 }), _) => unify(arena, ctx, *t1, b),
-
-        (_, TypeKind::Mutable(_)) => Err(Errors::InferenceError(format!(
-            "type mismatch: unify({}, {}) failed",
-            a_t.as_string(arena),
-            b_t.as_string(arena)
-        ))),
-
         (TypeKind::Keyword(kw1), TypeKind::Keyword(kw2)) => {
             if kw1 == kw2 {
                 Ok(())
@@ -654,9 +641,6 @@ pub fn unify_call(
             }
 
             unify(arena, ctx, ret_type, func.ret)?;
-        }
-        TypeKind::Mutable(Mutable { t }) => {
-            unify_call(arena, ctx, args, type_args, t)?;
         }
         TypeKind::KeyOf(KeyOf { t }) => {
             return Err(Errors::InferenceError(format!(

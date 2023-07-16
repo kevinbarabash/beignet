@@ -1059,27 +1059,6 @@ fn object_properties_and_getter_should_unify() -> Result<(), Errors> {
     Ok(())
 }
 
-#[test]
-fn mutable_object_properties_unify() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
-
-    let src = r#"
-    declare let foo: mut {
-        a: number,
-        b: string,
-    }
-    let bar: mut {
-        a: number,
-        b: string,
-    } = foo
-    "#;
-    let mut program = parse(src).unwrap();
-
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
-
-    Ok(())
-}
-
 // TODO
 #[test]
 #[ignore]
@@ -1087,10 +1066,10 @@ fn mutable_object_properties_unify_with_getters_setters() -> Result<(), Errors> 
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    declare let foo: mut {
+    declare let mut foo: {
         x: number,
     }
-    let bar: mut {
+    let mut bar: {
         get x(self): number,
         set x(self, value: number): undefined,
     } = foo
@@ -3239,54 +3218,6 @@ fn test_type_alias_with_undefined_def() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_mutable() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
-
-    let src = r#"
-    type Point = {x: number, y: number}
-    declare let scale: fn (p: mut Point, factor: number) => Point
-    let p: mut Point = {x: 5, y: 10}
-    let q = scale(p, 2)
-    "#;
-    let mut program = parse(src).unwrap();
-
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
-
-    let binding = my_ctx.values.get("p").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"mut Point"#);
-
-    let binding = my_ctx.values.get("q").unwrap();
-    assert_eq!(
-        arena[binding.index].as_string(&arena),
-        r#"{x: number, y: number}"#
-    );
-
-    Ok(())
-}
-
-#[test]
-fn test_passing_literal_as_mutable() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
-
-    let src = r#"
-    type Point = {x: number, y: number}
-    declare let scale: fn (mut p: Point, factor: number) => Point
-    let q = scale({x: 5, y: 10}, 2)
-    "#;
-    let mut program = parse(src).unwrap();
-
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
-
-    let binding = my_ctx.values.get("q").unwrap();
-    assert_eq!(
-        arena[binding.index].as_string(&arena),
-        r#"{x: number, y: number}"#
-    );
-
-    Ok(())
-}
-
-#[test]
 fn test_mutable_error_arg_passing() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
@@ -3403,7 +3334,7 @@ fn test_sub_objects_are_mutable() -> Result<(), Errors> {
     let src = r#"
     type Obj = {a: {b: {c: string}}}
     declare let obj1: Obj
-    declare let obj2: mut Obj
+    declare let mut obj2: Obj
     let b1 = obj1.a.b
     let b2 = obj2.a.b
     "#;
@@ -3415,7 +3346,8 @@ fn test_sub_objects_are_mutable() -> Result<(), Errors> {
     assert_eq!(arena[binding.index].as_string(&arena), r#"{c: string}"#);
 
     let binding = my_ctx.values.get("b2").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"mut {c: string}"#);
+    // TODO: create helper function to print bindings, not just types
+    assert_eq!(arena[binding.index].as_string(&arena), r#"{c: string}"#);
 
     Ok(())
 }
@@ -3492,8 +3424,8 @@ fn test_mutable_object_type_equality() -> Result<(), Errors> {
 
     let src = r#"
     type Point = {x: number, y: number}
-    let p: mut Point = {x: 5, y: 10}
-    let q: mut Point = {x: 0, y: 1}
+    let mut p: Point = {x: 5, y: 10}
+    let mut q: Point = {x: 0, y: 1}
     "#;
     let mut program = parse(src).unwrap();
 

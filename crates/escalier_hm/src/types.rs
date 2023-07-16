@@ -277,8 +277,6 @@ pub enum TypeKind {
     Function(Function),
     Object(Object),
     Rest(Rest), // Why is this its own type?
-    // Utility(Utility),
-    Mutable(Mutable), // Should this be moved to `Type` as a field?
     KeyOf(KeyOf),
     IndexedAccess(IndexedAccess),
     Conditional(Conditional),
@@ -515,7 +513,6 @@ impl Type {
                     arena[func.ret].as_string(arena),
                 )
             }
-            TypeKind::Mutable(Mutable { t }) => format!("mut {}", arena[*t].as_string(arena)),
             TypeKind::KeyOf(KeyOf { t }) => format!("keyof {}", arena[*t].as_string(arena)),
             TypeKind::IndexedAccess(IndexedAccess { obj, index }) => format!(
                 "{}[{}]",
@@ -672,10 +669,6 @@ pub fn new_lit_type(arena: &mut Arena<Type>, lit: &Lit) -> Index {
     arena.insert(Type::from(TypeKind::Literal(lit.clone())))
 }
 
-pub fn new_mutable_type(arena: &mut Arena<Type>, t: Index) -> Index {
-    arena.insert(Type::from(TypeKind::Mutable(Mutable { t })))
-}
-
 pub fn new_keyof_type(arena: &mut Arena<Type>, t: Index) -> Index {
     arena.insert(Type::from(TypeKind::KeyOf(KeyOf { t })))
 }
@@ -750,11 +743,6 @@ impl Type {
             (TypeKind::Rest(r1), TypeKind::Rest(r2)) => {
                 let t1 = &arena[r1.arg];
                 let t2 = &arena[r2.arg];
-                t1.equals(t2, arena)
-            }
-            (TypeKind::Mutable(m1), TypeKind::Mutable(m2)) => {
-                let t1 = &arena[m1.t];
-                let t2 = &arena[m2.t];
                 t1.equals(t2, arena)
             }
             // TODO:

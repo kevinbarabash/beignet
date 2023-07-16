@@ -724,10 +724,6 @@ pub fn infer_type_ann(
             new_indexed_access_type(arena, obj_idx, index_idx)
         }
         TypeAnnKind::TypeOf(expr) => infer_expression(arena, expr, ctx)?,
-        TypeAnnKind::Mutable(type_ann) => {
-            let t = infer_type_ann(arena, type_ann, ctx)?;
-            new_mutable_type(arena, t)
-        }
 
         // TODO: Create types for all of these
         TypeAnnKind::KeyOf(type_ann) => {
@@ -783,15 +779,8 @@ pub fn infer_statement(
 
                             // The initializer must conform to the type annotation's
                             // inferred type.
-                            if can_be_mutable {
-                                let type_ann_idx = match &arena[type_ann_idx].kind {
-                                    TypeKind::Mutable(Mutable { t }) => *t,
-                                    _ => type_ann_idx,
-                                };
-                                unify(arena, ctx, init_idx, type_ann_idx)?;
-                            } else {
-                                unify(arena, ctx, init_idx, type_ann_idx)?;
-                            }
+                            unify(arena, ctx, init_idx, type_ann_idx)?;
+
                             // Results in bindings introduced by the LHS pattern
                             // having their types inferred.
                             // It's okay for pat_type to be the super type here
@@ -1087,10 +1076,6 @@ fn get_ident_member(
                 "Can't find type alias for Array".to_string(),
             )),
         },
-        TypeKind::Mutable(types::Mutable { t, .. }) => {
-            let idx = get_ident_member(arena, ctx, *t, key_idx)?;
-            Ok(new_mutable_type(arena, idx))
-        }
         _ => Err(Errors::InferenceError(format!(
             "Can't access properties on {}",
             obj_type.as_string(arena)
