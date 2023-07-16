@@ -74,7 +74,7 @@ impl<'a> Visitor for Fresh<'a> {
         if is_generic(self.arena, *idx, self.ctx) {
             self.mapping
                 .entry(*idx)
-                .or_insert_with(|| new_var_type(self.arena, None))
+                .or_insert_with(|| new_var_type(self.arena, None, None))
                 .to_owned()
         } else {
             *idx
@@ -161,7 +161,7 @@ pub fn instantiate_func(
     func: &Function,
     type_args: Option<&[Index]>,
 ) -> Result<Function, Errors> {
-    // A mapping of TypeVariables to TypeVariables
+    // A mapping of type param names to fresh type variables
     let mut mapping = std::collections::HashMap::default();
 
     if let Some(type_params) = &func.type_params {
@@ -179,7 +179,7 @@ pub fn instantiate_func(
             }
             None => {
                 for tp in type_params {
-                    mapping.insert(tp.name.to_owned(), new_var_type(arena, tp.constraint));
+                    mapping.insert(tp.name.to_owned(), new_var_type(arena, tp.constraint, None));
                 }
             }
         }

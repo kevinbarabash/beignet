@@ -27,10 +27,8 @@ pub fn infer_pattern(
         ctx: &Context,
     ) -> Result<Index, Errors> {
         let idx = match &mut pattern.kind {
-            PatternKind::Ident(BindingIdent {
-                name, mutable: _, ..
-            }) => {
-                let idx = new_var_type(arena, None);
+            PatternKind::Ident(BindingIdent { name, mutable, .. }) => {
+                let idx = new_var_type(arena, None, Some(*mutable));
                 if assump.insert(name.to_owned(), idx).is_some() {
                     return Err(Errors::InferenceError(
                         "Duplicate identifier in pattern".to_string(),
@@ -68,8 +66,8 @@ pub fn infer_pattern(
                             // We ignore `init` for now, we can come back later to handle
                             // default values.
                             // TODO: handle default values
-
-                            let idx = new_var_type(arena, None);
+                            // TODO: add support for mutable bindings
+                            let idx = new_var_type(arena, None, Some(false));
                             if assump.insert(ident.name.to_owned(), idx).is_some() {
                                 todo!("return an error");
                             }
@@ -137,7 +135,7 @@ pub fn infer_pattern(
 
                 idx
             }
-            PatternKind::Wildcard => new_var_type(arena, None),
+            PatternKind::Wildcard => new_var_type(arena, None, None),
         };
 
         Ok(idx)

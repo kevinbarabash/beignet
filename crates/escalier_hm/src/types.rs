@@ -646,12 +646,20 @@ pub fn new_object_type(arena: &mut Arena<Type>, elems: &[TObjElem]) -> Index {
 }
 
 /// A binary type constructor which builds function types
-pub fn new_var_type(arena: &mut Arena<Type>, constraint: Option<Index>) -> Index {
-    arena.insert(Type::from(TypeKind::Variable(Variable {
-        id: arena.len(), // use for debugging purposes only
-        instance: None,
-        constraint,
-    })))
+pub fn new_var_type(
+    arena: &mut Arena<Type>,
+    constraint: Option<Index>,
+    mutable: Option<bool>,
+) -> Index {
+    arena.insert(Type {
+        kind: TypeKind::Variable(Variable {
+            id: arena.len(), // use for debugging purposes only
+            instance: None,
+            constraint,
+        }),
+        provenance: None,
+        mutable,
+    })
 }
 
 /// A binary type constructor which builds function types

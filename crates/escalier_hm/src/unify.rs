@@ -544,7 +544,7 @@ pub fn unify_call(
     type_args: Option<&[Index]>,
     t2: Index,
 ) -> Result<Index, Errors> {
-    let ret_type = new_var_type(arena, None);
+    let ret_type = new_var_type(arena, None, None);
 
     let b = prune(arena, t2);
     let b_t = arena.get(b).unwrap().clone();

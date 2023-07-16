@@ -164,7 +164,7 @@ pub fn infer_expression(
             {
                 let type_ann_t = match type_ann {
                     Some(type_ann) => infer_type_ann(arena, type_ann, &mut sig_ctx)?,
-                    None => new_var_type(arena, None),
+                    None => new_var_type(arena, None, None),
                 };
                 pattern.inferred_type = Some(type_ann_t);
 
@@ -286,8 +286,8 @@ pub fn infer_expression(
                     boolean
                 }
                 BinaryOp::Equals | BinaryOp::NotEquals => {
-                    let var_a = new_var_type(arena, None);
-                    let var_b = new_var_type(arena, None);
+                    let var_a = new_var_type(arena, None, None);
+                    let var_b = new_var_type(arena, None, None);
                     unify(arena, ctx, left_type, var_a)?;
                     unify(arena, ctx, right_type, var_b)?;
                     boolean
@@ -325,7 +325,7 @@ pub fn infer_expression(
             }
 
             let expr_t = infer_expression(arena, expr, ctx)?;
-            let inner_t = new_var_type(arena, None);
+            let inner_t = new_var_type(arena, None, None);
             // TODO: Merge Constructor and TypeRef
             // NOTE: This isn't quite right because we can await non-promise values.
             // That being said, we should avoid doing so.
@@ -434,7 +434,7 @@ pub fn infer_type_ann(
                 .map(|(i, param)| {
                     let t = match &mut param.type_ann {
                         Some(type_ann) => infer_type_ann(arena, type_ann, &mut sig_ctx)?,
-                        None => new_var_type(arena, None),
+                        None => new_var_type(arena, None, None),
                     };
 
                     Ok(types::FuncParam {
@@ -520,15 +520,12 @@ pub fn infer_type_ann(
                                     Some(type_ann) => {
                                         infer_type_ann(arena, type_ann, &mut sig_ctx)?
                                     }
-                                    None => new_var_type(arena, None),
+                                    None => new_var_type(arena, None, None),
                                 };
 
+                                // TODO: propertly convert pattern to tpat
                                 Ok(types::FuncParam {
-                                    pattern: TPat::Ident(BindingIdent {
-                                        name: param.pattern.get_name(&i),
-                                        mutable: false,
-                                        span: Span { start: 0, end: 0 },
-                                    }),
+                                    pattern: pattern_to_tpat(&param.pattern),
                                     t,
                                     optional: param.optional,
                                 })
@@ -563,7 +560,7 @@ pub fn infer_type_ann(
                                     Some(type_ann) => {
                                         infer_type_ann(arena, type_ann, &mut sig_ctx)?
                                     }
-                                    None => new_var_type(arena, None),
+                                    None => new_var_type(arena, None, None),
                                 };
 
                                 Ok(types::FuncParam {
@@ -607,7 +604,7 @@ pub fn infer_type_ann(
                                     Some(type_ann) => {
                                         infer_type_ann(arena, type_ann, &mut sig_ctx)?
                                     }
-                                    None => new_var_type(arena, None),
+                                    None => new_var_type(arena, None, None),
                                 };
 
                                 Ok(types::FuncParam {
@@ -659,7 +656,7 @@ pub fn infer_type_ann(
 
                         let t = match &mut params[1].type_ann {
                             Some(type_ann) => infer_type_ann(arena, type_ann, &mut sig_ctx)?,
-                            None => new_var_type(arena, None),
+                            None => new_var_type(arena, None, None),
                         };
 
                         let _self = &params[0];
