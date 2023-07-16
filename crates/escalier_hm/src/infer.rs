@@ -1,5 +1,5 @@
 use generational_arena::{Arena, Index};
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use escalier_ast::{self as syntax, *};
 
@@ -825,9 +825,10 @@ pub fn infer_statement(
                         }
                     };
 
+                    check_mutability(ctx, &pat_bindings, init)?;
+
                     for (name, binding) in pat_bindings {
                         ctx.values.insert(name.clone(), binding);
-                        // eprintln!("setting {name} to {binding:#?}");
                     }
 
                     pattern.inferred_type = Some(idx);
@@ -1162,4 +1163,52 @@ fn infer_type_params(
     };
 
     Ok(type_params)
+}
+
+// NOTE: It's possible to have a mix of mutable and immutable bindings be
+// introduced.  In that situation, we only need to check certain parts of
+// the initializer for mutability.
+fn check_mutability(
+    ctx: &Context,
+    pat_bindings: &HashMap<String, Binding>,
+    init: &Expr,
+) -> Result<(), Errors> {
+    let mut lhs_mutable = false;
+    for binding in pat_bindings.values() {
+        lhs_mutable = lhs_mutable || binding.is_mut;
+    }
+
+    let idents = find_identifiers(init)?;
+
+    if idents.is_empty() {
+        return Ok(());
+    }
+
+    let mut rhs_mutable = false;
+    for Ident { name, span: _ } in idents {
+        let binding = ctx.values.get(&name).unwrap();
+        rhs_mutable = rhs_mutable || binding.is_mut;
+    }
+
+    if lhs_mutable && !rhs_mutable {
+        // TODO: include which bindings are involved in the assignment
+        return Err(Errors::InferenceError(
+            "Can't assign immutable value to mutable binding".to_string(),
+        ));
+    }
+
+    Ok(())
+}
+
+fn find_identifiers(expr: &Expr) -> Result<Vec<Ident>, Errors> {
+    let mut idents = vec![];
+
+    match &expr.kind {
+        ExprKind::Ident(ident) => {
+            idents.push(ident.to_owned());
+        }
+        _ => (),
+    }
+
+    Ok(idents)
 }

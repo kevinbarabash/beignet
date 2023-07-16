@@ -677,16 +677,16 @@ pub fn unify_call(
 }
 
 fn bind(arena: &mut Arena<Type>, ctx: &Context, a: Index, b: Index) -> Result<(), Errors> {
-    eprint!("bind(");
-    eprint!("{:#?}", arena[a].as_string(arena));
-    if let Some(provenance) = &arena[a].provenance {
-        eprint!(" : {:#?}", provenance);
-    }
-    eprint!(", {:#?}", arena[b].as_string(arena));
-    if let Some(provenance) = &arena[b].provenance {
-        eprint!(" : {:#?}", provenance);
-    }
-    eprintln!(")");
+    // eprint!("bind(");
+    // eprint!("{:#?}", arena[a].as_string(arena));
+    // if let Some(provenance) = &arena[a].provenance {
+    //     eprint!(" : {:#?}", provenance);
+    // }
+    // eprint!(", {:#?}", arena[b].as_string(arena));
+    // if let Some(provenance) = &arena[b].provenance {
+    //     eprint!(" : {:#?}", provenance);
+    // }
+    // eprintln!(")");
 
     if a != b {
         if occurs_in_type(arena, a, b) {
