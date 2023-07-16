@@ -34,22 +34,24 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
     let a_t = arena[a].clone();
     let b_t = arena[b].clone();
 
+    match (&a_t.mutable, &b_t.mutable) {
+        (_, None) => (),
+        (None, _) => (),
+        (Some(a_mut), Some(b_mut)) => {
+            // if *a_mut && !*b_mut {
+            //     return Err(Errors::InferenceError(format!(
+            //         "type mismatch: unify({}, {}) failed",
+            //         a_t.as_string(arena),
+            //         b_t.as_string(arena)
+            //     )));
+            // }
+            eprintln!("a_mut = {:?}, b_mut = {:?}", a_mut, b_mut);
+        }
+    }
+
     match (&a_t.kind, &b_t.kind) {
         (TypeKind::Variable(_), _) => bind(arena, ctx, a, b),
         (_, TypeKind::Variable(_)) => bind(arena, ctx, b, a),
-
-        (TypeKind::Mutable(Mutable { t: t1 }), TypeKind::Mutable(Mutable { t: t2 })) => {
-            unify_mut(arena, ctx, *t1, *t2)
-        }
-
-        // It's okay to use a mutable reference as if it were immutable
-        (TypeKind::Mutable(Mutable { t: t1 }), _) => unify(arena, ctx, *t1, b),
-
-        (_, TypeKind::Mutable(_)) => Err(Errors::InferenceError(format!(
-            "type mismatch: unify({}, {}) failed",
-            a_t.as_string(arena),
-            b_t.as_string(arena)
-        ))),
 
         (TypeKind::Keyword(kw1), TypeKind::Keyword(kw2)) => {
             if kw1 == kw2 {
@@ -633,21 +635,9 @@ pub fn unify_call(
             }
 
             for ((expr, p), q) in arg_types.iter().zip(func.params.iter()) {
-                let can_be_mutable = matches!(&expr.kind, ExprKind::Object(_) | ExprKind::Tuple(_));
-                if can_be_mutable {
-                    let q_t = match &arena[q.t].kind {
-                        TypeKind::Mutable(Mutable { t }) => *t,
-                        _ => q.t,
-                    };
-                    unify(arena, ctx, *p, q_t)?;
-                } else {
-                    unify(arena, ctx, *p, q.t)?;
-                }
+                unify(arena, ctx, *p, q.t)?;
             }
             unify(arena, ctx, ret_type, func.ret)?;
-        }
-        TypeKind::Mutable(Mutable { t }) => {
-            unify_call(arena, ctx, arg_types, type_args, t)?;
         }
         TypeKind::KeyOf(KeyOf { t }) => {
             return Err(Errors::InferenceError(format!(
@@ -677,16 +667,16 @@ pub fn unify_call(
 }
 
 fn bind(arena: &mut Arena<Type>, ctx: &Context, a: Index, b: Index) -> Result<(), Errors> {
-    eprint!("bind(");
-    eprint!("{:#?}", arena[a].as_string(arena));
-    if let Some(provenance) = &arena[a].provenance {
-        eprint!(" : {:#?}", provenance);
-    }
-    eprint!(", {:#?}", arena[b].as_string(arena));
-    if let Some(provenance) = &arena[b].provenance {
-        eprint!(" : {:#?}", provenance);
-    }
-    eprintln!(")");
+    // eprint!("bind(");
+    // eprint!("{:#?}", arena[a].as_string(arena));
+    // if let Some(provenance) = &arena[a].provenance {
+    //     eprint!(" : {:#?}", provenance);
+    // }
+    // eprint!(", {:#?}", arena[b].as_string(arena));
+    // if let Some(provenance) = &arena[b].provenance {
+    //     eprint!(" : {:#?}", provenance);
+    // }
+    // eprintln!(")");
 
     if a != b {
         if occurs_in_type(arena, a, b) {

@@ -3238,6 +3238,95 @@ fn test_mutable_error() -> Result<(), Errors> {
 }
 
 #[test]
+fn test_mutable_error_take_2() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Point = {x: number, y: number}
+    let scale = fn (mut p: Point, factor: number) => {
+        return p
+    }
+    let p: Point = {x: 5, y: 10}
+    scale(p, 2)
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("p").unwrap();
+    assert_eq!(
+        arena[*binding].as_string(&arena),
+        r#"{x: number, y: number}"#
+    );
+
+    let binding = my_ctx.values.get("scale").unwrap();
+    assert_eq!(
+        arena[*binding].as_string(&arena),
+        r#"(p: Point, factor: number) => {x: number, y: number}"#
+    );
+
+    let point_type = my_ctx.schemes.get("Point").unwrap();
+    eprintln!("Point = {:#?}", arena[point_type.t].as_string(&arena));
+
+    // assert_eq!(
+    //     result,
+    //     Err(Errors::InferenceError(
+    //         "type mismatch: unify({x: number, y: number}, mut Point) failed".to_string()
+    //     ))
+    // );
+
+    Ok(())
+}
+
+#[test]
+fn test_mutable_error_take_3() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    // instead of checking whether the type is mutable, we should be
+    // checking the binding, some examples:
+    //
+    // let p: Point = {x: 5, y: 10}
+    // let mut q: Point = p; // error
+    //
+    // let l: Line = ...
+    // let {p1, mut p2} = l; // error, the whole line is immutable
+    //
+    // let mut p1: Point = ...
+    // let mut p2: Point = ...
+    // let mut l: Line = {p1, p2}; // okay
+    //
+    // right now we're just checking if the rhs unifies with
+    // the type annotation
+
+    let src = r#"
+    type Point = {x: number, y: number}
+    let mut p: Point = {x: 5, y: 10}
+    let mut q = p
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("p").unwrap();
+    assert_eq!(
+        arena[*binding].as_string(&arena),
+        r#"{x: number, y: number}"#
+    );
+
+    let point_type = my_ctx.schemes.get("Point").unwrap();
+    eprintln!("Point = {:#?}", arena[point_type.t].as_string(&arena));
+
+    // assert_eq!(
+    //     result,
+    //     Err(Errors::InferenceError(
+    //         "type mismatch: unify({x: number, y: number}, mut Point) failed".to_string()
+    //     ))
+    // );
+
+    Ok(())
+}
+
+#[test]
 fn test_sub_objects_are_mutable() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 

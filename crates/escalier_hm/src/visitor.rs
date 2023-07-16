@@ -170,12 +170,6 @@ pub trait Visitor: KeyValueStore<Index, Type> {
         }
     }
 
-    fn visit_mutable(&mut self, mutable: &Mutable) -> Mutable {
-        Mutable {
-            t: self.visit_index(&mutable.t),
-        }
-    }
-
     fn visit_keyof(&mut self, keyof: &KeyOf) -> KeyOf {
         KeyOf {
             t: self.visit_index(&keyof.t),
@@ -213,7 +207,6 @@ pub trait Visitor: KeyValueStore<Index, Type> {
             TypeKind::Function(func) => TypeKind::Function(self.visit_function(func)),
             TypeKind::Object(obj) => TypeKind::Object(self.visit_object(obj)),
             TypeKind::Rest(rest) => TypeKind::Rest(self.visit_rest(rest)),
-            TypeKind::Mutable(mutable) => TypeKind::Mutable(self.visit_mutable(mutable)),
             TypeKind::KeyOf(keyof) => TypeKind::KeyOf(self.visit_keyof(keyof)),
             TypeKind::IndexedAccess(indexed_access) => {
                 TypeKind::IndexedAccess(self.visit_indexed_access(indexed_access))

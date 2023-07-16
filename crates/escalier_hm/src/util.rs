@@ -65,7 +65,6 @@ pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
         TypeKind::Intersection(Intersection { types }) => occurs_in(arena, v, &types),
         TypeKind::Tuple(Tuple { types }) => occurs_in(arena, v, &types),
         TypeKind::Constructor(Constructor { types, .. }) => occurs_in(arena, v, &types),
-        TypeKind::Mutable(Mutable { t }) => occurs_in_type(arena, v, t),
         TypeKind::KeyOf(KeyOf { t }) => occurs_in_type(arena, v, t),
         TypeKind::IndexedAccess(IndexedAccess { obj, index }) => {
             occurs_in_type(arena, v, obj) || occurs_in_type(arena, v, index)
@@ -105,6 +104,16 @@ where
     false
 }
 
+pub fn get_mutable(arena: &Arena<Type>, idx: Index) -> Option<bool> {
+    arena.get(idx).unwrap().mutable
+}
+
+pub fn clone_and_set_mutable(arena: &mut Arena<Type>, idx: Index, mutable: Option<bool>) -> Index {
+    let mut t = arena.get(idx).unwrap().clone();
+    t.mutable = mutable;
+    arena.insert(t)
+}
+
 /// Returns the currently defining instance of t.
 ///
 /// As a side effect, collapses the list of type instances. The function Prune
@@ -119,20 +128,35 @@ where
 ///
 /// Returns:
 ///     An uninstantiated TypeVariable or a TypeOperator
-pub fn prune(arena: &mut Arena<Type>, t: Index) -> Index {
-    let v2 = match arena.get(t).unwrap().kind {
+pub fn prune(arena: &mut Arena<Type>, idx: Index) -> Index {
+    let t = arena.get(idx).unwrap();
+    // eprintln!("prune: {:?}, mutable: {:?}", t.kind, t.mutable);
+    let v2 = match t.kind {
         // TODO: handle .unwrap() panicing
         TypeKind::Variable(Variable {
             instance: Some(value),
             ..
         }) => value,
         _ => {
-            return t;
+            return idx;
         }
     };
 
-    let value = prune(arena, v2);
-    match &mut arena.get_mut(t).unwrap().kind {
+    // let mutable = t.mutable;
+    // let other_t = &arena[value];
+    // if other_t.mutable != mutable {}
+
+    // if mutable != get_mutable(arena, v2) {
+    //     v2 = clone_and_set_mutable(arena, v2, mutable);
+    // }
+    let mutable = t.mutable;
+    let mut value = prune(arena, v2);
+    // if mutable != get_mutable(arena, value) {
+    //     value = clone_and_set_mutable(arena, value, mutable);
+    // }
+
+    let t = arena.get_mut(idx).unwrap();
+    match &mut t.kind {
         // TODO: handle .unwrap() panicing
         TypeKind::Variable(Variable {
             ref mut instance, ..
@@ -140,7 +164,7 @@ pub fn prune(arena: &mut Arena<Type>, t: Index) -> Index {
             *instance = Some(value);
         }
         _ => {
-            return t;
+            return idx;
         }
     }
     value
@@ -311,10 +335,6 @@ pub fn get_computed_member(
                 "Can't find type alias for {alias_name}"
             ))),
         },
-        TypeKind::Mutable(Mutable { t, .. }) => {
-            let idx = get_computed_member(arena, ctx, *t, key_idx)?;
-            Ok(new_mutable_type(arena, idx))
-        }
         _ => {
             // TODO: provide a more specific error message for type variables
             Err(Errors::InferenceError(

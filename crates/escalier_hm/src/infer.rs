@@ -732,10 +732,6 @@ pub fn infer_type_ann(
             new_indexed_access_type(arena, obj_idx, index_idx)
         }
         TypeAnnKind::TypeOf(expr) => infer_expression(arena, expr, ctx)?,
-        TypeAnnKind::Mutable(type_ann) => {
-            let t = infer_type_ann(arena, type_ann, ctx)?;
-            new_mutable_type(arena, t)
-        }
 
         // TODO: Create types for all of these
         TypeAnnKind::KeyOf(type_ann) => {
@@ -782,24 +778,14 @@ pub fn infer_statement(
                         _ => init_idx,
                     };
 
-                    let can_be_mutable =
-                        matches!(&init.kind, ExprKind::Object(_) | ExprKind::Tuple(_));
-
                     let idx = match type_ann {
                         Some(type_ann) => {
                             let type_ann_idx = infer_type_ann(arena, type_ann, ctx)?;
 
                             // The initializer must conform to the type annotation's
                             // inferred type.
-                            if can_be_mutable {
-                                let type_ann_idx = match &arena[type_ann_idx].kind {
-                                    TypeKind::Mutable(Mutable { t }) => *t,
-                                    _ => type_ann_idx,
-                                };
-                                unify(arena, ctx, init_idx, type_ann_idx)?;
-                            } else {
-                                unify(arena, ctx, init_idx, type_ann_idx)?;
-                            }
+                            unify(arena, ctx, init_idx, type_ann_idx)?;
+
                             // Results in bindings introduced by the LHS pattern
                             // having their types inferred.
                             // It's okay for pat_type to be the super type here
@@ -823,9 +809,23 @@ pub fn infer_statement(
                         }
                     };
 
+                    // TODO: have a separate function that checks if the mutability
+                    // of the pattern and the mutability of the initializer are
+                    // compatible
+                    check_mutable(arena, ctx, init_idx, pat_type)?;
+
+                    // How do we check the mutability of the bindings against
+                    // the mutability of the initializer?
+                    // Each binding has some sort of path describing which part
+                    // of the initializer it is bound to.
+                    // Secondly, we need a way to determine which parts of the
+                    // initializer are mutable.
+                    // The only time we care about this kind of a check is when
+                    // we are assigning to a binding or passing a binding to a
+                    // to a function call.
                     for (name, binding) in pat_bindings {
                         ctx.values.insert(name.clone(), binding);
-                        // eprintln!("setting {name} to {binding:#?}");
+                        eprintln!("setting {name} to {:#?}", arena[binding].as_string(arena));
                     }
 
                     pattern.inferred_type = Some(idx);
@@ -1093,10 +1093,6 @@ fn get_ident_member(
                 "Can't find type alias for Array".to_string(),
             )),
         },
-        TypeKind::Mutable(types::Mutable { t, .. }) => {
-            let idx = get_ident_member(arena, ctx, *t, key_idx)?;
-            Ok(new_mutable_type(arena, idx))
-        }
         _ => Err(Errors::InferenceError(format!(
             "Can't access properties on {}",
             obj_type.as_string(arena)
@@ -1160,4 +1156,22 @@ fn infer_type_params(
     };
 
     Ok(type_params)
+}
+
+fn check_mutable(
+    arena: &mut Arena<Type>,
+    ctx: &mut Context,
+    t1: Index,
+    t2: Index,
+) -> Result<(), Errors> {
+    let t1 = prune(arena, t1);
+    let t2 = prune(arena, t2);
+
+    let t1 = arena[t1].clone();
+    let t2 = arena[t2].clone();
+
+    eprintln!("t1 = {}", t1.as_string(arena));
+    eprintln!("t2 = {}", t2.as_string(arena));
+
+    Ok(())
 }
