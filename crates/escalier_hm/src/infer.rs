@@ -419,8 +419,7 @@ pub fn infer_type_ann(
 
             let func_params = params
                 .iter_mut()
-                .enumerate()
-                .map(|(i, param)| {
+                .map(|param| {
                     let t = match &mut param.type_ann {
                         Some(type_ann) => infer_type_ann(arena, type_ann, &mut sig_ctx)?,
                         None => new_var_type(arena, None),

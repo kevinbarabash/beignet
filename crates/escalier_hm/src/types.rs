@@ -5,7 +5,7 @@ use std::fmt;
 
 // TODO: create type versions of these so that we don't have to bother
 // with source locations when doing type-level stuff.
-use escalier_ast::{BindingIdent, Ident, Literal as Lit};
+use escalier_ast::{BindingIdent, Literal as Lit};
 
 use crate::provenance::Provenance;
 
