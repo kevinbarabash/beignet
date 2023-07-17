@@ -3494,3 +3494,43 @@ fn test_mutable_object_type_equality() -> Result<(), Errors> {
 
     Ok(())
 }
+
+#[test]
+fn test_mutating_mutable_object() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Point = {x: number, y: number}
+    let mut p: Point = {x: 5, y: 10}
+    p.x = 0
+    p["y"] = 0
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    Ok(())
+}
+
+#[test]
+fn test_mutating_immutable_object_errors() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Point = {x: number, y: number}
+    let p: Point = {x: 5, y: 10}
+    p.x = 0
+    "#;
+    let mut program = parse(src).unwrap();
+
+    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "Cannot assign to immutable lvalue".to_string()
+        ))
+    );
+
+    Ok(())
+}

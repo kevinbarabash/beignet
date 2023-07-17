@@ -243,7 +243,19 @@ pub fn infer_expression(
         }
         // ExprKind::New(_) => todo!(),
         ExprKind::JSXElement(_) => todo!(),
-        ExprKind::Assign(_) => todo!(),
+        ExprKind::Assign(Assign { left, op, right }) => {
+            if !lvalue_mutability(ctx, left)? {
+                return Err(Errors::InferenceError(
+                    "Cannot assign to immutable lvalue".to_string(),
+                ));
+            }
+
+            let l_t = infer_expression(arena, left, ctx)?;
+            let r_t = infer_expression(arena, right, ctx)?;
+            unify(arena, ctx, r_t, l_t)?;
+
+            r_t
+        }
         // ExprKind::LetExpr(_) => todo!(),
         // ExprKind::Keyword(_) => todo!(), // null, undefined, etc.
         ExprKind::Binary(Binary { op, left, right }) => {
@@ -1174,4 +1186,17 @@ fn find_identifiers(expr: &Expr) -> Result<Vec<Ident>, Errors> {
     }
 
     Ok(idents)
+}
+
+fn lvalue_mutability(ctx: &Context, expr: &Expr) -> Result<bool, Errors> {
+    match &expr.kind {
+        ExprKind::Ident(ident) => {
+            let binding = ctx.values.get(&ident.name).unwrap();
+            Ok(binding.is_mut)
+        }
+        ExprKind::Member(member) => lvalue_mutability(ctx, &member.object),
+        _ => Err(Errors::InferenceError(
+            "Can't assign to non-lvalue".to_string(),
+        )),
+    }
 }
