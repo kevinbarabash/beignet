@@ -120,16 +120,6 @@ pub fn infer_expression(
         }) => {
             let func_type = infer_expression(arena, func, ctx)?;
 
-            let arg_types = args
-                .iter_mut()
-                .map(|arg| {
-                    // TODO: handle spreads
-                    let t = infer_expression(arena, arg, ctx)?;
-                    let arg: &Expr = arg;
-                    Ok((arg, t))
-                })
-                .collect::<Result<Vec<_>, _>>()?;
-
             match type_args {
                 Some(type_args) => {
                     let type_args = type_args
@@ -137,9 +127,9 @@ pub fn infer_expression(
                         .map(|type_arg| infer_type_ann(arena, type_arg, ctx))
                         .collect::<Result<Vec<_>, _>>()?;
 
-                    unify_call(arena, ctx, &arg_types, Some(&type_args), func_type)?
+                    unify_call(arena, ctx, args, Some(&type_args), func_type)?
                 }
-                None => unify_call(arena, ctx, &arg_types, None, func_type)?,
+                None => unify_call(arena, ctx, args, None, func_type)?,
             }
         }
         // TODO: Add support for explicit type parameters
@@ -177,7 +167,7 @@ pub fn infer_expression(
                 }
 
                 func_params.push(types::FuncParam {
-                    pattern: pattern_to_tpat(pattern),
+                    pattern: pattern_to_tpat(pattern, true),
                     t: type_ann_t,
                     optional: *optional,
                 });
@@ -429,19 +419,14 @@ pub fn infer_type_ann(
 
             let func_params = params
                 .iter_mut()
-                .enumerate()
-                .map(|(i, param)| {
+                .map(|param| {
                     let t = match &mut param.type_ann {
                         Some(type_ann) => infer_type_ann(arena, type_ann, &mut sig_ctx)?,
                         None => new_var_type(arena, None),
                     };
 
                     Ok(types::FuncParam {
-                        pattern: TPat::Ident(BindingIdent {
-                            name: param.pattern.get_name(&i),
-                            mutable: false,
-                            span: Span { start: 0, end: 0 },
-                        }),
+                        pattern: pattern_to_tpat(&param.pattern, true),
                         t,
                         optional: param.optional,
                     })
@@ -734,10 +719,6 @@ pub fn infer_type_ann(
             new_indexed_access_type(arena, obj_idx, index_idx)
         }
         TypeAnnKind::TypeOf(expr) => infer_expression(arena, expr, ctx)?,
-        TypeAnnKind::Mutable(type_ann) => {
-            let t = infer_type_ann(arena, type_ann, ctx)?;
-            new_mutable_type(arena, t)
-        }
 
         // TODO: Create types for all of these
         TypeAnnKind::KeyOf(type_ann) => {
@@ -784,24 +765,14 @@ pub fn infer_statement(
                         _ => init_idx,
                     };
 
-                    let can_be_mutable =
-                        matches!(&init.kind, ExprKind::Object(_) | ExprKind::Tuple(_));
-
                     let idx = match type_ann {
                         Some(type_ann) => {
                             let type_ann_idx = infer_type_ann(arena, type_ann, ctx)?;
 
                             // The initializer must conform to the type annotation's
                             // inferred type.
-                            if can_be_mutable {
-                                let type_ann_idx = match &arena[type_ann_idx].kind {
-                                    TypeKind::Mutable(Mutable { t }) => *t,
-                                    _ => type_ann_idx,
-                                };
-                                unify(arena, ctx, init_idx, type_ann_idx)?;
-                            } else {
-                                unify(arena, ctx, init_idx, type_ann_idx)?;
-                            }
+                            unify(arena, ctx, init_idx, type_ann_idx)?;
+
                             // Results in bindings introduced by the LHS pattern
                             // having their types inferred.
                             // It's okay for pat_type to be the super type here
@@ -825,9 +796,11 @@ pub fn infer_statement(
                         }
                     };
 
+                    let tpat = pattern_to_tpat(pattern, false);
+                    check_mutability(ctx, &tpat, init)?;
+
                     for (name, binding) in pat_bindings {
                         ctx.values.insert(name.clone(), binding);
-                        // eprintln!("setting {name} to {binding:#?}");
                     }
 
                     pattern.inferred_type = Some(idx);
@@ -1095,10 +1068,6 @@ fn get_ident_member(
                 "Can't find type alias for Array".to_string(),
             )),
         },
-        TypeKind::Mutable(types::Mutable { t, .. }) => {
-            let idx = get_ident_member(arena, ctx, *t, key_idx)?;
-            Ok(new_mutable_type(arena, idx))
-        }
         _ => Err(Errors::InferenceError(format!(
             "Can't access properties on {}",
             obj_type.as_string(arena)
@@ -1162,4 +1131,47 @@ fn infer_type_params(
     };
 
     Ok(type_params)
+}
+
+// NOTE: It's possible to have a mix of mutable and immutable bindings be
+// introduced.  In that situation, we only need to check certain parts of
+// the initializer for mutability.
+pub fn check_mutability(ctx: &Context, tpat: &TPat, init: &Expr) -> Result<(), Errors> {
+    let mut lhs_mutable = false;
+
+    // TODO: handle other patterns
+    if let TPat::Ident(binding) = tpat {
+        lhs_mutable = lhs_mutable || binding.mutable;
+    }
+
+    let idents = find_identifiers(init)?;
+
+    if idents.is_empty() {
+        return Ok(());
+    }
+
+    let mut rhs_mutable = false;
+    for Ident { name, span: _ } in idents {
+        let binding = ctx.values.get(&name).unwrap();
+        rhs_mutable = rhs_mutable || binding.is_mut;
+    }
+
+    if lhs_mutable && !rhs_mutable {
+        // TODO: include which bindings are involved in the assignment
+        return Err(Errors::InferenceError(
+            "Can't assign immutable value to mutable binding".to_string(),
+        ));
+    }
+
+    Ok(())
+}
+
+fn find_identifiers(expr: &Expr) -> Result<Vec<Ident>, Errors> {
+    let mut idents = vec![];
+
+    if let ExprKind::Ident(ident) = &expr.kind {
+        idents.push(ident.to_owned());
+    }
+
+    Ok(idents)
 }

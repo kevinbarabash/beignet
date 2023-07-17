@@ -3,11 +3,11 @@ use generational_arena::{Arena, Index};
 use itertools::Itertools;
 use std::collections::{BTreeSet, HashMap};
 
-use escalier_ast::{BindingIdent, Expr, ExprKind, Literal as Lit, Span};
+use escalier_ast::{BindingIdent, Expr, Literal as Lit, Span};
 
 use crate::context::*;
 use crate::errors::*;
-use crate::provenance;
+use crate::infer::{check_mutability, infer_expression};
 use crate::types::*;
 use crate::util::*;
 
@@ -37,19 +37,6 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
     match (&a_t.kind, &b_t.kind) {
         (TypeKind::Variable(_), _) => bind(arena, ctx, a, b),
         (_, TypeKind::Variable(_)) => bind(arena, ctx, b, a),
-
-        (TypeKind::Mutable(Mutable { t: t1 }), TypeKind::Mutable(Mutable { t: t2 })) => {
-            unify_mut(arena, ctx, *t1, *t2)
-        }
-
-        // It's okay to use a mutable reference as if it were immutable
-        (TypeKind::Mutable(Mutable { t: t1 }), _) => unify(arena, ctx, *t1, b),
-
-        (_, TypeKind::Mutable(_)) => Err(Errors::InferenceError(format!(
-            "type mismatch: unify({}, {}) failed",
-            a_t.as_string(arena),
-            b_t.as_string(arena)
-        ))),
 
         (TypeKind::Keyword(kw1), TypeKind::Keyword(kw2)) => {
             if kw1 == kw2 {
@@ -539,8 +526,8 @@ fn unify_mut(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
 // This function unifies and infers the return type of a function call.
 pub fn unify_call(
     arena: &mut Arena<Type>,
-    ctx: &Context,
-    arg_types: &[(&Expr, Index)],
+    ctx: &mut Context,
+    args: &mut [Expr],
     type_args: Option<&[Index]>,
     t2: Index,
 ) -> Result<Index, Errors> {
@@ -551,28 +538,32 @@ pub fn unify_call(
 
     match b_t.kind {
         TypeKind::Variable(_) => {
-            let arg_types: Vec<FuncParam> = arg_types
-                .iter()
+            let arg_types: Vec<FuncParam> = args
+                .iter_mut()
                 .enumerate()
-                .map(|(i, (_, t))| FuncParam {
-                    pattern: TPat::Ident(BindingIdent {
-                        name: format!("arg{i}"),
-                        mutable: false,
-                        // loc: DUMMY_LOC,
-                        span: Span { start: 0, end: 0 },
-                    }),
-                    // name: format!("arg{i}"),
-                    t: *t,
-                    optional: false,
+                .map(|(i, arg)| {
+                    let t = infer_expression(arena, arg, ctx)?;
+                    let param = FuncParam {
+                        pattern: TPat::Ident(BindingIdent {
+                            name: format!("arg{i}"),
+                            mutable: false,
+                            // loc: DUMMY_LOC,
+                            span: Span { start: 0, end: 0 },
+                        }),
+                        // name: format!("arg{i}"),
+                        t,
+                        optional: false,
+                    };
+                    Ok(param)
                 })
-                .collect();
+                .collect::<Result<Vec<_>, _>>()?;
             let call_type = new_func_type(arena, &arg_types, ret_type, &None);
             bind(arena, ctx, b, call_type)?
         }
         TypeKind::Union(Union { types }) => {
             let mut ret_types = vec![];
             for t in types.iter() {
-                let ret_type = unify_call(arena, ctx, arg_types, type_args, *t)?;
+                let ret_type = unify_call(arena, ctx, args, type_args, *t)?;
                 ret_types.push(ret_type);
             }
 
@@ -585,7 +576,7 @@ pub fn unify_call(
             for t in types.iter() {
                 // TODO: if there are multiple overloads that unify, pick the
                 // best one.
-                let result = unify_call(arena, ctx, arg_types, type_args, *t);
+                let result = unify_call(arena, ctx, args, type_args, *t);
                 match result {
                     Ok(ret_type) => return Ok(ret_type),
                     Err(_) => continue,
@@ -624,30 +615,32 @@ pub fn unify_call(
                 func
             };
 
-            if arg_types.len() < func.params.len() {
+            if args.len() < func.params.len() {
                 return Err(Errors::InferenceError(format!(
                     "too few arguments to function: expected {}, got {}",
                     func.params.len(),
-                    arg_types.len()
+                    args.len()
                 )));
             }
 
-            for ((expr, p), q) in arg_types.iter().zip(func.params.iter()) {
-                let can_be_mutable = matches!(&expr.kind, ExprKind::Object(_) | ExprKind::Tuple(_));
-                if can_be_mutable {
-                    let q_t = match &arena[q.t].kind {
-                        TypeKind::Mutable(Mutable { t }) => *t,
-                        _ => q.t,
-                    };
-                    unify(arena, ctx, *p, q_t)?;
-                } else {
-                    unify(arena, ctx, *p, q.t)?;
-                }
+            let arg_types = args
+                .iter_mut()
+                .map(|arg| {
+                    // TODO: handle spreads
+                    let t = infer_expression(arena, arg, ctx)?;
+                    Ok(t)
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+
+            for (p, q) in arg_types.iter().zip(func.params.iter()) {
+                unify(arena, ctx, *p, q.t)?;
             }
+
+            for (arg, param) in args.iter().zip(func.params.iter()) {
+                check_mutability(ctx, &param.pattern, arg)?;
+            }
+
             unify(arena, ctx, ret_type, func.ret)?;
-        }
-        TypeKind::Mutable(Mutable { t }) => {
-            unify_call(arena, ctx, arg_types, type_args, t)?;
         }
         TypeKind::KeyOf(KeyOf { t }) => {
             return Err(Errors::InferenceError(format!(
@@ -657,7 +650,7 @@ pub fn unify_call(
         }
         TypeKind::IndexedAccess(IndexedAccess { obj, index }) => {
             let t = get_prop(arena, ctx, obj, index)?;
-            unify_call(arena, ctx, arg_types, type_args, t)?;
+            unify_call(arena, ctx, args, type_args, t)?;
         }
         TypeKind::Conditional(Conditional {
             check,
@@ -666,8 +659,8 @@ pub fn unify_call(
             false_type,
         }) => {
             match unify(arena, ctx, check, extends) {
-                Ok(_) => unify_call(arena, ctx, arg_types, type_args, true_type)?,
-                Err(_) => unify_call(arena, ctx, arg_types, type_args, false_type)?,
+                Ok(_) => unify_call(arena, ctx, args, type_args, true_type)?,
+                Err(_) => unify_call(arena, ctx, args, type_args, false_type)?,
             };
         }
     }
@@ -677,16 +670,16 @@ pub fn unify_call(
 }
 
 fn bind(arena: &mut Arena<Type>, ctx: &Context, a: Index, b: Index) -> Result<(), Errors> {
-    eprint!("bind(");
-    eprint!("{:#?}", arena[a].as_string(arena));
-    if let Some(provenance) = &arena[a].provenance {
-        eprint!(" : {:#?}", provenance);
-    }
-    eprint!(", {:#?}", arena[b].as_string(arena));
-    if let Some(provenance) = &arena[b].provenance {
-        eprint!(" : {:#?}", provenance);
-    }
-    eprintln!(")");
+    // eprint!("bind(");
+    // eprint!("{:#?}", arena[a].as_string(arena));
+    // if let Some(provenance) = &arena[a].provenance {
+    //     eprint!(" : {:#?}", provenance);
+    // }
+    // eprint!(", {:#?}", arena[b].as_string(arena));
+    // if let Some(provenance) = &arena[b].provenance {
+    //     eprint!(" : {:#?}", provenance);
+    // }
+    // eprintln!(")");
 
     if a != b {
         if occurs_in_type(arena, a, b) {

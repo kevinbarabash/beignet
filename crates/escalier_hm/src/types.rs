@@ -72,6 +72,9 @@ pub enum TPat {
     Rest(RestPat),
     Tuple(TuplePat),
     Object(TObjectPat),
+    Lit(TLitPat),
+    Is(TIsPat),
+    Wildcard,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -107,6 +110,17 @@ pub struct TObjectKeyValuePatProp {
 pub struct TObjectAssignPatProp {
     pub key: String,
     pub value: Option<Index>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct TLitPat {
+    pub lit: Lit,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct TIsPat {
+    pub ident: String,
+    pub is_id: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -277,8 +291,6 @@ pub enum TypeKind {
     Function(Function),
     Object(Object),
     Rest(Rest), // Why is this its own type?
-    // Utility(Utility),
-    Mutable(Mutable), // Should this be moved to `Type` as a field?
     KeyOf(KeyOf),
     IndexedAccess(IndexedAccess),
     Conditional(Conditional),
@@ -515,7 +527,6 @@ impl Type {
                     arena[func.ret].as_string(arena),
                 )
             }
-            TypeKind::Mutable(Mutable { t }) => format!("mut {}", arena[*t].as_string(arena)),
             TypeKind::KeyOf(KeyOf { t }) => format!("keyof {}", arena[*t].as_string(arena)),
             TypeKind::IndexedAccess(IndexedAccess { obj, index }) => format!(
                 "{}[{}]",
@@ -602,6 +613,11 @@ fn tpat_to_string(_arena: &Arena<Type>, pattern: &TPat) -> String {
                 .collect();
             format!("{{{}}}", props.join(", "))
         }
+        TPat::Lit(TLitPat { lit }) => lit.to_string(),
+        TPat::Is(TIsPat { ident, is_id }) => {
+            format!("{ident} is {is_id}")
+        }
+        TPat::Wildcard => "_".to_string(),
     }
 }
 
@@ -670,10 +686,6 @@ pub fn new_rest_type(arena: &mut Arena<Type>, t: Index) -> Index {
 
 pub fn new_lit_type(arena: &mut Arena<Type>, lit: &Lit) -> Index {
     arena.insert(Type::from(TypeKind::Literal(lit.clone())))
-}
-
-pub fn new_mutable_type(arena: &mut Arena<Type>, t: Index) -> Index {
-    arena.insert(Type::from(TypeKind::Mutable(Mutable { t })))
 }
 
 pub fn new_keyof_type(arena: &mut Arena<Type>, t: Index) -> Index {
@@ -750,11 +762,6 @@ impl Type {
             (TypeKind::Rest(r1), TypeKind::Rest(r2)) => {
                 let t1 = &arena[r1.arg];
                 let t2 = &arena[r2.arg];
-                t1.equals(t2, arena)
-            }
-            (TypeKind::Mutable(m1), TypeKind::Mutable(m2)) => {
-                let t1 = &arena[m1.t];
-                let t2 = &arena[m2.t];
                 t1.equals(t2, arena)
             }
             // TODO:
