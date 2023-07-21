@@ -636,9 +636,13 @@ pub fn new_func_type(
 }
 
 pub fn new_union_type(arena: &mut Arena<Type>, types: &[Index]) -> Index {
-    arena.insert(Type::from(TypeKind::Union(Union {
-        types: types.to_owned(),
-    })))
+    match types.len() {
+        0 => new_keyword(arena, Keyword::Never),
+        1 => types[0],
+        _ => arena.insert(Type::from(TypeKind::Union(Union {
+            types: types.to_owned(),
+        }))),
+    }
 }
 
 pub fn new_intersection_type(arena: &mut Arena<Type>, types: &[Index]) -> Index {

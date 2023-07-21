@@ -209,12 +209,19 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
                     keys.push(new_lit_type(arena, &Lit::String(name.to_string())));
                 }
             }
-
-            match keys.len() {
-                0 => Ok(new_keyword(arena, Keyword::Never)),
-                1 => Ok(keys[0].to_owned()),
-                _ => Ok(new_union_type(arena, &keys)),
-            }
+            Ok(new_union_type(arena, &keys))
+        }
+        TypeKind::Constructor(array) if array.name == "Array" => {
+            Ok(new_keyword(arena, Keyword::Number))
+        }
+        TypeKind::Tuple(tuple) => {
+            let keys: Vec<Index> = tuple
+                .types
+                .iter()
+                .enumerate()
+                .map(|(k, _)| new_lit_type(arena, &Lit::Number(k.to_string())))
+                .collect();
+            Ok(new_union_type(arena, &keys))
         }
         _ => Err(Errors::InferenceError(format!(
             "{} isn't an object",

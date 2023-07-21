@@ -3100,7 +3100,7 @@ fn test_typeof() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_keyof() -> Result<(), Errors> {
+fn test_keyof_obj() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"   
@@ -3124,6 +3124,39 @@ fn test_keyof() -> Result<(), Errors> {
     assert_eq!(arena[t].as_string(&arena), r#""a""#);
 
     let scheme = my_ctx.schemes.get("Baz").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"never"#);
+
+    Ok(())
+}
+
+#[test]
+fn test_keyof_array_tuple() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"   
+    type Foo = keyof Array<number>
+    type Bar = keyof ["hello", 5, true]
+    type Baz = keyof ["hello"]
+    type Qux = keyof []
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let scheme = my_ctx.schemes.get("Foo").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"number"#);
+
+    let scheme = my_ctx.schemes.get("Bar").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"0 | 1 | 2"#);
+
+    let scheme = my_ctx.schemes.get("Baz").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"0"#);
+
+    let scheme = my_ctx.schemes.get("Qux").unwrap();
     let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
     assert_eq!(arena[t].as_string(&arena), r#"never"#);
 
