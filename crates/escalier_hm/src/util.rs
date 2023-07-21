@@ -211,6 +211,11 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
             }
             Ok(new_union_type(arena, &keys))
         }
+        // NOTE: The behavior of `keyof` with arrays and tuples differs from
+        // TypeScript.  TypeScript includes the names of all the properties from
+        // Array.prototype as well.
+        // TODO(#637): Have interop layer translate between Escalier's and
+        // TypeScript's `keyof` utility type.
         TypeKind::Constructor(array) if array.name == "Array" => {
             Ok(new_keyword(arena, Keyword::Number))
         }
