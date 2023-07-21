@@ -3164,22 +3164,81 @@ fn test_keyof_array_tuple() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_keyof_unknown() -> Result<(), Errors> {
+fn test_keyof_alias() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    type T = keyof unknown
+    type Point = {x: number, y: number}
+    type Foo = keyof Point
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-    assert_eq!(
-        result,
-        Err(Errors::InferenceError(
-            "unknown isn't an object".to_string()
-        ))
-    );
+    let scheme = my_ctx.schemes.get("Foo").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#""x" | "y""#);
+
+    Ok(())
+}
+
+#[test]
+fn test_keyof_unknown_undefined_null() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type A = keyof unknown
+    type B = keyof undefined
+    type C = keyof null
+    type D = keyof never
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let scheme = my_ctx.schemes.get("A").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"never"#);
+
+    let scheme = my_ctx.schemes.get("B").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"never"#);
+
+    let scheme = my_ctx.schemes.get("C").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"never"#);
+
+    let scheme = my_ctx.schemes.get("D").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"string | number | symbol"#);
+
+    Ok(())
+}
+
+#[test]
+fn test_keyof_intersection() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type A = keyof ({a: number} & {b: string})
+    type B = keyof ({a: number, b: number} & {b: string, c: boolean})
+    type C = keyof ({a: number} & undefined)
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let scheme = my_ctx.schemes.get("A").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#""a" | "b""#);
+
+    let scheme = my_ctx.schemes.get("B").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#""a" | "b" | "c""#);
+
+    let scheme = my_ctx.schemes.get("C").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#""a""#);
 
     Ok(())
 }

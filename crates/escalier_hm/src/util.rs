@@ -1,5 +1,5 @@
 use generational_arena::{Arena, Index};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use escalier_ast::Literal as Lit;
 
@@ -197,6 +197,11 @@ pub fn expand_type(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<I
     }
 }
 
+// Expands `keyof` types into one of the followwing:
+// - string or number literals
+// - string, number, or symbol type
+// - never
+// - union of any of those types
 pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<Index, Errors> {
     let obj = expand_type(arena, ctx, t)?;
 
@@ -228,10 +233,104 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
                 .collect();
             Ok(new_union_type(arena, &keys))
         }
-        _ => Err(Errors::InferenceError(format!(
-            "{} isn't an object",
-            arena[t].as_string(arena),
-        ))),
+        TypeKind::Constructor(constructor) => match ctx.schemes.get(&constructor.name) {
+            Some(scheme) => {
+                let t = expand_alias(arena, &constructor.name, scheme, &constructor.types)?;
+                expand_keyof(arena, ctx, t)
+            }
+            None => Err(Errors::InferenceError(format!(
+                "{} isn't defined",
+                constructor.name
+            ))),
+        },
+        TypeKind::Intersection(Intersection { types }) => {
+            let mut literal_keys = BTreeMap::new();
+            let mut maybe_string = None;
+            let mut maybe_number = None;
+            let mut maybe_symbol = None;
+
+            for t in types {
+                let keys = expand_keyof(arena, ctx, *t)?;
+
+                match &arena[keys].kind {
+                    TypeKind::Variable(_) => todo!(),
+                    TypeKind::Constructor(_) => todo!(),
+                    TypeKind::Union(Union { types }) => {
+                        for t in types {
+                            match &arena[*t].kind {
+                                TypeKind::Literal(Lit::Number(num)) => {
+                                    literal_keys.insert(num.to_string(), *t);
+                                }
+                                TypeKind::Literal(Lit::String(str)) => {
+                                    literal_keys.insert(str.to_string(), *t);
+                                }
+                                TypeKind::Keyword(Keyword::Number) => {
+                                    maybe_number = Some(*t);
+                                }
+                                TypeKind::Keyword(Keyword::String) => {
+                                    maybe_string = Some(*t);
+                                }
+                                TypeKind::Keyword(Keyword::Symbol) => {
+                                    maybe_symbol = Some(*t);
+                                }
+                                _ => (),
+                            }
+                        }
+                    }
+                    TypeKind::Keyword(Keyword::String) => {
+                        maybe_string = Some(keys);
+                    }
+                    TypeKind::Literal(Lit::Number(num)) => {
+                        literal_keys.insert(num.to_string(), keys);
+                    }
+                    TypeKind::Literal(Lit::String(str)) => {
+                        literal_keys.insert(str.to_string(), keys);
+                    }
+                    TypeKind::Keyword(Keyword::Symbol) => {
+                        maybe_symbol = Some(*t);
+                    }
+                    _ => (),
+                }
+            }
+
+            let mut all_keys: Vec<Index> = literal_keys.values().cloned().collect();
+
+            if let Some(number) = maybe_number {
+                all_keys.push(number);
+            }
+            if let Some(string) = maybe_string {
+                all_keys.push(string);
+            }
+            if let Some(symbol) = maybe_symbol {
+                all_keys.push(symbol);
+            }
+
+            Ok(new_union_type(arena, &all_keys))
+        }
+        TypeKind::Union(_) => Ok(new_keyword(arena, Keyword::Never)),
+        TypeKind::Keyword(keyword) => match keyword {
+            Keyword::Number => todo!(),
+            Keyword::Boolean => todo!(),
+            Keyword::String => todo!(),
+            Keyword::Symbol => todo!(),
+            Keyword::Null => Ok(new_keyword(arena, Keyword::Never)),
+            Keyword::Undefined => Ok(new_keyword(arena, Keyword::Never)),
+            Keyword::Unknown => Ok(new_keyword(arena, Keyword::Never)),
+            Keyword::Never => {
+                let string = new_keyword(arena, Keyword::String);
+                let number = new_keyword(arena, Keyword::Number);
+                let symbol = new_keyword(arena, Keyword::Symbol);
+                Ok(new_union_type(arena, &[string, number, symbol]))
+            }
+        },
+        _ => {
+            let expanded_t = expand_type(arena, ctx, t)?;
+            if expanded_t != t {
+                expand_keyof(arena, ctx, expanded_t)
+            } else {
+                Ok(new_keyword(arena, Keyword::Never))
+            }
+        }
     }
 }
 
