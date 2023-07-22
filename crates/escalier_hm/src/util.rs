@@ -145,6 +145,32 @@ pub fn prune(arena: &mut Arena<Type>, t: Index) -> Index {
     value
 }
 
+pub fn expand_constructor(
+    arena: &mut Arena<Type>,
+    ctx: &Context,
+    constructor: &Constructor,
+) -> Result<Index, Errors> {
+    match ctx.schemes.get(&constructor.name) {
+        Some(scheme) => expand_alias(arena, &constructor.name, scheme, &constructor.types),
+        None => Err(Errors::InferenceError(format!(
+            "{} isn't defined",
+            constructor.name
+        ))),
+    }
+}
+
+pub fn expand_alias_by_name(
+    arena: &mut Arena<Type>,
+    ctx: &Context,
+    name: &str,
+    type_args: &[Index],
+) -> Result<Index, Errors> {
+    match ctx.schemes.get(name) {
+        Some(scheme) => expand_alias(arena, name, scheme, type_args),
+        None => Err(Errors::InferenceError(format!("{} isn't defined", name))),
+    }
+}
+
 pub fn expand_alias(
     arena: &mut Arena<Type>,
     name: &str,
@@ -233,18 +259,13 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
                 .collect();
             Ok(new_union_type(arena, &keys))
         }
-        TypeKind::Constructor(constructor) => match ctx.schemes.get(&constructor.name) {
-            Some(scheme) => {
-                let t = expand_alias(arena, &constructor.name, scheme, &constructor.types)?;
-                expand_keyof(arena, ctx, t)
-            }
-            None => Err(Errors::InferenceError(format!(
-                "{} isn't defined",
-                constructor.name
-            ))),
-        },
+        TypeKind::Constructor(constructor) => {
+            let idx = expand_constructor(arena, ctx, constructor)?;
+            expand_keyof(arena, ctx, idx)
+        }
         TypeKind::Intersection(Intersection { types }) => {
-            let mut literal_keys = BTreeMap::new();
+            let mut string_keys = BTreeMap::new();
+            let mut number_keys = BTreeMap::new();
             let mut maybe_string = None;
             let mut maybe_number = None;
             let mut maybe_symbol = None;
@@ -253,16 +274,14 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
                 let keys = expand_keyof(arena, ctx, *t)?;
 
                 match &arena[keys].kind {
-                    TypeKind::Variable(_) => todo!(),
-                    TypeKind::Constructor(_) => todo!(),
                     TypeKind::Union(Union { types }) => {
                         for t in types {
                             match &arena[*t].kind {
                                 TypeKind::Literal(Lit::Number(num)) => {
-                                    literal_keys.insert(num.to_string(), *t);
+                                    number_keys.insert(num.to_string(), *t);
                                 }
                                 TypeKind::Literal(Lit::String(str)) => {
-                                    literal_keys.insert(str.to_string(), *t);
+                                    string_keys.insert(str.to_string(), *t);
                                 }
                                 TypeKind::Keyword(Keyword::Number) => {
                                     maybe_number = Some(*t);
@@ -277,14 +296,17 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
                             }
                         }
                     }
-                    TypeKind::Keyword(Keyword::String) => {
-                        maybe_string = Some(keys);
-                    }
                     TypeKind::Literal(Lit::Number(num)) => {
-                        literal_keys.insert(num.to_string(), keys);
+                        number_keys.insert(num.to_string(), keys);
                     }
                     TypeKind::Literal(Lit::String(str)) => {
-                        literal_keys.insert(str.to_string(), keys);
+                        string_keys.insert(str.to_string(), keys);
+                    }
+                    TypeKind::Keyword(Keyword::Number) => {
+                        maybe_number = Some(keys);
+                    }
+                    TypeKind::Keyword(Keyword::String) => {
+                        maybe_string = Some(keys);
                     }
                     TypeKind::Keyword(Keyword::Symbol) => {
                         maybe_symbol = Some(*t);
@@ -293,14 +315,18 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
                 }
             }
 
-            let mut all_keys: Vec<Index> = literal_keys.values().cloned().collect();
+            let mut all_keys: Vec<Index> = vec![];
 
-            if let Some(number) = maybe_number {
-                all_keys.push(number);
+            match maybe_number {
+                Some(number) => all_keys.push(number),
+                None => all_keys.append(&mut number_keys.values().cloned().collect::<Vec<Index>>()),
             }
-            if let Some(string) = maybe_string {
-                all_keys.push(string);
+
+            match maybe_string {
+                Some(string) => all_keys.push(string),
+                None => all_keys.append(&mut string_keys.values().cloned().collect::<Vec<Index>>()),
             }
+
             if let Some(symbol) = maybe_symbol {
                 all_keys.push(symbol);
             }
@@ -309,10 +335,24 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
         }
         TypeKind::Union(_) => Ok(new_keyword(arena, Keyword::Never)),
         TypeKind::Keyword(keyword) => match keyword {
-            Keyword::Number => todo!(),
-            Keyword::Boolean => todo!(),
-            Keyword::String => todo!(),
-            Keyword::Symbol => todo!(),
+            // TODO: update get_property to handle these cases as well
+            // TODO: split these out in TypeKind::Primitive
+            Keyword::Number => {
+                let idx = expand_alias_by_name(arena, ctx, "Number", &[])?;
+                expand_keyof(arena, ctx, idx)
+            }
+            Keyword::Boolean => {
+                let idx = expand_alias_by_name(arena, ctx, "Boolean", &[])?;
+                expand_keyof(arena, ctx, idx)
+            }
+            Keyword::String => {
+                let idx = expand_alias_by_name(arena, ctx, "String", &[])?;
+                expand_keyof(arena, ctx, idx)
+            }
+            Keyword::Symbol => {
+                let idx = expand_alias_by_name(arena, ctx, "Symbol", &[])?;
+                expand_keyof(arena, ctx, idx)
+            }
             Keyword::Null => Ok(new_keyword(arena, Keyword::Never)),
             Keyword::Undefined => Ok(new_keyword(arena, Keyword::Never)),
             Keyword::Unknown => Ok(new_keyword(arena, Keyword::Never)),
@@ -323,6 +363,10 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
                 Ok(new_union_type(arena, &[string, number, symbol]))
             }
         },
+        TypeKind::Literal(_) => {
+            // TODO: handle literals in a similar way to primitives
+            todo!()
+        }
         _ => {
             let expanded_t = expand_type(arena, ctx, t)?;
             if expanded_t != t {
