@@ -52,6 +52,17 @@ pub enum Primitive {
     Symbol,
 }
 
+impl Primitive {
+    pub fn get_scheme_name(&self) -> &'static str {
+        match self {
+            Self::Number => "Number",
+            Self::Boolean => "Boolean",
+            Self::String => "String",
+            Self::Symbol => "Symbol",
+        }
+    }
+}
+
 impl fmt::Display for Primitive {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let result = match self {

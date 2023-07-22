@@ -1,7 +1,7 @@
 use generational_arena::{Arena, Index};
 use std::collections::{BTreeMap, HashMap};
 
-use escalier_ast::Literal as Lit;
+use escalier_ast::Literal;
 
 use crate::context::*;
 use crate::errors::*;
@@ -234,14 +234,70 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
 
     match &arena[obj].kind.clone() {
         TypeKind::Object(Object { elems }) => {
-            let mut keys = Vec::new();
+            let mut string_keys: Vec<Index> = Vec::new();
+            let mut number_keys: Vec<Index> = Vec::new();
+            let mut maybe_string: Option<Index> = None;
+            let mut maybe_number: Option<Index> = None;
+            let mut maybe_symbol: Option<Index> = None;
+
             for elem in elems {
-                // TODO: include indexers as well
-                if let TObjElem::Prop(TProp { name, .. }) = elem {
-                    keys.push(new_lit_type(arena, &Lit::String(name.to_string())));
+                match elem {
+                    TObjElem::Call(_) => (),
+                    TObjElem::Constructor(_) => (),
+                    TObjElem::Method(TMethod { name, .. }) => match name {
+                        TPropKey::StringKey(name) => {
+                            string_keys
+                                .push(new_lit_type(arena, &Literal::String(name.to_owned())));
+                        }
+                        TPropKey::NumberKey(name) => {
+                            number_keys
+                                .push(new_lit_type(arena, &Literal::Number(name.to_owned())));
+                        }
+                    },
+                    TObjElem::Getter(_) => todo!(),
+                    TObjElem::Setter(_) => todo!(),
+                    TObjElem::Index(TIndex { key, .. }) => match &arena[key.t].kind {
+                        TypeKind::Primitive(Primitive::String) => {
+                            maybe_string = Some(key.t);
+                        }
+                        TypeKind::Primitive(Primitive::Number) => {
+                            maybe_number = Some(key.t);
+                        }
+                        TypeKind::Primitive(Primitive::Symbol) => {
+                            maybe_symbol = Some(key.t);
+                        }
+                        _ => todo!(),
+                    },
+                    TObjElem::Prop(TProp { name, .. }) => match name {
+                        TPropKey::StringKey(name) => {
+                            string_keys
+                                .push(new_lit_type(arena, &Literal::String(name.to_owned())));
+                        }
+                        TPropKey::NumberKey(name) => {
+                            number_keys
+                                .push(new_lit_type(arena, &Literal::Number(name.to_owned())));
+                        }
+                    },
                 }
             }
-            Ok(new_union_type(arena, &keys))
+
+            let mut all_keys: Vec<Index> = vec![];
+
+            match maybe_number {
+                Some(number) => all_keys.push(number),
+                None => all_keys.append(&mut number_keys),
+            }
+
+            match maybe_string {
+                Some(string) => all_keys.push(string),
+                None => all_keys.append(&mut string_keys),
+            }
+
+            if let Some(symbol) = maybe_symbol {
+                all_keys.push(symbol);
+            }
+
+            Ok(new_union_type(arena, &all_keys))
         }
         // NOTE: The behavior of `keyof` with arrays and tuples differs from
         // TypeScript.  TypeScript includes the names of all the properties from
@@ -256,7 +312,7 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
                 .types
                 .iter()
                 .enumerate()
-                .map(|(k, _)| new_lit_type(arena, &Lit::Number(k.to_string())))
+                .map(|(k, _)| new_lit_type(arena, &Literal::Number(k.to_string())))
                 .collect();
             Ok(new_union_type(arena, &keys))
         }
@@ -278,10 +334,10 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
                     TypeKind::Union(Union { types }) => {
                         for t in types {
                             match &arena[*t].kind {
-                                TypeKind::Literal(Lit::Number(num)) => {
+                                TypeKind::Literal(Literal::Number(num)) => {
                                     number_keys.insert(num.to_string(), *t);
                                 }
-                                TypeKind::Literal(Lit::String(str)) => {
+                                TypeKind::Literal(Literal::String(str)) => {
                                     string_keys.insert(str.to_string(), *t);
                                 }
                                 TypeKind::Primitive(Primitive::Number) => {
@@ -297,10 +353,10 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
                             }
                         }
                     }
-                    TypeKind::Literal(Lit::Number(num)) => {
+                    TypeKind::Literal(Literal::Number(num)) => {
                         number_keys.insert(num.to_string(), keys);
                     }
-                    TypeKind::Literal(Lit::String(str)) => {
+                    TypeKind::Literal(Literal::String(str)) => {
                         string_keys.insert(str.to_string(), keys);
                     }
                     TypeKind::Primitive(Primitive::Number) => {
@@ -347,43 +403,18 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
                 Ok(new_union_type(arena, &[string, number, symbol]))
             }
         },
-        TypeKind::Primitive(primitive) => match primitive {
-            Primitive::Number => {
-                let idx = expand_alias_by_name(arena, ctx, "Number", &[])?;
-                expand_keyof(arena, ctx, idx)
-            }
-            Primitive::Boolean => {
-                let idx = expand_alias_by_name(arena, ctx, "Boolean", &[])?;
-                expand_keyof(arena, ctx, idx)
-            }
-            Primitive::String => {
-                let idx = expand_alias_by_name(arena, ctx, "String", &[])?;
-                expand_keyof(arena, ctx, idx)
-            }
-            Primitive::Symbol => {
-                let idx = expand_alias_by_name(arena, ctx, "Symbol", &[])?;
-                expand_keyof(arena, ctx, idx)
-            }
-        },
-        TypeKind::Literal(literal) => {
-            // TODO: handle literals in a similar way to primitives
-            match literal {
-                Lit::Number(_) => {
-                    let idx = expand_alias_by_name(arena, ctx, "Number", &[])?;
-                    expand_keyof(arena, ctx, idx)
-                }
-                Lit::String(_) => {
-                    let idx = expand_alias_by_name(arena, ctx, "String", &[])?;
-                    expand_keyof(arena, ctx, idx)
-                }
-                Lit::Boolean(_) => {
-                    let idx = expand_alias_by_name(arena, ctx, "Boolean", &[])?;
-                    expand_keyof(arena, ctx, idx)
-                }
-                Lit::Null => todo!(),
-                Lit::Undefined => todo!(),
-            }
+        TypeKind::Primitive(primitive) => {
+            let scheme_name = primitive.get_scheme_name();
+            let idx = expand_alias_by_name(arena, ctx, scheme_name, &[])?;
+            expand_keyof(arena, ctx, idx)
         }
+        TypeKind::Literal(literal) => match literal.get_scheme_name() {
+            Some(name) => {
+                let idx = expand_alias_by_name(arena, ctx, name, &[])?;
+                expand_keyof(arena, ctx, idx)
+            }
+            None => todo!(),
+        },
         _ => {
             let expanded_t = expand_type(arena, ctx, t)?;
             if expanded_t != t {
@@ -412,7 +443,7 @@ pub fn get_computed_member(
         // tuple[1]; // "hello"
         TypeKind::Tuple(tuple) => {
             match &key_type.kind {
-                TypeKind::Literal(Lit::Number(value)) => {
+                TypeKind::Literal(Literal::Number(value)) => {
                     let index: usize = str::parse(value).map_err(|_| {
                         Errors::InferenceError(format!("{} isn't a valid index", value))
                     })?;
@@ -425,7 +456,7 @@ pub fn get_computed_member(
                         tuple.types.len()
                     )))
                 }
-                TypeKind::Literal(Lit::String(_)) => {
+                TypeKind::Literal(Literal::String(_)) => {
                     // TODO: look up methods on the `Array` interface
                     // we need to instantiate the scheme such that `T` is equal
                     // to the union of all types in the tuple
@@ -590,7 +621,7 @@ pub fn get_prop(
                     )))
                 }
             }
-            TypeKind::Literal(Lit::String(name)) => {
+            TypeKind::Literal(Literal::String(name)) => {
                 let mut maybe_index: Option<&TIndex> = None;
                 for elem in &object.elems {
                     match elem {
@@ -683,7 +714,7 @@ pub fn get_prop(
                     )))
                 }
             }
-            TypeKind::Literal(Lit::Number(name)) => {
+            TypeKind::Literal(Literal::Number(name)) => {
                 let mut maybe_index: Option<&TIndex> = None;
                 for elem in &object.elems {
                     if let TObjElem::Index(index) = elem {

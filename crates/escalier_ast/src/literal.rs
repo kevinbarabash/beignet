@@ -9,6 +9,18 @@ pub enum Literal {
     Undefined,
 }
 
+impl Literal {
+    pub fn get_scheme_name(&self) -> Option<&'static str> {
+        match self {
+            Literal::Number(_) => Some("Number"),
+            Literal::String(_) => Some("String"),
+            Literal::Boolean(_) => Some("Boolean"),
+            Literal::Null => None,
+            Literal::Undefined => None,
+        }
+    }
+}
+
 impl fmt::Display for Literal {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
