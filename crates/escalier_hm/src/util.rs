@@ -27,9 +27,10 @@ pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
     // We clone here because we can't move out of a shared reference.
     // TODO: Consider using Rc<RefCell<Type>> to avoid unnecessary cloning.
     match arena.get(pruned_type2).unwrap().clone().kind {
-        TypeKind::Variable(_) => false, // leaf node
-        TypeKind::Literal(_) => false,  // leaf node
-        TypeKind::Keyword(_) => false,  // leaf node
+        TypeKind::Variable(_) => false,  // leaf node
+        TypeKind::Literal(_) => false,   // leaf node
+        TypeKind::Primitive(_) => false, // leaf node
+        TypeKind::Keyword(_) => false,   // leaf node
         TypeKind::Object(Object { elems }) => elems.iter().any(|elem| match elem {
             TObjElem::Constructor(constructor) => {
                 // TODO: check constraints and default on type_params
@@ -248,7 +249,7 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
         // TODO(#637): Have interop layer translate between Escalier's and
         // TypeScript's `keyof` utility type.
         TypeKind::Constructor(array) if array.name == "Array" => {
-            Ok(new_keyword(arena, Keyword::Number))
+            Ok(new_primitive(arena, Primitive::Number))
         }
         TypeKind::Tuple(tuple) => {
             let keys: Vec<Index> = tuple
@@ -283,13 +284,13 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
                                 TypeKind::Literal(Lit::String(str)) => {
                                     string_keys.insert(str.to_string(), *t);
                                 }
-                                TypeKind::Keyword(Keyword::Number) => {
+                                TypeKind::Primitive(Primitive::Number) => {
                                     maybe_number = Some(*t);
                                 }
-                                TypeKind::Keyword(Keyword::String) => {
+                                TypeKind::Primitive(Primitive::String) => {
                                     maybe_string = Some(*t);
                                 }
-                                TypeKind::Keyword(Keyword::Symbol) => {
+                                TypeKind::Primitive(Primitive::Symbol) => {
                                     maybe_symbol = Some(*t);
                                 }
                                 _ => (),
@@ -302,13 +303,13 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
                     TypeKind::Literal(Lit::String(str)) => {
                         string_keys.insert(str.to_string(), keys);
                     }
-                    TypeKind::Keyword(Keyword::Number) => {
+                    TypeKind::Primitive(Primitive::Number) => {
                         maybe_number = Some(keys);
                     }
-                    TypeKind::Keyword(Keyword::String) => {
+                    TypeKind::Primitive(Primitive::String) => {
                         maybe_string = Some(keys);
                     }
-                    TypeKind::Keyword(Keyword::Symbol) => {
+                    TypeKind::Primitive(Primitive::Symbol) => {
                         maybe_symbol = Some(*t);
                     }
                     _ => (),
@@ -336,36 +337,52 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
         TypeKind::Union(_) => Ok(new_keyword(arena, Keyword::Never)),
         TypeKind::Keyword(keyword) => match keyword {
             // TODO: update get_property to handle these cases as well
-            // TODO: split these out in TypeKind::Primitive
-            Keyword::Number => {
-                let idx = expand_alias_by_name(arena, ctx, "Number", &[])?;
-                expand_keyof(arena, ctx, idx)
-            }
-            Keyword::Boolean => {
-                let idx = expand_alias_by_name(arena, ctx, "Boolean", &[])?;
-                expand_keyof(arena, ctx, idx)
-            }
-            Keyword::String => {
-                let idx = expand_alias_by_name(arena, ctx, "String", &[])?;
-                expand_keyof(arena, ctx, idx)
-            }
-            Keyword::Symbol => {
-                let idx = expand_alias_by_name(arena, ctx, "Symbol", &[])?;
-                expand_keyof(arena, ctx, idx)
-            }
             Keyword::Null => Ok(new_keyword(arena, Keyword::Never)),
             Keyword::Undefined => Ok(new_keyword(arena, Keyword::Never)),
             Keyword::Unknown => Ok(new_keyword(arena, Keyword::Never)),
             Keyword::Never => {
-                let string = new_keyword(arena, Keyword::String);
-                let number = new_keyword(arena, Keyword::Number);
-                let symbol = new_keyword(arena, Keyword::Symbol);
+                let string = new_primitive(arena, Primitive::String);
+                let number = new_primitive(arena, Primitive::Number);
+                let symbol = new_primitive(arena, Primitive::Symbol);
                 Ok(new_union_type(arena, &[string, number, symbol]))
             }
         },
-        TypeKind::Literal(_) => {
+        TypeKind::Primitive(primitive) => match primitive {
+            Primitive::Number => {
+                let idx = expand_alias_by_name(arena, ctx, "Number", &[])?;
+                expand_keyof(arena, ctx, idx)
+            }
+            Primitive::Boolean => {
+                let idx = expand_alias_by_name(arena, ctx, "Boolean", &[])?;
+                expand_keyof(arena, ctx, idx)
+            }
+            Primitive::String => {
+                let idx = expand_alias_by_name(arena, ctx, "String", &[])?;
+                expand_keyof(arena, ctx, idx)
+            }
+            Primitive::Symbol => {
+                let idx = expand_alias_by_name(arena, ctx, "Symbol", &[])?;
+                expand_keyof(arena, ctx, idx)
+            }
+        },
+        TypeKind::Literal(literal) => {
             // TODO: handle literals in a similar way to primitives
-            todo!()
+            match literal {
+                Lit::Number(_) => {
+                    let idx = expand_alias_by_name(arena, ctx, "Number", &[])?;
+                    expand_keyof(arena, ctx, idx)
+                }
+                Lit::String(_) => {
+                    let idx = expand_alias_by_name(arena, ctx, "String", &[])?;
+                    expand_keyof(arena, ctx, idx)
+                }
+                Lit::Boolean(_) => {
+                    let idx = expand_alias_by_name(arena, ctx, "Boolean", &[])?;
+                    expand_keyof(arena, ctx, idx)
+                }
+                Lit::Null => todo!(),
+                Lit::Undefined => todo!(),
+            }
         }
         _ => {
             let expanded_t = expand_type(arena, ctx, t)?;
@@ -414,7 +431,7 @@ pub fn get_computed_member(
                     // to the union of all types in the tuple
                     get_prop(arena, ctx, obj_idx, key_idx)
                 }
-                TypeKind::Keyword(Keyword::Number) => {
+                TypeKind::Primitive(Primitive::Number) => {
                     let mut types = tuple.types.clone();
                     types.push(new_keyword(arena, Keyword::Undefined));
                     Ok(new_union_type(arena, &types))
@@ -488,10 +505,10 @@ pub fn get_prop(
 
     if let TypeKind::Object(object) = &obj_type.kind {
         match &key_type.kind {
-            TypeKind::Keyword(keyword)
-                if keyword == &Keyword::Number
-                    || keyword == &Keyword::String
-                    || keyword == &Keyword::Symbol =>
+            TypeKind::Primitive(primitive)
+                if primitive == &Primitive::Number
+                    || primitive == &Primitive::String
+                    || primitive == &Primitive::Symbol =>
             {
                 let mut maybe_index: Option<&TIndex> = None;
                 let mut values: Vec<Index> = vec![];
@@ -505,8 +522,8 @@ pub fn get_prop(
                             // This only makes sense when we're getting the property
                             // as rvalue
                             match &method.name {
-                                TPropKey::StringKey(_) if keyword == &Keyword::String => (),
-                                TPropKey::NumberKey(_) if keyword == &Keyword::Number => (),
+                                TPropKey::StringKey(_) if primitive == &Primitive::String => (),
+                                TPropKey::NumberKey(_) if primitive == &Primitive::Number => (),
                                 _ => continue,
                             };
 
@@ -536,8 +553,8 @@ pub fn get_prop(
                         }
                         TObjElem::Prop(prop) => {
                             match &prop.name {
-                                TPropKey::StringKey(_) if keyword == &Keyword::String => (),
-                                TPropKey::NumberKey(_) if keyword == &Keyword::Number => (),
+                                TPropKey::StringKey(_) if primitive == &Primitive::String => (),
+                                TPropKey::NumberKey(_) if primitive == &Primitive::Number => (),
                                 _ => continue,
                             };
 

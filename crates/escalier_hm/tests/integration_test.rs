@@ -21,7 +21,7 @@ fn test_env() -> (Arena<Type>, Context) {
     let mut arena = Arena::new();
     let mut context = Context::default();
 
-    let number = new_keyword(&mut arena, Keyword::Number);
+    let number = new_primitive(&mut arena, Primitive::Number);
     let type_param_t = new_constructor(&mut arena, "T", &[]);
 
     let array_interface = new_object_type(
@@ -501,8 +501,8 @@ fn test_union_subtype() -> Result<(), Errors> {
 fn test_calling_a_union() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
-    let bool = new_keyword(&mut arena, Keyword::Boolean);
-    let str = new_keyword(&mut arena, Keyword::String);
+    let bool = new_primitive(&mut arena, Primitive::Boolean);
+    let str = new_primitive(&mut arena, Primitive::String);
     let fn1 = new_func_type(&mut arena, &[], bool, &None);
     let fn2 = new_func_type(&mut arena, &[], str, &None);
     my_ctx.values.insert(
@@ -2672,7 +2672,7 @@ fn test_unknown_assignment_error() -> Result<(), Errors> {
     assert_eq!(
         result,
         Err(Errors::InferenceError(
-            "type mismatch: unknown != number".to_string()
+            "type mismatch: unify(unknown, number) failed".to_string()
         ))
     );
 
@@ -2695,7 +2695,7 @@ fn test_type_param_explicit_unknown_constraint() -> Result<(), Errors> {
     assert_eq!(
         result,
         Err(Errors::InferenceError(
-            "type mismatch: unknown != number".to_string()
+            "type mismatch: unify(unknown, number) failed".to_string()
         ))
     );
 
@@ -2718,7 +2718,7 @@ fn test_type_param_implicit_unknown_constraint() -> Result<(), Errors> {
     assert_eq!(
         result,
         Err(Errors::InferenceError(
-            "type mismatch: unknown != number".to_string()
+            "type mismatch: unify(unknown, number) failed".to_string()
         ))
     );
 

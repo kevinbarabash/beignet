@@ -26,10 +26,6 @@ pub struct Constructor {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Keyword {
-    Number,
-    Boolean,
-    String,
-    Symbol,
     Null,
     Undefined,
     Unknown,
@@ -39,14 +35,30 @@ pub enum Keyword {
 impl fmt::Display for Keyword {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let result = match self {
-            Keyword::Number => "number",
-            Keyword::Boolean => "boolean",
-            Keyword::String => "string",
-            Keyword::Symbol => "symbol",
-            Keyword::Null => "null",
-            Keyword::Undefined => "undefined",
-            Keyword::Unknown => "unknown",
-            Keyword::Never => "never",
+            Self::Null => "null",
+            Self::Undefined => "undefined",
+            Self::Unknown => "unknown",
+            Self::Never => "never",
+        };
+        write!(f, "{result}")
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Primitive {
+    Number,
+    Boolean,
+    String,
+    Symbol,
+}
+
+impl fmt::Display for Primitive {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let result = match self {
+            Self::Number => "number",
+            Self::Boolean => "boolean",
+            Self::String => "string",
+            Self::Symbol => "symbol",
         };
         write!(f, "{result}")
     }
@@ -287,6 +299,7 @@ pub enum TypeKind {
     Intersection(Intersection),
     Tuple(Tuple),
     Keyword(Keyword),
+    Primitive(Primitive),
     Literal(Lit),
     Function(Function),
     Object(Object),
@@ -348,6 +361,7 @@ impl Type {
                 }
             }
             TypeKind::Keyword(keyword) => keyword.to_string(),
+            TypeKind::Primitive(primitive) => primitive.to_string(),
             TypeKind::Literal(lit) => lit.to_string(),
             TypeKind::Object(object) => {
                 let mut fields = vec![];
@@ -684,6 +698,10 @@ pub fn new_keyword(arena: &mut Arena<Type>, keyword: Keyword) -> Index {
     arena.insert(Type::from(TypeKind::Keyword(keyword)))
 }
 
+pub fn new_primitive(arena: &mut Arena<Type>, primitive: Primitive) -> Index {
+    arena.insert(Type::from(TypeKind::Primitive(primitive)))
+}
+
 pub fn new_rest_type(arena: &mut Arena<Type>, t: Index) -> Index {
     arena.insert(Type::from(TypeKind::Rest(Rest { arg: t })))
 }
@@ -743,6 +761,7 @@ impl Type {
                 types_equal(arena, &tuple1.types, &tuple2.types)
             }
             (TypeKind::Keyword(kw1), TypeKind::Keyword(kw2)) => kw1 == kw2,
+            (TypeKind::Primitive(prim1), TypeKind::Primitive(prim2)) => prim1 == prim2,
             (TypeKind::Literal(l1), TypeKind::Literal(l2)) => l1 == l2,
             (TypeKind::Function(f1), TypeKind::Function(f2)) => {
                 eprintln!("checking function types");

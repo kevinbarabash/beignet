@@ -202,9 +202,20 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             }
             Ok(())
         }
-        (TypeKind::Literal(Lit::Number(_)), TypeKind::Keyword(Keyword::Number)) => Ok(()),
-        (TypeKind::Literal(Lit::String(_)), TypeKind::Keyword(Keyword::String)) => Ok(()),
-        (TypeKind::Literal(Lit::Boolean(_)), TypeKind::Keyword(Keyword::Boolean)) => Ok(()),
+        (TypeKind::Literal(Lit::Number(_)), TypeKind::Primitive(Primitive::Number)) => Ok(()),
+        (TypeKind::Literal(Lit::String(_)), TypeKind::Primitive(Primitive::String)) => Ok(()),
+        (TypeKind::Literal(Lit::Boolean(_)), TypeKind::Primitive(Primitive::Boolean)) => Ok(()),
+        (TypeKind::Primitive(prim1), TypeKind::Primitive(prim2)) => match (prim1, prim2) {
+            (Primitive::Number, Primitive::Number) => Ok(()),
+            (Primitive::String, Primitive::String) => Ok(()),
+            (Primitive::Boolean, Primitive::Boolean) => Ok(()),
+            (Primitive::Symbol, Primitive::Symbol) => Ok(()),
+            _ => Err(Errors::InferenceError(format!(
+                "type mismatch: {} != {}",
+                a_t.as_string(arena),
+                b_t.as_string(arena),
+            ))),
+        },
         (TypeKind::Object(object1), TypeKind::Object(object2)) => {
             // object1 must have atleast as the same properties as object2
             // This is pretty inefficient... we should have some way of hashing
@@ -596,6 +607,11 @@ pub fn unify_call(
         TypeKind::Literal(lit) => {
             return Err(Errors::InferenceError(format!(
                 "literal {lit:#?} is not callable"
+            )));
+        }
+        TypeKind::Primitive(primitive) => {
+            return Err(Errors::InferenceError(format!(
+                "Primitive {primitive:#?} is not callable"
             )));
         }
         TypeKind::Keyword(keyword) => {
