@@ -46,6 +46,10 @@ pub trait Visitor: KeyValueStore<Index, Type> {
         keyword.clone()
     }
 
+    fn visit_primitive(&self, primitive: &Primitive) -> Primitive {
+        primitive.clone()
+    }
+
     fn visit_literal(&self, lit: &Lit) -> Lit {
         lit.clone()
     }
@@ -202,6 +206,7 @@ pub trait Visitor: KeyValueStore<Index, Type> {
             TypeKind::Tuple(tuple) => TypeKind::Tuple(self.visit_tuple(tuple)),
             TypeKind::Constructor(tref) => return self.visit_type_ref(tref, &idx),
             TypeKind::Keyword(keyword) => TypeKind::Keyword(self.visit_keyword(keyword)),
+            TypeKind::Primitive(primitive) => TypeKind::Primitive(self.visit_primitive(primitive)),
             TypeKind::Literal(lit) => TypeKind::Literal(self.visit_literal(lit)),
             TypeKind::Function(func) => TypeKind::Function(self.visit_function(func)),
             TypeKind::Object(obj) => TypeKind::Object(self.visit_object(obj)),

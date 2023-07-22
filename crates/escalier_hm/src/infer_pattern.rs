@@ -143,9 +143,9 @@ pub fn infer_pattern(
             PatternKind::Lit(LitPat { lit }) => new_lit_type(arena, lit),
             PatternKind::Is(IsPat { ident, is_id }) => {
                 let t = match is_id.name.as_str() {
-                    "number" => new_keyword(arena, Keyword::Number),
-                    "string" => new_keyword(arena, Keyword::String),
-                    "boolean" => new_keyword(arena, Keyword::Boolean),
+                    "number" => new_primitive(arena, Primitive::Number),
+                    "string" => new_primitive(arena, Primitive::String),
+                    "boolean" => new_primitive(arena, Primitive::Boolean),
                     name => get_type(arena, name, ctx)?,
                 };
 

@@ -218,7 +218,7 @@ pub fn infer_expression(
             alternate,
         }) => {
             let cond_type = infer_expression(arena, cond, ctx)?;
-            let bool_type = new_keyword(arena, Keyword::Boolean);
+            let bool_type = new_primitive(arena, Primitive::Boolean);
             unify(arena, ctx, cond_type, bool_type)?;
             let consequent_type = infer_block(arena, consequent, ctx)?;
             // TODO: handle the case where there is no alternate
@@ -259,8 +259,8 @@ pub fn infer_expression(
         // ExprKind::LetExpr(_) => todo!(),
         // ExprKind::Keyword(_) => todo!(), // null, undefined, etc.
         ExprKind::Binary(Binary { op, left, right }) => {
-            let number = new_keyword(arena, Keyword::Number);
-            let boolean = new_keyword(arena, Keyword::Boolean);
+            let number = new_primitive(arena, Primitive::Number);
+            let boolean = new_primitive(arena, Primitive::Boolean);
             let left_type = infer_expression(arena, left, ctx)?;
             let right_type = infer_expression(arena, right, ctx)?;
 
@@ -300,8 +300,8 @@ pub fn infer_expression(
             op,
             right: arg, // TODO: rename `right` to `arg`
         }) => {
-            let number = new_keyword(arena, Keyword::Number);
-            let boolean = new_keyword(arena, Keyword::Boolean);
+            let number = new_primitive(arena, Primitive::Number);
+            let boolean = new_primitive(arena, Primitive::Boolean);
             let arg_type = infer_expression(arena, arg, ctx)?;
 
             match op {
@@ -465,14 +465,17 @@ pub fn infer_type_ann(
         //     kind: TypeKind::Literal(syntax::Literal::Undefined),
         // }),
         // TypeAnnKind::Lit(lit) => new_lit_type(arena, lit),
-        TypeAnnKind::Number => new_keyword(arena, Keyword::Number),
-        TypeAnnKind::Boolean => new_keyword(arena, Keyword::Boolean),
-        TypeAnnKind::String => new_keyword(arena, Keyword::String),
+        
+        TypeAnnKind::Number => new_primitive(arena, Primitive::Number),
+        TypeAnnKind::Boolean => new_primitive(arena, Primitive::Boolean),
+        TypeAnnKind::String => new_primitive(arena, Primitive::String),
+        TypeAnnKind::Symbol => new_primitive(arena, Primitive::Symbol),
+
         TypeAnnKind::Null => new_keyword(arena, Keyword::Null),
-        TypeAnnKind::Symbol => new_keyword(arena, Keyword::Symbol),
         TypeAnnKind::Undefined => new_keyword(arena, Keyword::Undefined),
         TypeAnnKind::Unknown => new_keyword(arena, Keyword::Unknown),
         TypeAnnKind::Never => new_keyword(arena, Keyword::Never),
+
         TypeAnnKind::Object(obj) => {
             let mut props: Vec<types::TObjElem> = Vec::new();
             for elem in obj.iter_mut() {
