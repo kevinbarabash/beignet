@@ -90,7 +90,8 @@ impl<'a> Parser<'a> {
                                 optional,
                                 mutable: false, // TODO
                                 type_ann: Box::new(type_ann),
-                                span: Span { start: 0, end: 0 }, // TODO
+                                // TODO(#642): compute correct spans for type annotations
+                                span: Span { start: 0, end: 0 },
                             }));
                         }
                         TokenKind::LeftBracket => {
@@ -121,7 +122,8 @@ impl<'a> Parser<'a> {
                                 key,
                                 mutable: false, // TODO
                                 type_ann: Box::new(type_ann),
-                                span: Span { start: 0, end: 0 }, // TODO
+                                // TODO(#642): compute correct spans for type annotations
+                                span: Span { start: 0, end: 0 },
                             }));
                         }
                         TokenKind::Fn => {
@@ -142,7 +144,8 @@ impl<'a> Parser<'a> {
                                         type_params,
                                         params,
                                         ret: Box::new(ret),
-                                        span: Span { start: 0, end: 0 }, // TODO
+                                        // TODO(#642): compute correct spans for type annotations
+                                        span: Span { start: 0, end: 0 },
                                     }));
                                 }
                                 TokenKind::LeftParen => {
@@ -158,7 +161,8 @@ impl<'a> Parser<'a> {
                                         type_params,
                                         params,
                                         ret: Box::new(ret),
-                                        span: Span { start: 0, end: 0 }, // TODO
+                                        // TODO(#642): compute correct spans for type annotations
+                                        span: Span { start: 0, end: 0 },
                                     }));
                                 }
                                 _ => {
@@ -186,7 +190,8 @@ impl<'a> Parser<'a> {
                                 name,
                                 ret: Box::new(ret),
                                 params,
-                                span: Span { start: 0, end: 0 }, // TODO
+                                // TODO(#642): compute correct spans for type annotations
+                                span: Span { start: 0, end: 0 },
                             }));
                         }
                         TokenKind::Set => {
@@ -208,7 +213,8 @@ impl<'a> Parser<'a> {
                             props.push(ObjectProp::Setter(ObjSetter {
                                 name,
                                 params,
-                                span: Span { start: 0, end: 0 }, // TODO
+                                // TODO(#642): compute correct spans for type annotations
+                                span: Span { start: 0, end: 0 },
                             }));
                         }
                         _ => {
@@ -324,51 +330,7 @@ impl<'a> Parser<'a> {
 
                 TypeAnnKind::TypeOf(Box::new(expr))
             }
-            TokenKind::If => {
-                self.next(); // consumes 'if'
-
-                assert_eq!(
-                    self.next().unwrap_or(EOF.clone()).kind,
-                    TokenKind::LeftParen
-                );
-                let check = self.parse_type_ann()?;
-                assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Extends);
-                let extends = self.parse_type_ann()?;
-                assert_eq!(
-                    self.next().unwrap_or(EOF.clone()).kind,
-                    TokenKind::RightParen
-                );
-
-                assert_eq!(
-                    self.next().unwrap_or(EOF.clone()).kind,
-                    TokenKind::LeftBrace
-                );
-                let true_type = self.parse_type_ann()?;
-                assert_eq!(
-                    self.next().unwrap_or(EOF.clone()).kind,
-                    TokenKind::RightBrace
-                );
-                assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Else);
-
-                assert_eq!(
-                    self.next().unwrap_or(EOF.clone()).kind,
-                    TokenKind::LeftBrace
-                );
-                let false_type = self.parse_type_ann()?;
-                assert_eq!(
-                    self.next().unwrap_or(EOF.clone()).kind,
-                    TokenKind::RightBrace
-                );
-
-                // TODO: allow chaining of if/else
-
-                TypeAnnKind::Condition(ConditionType {
-                    check: Box::new(check),
-                    extends: Box::new(extends),
-                    true_type: Box::new(true_type),
-                    false_type: Box::new(false_type),
-                })
-            }
+            TokenKind::If => return self.parse_conditional_type(),
             token => {
                 panic!("expected token to start type annotation, found {:?}", token)
             }
@@ -525,6 +487,68 @@ impl<'a> Parser<'a> {
 
             return Ok(lhs);
         }
+    }
+
+    fn parse_conditional_type(&mut self) -> Result<TypeAnn, ParseError> {
+        // TODO(#642): compute correct spans for type annotations
+        let span = self.peek().unwrap_or(&EOF).span;
+        self.next(); // consumes 'if'
+
+        assert_eq!(
+            self.next().unwrap_or(EOF.clone()).kind,
+            TokenKind::LeftParen
+        );
+        let check = self.parse_type_ann()?;
+        assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Extends);
+        let extends = self.parse_type_ann()?;
+        assert_eq!(
+            self.next().unwrap_or(EOF.clone()).kind,
+            TokenKind::RightParen
+        );
+
+        assert_eq!(
+            self.next().unwrap_or(EOF.clone()).kind,
+            TokenKind::LeftBrace
+        );
+        let true_type = self.parse_type_ann()?;
+        assert_eq!(
+            self.next().unwrap_or(EOF.clone()).kind,
+            TokenKind::RightBrace
+        );
+        assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Else);
+
+        let false_type = match self.peek().unwrap_or(&EOF).kind {
+            TokenKind::If => self.parse_conditional_type()?,
+            _ => {
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::LeftBrace
+                );
+                let false_type = self.parse_type_ann()?;
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::RightBrace
+                );
+                false_type
+            }
+        };
+
+        // TODO: allow chaining of if/else
+
+        let kind = TypeAnnKind::Condition(ConditionType {
+            check: Box::new(check),
+            extends: Box::new(extends),
+            true_type: Box::new(true_type),
+            false_type: Box::new(false_type),
+        });
+
+        let atom = TypeAnn {
+            kind,
+            span,
+            inferred_type: None,
+        };
+
+        Ok(atom)
     }
 
     pub fn parse_type_ann(&mut self) -> Result<TypeAnn, ParseError> {

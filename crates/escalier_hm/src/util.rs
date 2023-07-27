@@ -201,6 +201,10 @@ pub fn expand_alias(
                             })
                             .collect::<Result<Vec<_>, Errors>>()?;
 
+                        // for t in &types {
+                        //     eprintln!("t = {:#?}", arena[*t].as_string(arena));
+                        // }
+
                         let filtered_types = types
                             .into_iter()
                             .filter(|t| {
@@ -236,18 +240,21 @@ pub fn expand_alias(
 
 pub fn expand_type(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<Index, Errors> {
     let t = prune(arena, t);
+
     // It's okay to clone here because we aren't mutating the type
-    match &arena[t].clone().kind {
-        TypeKind::KeyOf(KeyOf { t }) => expand_keyof(arena, ctx, *t),
+    let t = match &arena[t].clone().kind {
+        TypeKind::KeyOf(KeyOf { t }) => expand_keyof(arena, ctx, *t)?,
         TypeKind::IndexedAccess(IndexedAccess { obj, index }) => {
-            get_computed_member(arena, ctx, *obj, *index)
+            get_computed_member(arena, ctx, *obj, *index)?
         }
-        TypeKind::Conditional(conditional) => expand_conditional(arena, ctx, conditional),
+        TypeKind::Conditional(conditional) => expand_conditional(arena, ctx, conditional)?,
         TypeKind::Constructor(Constructor { name, types, .. }) => {
-            expand_alias_by_name(arena, ctx, name, types)
+            expand_alias_by_name(arena, ctx, name, types)?
         }
-        _ => Ok(t),
-    }
+        _ => return Ok(t), // Early return to avoid infinite loop
+    };
+
+    expand_type(arena, ctx, t)
 }
 
 // Expands `keyof` types into one of the followwing:
