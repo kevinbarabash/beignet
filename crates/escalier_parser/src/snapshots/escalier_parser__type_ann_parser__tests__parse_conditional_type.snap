@@ -1,0 +1,41 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(\"if (T extends U) { never } else { T }\")"
+---
+TypeAnn {
+    kind: Condition(
+        ConditionType {
+            check: TypeAnn {
+                kind: TypeRef(
+                    "T",
+                    None,
+                ),
+                span: 4..5,
+                inferred_type: None,
+            },
+            extends: TypeAnn {
+                kind: TypeRef(
+                    "U",
+                    None,
+                ),
+                span: 14..15,
+                inferred_type: None,
+            },
+            true_type: TypeAnn {
+                kind: Never,
+                span: 19..24,
+                inferred_type: None,
+            },
+            false_type: TypeAnn {
+                kind: TypeRef(
+                    "T",
+                    None,
+                ),
+                span: 34..35,
+                inferred_type: None,
+            },
+        },
+    ),
+    span: 0..2,
+    inferred_type: None,
+}

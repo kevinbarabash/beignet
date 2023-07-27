@@ -81,6 +81,14 @@ pub struct FunctionType {
     pub ret: Box<TypeAnn>,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct ConditionType {
+    pub check: Box<TypeAnn>,
+    pub extends: Box<TypeAnn>,
+    pub true_type: Box<TypeAnn>,
+    pub false_type: Box<TypeAnn>,
+}
+
 // TODO: typeof, keyof, conditional types
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TypeAnnKind {
@@ -105,6 +113,7 @@ pub enum TypeAnnKind {
     IndexedAccess(Box<TypeAnn>, Box<TypeAnn>),
     KeyOf(Box<TypeAnn>),
     TypeOf(Box<Expr>),
+    Condition(ConditionType),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

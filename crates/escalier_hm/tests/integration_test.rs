@@ -3719,3 +3719,22 @@ fn test_mutating_immutable_object_errors() -> Result<(), Errors> {
 
     Ok(())
 }
+
+#[test]
+fn conditional_type_exclude() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Exclude<T, U> = if (T extends U) { never } else { T }
+    type Result = Exclude<"a" | "b" | "c" | "d" | "e", "a" | "e">
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let result = my_ctx.schemes.get("Result").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#""b" | "c" | "d""#);
+
+    Ok(())
+}

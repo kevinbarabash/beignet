@@ -465,7 +465,6 @@ pub fn infer_type_ann(
         //     kind: TypeKind::Literal(syntax::Literal::Undefined),
         // }),
         // TypeAnnKind::Lit(lit) => new_lit_type(arena, lit),
-        
         TypeAnnKind::Number => new_primitive(arena, Primitive::Number),
         TypeAnnKind::Boolean => new_primitive(arena, Primitive::Boolean),
         TypeAnnKind::String => new_primitive(arena, Primitive::String),
@@ -742,7 +741,18 @@ pub fn infer_type_ann(
             expand_type(arena, ctx, t)?
         }
         // TypeAnnKind::Mapped(_) => todo!(),
-        // TypeAnnKind::Conditional(_) => todo!(),
+        TypeAnnKind::Condition(ConditionType {
+            check,
+            extends,
+            true_type,
+            false_type,
+        }) => {
+            let check_idx = infer_type_ann(arena, check, ctx)?;
+            let extends_idx = infer_type_ann(arena, extends, ctx)?;
+            let true_idx = infer_type_ann(arena, true_type, ctx)?;
+            let false_idx = infer_type_ann(arena, false_type, ctx)?;
+            new_conditional_type(arena, check_idx, extends_idx, true_idx, false_idx)
+        }
         // TypeAnnKind::Infer(_) => todo!(),
     };
 
@@ -1066,7 +1076,7 @@ fn get_ident_member(
             ..
         }) => match ctx.schemes.get(alias_name) {
             Some(scheme) => {
-                let obj_idx = expand_alias(arena, alias_name, scheme, types)?;
+                let obj_idx = expand_alias(arena, ctx, alias_name, scheme, types)?;
                 get_ident_member(arena, ctx, obj_idx, key_idx)
             }
             None => Err(Errors::InferenceError(format!(
@@ -1076,7 +1086,7 @@ fn get_ident_member(
         TypeKind::Tuple(types::Tuple { types }) => match ctx.schemes.get("Array") {
             Some(scheme) => {
                 let t = new_union_type(arena, types);
-                let obj_idx = expand_alias(arena, "Array", scheme, &[t])?;
+                let obj_idx = expand_alias(arena, ctx, "Array", scheme, &[t])?;
                 get_ident_member(arena, ctx, obj_idx, key_idx)
             }
             None => Err(Errors::InferenceError(

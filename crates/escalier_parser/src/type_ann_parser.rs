@@ -324,6 +324,51 @@ impl<'a> Parser<'a> {
 
                 TypeAnnKind::TypeOf(Box::new(expr))
             }
+            TokenKind::If => {
+                self.next(); // consumes 'if'
+
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::LeftParen
+                );
+                let check = self.parse_type_ann()?;
+                assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Extends);
+                let extends = self.parse_type_ann()?;
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::RightParen
+                );
+
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::LeftBrace
+                );
+                let true_type = self.parse_type_ann()?;
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::RightBrace
+                );
+                assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Else);
+
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::LeftBrace
+                );
+                let false_type = self.parse_type_ann()?;
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::RightBrace
+                );
+
+                // TODO: allow chaining of if/else
+
+                TypeAnnKind::Condition(ConditionType {
+                    check: Box::new(check),
+                    extends: Box::new(extends),
+                    true_type: Box::new(true_type),
+                    false_type: Box::new(false_type),
+                })
+            }
             token => {
                 panic!("expected token to start type annotation, found {:?}", token)
             }
@@ -625,5 +670,10 @@ mod tests {
     fn parse_indexer_type() {
         insta::assert_debug_snapshot!(parse("{[key: string]: number}"));
         insta::assert_debug_snapshot!(parse("{[key: string]: number, [key: number]: string}"));
+    }
+
+    #[test]
+    fn parse_conditional_type() {
+        insta::assert_debug_snapshot!(parse("if (T extends U) { never } else { T }"));
     }
 }
