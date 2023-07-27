@@ -73,27 +73,29 @@ expression: "parse(\"let max = if (x > y) { x } else { y }\")"
                                 ],
                             },
                             alternate: Some(
-                                Block {
-                                    span: 31..37,
-                                    stmts: [
-                                        Stmt {
-                                            kind: Expr {
-                                                expr: Expr {
-                                                    kind: Ident(
-                                                        Ident {
-                                                            name: "y",
-                                                            span: 34..35,
-                                                        },
-                                                    ),
-                                                    span: 34..35,
-                                                    inferred_type: None,
+                                Block(
+                                    Block {
+                                        span: 31..37,
+                                        stmts: [
+                                            Stmt {
+                                                kind: Expr {
+                                                    expr: Expr {
+                                                        kind: Ident(
+                                                            Ident {
+                                                                name: "y",
+                                                                span: 34..35,
+                                                            },
+                                                        ),
+                                                        span: 34..35,
+                                                        inferred_type: None,
+                                                    },
                                                 },
+                                                span: 34..35,
+                                                inferred_type: None,
                                             },
-                                            span: 34..35,
-                                            inferred_type: None,
-                                        },
-                                    ],
-                                },
+                                        ],
+                                    },
+                                ),
                             ),
                         },
                     ),

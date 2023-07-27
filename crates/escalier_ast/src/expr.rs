@@ -144,7 +144,7 @@ pub struct OptionalChain {
 pub struct IfElse {
     pub cond: Box<Expr>,
     pub consequent: Block,
-    pub alternate: Option<Block>,
+    pub alternate: Option<BlockOrExpr>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
