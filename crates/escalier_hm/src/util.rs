@@ -1,4 +1,5 @@
 use generational_arena::{Arena, Index};
+use itertools::Itertools;
 use std::collections::{BTreeMap, HashMap};
 
 use escalier_ast::Literal;
@@ -146,20 +147,6 @@ pub fn prune(arena: &mut Arena<Type>, t: Index) -> Index {
     value
 }
 
-pub fn expand_constructor(
-    arena: &mut Arena<Type>,
-    ctx: &Context,
-    constructor: &Constructor,
-) -> Result<Index, Errors> {
-    match ctx.schemes.get(&constructor.name) {
-        Some(scheme) => expand_alias(arena, &constructor.name, scheme, &constructor.types),
-        None => Err(Errors::InferenceError(format!(
-            "{} isn't defined",
-            constructor.name
-        ))),
-    }
-}
-
 pub fn expand_alias_by_name(
     arena: &mut Arena<Type>,
     ctx: &Context,
@@ -167,13 +154,14 @@ pub fn expand_alias_by_name(
     type_args: &[Index],
 ) -> Result<Index, Errors> {
     match ctx.schemes.get(name) {
-        Some(scheme) => expand_alias(arena, name, scheme, type_args),
+        Some(scheme) => expand_alias(arena, ctx, name, scheme, type_args),
         None => Err(Errors::InferenceError(format!("{} isn't defined", name))),
     }
 }
 
 pub fn expand_alias(
     arena: &mut Arena<Type>,
+    ctx: &Context,
     name: &str,
     scheme: &Scheme,
     type_args: &[Index],
@@ -181,21 +169,57 @@ pub fn expand_alias(
     match &scheme.type_params {
         Some(type_params) => {
             if type_params.len() != type_args.len() {
-                Err(Errors::InferenceError(format!(
+                return Err(Errors::InferenceError(format!(
                     "{name} expects {} type args, but was passed {}",
                     type_params.len(),
                     type_args.len()
-                )))
-            } else {
-                let mut mapping: HashMap<String, Index> = HashMap::new();
-                for (param, arg) in type_params.iter().zip(type_args.iter()) {
-                    mapping.insert(param.name.clone(), arg.to_owned());
-                }
-
-                let t = instantiate_scheme(arena, scheme.t, &mapping);
-
-                Ok(t)
+                )));
             }
+
+            let mut mapping: HashMap<String, Index> = HashMap::new();
+            for (param, arg) in type_params.iter().zip(type_args.iter()) {
+                mapping.insert(param.name.clone(), arg.to_owned());
+            }
+
+            if let TypeKind::Conditional(Conditional { check, .. }) = arena[scheme.t].kind {
+                if let TypeKind::Constructor(tref) = &arena[check].kind.clone() {
+                    if let Some((index_of_check_type, _)) = type_params
+                        .iter()
+                        .find_position(|param| param.name == tref.name)
+                    {
+                        let check_args = match &arena[type_args[index_of_check_type]].kind {
+                            TypeKind::Union(Union { types }) => types.to_owned(),
+                            _ => vec![type_args[index_of_check_type].to_owned()],
+                        };
+
+                        let types = check_args
+                            .iter()
+                            .map(|check_arg| {
+                                mapping.insert(tref.name.to_owned(), check_arg.to_owned());
+                                let t = instantiate_scheme(arena, scheme.t, &mapping);
+                                expand_type(arena, ctx, t)
+                            })
+                            .collect::<Result<Vec<_>, Errors>>()?;
+
+                        let filtered_types = types
+                            .into_iter()
+                            .filter(|t| {
+                                if let TypeKind::Keyword(kw) = &arena[*t].kind {
+                                    kw != &Keyword::Never
+                                } else {
+                                    true
+                                }
+                            })
+                            .collect::<Vec<_>>();
+
+                        let t = new_union_type(arena, &filtered_types);
+                        return expand_type(arena, ctx, t);
+                    }
+                }
+            }
+
+            let t = instantiate_scheme(arena, scheme.t, &mapping);
+            expand_type(arena, ctx, t)
         }
         None => {
             if type_args.is_empty() {
@@ -217,8 +241,9 @@ pub fn expand_type(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<I
         TypeKind::IndexedAccess(IndexedAccess { obj, index }) => {
             get_computed_member(arena, ctx, *obj, *index)
         }
-        TypeKind::Conditional(_) => {
-            todo!()
+        TypeKind::Conditional(conditional) => expand_conditional(arena, ctx, conditional),
+        TypeKind::Constructor(Constructor { name, types, .. }) => {
+            expand_alias_by_name(arena, ctx, name, types)
         }
         _ => Ok(t),
     }
@@ -317,7 +342,7 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
             Ok(new_union_type(arena, &keys))
         }
         TypeKind::Constructor(constructor) => {
-            let idx = expand_constructor(arena, ctx, constructor)?;
+            let idx = expand_alias_by_name(arena, ctx, &constructor.name, &constructor.types)?;
             expand_keyof(arena, ctx, idx)
         }
         TypeKind::Intersection(Intersection { types }) => {
@@ -426,6 +451,28 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
     }
 }
 
+// TODO: have a separate version of this for expanding conditional types that
+// are the definition of a type alias.  In that situation, if the `check` is
+// a type reference and the arg passed to the type alias is a union, then we
+// have distribute the union.
+pub fn expand_conditional(
+    arena: &mut Arena<Type>,
+    ctx: &Context,
+    conditional: &Conditional,
+) -> Result<Index, Errors> {
+    let Conditional {
+        check,
+        extends,
+        true_type,
+        false_type,
+    } = conditional;
+
+    match unify(arena, ctx, *check, *extends) {
+        Ok(_) => Ok(*true_type),
+        Err(_) => Ok(*false_type),
+    }
+}
+
 pub fn get_computed_member(
     arena: &mut Arena<Type>,
     ctx: &Context,
@@ -500,19 +547,10 @@ pub fn get_computed_member(
                 Ok(new_union_type(arena, &result_types))
             }
         }
-        TypeKind::Constructor(Constructor {
-            name: alias_name,
-            types,
-            ..
-        }) => match ctx.schemes.get(alias_name) {
-            Some(scheme) => {
-                let obj_idx = expand_alias(arena, alias_name, scheme, types)?;
-                get_computed_member(arena, ctx, obj_idx, key_idx)
-            }
-            None => Err(Errors::InferenceError(format!(
-                "Can't find type alias for {alias_name}"
-            ))),
-        },
+        TypeKind::Constructor(Constructor { name, types, .. }) => {
+            let idx = expand_alias_by_name(arena, ctx, name, types)?;
+            get_computed_member(arena, ctx, idx, key_idx)
+        }
         _ => {
             // TODO: provide a more specific error message for type variables
             Err(Errors::InferenceError(
