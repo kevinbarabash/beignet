@@ -28,6 +28,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
     let a = prune(arena, t1);
     let b = prune(arena, t2);
 
+    // TODO: only expand if unification fails since it's expensive
     let a = expand(arena, ctx, a)?;
     let b = expand(arena, ctx, b)?;
 
@@ -517,6 +518,7 @@ fn unify_mut(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
     let t1 = prune(arena, t1);
     let t2 = prune(arena, t2);
 
+    // TODO: only expand if unification fails since it's expensive
     let t1 = expand(arena, ctx, t1)?;
     let t2 = expand(arena, ctx, t2)?;
 
@@ -811,16 +813,9 @@ pub fn simplify_intersection(arena: &mut Arena<Type>, in_types: &[Index]) -> Ind
 fn expand(arena: &mut Arena<Type>, ctx: &Context, a: Index) -> Result<Index, Errors> {
     let a_t = arena[a].clone();
 
-    let a = match &a_t.kind {
-        TypeKind::Constructor(Constructor {
-            name,
-            types: type_args,
-        }) if !["Promise", "Array"].contains(&name.as_str()) => match ctx.schemes.get(name) {
-            Some(scheme) => expand_alias(arena, ctx, name, scheme, type_args),
-            None => Err(Errors::InferenceError(format!("Unbound type name: {name}"))),
-        },
-        _ => Ok(a),
-    }?;
-
-    expand_type(arena, ctx, a)
+    match &a_t.kind {
+        TypeKind::Constructor(Constructor { name, .. }) if name == "Array" => Ok(a),
+        TypeKind::Constructor(Constructor { name, .. }) if name == "Promise" => Ok(a),
+        _ => expand_type(arena, ctx, a),
+    }
 }

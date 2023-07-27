@@ -223,7 +223,8 @@ pub fn expand_alias(
         }
         None => {
             if type_args.is_empty() {
-                Ok(scheme.t)
+                let t = expand_type(arena, ctx, scheme.t)?;
+                Ok(t)
             } else {
                 Err(Errors::InferenceError(format!(
                     "{name} doesn't require any type args"
@@ -255,7 +256,13 @@ pub fn expand_type(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<I
 // - never
 // - union of any of those types
 pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<Index, Errors> {
-    let obj = expand_type(arena, ctx, t)?;
+    let obj = match &arena[t].kind {
+        // Don't expand Array's since they have a special `keyof` behavior.  We
+        // don't want to expand them because we don't want to include array methods
+        // in the list of keys.  This is similar to how objects are treated.
+        TypeKind::Constructor(Constructor { name, .. }) if name == "Array" => t,
+        _ => expand_type(arena, ctx, t)?,
+    };
 
     match &arena[obj].kind.clone() {
         TypeKind::Object(Object { elems }) => {
