@@ -1,0 +1,111 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(r#\"if (cond1) { x } else if (cond2) { y } else { z }\"#)"
+---
+Expr {
+    kind: IfElse(
+        IfElse {
+            cond: Expr {
+                kind: Ident(
+                    Ident {
+                        name: "cond1",
+                        span: 4..9,
+                    },
+                ),
+                span: 4..9,
+                inferred_type: None,
+            },
+            consequent: Block {
+                span: 10..16,
+                stmts: [
+                    Stmt {
+                        kind: Expr {
+                            expr: Expr {
+                                kind: Ident(
+                                    Ident {
+                                        name: "x",
+                                        span: 13..14,
+                                    },
+                                ),
+                                span: 13..14,
+                                inferred_type: None,
+                            },
+                        },
+                        span: 13..14,
+                        inferred_type: None,
+                    },
+                ],
+            },
+            alternate: Some(
+                Expr(
+                    Expr {
+                        kind: IfElse(
+                            IfElse {
+                                cond: Expr {
+                                    kind: Ident(
+                                        Ident {
+                                            name: "cond2",
+                                            span: 26..31,
+                                        },
+                                    ),
+                                    span: 26..31,
+                                    inferred_type: None,
+                                },
+                                consequent: Block {
+                                    span: 32..38,
+                                    stmts: [
+                                        Stmt {
+                                            kind: Expr {
+                                                expr: Expr {
+                                                    kind: Ident(
+                                                        Ident {
+                                                            name: "y",
+                                                            span: 35..36,
+                                                        },
+                                                    ),
+                                                    span: 35..36,
+                                                    inferred_type: None,
+                                                },
+                                            },
+                                            span: 35..36,
+                                            inferred_type: None,
+                                        },
+                                    ],
+                                },
+                                alternate: Some(
+                                    Block(
+                                        Block {
+                                            span: 43..49,
+                                            stmts: [
+                                                Stmt {
+                                                    kind: Expr {
+                                                        expr: Expr {
+                                                            kind: Ident(
+                                                                Ident {
+                                                                    name: "z",
+                                                                    span: 46..47,
+                                                                },
+                                                            ),
+                                                            span: 46..47,
+                                                            inferred_type: None,
+                                                        },
+                                                    },
+                                                    span: 46..47,
+                                                    inferred_type: None,
+                                                },
+                                            ],
+                                        },
+                                    ),
+                                ),
+                            },
+                        ),
+                        span: 22..49,
+                        inferred_type: None,
+                    },
+                ),
+            ),
+        },
+    ),
+    span: 0..49,
+    inferred_type: None,
+}

@@ -222,7 +222,13 @@ pub fn infer_expression(
             unify(arena, ctx, cond_type, bool_type)?;
             let consequent_type = infer_block(arena, consequent, ctx)?;
             // TODO: handle the case where there is no alternate
-            let alternate_type = infer_block(arena, &mut alternate.clone().unwrap(), ctx)?;
+            let alternate_type = match alternate {
+                Some(alternate) => match alternate {
+                    BlockOrExpr::Block(block) => infer_block(arena, block, ctx)?,
+                    BlockOrExpr::Expr(expr) => infer_expression(arena, expr, ctx)?,
+                },
+                None => todo!(),
+            };
             new_union_type(arena, &[consequent_type, alternate_type])
         }
         ExprKind::Member(Member {
@@ -752,8 +758,7 @@ pub fn infer_type_ann(
             let true_idx = infer_type_ann(arena, true_type, ctx)?;
             let false_idx = infer_type_ann(arena, false_type, ctx)?;
             new_conditional_type(arena, check_idx, extends_idx, true_idx, false_idx)
-        }
-        // TypeAnnKind::Infer(_) => todo!(),
+        } // TypeAnnKind::Infer(_) => todo!(),
     };
 
     let t = &mut arena[idx];

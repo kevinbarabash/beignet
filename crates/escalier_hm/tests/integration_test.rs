@@ -123,6 +123,43 @@ fn test_string_equality() -> Result<(), Errors> {
 }
 
 #[test]
+fn test_if_else() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let cond: boolean
+    let result = if (cond) { 5 } else { 10 }
+    "#;
+
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    let binding = my_ctx.values.get("result").unwrap();
+
+    assert_eq!(arena[binding.index].as_string(&arena), r#"5 | 10"#);
+    Ok(())
+}
+
+#[test]
+fn test_chained_if_else() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let cond1: boolean
+    declare let cond2: boolean
+    let result = if (cond1) { 5 } else if (cond2) { 10 } else { 15 }
+    "#;
+
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    let binding = my_ctx.values.get("result").unwrap();
+
+    assert_eq!(arena[binding.index].as_string(&arena), r#"5 | 10 | 15"#);
+    Ok(())
+}
+
+#[test]
 fn test_factorial() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
@@ -3735,6 +3772,31 @@ fn conditional_type_exclude() -> Result<(), Errors> {
     let result = my_ctx.schemes.get("Result").unwrap();
     let t = expand_type(&mut arena, &my_ctx, result.t)?;
     assert_eq!(arena[t].as_string(&arena), r#""b" | "c" | "d""#);
+
+    Ok(())
+}
+
+#[test]
+fn chained_conditional_types() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Foo<T> = if (T extends string) { 
+        "str"
+    } else if (T extends number) {
+        "num"
+    } else {
+        "?"
+    }
+    type Result = Foo<5 | "hello">
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let result = my_ctx.schemes.get("Result").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#""num" | "str""#);
 
     Ok(())
 }

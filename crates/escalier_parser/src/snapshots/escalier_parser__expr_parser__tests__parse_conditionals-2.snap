@@ -37,27 +37,29 @@ Expr {
                 ],
             },
             alternate: Some(
-                Block {
-                    span: 20..26,
-                    stmts: [
-                        Stmt {
-                            kind: Expr {
-                                expr: Expr {
-                                    kind: Ident(
-                                        Ident {
-                                            name: "y",
-                                            span: 23..24,
-                                        },
-                                    ),
-                                    span: 23..24,
-                                    inferred_type: None,
+                Block(
+                    Block {
+                        span: 20..26,
+                        stmts: [
+                            Stmt {
+                                kind: Expr {
+                                    expr: Expr {
+                                        kind: Ident(
+                                            Ident {
+                                                name: "y",
+                                                span: 23..24,
+                                            },
+                                        ),
+                                        span: 23..24,
+                                        inferred_type: None,
+                                    },
                                 },
+                                span: 23..24,
+                                inferred_type: None,
                             },
-                            span: 23..24,
-                            inferred_type: None,
-                        },
-                    ],
-                },
+                        ],
+                    },
+                ),
             ),
         },
     ),

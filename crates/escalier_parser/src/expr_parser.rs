@@ -268,37 +268,7 @@ impl<'a> Parser<'a> {
             TokenKind::Async => self.parse_function()?,
             TokenKind::Gen => self.parse_function()?,
             TokenKind::Fn => self.parse_function()?,
-            TokenKind::If => {
-                self.next(); // consumes 'if'
-                let cond = self.parse_inside_parens(|p| p.parse_expr())?;
-                let consequent = self.parse_block()?;
-
-                if self.peek().unwrap_or(&EOF).kind == TokenKind::Else {
-                    self.next().unwrap_or(EOF.clone());
-                    let alternate = self.parse_block()?;
-                    let span = merge_spans(&token.span, &alternate.span);
-                    Expr {
-                        kind: ExprKind::IfElse(IfElse {
-                            cond: Box::new(cond),
-                            consequent,
-                            alternate: Some(alternate),
-                        }),
-                        span,
-                        inferred_type: None,
-                    }
-                } else {
-                    let span = merge_spans(&token.span, &consequent.span);
-                    Expr {
-                        kind: ExprKind::IfElse(IfElse {
-                            cond: Box::new(cond),
-                            consequent,
-                            alternate: None,
-                        }),
-                        span,
-                        inferred_type: None,
-                    }
-                }
-            }
+            TokenKind::If => self.parse_if_else()?,
             TokenKind::Match => {
                 let start = token;
                 self.next(); // consumes 'match'
@@ -491,6 +461,51 @@ impl<'a> Parser<'a> {
         };
 
         Ok(lhs)
+    }
+
+    fn parse_if_else(&mut self) -> Result<Expr, ParseError> {
+        let token = self.next().unwrap_or(EOF.clone()); // consumes 'if'
+        let cond = self.parse_inside_parens(|p| p.parse_expr())?;
+        let consequent = self.parse_block()?;
+
+        let expr = if self.peek().unwrap_or(&EOF).kind == TokenKind::Else {
+            self.next().unwrap_or(EOF.clone());
+
+            let (alternate, span) = if self.peek().unwrap_or(&EOF).kind == TokenKind::If {
+                let expr = self.parse_if_else()?;
+                let span = merge_spans(&token.span, &expr.span);
+                let alternate = BlockOrExpr::Expr(Box::new(expr));
+                (alternate, span)
+            } else {
+                let block = self.parse_block()?;
+                let span = merge_spans(&token.span, &block.span);
+                let alternate = BlockOrExpr::Block(block);
+                (alternate, span)
+            };
+
+            Expr {
+                kind: ExprKind::IfElse(IfElse {
+                    cond: Box::new(cond),
+                    consequent,
+                    alternate: Some(alternate),
+                }),
+                span,
+                inferred_type: None,
+            }
+        } else {
+            let span = merge_spans(&token.span, &consequent.span);
+            Expr {
+                kind: ExprKind::IfElse(IfElse {
+                    cond: Box::new(cond),
+                    consequent,
+                    alternate: None,
+                }),
+                span,
+                inferred_type: None,
+            }
+        };
+
+        Ok(expr)
     }
 
     pub fn maybe_parse_type_params(&mut self) -> Result<Option<Vec<TypeParam>>, ParseError> {
@@ -1160,6 +1175,9 @@ mod tests {
                 {a: 1, b: 2}
             }
             "#
+        ));
+        insta::assert_debug_snapshot!(parse(
+            r#"if (cond1) { x } else if (cond2) { y } else { z }"#
         ));
     }
 
