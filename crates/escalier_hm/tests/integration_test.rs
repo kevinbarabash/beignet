@@ -3466,6 +3466,30 @@ fn test_mutable_error_arg_passing() -> Result<(), Errors> {
 }
 
 #[test]
+fn test_mutable_error_arg_passing_with_subtyping() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    // TODO: handle `declare let scale: fn(mut p: Point, ...);
+    let src = r#"
+    declare let foo: fn (mut items: Array<number | string>) => undefined
+    let mut numbers: Array<number> = [1, 2, 3]
+    foo(numbers)
+    "#;
+    let mut program = parse(src).unwrap();
+
+    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "unify_mut: Array<number> != Array<number | string>".to_string(),
+        )),
+    );
+
+    Ok(())
+}
+
+#[test]
 fn test_mutable_ok_arg_passing() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
@@ -3599,6 +3623,28 @@ fn test_mutable_ok_assignments() -> Result<(), Errors> {
     let mut program = parse(src).unwrap();
 
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    Ok(())
+}
+
+#[test]
+fn test_mutable_invalid_assignments() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"    
+    let mut arr1: Array<number> = [1, 2, 3]
+    let mut arr2: Array<number | string>  = arr1
+    "#;
+    let mut program = parse(src).unwrap();
+
+    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "unify_mut: Array<number> != Array<number | string>".to_string(),
+        ))
+    );
 
     Ok(())
 }

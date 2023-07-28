@@ -514,7 +514,12 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
     }
 }
 
-fn unify_mut(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Result<(), Errors> {
+pub fn unify_mut(
+    arena: &mut Arena<Type>,
+    ctx: &Context,
+    t1: Index,
+    t2: Index,
+) -> Result<(), Errors> {
     let t1 = prune(arena, t1);
     let t2 = prune(arena, t2);
 
@@ -646,16 +651,15 @@ pub fn unify_call(
                 .map(|arg| {
                     // TODO: handle spreads
                     let t = infer_expression(arena, arg, ctx)?;
-                    Ok(t)
+                    Ok((arg, t))
                 })
                 .collect::<Result<Vec<_>, _>>()?;
 
-            for (p, q) in arg_types.iter().zip(func.params.iter()) {
-                unify(arena, ctx, *p, q.t)?;
-            }
-
-            for (arg, param) in args.iter().zip(func.params.iter()) {
-                check_mutability(ctx, &param.pattern, arg)?;
+            for ((arg, p), param) in arg_types.iter().zip(func.params.iter()) {
+                match check_mutability(ctx, &param.pattern, arg)? {
+                    true => unify_mut(arena, ctx, *p, param.t)?,
+                    false => unify(arena, ctx, *p, param.t)?,
+                };
             }
 
             unify(arena, ctx, ret_type, func.ret)?;
