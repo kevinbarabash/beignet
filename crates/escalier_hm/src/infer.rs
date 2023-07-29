@@ -249,7 +249,7 @@ pub fn infer_expression(
         }
         // ExprKind::New(_) => todo!(),
         ExprKind::JSXElement(_) => todo!(),
-        ExprKind::Assign(Assign { left, op, right }) => {
+        ExprKind::Assign(Assign { left, op: _, right }) => {
             if !lvalue_mutability(ctx, left)? {
                 return Err(Errors::InferenceError(
                     "Cannot assign to immutable lvalue".to_string(),
@@ -795,13 +795,19 @@ pub fn infer_statement(
                         _ => init_idx,
                     };
 
+                    let tpat = pattern_to_tpat(pattern, false);
+                    let mutability = check_mutability(ctx, &tpat, init)?;
+
                     let idx = match type_ann {
                         Some(type_ann) => {
                             let type_ann_idx = infer_type_ann(arena, type_ann, ctx)?;
 
                             // The initializer must conform to the type annotation's
                             // inferred type.
-                            unify(arena, ctx, init_idx, type_ann_idx)?;
+                            match mutability {
+                                true => unify_mut(arena, ctx, init_idx, type_ann_idx)?,
+                                false => unify(arena, ctx, init_idx, type_ann_idx)?,
+                            };
 
                             // Results in bindings introduced by the LHS pattern
                             // having their types inferred.
@@ -825,9 +831,6 @@ pub fn infer_statement(
                             init_idx
                         }
                     };
-
-                    let tpat = pattern_to_tpat(pattern, false);
-                    check_mutability(ctx, &tpat, init)?;
 
                     for (name, binding) in pat_bindings {
                         ctx.values.insert(name.clone(), binding);
@@ -1166,7 +1169,8 @@ fn infer_type_params(
 // NOTE: It's possible to have a mix of mutable and immutable bindings be
 // introduced.  In that situation, we only need to check certain parts of
 // the initializer for mutability.
-pub fn check_mutability(ctx: &Context, tpat: &TPat, init: &Expr) -> Result<(), Errors> {
+pub fn check_mutability(ctx: &Context, tpat: &TPat, init: &Expr) -> Result<bool, Errors> {
+    eprintln!("check_mutability({:?}, {:?})", tpat, init);
     let mut lhs_mutable = false;
 
     // TODO: handle other patterns
@@ -1177,7 +1181,7 @@ pub fn check_mutability(ctx: &Context, tpat: &TPat, init: &Expr) -> Result<(), E
     let idents = find_identifiers(init)?;
 
     if idents.is_empty() {
-        return Ok(());
+        return Ok(false);
     }
 
     let mut rhs_mutable = false;
@@ -1193,7 +1197,7 @@ pub fn check_mutability(ctx: &Context, tpat: &TPat, init: &Expr) -> Result<(), E
         ));
     }
 
-    Ok(())
+    Ok(lhs_mutable && rhs_mutable)
 }
 
 fn find_identifiers(expr: &Expr) -> Result<Vec<Ident>, Errors> {
