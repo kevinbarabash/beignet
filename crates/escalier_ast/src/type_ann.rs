@@ -2,7 +2,6 @@ use generational_arena::Index;
 
 use crate::expr::Expr;
 use crate::func_param::FuncParam;
-use crate::identifier::Ident;
 use crate::span::*;
 use crate::type_param::TypeParam;
 

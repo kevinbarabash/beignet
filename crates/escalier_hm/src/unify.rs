@@ -685,6 +685,11 @@ pub fn unify_call(
                 Err(_) => unify_call(arena, ctx, args, type_args, false_type)?,
             };
         }
+        TypeKind::Infer(Infer { name }) => {
+            return Err(Errors::InferenceError(format!(
+                "infer {name} is not callable",
+            )));
+        }
     }
 
     // We need to prune the return type, because it might be a type variable.
