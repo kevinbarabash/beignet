@@ -1,0 +1,49 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(\"fn (...args: _) => _\")"
+---
+TypeAnn {
+    kind: Function(
+        FunctionType {
+            type_params: None,
+            params: [
+                FuncParam {
+                    pattern: Pattern {
+                        kind: Rest(
+                            RestPat {
+                                arg: Pattern {
+                                    kind: Ident(
+                                        BindingIdent {
+                                            name: "args",
+                                            span: 7..11,
+                                            mutable: false,
+                                        },
+                                    ),
+                                    span: 7..11,
+                                    inferred_type: None,
+                                },
+                            },
+                        ),
+                        span: 4..7,
+                        inferred_type: None,
+                    },
+                    type_ann: Some(
+                        TypeAnn {
+                            kind: Wildcard,
+                            span: 13..14,
+                            inferred_type: None,
+                        },
+                    ),
+                    optional: false,
+                },
+            ],
+            ret: TypeAnn {
+                kind: Wildcard,
+                span: 19..20,
+                inferred_type: None,
+            },
+        },
+    ),
+    span: 0..2,
+    inferred_type: None,
+}

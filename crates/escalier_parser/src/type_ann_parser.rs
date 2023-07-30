@@ -725,6 +725,13 @@ mod tests {
     }
 
     #[test]
+    fn parse_func_with_rest_param() {
+        insta::assert_debug_snapshot!(parse("fn (...args: Array<number>) => number"));
+        insta::assert_debug_snapshot!(parse("fn (...args: Array<_>) => _"));
+        insta::assert_debug_snapshot!(parse("fn (...args: _) => _"));
+    }
+
+    #[test]
     fn parse_infer_type() {
         insta::assert_debug_snapshot!(parse("infer T"));
     }
