@@ -1,0 +1,21 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+assertion_line: 724
+expression: "parse(\"Array<_>\")"
+---
+TypeAnn {
+    kind: TypeRef(
+        "Array",
+        Some(
+            [
+                TypeAnn {
+                    kind: Wildcard,
+                    span: 6..7,
+                    inferred_type: None,
+                },
+            ],
+        ),
+    ),
+    span: 0..8,
+    inferred_type: None,
+}

@@ -481,6 +481,11 @@ pub fn infer_type_ann(
         TypeAnnKind::Unknown => new_keyword(arena, Keyword::Unknown),
         TypeAnnKind::Never => new_keyword(arena, Keyword::Never),
 
+        TypeAnnKind::Wildcard => new_var_type(arena, None),
+        TypeAnnKind::Infer(_) => {
+            panic!("This should be handled by `expand_conditional` in util.rs")
+        }
+
         TypeAnnKind::Object(obj) => {
             let mut props: Vec<types::TObjElem> = Vec::new();
             for elem in obj.iter_mut() {
