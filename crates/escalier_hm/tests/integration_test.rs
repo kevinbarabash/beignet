@@ -3846,3 +3846,79 @@ fn chained_conditional_types() -> Result<(), Errors> {
 
     Ok(())
 }
+
+#[test]
+fn conditional_type_with_placeholders() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    // TODO: introduce a placeholder type that will unify with anything
+    let src = r#"
+        type IsArray<T> = if (T extends Array<_>) { true } else { false }
+        type T = IsArray<Array<number>>
+        type F = IsArray<number>
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let result = my_ctx.schemes.get("T").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"true"#);
+
+    let result = my_ctx.schemes.get("F").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"false"#);
+
+    Ok(())
+}
+
+#[test]
+#[ignore]
+fn conditional_type_with_function_subtyping() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+        type IsFunction<T> = if (T extends fn (...args: Array<_>) => _) { true } else { false }
+        type T = IsFunction<fn (a: number) => string>
+        type F = IsFunction<number>
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let result = my_ctx.schemes.get("T").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"true"#);
+
+    let result = my_ctx.schemes.get("F").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"false"#);
+
+    Ok(())
+}
+
+#[test]
+fn conditional_type_with_infer_and_placeholders() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    // TODO: introduce a placeholder type that will unify with anything
+    let src = r#"
+        type ReturnType<
+            T : fn (...args: Array<_>) => _
+        > = if (T extends fn (...args: Array<_>) => infer R) { 
+            R 
+        } else {
+            never
+        }
+        type Result = ReturnType<fn () => boolean> 
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let result = my_ctx.schemes.get("Result").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"boolean"#);
+
+    Ok(())
+}

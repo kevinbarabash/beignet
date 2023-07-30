@@ -1,0 +1,11 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(\"infer T\")"
+---
+TypeAnn {
+    kind: Infer(
+        "T",
+    ),
+    span: 0..5,
+    inferred_type: None,
+}

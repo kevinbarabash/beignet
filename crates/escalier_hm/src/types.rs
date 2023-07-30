@@ -302,6 +302,13 @@ pub struct Conditional {
     pub false_type: Index,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Infer {
+    pub name: String,
+    // TODO
+    // pub constraint: Option<Index>,
+}
+
 #[derive(Debug, Clone, Hash)]
 pub enum TypeKind {
     Variable(Variable),       // TODO: rename to TypeVar
@@ -318,6 +325,7 @@ pub enum TypeKind {
     KeyOf(KeyOf),
     IndexedAccess(IndexedAccess),
     Conditional(Conditional),
+    Infer(Infer),
 }
 
 #[derive(Debug, Clone)]
@@ -572,6 +580,7 @@ impl Type {
                     arena[*false_type].as_string(arena),
                 )
             }
+            TypeKind::Infer(Infer { name }) => format!("infer {}", name),
         }
     }
 }
@@ -744,6 +753,12 @@ pub fn new_conditional_type(
         extends,
         true_type,
         false_type,
+    })))
+}
+
+pub fn new_infer_type(arena: &mut Arena<Type>, name: &str) -> Index {
+    arena.insert(Type::from(TypeKind::Infer(Infer {
+        name: name.to_string(),
     })))
 }
 

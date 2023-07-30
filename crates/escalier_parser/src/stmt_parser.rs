@@ -259,6 +259,9 @@ mod tests {
     fn parse_type_alias() {
         insta::assert_debug_snapshot!(parse(r#"type Foo = Bar"#));
         insta::assert_debug_snapshot!(parse(r#"type Point<T> = {x: T, y: T}"#));
+        insta::assert_debug_snapshot!(parse(
+            r#"type ReturnType<T : fn (...args: Array<_>) => _> = if (T extends fn (...args: Array<_>) => infer R) { R } else { never }"#
+        ))
     }
 
     #[test]

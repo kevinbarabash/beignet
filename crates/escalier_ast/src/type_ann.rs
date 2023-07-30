@@ -114,6 +114,8 @@ pub enum TypeAnnKind {
     KeyOf(Box<TypeAnn>),
     TypeOf(Box<Expr>),
     Condition(ConditionType),
+    Wildcard,
+    Infer(String),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

@@ -170,6 +170,15 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             // Is this the right place to instantiate the function types?
             let func_a = instantiate_func(arena, func_a, None)?;
             let func_b = instantiate_func(arena, func_b, None)?;
+
+            // TODO:
+            // - determine if a nad/or b have rest params
+            // - calculate the minimum number of params that a and b have
+            //   - if a's minimum is greater than b's maximum, then it's not a subtype
+            // - unify each of the required params from a with the corresponding
+            //   param from b.  If we run out of required params in b, then start
+            //   using rest params from b.
+
             if func_a.params.len() > func_b.params.len() {
                 return Err(Errors::InferenceError(format!(
                     "{} is not a subtype of {} since it requires more params",
@@ -684,6 +693,11 @@ pub fn unify_call(
                 Ok(_) => unify_call(arena, ctx, args, type_args, true_type)?,
                 Err(_) => unify_call(arena, ctx, args, type_args, false_type)?,
             };
+        }
+        TypeKind::Infer(Infer { name }) => {
+            return Err(Errors::InferenceError(format!(
+                "infer {name} is not callable",
+            )));
         }
     }
 

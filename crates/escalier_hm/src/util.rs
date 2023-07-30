@@ -8,6 +8,7 @@ use crate::context::*;
 use crate::errors::*;
 use crate::types::*;
 use crate::unify::*;
+use crate::visitor::{KeyValueStore, Visitor};
 
 /// Checks whether a type variable occurs in a type expression.
 ///
@@ -32,6 +33,8 @@ pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
         TypeKind::Literal(_) => false,   // leaf node
         TypeKind::Primitive(_) => false, // leaf node
         TypeKind::Keyword(_) => false,   // leaf node
+        // TODO: check constraint when it gets added
+        TypeKind::Infer(_) => false, // leaf node
         TypeKind::Object(Object { elems }) => elems.iter().any(|elem| match elem {
             TObjElem::Constructor(constructor) => {
                 // TODO: check constraints and default on type_params
@@ -200,10 +203,6 @@ pub fn expand_alias(
                                 expand_type(arena, ctx, t)
                             })
                             .collect::<Result<Vec<_>, Errors>>()?;
-
-                        // for t in &types {
-                        //     eprintln!("t = {:#?}", arena[*t].as_string(arena));
-                        // }
 
                         let filtered_types = types
                             .into_iter()
@@ -481,10 +480,109 @@ pub fn expand_conditional(
         false_type,
     } = conditional;
 
-    match unify(arena, ctx, *check, *extends) {
-        Ok(_) => Ok(*true_type),
+    let infer_types = find_infer_types(arena, extends);
+
+    let mut type_param_map: HashMap<String, Index> = HashMap::new();
+    for infer_t in infer_types {
+        type_param_map.insert(infer_t.name.to_owned(), new_var_type(arena, None));
+    }
+
+    let extends = replace_infer_types(arena, extends, &type_param_map);
+
+    match unify(arena, ctx, *check, extends) {
+        Ok(_) => {
+            let true_type = instantiate_scheme(arena, *true_type, &type_param_map);
+            Ok(true_type)
+        }
         Err(_) => Ok(*false_type),
     }
+}
+
+pub struct FindInferVisitor<'a> {
+    pub arena: &'a mut Arena<Type>,
+    pub infer_types: Vec<Infer>,
+}
+
+impl<'a> KeyValueStore<Index, Type> for FindInferVisitor<'a> {
+    // NOTE: The reason we return both an Index and a Type is that
+    // this method calls `prune` which maybe return a different Index
+    // from the one passed to it. We need to ensure this method returns
+    // an Index that corresponds to the returned Type.
+    fn get_type(&mut self, idx: &Index) -> (Index, Type) {
+        let idx = prune(self.arena, *idx);
+        let t = self.arena[idx].clone();
+        (idx, t)
+    }
+    fn put_type(&mut self, t: Type) -> Index {
+        self.arena.insert(t)
+    }
+}
+
+impl<'a> Visitor for FindInferVisitor<'a> {
+    fn visit_type_var(&mut self, _: &Variable, idx: &Index) -> Index {
+        // We assume that any type variables were created by instantiate and
+        // thus there is no need to process them further.
+        *idx
+    }
+    fn visit_infer(&mut self, infer: &Infer, idx: Index) -> Index {
+        self.infer_types.push(infer.to_owned());
+        idx
+    }
+}
+
+pub fn find_infer_types(arena: &mut Arena<Type>, t: &Index) -> Vec<Infer> {
+    let mut replace_visitor = FindInferVisitor {
+        arena,
+        infer_types: vec![],
+    };
+
+    replace_visitor.visit_index(t);
+
+    replace_visitor.infer_types
+}
+
+pub struct ReplaceVisitor<'a> {
+    pub arena: &'a mut Arena<Type>,
+    pub mapping: &'a std::collections::HashMap<String, Index>,
+}
+
+impl<'a> KeyValueStore<Index, Type> for ReplaceVisitor<'a> {
+    // NOTE: The reason we return both an Index and a Type is that
+    // this method calls `prune` which maybe return a different Index
+    // from the one passed to it. We need to ensure this method returns
+    // an Index that corresponds to the returned Type.
+    fn get_type(&mut self, idx: &Index) -> (Index, Type) {
+        let idx = prune(self.arena, *idx);
+        let t = self.arena[idx].clone();
+        (idx, t)
+    }
+    fn put_type(&mut self, t: Type) -> Index {
+        self.arena.insert(t)
+    }
+}
+
+impl<'a> Visitor for ReplaceVisitor<'a> {
+    fn visit_type_var(&mut self, _: &Variable, idx: &Index) -> Index {
+        // We assume that any type variables were created by instantiate and
+        // thus there is no need to process them further.
+        *idx
+    }
+    fn visit_infer(&mut self, infer: &Infer, idx: Index) -> Index {
+        match self.mapping.get(&infer.name) {
+            Some(idx) => *idx,
+            None => idx,
+        }
+    }
+}
+
+pub fn replace_infer_types(
+    arena: &mut Arena<Type>,
+    t: &Index,
+    mapping: &std::collections::HashMap<String, Index>,
+) -> Index {
+    let mut replace_visitor = ReplaceVisitor { arena, mapping };
+
+    replace_visitor.visit_index(t)
 }
 
 pub fn get_computed_member(

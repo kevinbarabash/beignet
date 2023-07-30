@@ -481,6 +481,9 @@ pub fn infer_type_ann(
         TypeAnnKind::Unknown => new_keyword(arena, Keyword::Unknown),
         TypeAnnKind::Never => new_keyword(arena, Keyword::Never),
 
+        TypeAnnKind::Wildcard => new_var_type(arena, None),
+        TypeAnnKind::Infer(name) => new_infer_type(arena, name),
+
         TypeAnnKind::Object(obj) => {
             let mut props: Vec<types::TObjElem> = Vec::new();
             for elem in obj.iter_mut() {
@@ -755,10 +758,23 @@ pub fn infer_type_ann(
         }) => {
             let check_idx = infer_type_ann(arena, check, ctx)?;
             let extends_idx = infer_type_ann(arena, extends, ctx)?;
+
+            let infer_types = find_infer_types(arena, &extends_idx);
+            for infer in infer_types {
+                let tp = new_var_type(arena, None);
+                let scheme = Scheme {
+                    type_params: None,
+                    t: tp,
+                };
+                ctx.schemes.insert(infer.name, scheme);
+                // QUESTION: Do we need to do something with ctx.non_generic here?
+                // ctx.non_generic.insert(tp);
+            }
+
             let true_idx = infer_type_ann(arena, true_type, ctx)?;
             let false_idx = infer_type_ann(arena, false_type, ctx)?;
             new_conditional_type(arena, check_idx, extends_idx, true_idx, false_idx)
-        } // TypeAnnKind::Infer(_) => todo!(),
+        }
     };
 
     let t = &mut arena[idx];

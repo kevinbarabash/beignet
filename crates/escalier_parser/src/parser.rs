@@ -269,6 +269,7 @@ impl<'a> Parser<'a> {
             "do" => TokenKind::Do,
             "class" => TokenKind::Class,
             "extends" => TokenKind::Extends,
+            "infer" => TokenKind::Infer,
             "return" => TokenKind::Return,
             "if" => TokenKind::If,
             "else" => TokenKind::Else,

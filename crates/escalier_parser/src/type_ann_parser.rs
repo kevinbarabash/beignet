@@ -68,6 +68,10 @@ impl<'a> Parser<'a> {
                 self.next();
                 TypeAnnKind::Never
             }
+            TokenKind::Underscore => {
+                self.next();
+                TypeAnnKind::Wildcard
+            }
             TokenKind::LeftBrace => {
                 self.next(); // consumes '{'
                 let mut props: Vec<ObjectProp> = vec![];
@@ -329,6 +333,20 @@ impl<'a> Parser<'a> {
                 let expr = self.parse_expr()?;
 
                 TypeAnnKind::TypeOf(Box::new(expr))
+            }
+            TokenKind::Infer => {
+                self.next(); // consumes 'infer'
+
+                let name = match self.next().unwrap_or(EOF.clone()).kind {
+                    TokenKind::Identifier(name) => name,
+                    _ => {
+                        return Err(ParseError {
+                            message: "expected identifier".to_string(),
+                        })
+                    }
+                };
+
+                TypeAnnKind::Infer(name)
             }
             TokenKind::If => return self.parse_conditional_type(),
             token => {
@@ -699,5 +717,15 @@ mod tests {
     #[test]
     fn parse_conditional_type() {
         insta::assert_debug_snapshot!(parse("if (T extends U) { never } else { T }"));
+    }
+
+    #[test]
+    fn parse_wildcard_type() {
+        insta::assert_debug_snapshot!(parse("Array<_>"));
+    }
+
+    #[test]
+    fn parse_infer_type() {
+        insta::assert_debug_snapshot!(parse("infer T"));
     }
 }
