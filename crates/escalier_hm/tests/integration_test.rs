@@ -3878,7 +3878,7 @@ fn conditional_type_with_function_subtyping() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-        type IsFunction<T> = if (T extends fn (...args: Array<_>) => _) { true } else { false }
+        type IsFunction<T> = if (T extends fn (...args: _) => _) { true } else { false }
         type T = IsFunction<fn (a: number) => string>
         type F = IsFunction<number>
     "#;
@@ -3898,27 +3898,150 @@ fn conditional_type_with_function_subtyping() -> Result<(), Errors> {
 }
 
 #[test]
-fn conditional_type_with_infer_and_placeholders() -> Result<(), Errors> {
+fn return_type_rest_placeholder() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     // TODO: introduce a placeholder type that will unify with anything
     let src = r#"
         type ReturnType<
-            T : fn (...args: Array<_>) => _
-        > = if (T extends fn (...args: Array<_>) => infer R) { 
+            T : fn (...args: _) => _
+        > = if (T extends fn (...args: _) => infer R) { 
             R 
         } else {
             never
         }
-        type Result = ReturnType<fn () => boolean> 
+        type RT1 = ReturnType<fn (a: string, b: number) => boolean> 
+        type RT2 = ReturnType<fn (a: string) => number>
+        type RT3 = ReturnType<fn () => string> 
     "#;
     let mut program = parse(src).unwrap();
 
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
-    let result = my_ctx.schemes.get("Result").unwrap();
+    let result = my_ctx.schemes.get("RT1").unwrap();
     let t = expand_type(&mut arena, &my_ctx, result.t)?;
     assert_eq!(arena[t].as_string(&arena), r#"boolean"#);
+
+    let result = my_ctx.schemes.get("RT2").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"number"#);
+
+    let result = my_ctx.schemes.get("RT3").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"string"#);
+
+    Ok(())
+}
+
+#[test]
+fn parameters_utility_type() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Parameters<T : fn (...args: _) => _> = if (
+        T extends fn (...args: infer P) => _
+    ) { 
+        P
+    } else { 
+        never
+    }
+    type P1 = Parameters<fn (a: string, b: number) => boolean>
+    type P2 = Parameters<fn (a: string, ...rest: Array<number>) => boolean>
+    "#;
+
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let result = my_ctx.schemes.get("P1").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"[string, number]"#);
+
+    let result = my_ctx.schemes.get("P2").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    // TODO: add support for spread types within tuple types
+    assert_eq!(arena[t].as_string(&arena), r#"[string, Array<number>]"#);
+
+    Ok(())
+}
+
+#[test]
+fn function_subtyping_with_rest_placeholder() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let none: fn (...args: _) => boolean = fn () => true
+    let one: fn (...args: _) => boolean = fn (a: string) => true
+    let many: fn (...args: _) => boolean = fn (a: string, b: number) => true
+    let one_req: fn (a: string, ...args: _) => boolean = fn (a: string, b: number) => true
+    let array: fn (...args: Array<_>) => boolean = fn (...args: Array<number>) => true
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    Ok(())
+}
+
+#[test]
+fn function_subtyping_with_rest_array_fails() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let result: fn (...args: Array<_>) => boolean = fn (a: string, b: number) => true
+    "#;
+    let mut program = parse(src).unwrap();
+
+    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "type mismatch: unify(undefined, string) failed".to_string()
+        ))
+    );
+
+    Ok(())
+}
+
+#[test]
+fn function_multiple_rest_params_in_type_fails() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let result: fn (...args: _, ...moar_args: _) => boolean = fn (a: string, b: number) => true
+    "#;
+    let mut program = parse(src).unwrap();
+
+    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "multiple rest params in function".to_string()
+        ))
+    );
+
+    Ok(())
+}
+
+#[test]
+fn function_multiple_rest_params_function_fails() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let result: fn (...args: _) => boolean = fn (...args: _, ...moar_args: _) => true
+    "#;
+    let mut program = parse(src).unwrap();
+
+    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "multiple rest params in function".to_string()
+        ))
+    );
 
     Ok(())
 }

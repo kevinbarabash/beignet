@@ -1,4 +1,5 @@
 use defaultmap::*;
+use escalier_ast::PatternKind;
 use generational_arena::{Arena, Index};
 use itertools::Itertools;
 use std::collections::{BTreeSet, HashMap};
@@ -171,15 +172,63 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             let func_a = instantiate_func(arena, func_a, None)?;
             let func_b = instantiate_func(arena, func_b, None)?;
 
-            // TODO:
-            // - determine if a nad/or b have rest params
-            // - calculate the minimum number of params that a and b have
-            //   - if a's minimum is greater than b's maximum, then it's not a subtype
-            // - unify each of the required params from a with the corresponding
-            //   param from b.  If we run out of required params in b, then start
-            //   using rest params from b.
+            let mut rest_a = None;
+            let mut rest_b = None;
 
-            if func_a.params.len() > func_b.params.len() {
+            for param in &func_a.params {
+                if let TPat::Rest(rest) = &param.pattern {
+                    if rest_a.is_some() {
+                        return Err(Errors::InferenceError(
+                            "multiple rest params in function".to_string(),
+                        ));
+                    }
+                    rest_a = Some((rest, param.t));
+                }
+            }
+
+            for param in &func_b.params {
+                if let TPat::Rest(rest) = &param.pattern {
+                    if rest_b.is_some() {
+                        return Err(Errors::InferenceError(
+                            "multiple rest params in function".to_string(),
+                        ));
+                    }
+                    rest_b = Some((rest, param.t));
+                }
+            }
+
+            let min_params_a = func_a.params.len() - rest_a.is_some() as usize;
+            let min_params_b = func_b.params.len() - rest_b.is_some() as usize;
+
+            if min_params_a > min_params_b {
+                if let Some(rest_b) = rest_b {
+                    for i in 0..min_params_b {
+                        let p = &func_a.params[i];
+                        let q = &func_b.params[i];
+                        // NOTE: We reverse the order of the params here because func_a
+                        // should be able to accept any params that func_b can accept,
+                        // its params may be more lenient.
+                        unify(arena, ctx, q.t, p.t)?;
+                    }
+
+                    let remaining_args_a = new_tuple_type(
+                        arena,
+                        &func_a.params[min_params_b..]
+                            .iter()
+                            .map(|p| p.t)
+                            .collect_vec(),
+                    );
+
+                    // NOTE: We reverse the order of the params here because func_a
+                    // should be able to accept any params that func_b can accept,
+                    // its params may be more lenient.
+                    unify(arena, ctx, rest_b.1, remaining_args_a)?;
+
+                    unify(arena, ctx, func_a.ret, func_b.ret)?;
+
+                    return Ok(());
+                }
+
                 return Err(Errors::InferenceError(format!(
                     "{} is not a subtype of {} since it requires more params",
                     a_t.as_string(arena),
@@ -187,13 +236,34 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 )));
             }
 
-            for (p, q) in func_a.params.iter().zip(func_b.params.iter()) {
+            for i in 0..min_params_a {
+                let p = &func_a.params[i];
+                let q = &func_b.params[i];
                 // NOTE: We reverse the order of the params here because func_a
                 // should be able to accept any params that func_b can accept,
-                // its params may be more lenient.  Thus q is a subtype of p.
+                // its params may be more lenient.
                 unify(arena, ctx, q.t, p.t)?;
             }
+
+            if let Some(rest_a) = rest_a {
+                for i in min_params_a..min_params_b {
+                    let q = &func_b.params[i];
+                    // NOTE: We reverse the order of the params here because func_a
+                    // should be able to accept any params that func_b can accept,
+                    // its params may be more lenient.
+                    unify(arena, ctx, q.t, rest_a.1)?;
+                }
+
+                if let Some(rest_b) = rest_b {
+                    // NOTE: We reverse the order of the params here because func_a
+                    // should be able to accept any params that func_b can accept,
+                    // its params may be more lenient.
+                    unify(arena, ctx, rest_b.1, rest_a.1)?;
+                }
+            }
+
             unify(arena, ctx, func_a.ret, func_b.ret)?;
+
             Ok(())
         }
         (TypeKind::Literal(lit1), TypeKind::Literal(lit2)) => {

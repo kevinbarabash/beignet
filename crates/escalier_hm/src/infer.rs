@@ -1186,7 +1186,6 @@ fn infer_type_params(
 // introduced.  In that situation, we only need to check certain parts of
 // the initializer for mutability.
 pub fn check_mutability(ctx: &Context, tpat: &TPat, init: &Expr) -> Result<bool, Errors> {
-    eprintln!("check_mutability({:?}, {:?})", tpat, init);
     let mut lhs_mutable = false;
 
     // TODO: handle other patterns
