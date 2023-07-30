@@ -3934,6 +3934,38 @@ fn return_type_rest_placeholder() -> Result<(), Errors> {
 }
 
 #[test]
+fn parameters_utility_type() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Parameters<T : fn (...args: _) => _> = if (
+        T extends fn (...args: infer P) => _
+    ) { 
+        P
+    } else { 
+        never
+    }
+    type P1 = Parameters<fn (a: string, b: number) => boolean>
+    type P2 = Parameters<fn (a: string, ...rest: Array<number>) => boolean>
+    "#;
+
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let result = my_ctx.schemes.get("P1").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"[string, number]"#);
+
+    let result = my_ctx.schemes.get("P2").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    // TODO: add support for spread types within tuple types
+    assert_eq!(arena[t].as_string(&arena), r#"[string, Array<number>]"#);
+
+    Ok(())
+}
+
+#[test]
 fn function_subtyping_with_rest_placeholder() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
