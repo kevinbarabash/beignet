@@ -3941,6 +3941,7 @@ fn function_subtyping_with_rest_placeholder() -> Result<(), Errors> {
     let none: fn (...args: _) => boolean = fn () => true
     let one: fn (...args: _) => boolean = fn (a: string) => true
     let many: fn (...args: _) => boolean = fn (a: string, b: number) => true
+    let one_req: fn (a: string, ...args: _) => boolean = fn (a: string, b: number) => true
     let array: fn (...args: Array<_>) => boolean = fn (...args: Array<number>) => true
     "#;
     let mut program = parse(src).unwrap();
@@ -3965,6 +3966,48 @@ fn function_subtyping_with_rest_array_fails() -> Result<(), Errors> {
         result,
         Err(Errors::InferenceError(
             "type mismatch: unify(undefined, string) failed".to_string()
+        ))
+    );
+
+    Ok(())
+}
+
+#[test]
+fn function_multiple_rest_params_in_type_fails() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let result: fn (...args: _, ...moar_args: _) => boolean = fn (a: string, b: number) => true
+    "#;
+    let mut program = parse(src).unwrap();
+
+    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "multiple rest params in function".to_string()
+        ))
+    );
+
+    Ok(())
+}
+
+#[test]
+fn function_multiple_rest_params_function_fails() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let result: fn (...args: _) => boolean = fn (...args: _, ...moar_args: _) => true
+    "#;
+    let mut program = parse(src).unwrap();
+
+    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "multiple rest params in function".to_string()
         ))
     );
 

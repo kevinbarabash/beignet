@@ -172,8 +172,6 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             let func_a = instantiate_func(arena, func_a, None)?;
             let func_b = instantiate_func(arena, func_b, None)?;
 
-            eprintln!("after instantiate_func()");
-
             let mut rest_a = None;
             let mut rest_b = None;
 
@@ -185,7 +183,6 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                         ));
                     }
                     rest_a = Some((rest, param.t));
-                    break;
                 }
             }
 
@@ -197,7 +194,6 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                         ));
                     }
                     rest_b = Some((rest, param.t));
-                    break;
                 }
             }
 
