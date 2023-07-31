@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/type_ann_parser.rs
-expression: "parse(\"if (T extends U) { never } else { T }\")"
+expression: "parse(\"if (T: U) { never } else { T }\")"
 ---
 TypeAnn {
     kind: Condition(
@@ -18,12 +18,12 @@ TypeAnn {
                     "U",
                     None,
                 ),
-                span: 14..15,
+                span: 7..8,
                 inferred_type: None,
             },
             true_type: TypeAnn {
                 kind: Never,
-                span: 19..24,
+                span: 12..17,
                 inferred_type: None,
             },
             false_type: TypeAnn {
@@ -31,7 +31,7 @@ TypeAnn {
                     "T",
                     None,
                 ),
-                span: 34..35,
+                span: 27..28,
                 inferred_type: None,
             },
         },

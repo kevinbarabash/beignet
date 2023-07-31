@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/stmt_parser.rs
-expression: "parse(r#\"type ReturnType<T : fn (...args: Array<_>) => _> = if (T extends fn (...args: Array<_>) => infer R) { R } else { never }\"#)"
+expression: "parse(r#\"\n            type ReturnType<T: fn (...args: Array<_>) => _> = if (\n                T: fn (...args: Array<_>) => infer R\n            ) { \n                R\n            } else {\n                never \n            }\"#)"
 ---
 [
     Stmt {
@@ -14,7 +14,7 @@ expression: "parse(r#\"type ReturnType<T : fn (...args: Array<_>) => _> = if (T 
                                 "T",
                                 None,
                             ),
-                            span: 55..56,
+                            span: 84..85,
                             inferred_type: None,
                         },
                         extends: TypeAnn {
@@ -30,16 +30,16 @@ expression: "parse(r#\"type ReturnType<T : fn (...args: Array<_>) => _> = if (T 
                                                             kind: Ident(
                                                                 BindingIdent {
                                                                     name: "args",
-                                                                    span: 72..76,
+                                                                    span: 94..98,
                                                                     mutable: false,
                                                                 },
                                                             ),
-                                                            span: 72..76,
+                                                            span: 94..98,
                                                             inferred_type: None,
                                                         },
                                                     },
                                                 ),
-                                                span: 69..72,
+                                                span: 91..94,
                                                 inferred_type: None,
                                             },
                                             type_ann: Some(
@@ -50,13 +50,13 @@ expression: "parse(r#\"type ReturnType<T : fn (...args: Array<_>) => _> = if (T 
                                                             [
                                                                 TypeAnn {
                                                                     kind: Wildcard,
-                                                                    span: 84..85,
+                                                                    span: 106..107,
                                                                     inferred_type: None,
                                                                 },
                                                             ],
                                                         ),
                                                     ),
-                                                    span: 78..86,
+                                                    span: 100..108,
                                                     inferred_type: None,
                                                 },
                                             ),
@@ -67,12 +67,12 @@ expression: "parse(r#\"type ReturnType<T : fn (...args: Array<_>) => _> = if (T 
                                         kind: Infer(
                                             "R",
                                         ),
-                                        span: 91..96,
+                                        span: 113..118,
                                         inferred_type: None,
                                     },
                                 },
                             ),
-                            span: 65..67,
+                            span: 87..89,
                             inferred_type: None,
                         },
                         true_type: TypeAnn {
@@ -80,23 +80,23 @@ expression: "parse(r#\"type ReturnType<T : fn (...args: Array<_>) => _> = if (T 
                                 "R",
                                 None,
                             ),
-                            span: 102..103,
+                            span: 154..155,
                             inferred_type: None,
                         },
                         false_type: TypeAnn {
                             kind: Never,
-                            span: 113..118,
+                            span: 193..198,
                             inferred_type: None,
                         },
                     },
                 ),
-                span: 51..53,
+                span: 63..65,
                 inferred_type: None,
             },
             type_params: Some(
                 [
                     TypeParam {
-                        span: 17..48,
+                        span: 30..60,
                         name: "T",
                         bound: Some(
                             TypeAnn {
@@ -112,16 +112,16 @@ expression: "parse(r#\"type ReturnType<T : fn (...args: Array<_>) => _> = if (T 
                                                                 kind: Ident(
                                                                     BindingIdent {
                                                                         name: "args",
-                                                                        span: 27..31,
+                                                                        span: 39..43,
                                                                         mutable: false,
                                                                     },
                                                                 ),
-                                                                span: 27..31,
+                                                                span: 39..43,
                                                                 inferred_type: None,
                                                             },
                                                         },
                                                     ),
-                                                    span: 24..27,
+                                                    span: 36..39,
                                                     inferred_type: None,
                                                 },
                                                 type_ann: Some(
@@ -132,13 +132,13 @@ expression: "parse(r#\"type ReturnType<T : fn (...args: Array<_>) => _> = if (T 
                                                                 [
                                                                     TypeAnn {
                                                                         kind: Wildcard,
-                                                                        span: 39..40,
+                                                                        span: 51..52,
                                                                         inferred_type: None,
                                                                     },
                                                                 ],
                                                             ),
                                                         ),
-                                                        span: 33..41,
+                                                        span: 45..53,
                                                         inferred_type: None,
                                                     },
                                                 ),
@@ -147,12 +147,12 @@ expression: "parse(r#\"type ReturnType<T : fn (...args: Array<_>) => _> = if (T 
                                         ],
                                         ret: TypeAnn {
                                             kind: Wildcard,
-                                            span: 46..47,
+                                            span: 58..59,
                                             inferred_type: None,
                                         },
                                     },
                                 ),
-                                span: 20..22,
+                                span: 32..34,
                                 inferred_type: None,
                             },
                         ),
@@ -161,7 +161,7 @@ expression: "parse(r#\"type ReturnType<T : fn (...args: Array<_>) => _> = if (T 
                 ],
             ),
         },
-        span: 0..53,
+        span: 13..65,
         inferred_type: None,
     },
 ]

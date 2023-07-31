@@ -3808,7 +3808,7 @@ fn conditional_type_exclude() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    type Exclude<T, U> = if (T extends U) { never } else { T }
+    type Exclude<T, U> = if (T: U) { never } else { T }
     type Result = Exclude<"a" | "b" | "c" | "d" | "e", "a" | "e">
     "#;
     let mut program = parse(src).unwrap();
@@ -3827,9 +3827,9 @@ fn chained_conditional_types() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    type Foo<T> = if (T extends string) { 
+    type Foo<T> = if (T: string) { 
         "str"
-    } else if (T extends number) {
+    } else if (T: number) {
         "num"
     } else {
         "?"
@@ -3853,7 +3853,7 @@ fn conditional_type_with_placeholders() -> Result<(), Errors> {
 
     // TODO: introduce a placeholder type that will unify with anything
     let src = r#"
-        type IsArray<T> = if (T extends Array<_>) { true } else { false }
+        type IsArray<T> = if (T: Array<_>) { true } else { false }
         type T = IsArray<Array<number>>
         type F = IsArray<number>
     "#;
@@ -3878,7 +3878,7 @@ fn conditional_type_with_function_subtyping() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-        type IsFunction<T> = if (T extends fn (...args: _) => _) { true } else { false }
+        type IsFunction<T> = if (T: fn (...args: _) => _) { true } else { false }
         type T = IsFunction<fn (a: number) => string>
         type F = IsFunction<number>
     "#;
@@ -3904,8 +3904,8 @@ fn return_type_rest_placeholder() -> Result<(), Errors> {
     // TODO: introduce a placeholder type that will unify with anything
     let src = r#"
         type ReturnType<
-            T : fn (...args: _) => _
-        > = if (T extends fn (...args: _) => infer R) { 
+            T: fn (...args: _) => _
+        > = if (T: fn (...args: _) => infer R) { 
             R 
         } else {
             never
@@ -3939,7 +3939,7 @@ fn parameters_utility_type() -> Result<(), Errors> {
 
     let src = r#"
     type Parameters<T : fn (...args: _) => _> = if (
-        T extends fn (...args: infer P) => _
+        T: fn (...args: infer P) => _
     ) { 
         P
     } else { 
