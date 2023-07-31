@@ -256,10 +256,24 @@ impl<'a> Parser<'a> {
                 let mut elems: Vec<TypeAnn> = vec![];
 
                 while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBracket {
-                    elems.push(self.parse_type_ann()?);
+                    if self.peek().unwrap_or(&EOF).kind == TokenKind::DotDotDot {
+                        let token = self.next().ok_or(ParseError {
+                            message: "expected '...'".to_string(),
+                        })?;
+                        let type_ann = self.parse_type_ann()?;
+                        let span = merge_spans(&token.span, &type_ann.span);
+
+                        elems.push(TypeAnn {
+                            kind: TypeAnnKind::Rest(Box::new(type_ann)),
+                            span,
+                            inferred_type: None,
+                        });
+                    } else {
+                        elems.push(self.parse_type_ann()?);
+                    }
 
                     if self.peek().unwrap_or(&EOF).kind == TokenKind::Comma {
-                        self.next().unwrap_or(EOF.clone());
+                        self.next(); // consume the ','
                     } else {
                         break;
                     }
@@ -645,6 +659,7 @@ mod tests {
     fn parse_tuple_types() {
         insta::assert_debug_snapshot!(parse("[number, string, boolean]"));
         insta::assert_debug_snapshot!(parse("[\n  number,\n  string,\n  boolean,\n]"));
+        insta::assert_debug_snapshot!(parse("[number, ...number[]]"));
     }
 
     #[test]

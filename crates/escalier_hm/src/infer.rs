@@ -732,6 +732,10 @@ pub fn infer_type_ann(
             }
             new_tuple_type(arena, &idxs)
         }
+        TypeAnnKind::Rest(rest) => {
+            let idx = infer_type_ann(arena, rest, ctx)?;
+            new_rest_type(arena, idx)
+        }
         TypeAnnKind::Array(elem_type) => {
             let idx = infer_type_ann(arena, elem_type, ctx)?;
             new_constructor(arena, "Array", &[idx])

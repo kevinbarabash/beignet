@@ -1,5 +1,4 @@
 use defaultmap::*;
-use escalier_ast::PatternKind;
 use generational_arena::{Arena, Index};
 use itertools::Itertools;
 use std::collections::{BTreeSet, HashMap};
@@ -211,13 +210,35 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                         unify(arena, ctx, q.t, p.t)?;
                     }
 
-                    let remaining_args_a = new_tuple_type(
-                        arena,
-                        &func_a.params[min_params_b..]
-                            .iter()
-                            .map(|p| p.t)
-                            .collect_vec(),
-                    );
+                    let mut remaining_args_a = vec![];
+
+                    for p in &func_a.params[min_params_b..] {
+                        let arg = match &p.pattern {
+                            TPat::Rest(_) => match &arena[p.t].kind {
+                                TypeKind::Tuple(tuple) => {
+                                    for t in &tuple.types {
+                                        remaining_args_a.push(*t);
+                                    }
+                                    continue;
+                                }
+                                TypeKind::Constructor(array) if array.name == "Array" => {
+                                    new_rest_type(arena, p.t)
+                                }
+                                TypeKind::Constructor(_) => todo!(),
+                                _ => {
+                                    return Err(Errors::InferenceError(format!(
+                                        "rest param must be an array or tuple, got {}",
+                                        arena[p.t].as_string(arena)
+                                    )))
+                                }
+                            },
+                            _ => p.t,
+                        };
+
+                        remaining_args_a.push(arg);
+                    }
+
+                    let remaining_args_a = new_tuple_type(arena, &remaining_args_a);
 
                     // NOTE: We reverse the order of the params here because func_a
                     // should be able to accept any params that func_b can accept,

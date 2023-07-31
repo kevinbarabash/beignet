@@ -112,6 +112,7 @@ pub enum TypeAnnKind {
     Intersection(Vec<TypeAnn>),
     IndexedAccess(Box<TypeAnn>, Box<TypeAnn>),
     KeyOf(Box<TypeAnn>),
+    Rest(Box<TypeAnn>),
     TypeOf(Box<Expr>),
     Condition(ConditionType),
     Wildcard,

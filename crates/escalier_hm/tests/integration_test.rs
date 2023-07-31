@@ -3947,6 +3947,7 @@ fn parameters_utility_type() -> Result<(), Errors> {
     }
     type P1 = Parameters<fn (a: string, b: number) => boolean>
     type P2 = Parameters<fn (a: string, ...rest: Array<number>) => boolean>
+    type P3 = Parameters<fn (a: string, ...rest: [number, boolean]) => boolean>
     "#;
 
     let mut program = parse(src).unwrap();
@@ -3959,8 +3960,11 @@ fn parameters_utility_type() -> Result<(), Errors> {
 
     let result = my_ctx.schemes.get("P2").unwrap();
     let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    // TODO: add support for spread types within tuple types
-    assert_eq!(arena[t].as_string(&arena), r#"[string, Array<number>]"#);
+    assert_eq!(arena[t].as_string(&arena), r#"[string, ...Array<number>]"#);
+
+    let result = my_ctx.schemes.get("P3").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"[string, number, boolean]"#);
 
     Ok(())
 }

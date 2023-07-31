@@ -1,0 +1,34 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(\"[number, ...number[]]\")"
+---
+TypeAnn {
+    kind: Tuple(
+        [
+            TypeAnn {
+                kind: Number,
+                span: 1..7,
+                inferred_type: None,
+            },
+            TypeAnn {
+                kind: Rest(
+                    TypeAnn {
+                        kind: Array(
+                            TypeAnn {
+                                kind: Number,
+                                span: 12..18,
+                                inferred_type: None,
+                            },
+                        ),
+                        span: 12..20,
+                        inferred_type: None,
+                    },
+                ),
+                span: 8..20,
+                inferred_type: None,
+            },
+        ],
+    ),
+    span: 0..21,
+    inferred_type: None,
+}
