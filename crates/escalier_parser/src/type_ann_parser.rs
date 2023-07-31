@@ -517,7 +517,7 @@ impl<'a> Parser<'a> {
             TokenKind::LeftParen
         );
         let check = self.parse_type_ann()?;
-        assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Extends);
+        assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
         let extends = self.parse_type_ann()?;
         assert_eq!(
             self.next().unwrap_or(EOF.clone()).kind,
@@ -716,7 +716,7 @@ mod tests {
 
     #[test]
     fn parse_conditional_type() {
-        insta::assert_debug_snapshot!(parse("if (T extends U) { never } else { T }"));
+        insta::assert_debug_snapshot!(parse("if (T: U) { never } else { T }"));
     }
 
     #[test]

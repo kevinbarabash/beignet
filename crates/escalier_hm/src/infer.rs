@@ -759,6 +759,8 @@ pub fn infer_type_ann(
             let check_idx = infer_type_ann(arena, check, ctx)?;
             let extends_idx = infer_type_ann(arena, extends, ctx)?;
 
+            let mut true_ctx = ctx.clone();
+
             let infer_types = find_infer_types(arena, &extends_idx);
             for infer in infer_types {
                 let tp = new_var_type(arena, None);
@@ -766,12 +768,12 @@ pub fn infer_type_ann(
                     type_params: None,
                     t: tp,
                 };
-                ctx.schemes.insert(infer.name, scheme);
+                true_ctx.schemes.insert(infer.name, scheme);
                 // QUESTION: Do we need to do something with ctx.non_generic here?
-                // ctx.non_generic.insert(tp);
+                // true_ctx.non_generic.insert(tp);
             }
 
-            let true_idx = infer_type_ann(arena, true_type, ctx)?;
+            let true_idx = infer_type_ann(arena, true_type, &mut true_ctx)?;
             let false_idx = infer_type_ann(arena, false_type, ctx)?;
             new_conditional_type(arena, check_idx, extends_idx, true_idx, false_idx)
         }
