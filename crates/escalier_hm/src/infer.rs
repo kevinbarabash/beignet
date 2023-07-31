@@ -759,6 +759,8 @@ pub fn infer_type_ann(
             let check_idx = infer_type_ann(arena, check, ctx)?;
             let extends_idx = infer_type_ann(arena, extends, ctx)?;
 
+            // Create a copy of `ctx` so that we can add type aliases to it
+            // without them leaking out of the conditional type.
             let mut true_ctx = ctx.clone();
 
             let infer_types = find_infer_types(arena, &extends_idx);
