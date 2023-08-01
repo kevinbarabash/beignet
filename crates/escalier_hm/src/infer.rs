@@ -783,6 +783,9 @@ pub fn infer_type_ann(
             let false_idx = infer_type_ann(arena, false_type, ctx)?;
             new_conditional_type(arena, check_idx, extends_idx, true_idx, false_idx)
         }
+        TypeAnnKind::Match(_) => {
+            todo!("Match types are not yet supported")
+        }
     };
 
     let t = &mut arena[idx];
