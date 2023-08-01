@@ -749,6 +749,24 @@ fn tuple_subtyping() -> Result<(), Errors> {
     Ok(())
 }
 
+// TODO(#654): update how we unify tuples with arrays and other tuples
+#[test]
+#[ignore]
+fn more_tuple_subtyping() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let tuple1: [number, ...string[]] = [5]
+    let tuple2: [number, ...string[]] = [5, "hello"]
+    let tuple3: [number, ...string[]] = [5, "hello", "world"]
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    Ok(())
+}
+
 #[test]
 fn tuple_subtyping_not_enough_elements() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
@@ -3947,6 +3965,8 @@ fn parameters_utility_type() -> Result<(), Errors> {
     }
     type P1 = Parameters<fn (a: string, b: number) => boolean>
     type P2 = Parameters<fn (a: string, ...rest: Array<number>) => boolean>
+    type P3 = Parameters<fn (a: string, ...rest: [number, boolean]) => boolean>
+    type P4 = Parameters<fn (a: string, ...rest: [number, boolean, ...string[]]) => boolean>
     "#;
 
     let mut program = parse(src).unwrap();
@@ -3959,8 +3979,18 @@ fn parameters_utility_type() -> Result<(), Errors> {
 
     let result = my_ctx.schemes.get("P2").unwrap();
     let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    // TODO: add support for spread types within tuple types
-    assert_eq!(arena[t].as_string(&arena), r#"[string, Array<number>]"#);
+    assert_eq!(arena[t].as_string(&arena), r#"[string, ...Array<number>]"#);
+
+    let result = my_ctx.schemes.get("P3").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"[string, number, boolean]"#);
+
+    let result = my_ctx.schemes.get("P4").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(
+        arena[t].as_string(&arena),
+        r#"[string, number, boolean, ...Array<string>]"#
+    );
 
     Ok(())
 }
@@ -3975,6 +4005,9 @@ fn function_subtyping_with_rest_placeholder() -> Result<(), Errors> {
     let many: fn (...args: _) => boolean = fn (a: string, b: number) => true
     let one_req: fn (a: string, ...args: _) => boolean = fn (a: string, b: number) => true
     let array: fn (...args: Array<_>) => boolean = fn (...args: Array<number>) => true
+    let tuple1: fn (...args: [_, _]) => boolean = fn (...args: [number, string]) => true
+    let tuple2: fn (...args: [_, _]) => boolean = fn (a: string, b: number) => true
+    let tuple3: fn (...args: [string, number]) => boolean = fn (a: string, b: number) => true
     "#;
     let mut program = parse(src).unwrap();
 
@@ -4042,6 +4075,24 @@ fn function_multiple_rest_params_function_fails() -> Result<(), Errors> {
             "multiple rest params in function".to_string()
         ))
     );
+
+    Ok(())
+}
+
+// TODO(#653): rest args in function calls
+#[test]
+#[ignore]
+fn function_call_with_spread_args() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let foo = fn (a: number, b: string) => true
+    let args = [5, "hello"]
+    let result = foo(...args)
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
     Ok(())
 }
