@@ -816,38 +816,6 @@ pub fn infer_type_ann(
     Ok(idx)
 }
 
-fn infer_conditional_type(
-    arena: &mut Arena<Type>,
-    ctx: &mut Context,
-    cond_type: &mut ConditionType,
-) -> Result<Index, Errors> {
-    let check_idx = infer_type_ann(arena, &mut cond_type.check, ctx)?;
-    let extends_idx = infer_type_ann(arena, &mut cond_type.extends, ctx)?;
-
-    // Create a copy of `ctx` so that we can add type aliases to it
-    // without them leaking out of the conditional type.
-    let mut true_ctx = ctx.clone();
-
-    let infer_types = find_infer_types(arena, &extends_idx);
-    for infer in infer_types {
-        let tp = new_var_type(arena, None);
-        let scheme = Scheme {
-            type_params: None,
-            t: tp,
-        };
-        true_ctx.schemes.insert(infer.name, scheme);
-        // QUESTION: Do we need to do something with ctx.non_generic here?
-        // true_ctx.non_generic.insert(tp);
-    }
-
-    let true_idx = infer_type_ann(arena, &mut cond_type.true_type, &mut true_ctx)?;
-    let false_idx = infer_type_ann(arena, &mut cond_type.false_type, ctx)?;
-
-    let t = new_conditional_type(arena, check_idx, extends_idx, true_idx, false_idx);
-
-    Ok(t)
-}
-
 pub fn infer_statement(
     arena: &mut Arena<Type>,
     statement: &mut Stmt,
