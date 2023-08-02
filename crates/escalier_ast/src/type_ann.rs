@@ -97,7 +97,7 @@ pub struct MatchType {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct MatchTypeCase {
-    pub check: Box<TypeAnn>,
+    pub extends: Box<TypeAnn>,
     pub true_type: Box<TypeAnn>,
 }
 

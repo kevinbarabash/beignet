@@ -15,7 +15,7 @@ TypeAnn {
             },
             cases: [
                 MatchTypeCase {
-                    check: TypeAnn {
+                    extends: TypeAnn {
                         kind: Number,
                         span: 41..47,
                         inferred_type: None,
@@ -29,7 +29,7 @@ TypeAnn {
                     },
                 },
                 MatchTypeCase {
-                    check: TypeAnn {
+                    extends: TypeAnn {
                         kind: String,
                         span: 77..83,
                         inferred_type: None,
@@ -43,7 +43,7 @@ TypeAnn {
                     },
                 },
                 MatchTypeCase {
-                    check: TypeAnn {
+                    extends: TypeAnn {
                         kind: Wildcard,
                         span: 113..114,
                         inferred_type: None,

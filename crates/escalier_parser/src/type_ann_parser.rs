@@ -383,12 +383,12 @@ impl<'a> Parser<'a> {
 
                 let mut cases: Vec<MatchTypeCase> = vec![];
                 while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
-                    let check_type = self.parse_type_ann()?;
+                    let extends = self.parse_type_ann()?;
                     assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Arrow);
                     let true_type = self.parse_type_ann()?;
 
                     cases.push(MatchTypeCase {
-                        check: Box::new(check_type),
+                        extends: Box::new(extends),
                         true_type: Box::new(true_type),
                     });
 
@@ -398,6 +398,8 @@ impl<'a> Parser<'a> {
                         break;
                     }
                 }
+
+                self.next(); // consumes '}'
 
                 TypeAnnKind::Match(MatchType {
                     matchable: Box::new(matchable),

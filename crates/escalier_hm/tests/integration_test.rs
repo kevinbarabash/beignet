@@ -3866,6 +3866,29 @@ fn chained_conditional_types() -> Result<(), Errors> {
 }
 
 #[test]
+fn match_type() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Foo<T> = match (T) {
+        string => "str",
+        number => "num",
+        _ => "other",
+    }
+    type Result = Foo<5 | "hello">
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let result = my_ctx.schemes.get("Result").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#""num" | "str""#);
+
+    Ok(())
+}
+
+#[test]
 fn conditional_type_with_placeholders() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
