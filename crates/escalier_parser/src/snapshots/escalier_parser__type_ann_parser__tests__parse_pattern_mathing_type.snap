@@ -1,0 +1,64 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(r#\"\n            match (T) {\n                number => \"number\",\n                string => \"string\",\n                _ => \"other\",\n            }\n        \"#)"
+---
+TypeAnn {
+    kind: Match(
+        MatchType {
+            matchable: TypeAnn {
+                kind: TypeRef(
+                    "T",
+                    None,
+                ),
+                span: 20..21,
+                inferred_type: None,
+            },
+            cases: [
+                MatchTypeCase {
+                    extends: TypeAnn {
+                        kind: Number,
+                        span: 41..47,
+                        inferred_type: None,
+                    },
+                    true_type: TypeAnn {
+                        kind: StrLit(
+                            "number",
+                        ),
+                        span: 51..59,
+                        inferred_type: None,
+                    },
+                },
+                MatchTypeCase {
+                    extends: TypeAnn {
+                        kind: String,
+                        span: 77..83,
+                        inferred_type: None,
+                    },
+                    true_type: TypeAnn {
+                        kind: StrLit(
+                            "string",
+                        ),
+                        span: 87..95,
+                        inferred_type: None,
+                    },
+                },
+                MatchTypeCase {
+                    extends: TypeAnn {
+                        kind: Wildcard,
+                        span: 113..114,
+                        inferred_type: None,
+                    },
+                    true_type: TypeAnn {
+                        kind: StrLit(
+                            "other",
+                        ),
+                        span: 118..125,
+                        inferred_type: None,
+                    },
+                },
+            ],
+        },
+    ),
+    span: 13..18,
+    inferred_type: None,
+}

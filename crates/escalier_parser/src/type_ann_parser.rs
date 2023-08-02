@@ -363,6 +363,49 @@ impl<'a> Parser<'a> {
                 TypeAnnKind::Infer(name)
             }
             TokenKind::If => return self.parse_conditional_type(),
+            TokenKind::Match => {
+                self.next(); // consumes 'match'
+
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::LeftParen
+                );
+                let matchable = self.parse_type_ann()?;
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::RightParen
+                );
+
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::LeftBrace
+                );
+
+                let mut cases: Vec<MatchTypeCase> = vec![];
+                while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
+                    let extends = self.parse_type_ann()?;
+                    assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Arrow);
+                    let true_type = self.parse_type_ann()?;
+
+                    cases.push(MatchTypeCase {
+                        extends: Box::new(extends),
+                        true_type: Box::new(true_type),
+                    });
+
+                    if self.peek().unwrap_or(&EOF).kind == TokenKind::Comma {
+                        self.next();
+                    } else {
+                        break;
+                    }
+                }
+
+                self.next(); // consumes '}'
+
+                TypeAnnKind::Match(MatchType {
+                    matchable: Box::new(matchable),
+                    cases,
+                })
+            }
             token => {
                 panic!("expected token to start type annotation, found {:?}", token)
             }
@@ -732,6 +775,9 @@ mod tests {
     #[test]
     fn parse_conditional_type() {
         insta::assert_debug_snapshot!(parse("if (T: U) { never } else { T }"));
+        insta::assert_debug_snapshot!(parse(
+            r#"if (T: string) { "string" } else if (T: number) { "number" } else { "other" }"#
+        ));
     }
 
     #[test]
@@ -749,5 +795,18 @@ mod tests {
     #[test]
     fn parse_infer_type() {
         insta::assert_debug_snapshot!(parse("infer T"));
+    }
+
+    #[test]
+    fn parse_pattern_mathing_type() {
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            match (T) {
+                number => "number",
+                string => "string",
+                _ => "other",
+            }
+        "#
+        ));
     }
 }

@@ -783,6 +783,29 @@ pub fn infer_type_ann(
             let false_idx = infer_type_ann(arena, false_type, ctx)?;
             new_conditional_type(arena, check_idx, extends_idx, true_idx, false_idx)
         }
+        TypeAnnKind::Match(MatchType { matchable, cases }) => {
+            let check_idx = infer_type_ann(arena, matchable, ctx)?;
+
+            let case = cases.last_mut().unwrap();
+
+            let extends_idx = infer_type_ann(arena, &mut case.extends, ctx)?;
+            let true_idx = infer_type_ann(arena, &mut case.true_type, ctx)?;
+            let false_idx = new_keyword(arena, Keyword::Never);
+
+            let mut cond_type =
+                new_conditional_type(arena, check_idx, extends_idx, true_idx, false_idx);
+
+            for case in cases.iter_mut().rev().skip(1) {
+                let extends_idx = infer_type_ann(arena, &mut case.extends, ctx)?;
+                let true_idx = infer_type_ann(arena, &mut case.true_type, ctx)?;
+                let false_idx = cond_type;
+
+                cond_type =
+                    new_conditional_type(arena, check_idx, extends_idx, true_idx, false_idx);
+            }
+
+            cond_type
+        }
     };
 
     let t = &mut arena[idx];

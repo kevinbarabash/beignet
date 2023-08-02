@@ -3866,6 +3866,109 @@ fn chained_conditional_types() -> Result<(), Errors> {
 }
 
 #[test]
+fn match_type_with_catchall() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Foo<T> = match (T) {
+        string => "str",
+        number => "num",
+        _ => "other",
+    }
+    type Result = Foo<5 | "hello">
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let result = my_ctx.schemes.get("Result").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#""num" | "str""#);
+
+    Ok(())
+}
+
+#[test]
+fn match_type_without_catchall() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Foo<T> = match (T) {
+        string => "str",
+        number => "num",
+    }
+    type True = Foo<5 | true>
+    type Never = Foo<true>
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let result = my_ctx.schemes.get("True").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#""num""#);
+
+    let result = my_ctx.schemes.get("Never").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"never"#);
+
+    Ok(())
+}
+
+#[test]
+fn match_type_with_tuples() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    // NOTE: The arrays need to be matched in reverse order
+    // because they're open.  This means that the first match
+    // all arrays size 4 and greater.
+    let src = r#"
+    type Bar<T: Array<_>> = match (T) {
+        [_, _, _, _] => "n-tuple",
+        [_, _, _] => "triplet",
+        [_, _] => "pair",
+        [_] => "1-tuple",
+        [] => "unit",
+    }
+    type Tuple0 = Bar<[]>
+    type Tuple1 = Bar<[5]>
+    type Tuple2 = Bar<[5, "hello"]>
+    type Tuple3 = Bar<[5, "hello", true]>
+    type Tuple4 = Bar<[5, "hello", true, 10]>
+    type Tuple5 = Bar<[5, "hello", true, 10, "world"]>
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let result = my_ctx.schemes.get("Tuple0").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#""unit""#);
+
+    let result = my_ctx.schemes.get("Tuple1").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#""1-tuple""#);
+
+    let result = my_ctx.schemes.get("Tuple2").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#""pair""#);
+
+    let result = my_ctx.schemes.get("Tuple3").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#""triplet""#);
+
+    let result = my_ctx.schemes.get("Tuple4").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#""n-tuple""#);
+
+    let result = my_ctx.schemes.get("Tuple5").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#""n-tuple""#);
+
+    Ok(())
+}
+
+#[test]
 fn conditional_type_with_placeholders() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 

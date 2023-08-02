@@ -1,0 +1,67 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(r#\"if (T: string) { \"string\" } else if (T: number) { \"number\" } else { \"other\" }\"#)"
+---
+TypeAnn {
+    kind: Condition(
+        ConditionType {
+            check: TypeAnn {
+                kind: TypeRef(
+                    "T",
+                    None,
+                ),
+                span: 4..5,
+                inferred_type: None,
+            },
+            extends: TypeAnn {
+                kind: String,
+                span: 7..13,
+                inferred_type: None,
+            },
+            true_type: TypeAnn {
+                kind: StrLit(
+                    "string",
+                ),
+                span: 17..25,
+                inferred_type: None,
+            },
+            false_type: TypeAnn {
+                kind: Condition(
+                    ConditionType {
+                        check: TypeAnn {
+                            kind: TypeRef(
+                                "T",
+                                None,
+                            ),
+                            span: 37..38,
+                            inferred_type: None,
+                        },
+                        extends: TypeAnn {
+                            kind: Number,
+                            span: 40..46,
+                            inferred_type: None,
+                        },
+                        true_type: TypeAnn {
+                            kind: StrLit(
+                                "number",
+                            ),
+                            span: 50..58,
+                            inferred_type: None,
+                        },
+                        false_type: TypeAnn {
+                            kind: StrLit(
+                                "other",
+                            ),
+                            span: 68..75,
+                            inferred_type: None,
+                        },
+                    },
+                ),
+                span: 33..35,
+                inferred_type: None,
+            },
+        },
+    ),
+    span: 0..2,
+    inferred_type: None,
+}

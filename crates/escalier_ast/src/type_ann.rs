@@ -89,6 +89,18 @@ pub struct ConditionType {
     pub false_type: Box<TypeAnn>,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct MatchType {
+    pub matchable: Box<TypeAnn>,
+    pub cases: Vec<MatchTypeCase>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct MatchTypeCase {
+    pub extends: Box<TypeAnn>,
+    pub true_type: Box<TypeAnn>,
+}
+
 // TODO: typeof, keyof, conditional types
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TypeAnnKind {
@@ -115,6 +127,7 @@ pub enum TypeAnnKind {
     Rest(Box<TypeAnn>),
     TypeOf(Box<Expr>),
     Condition(ConditionType),
+    Match(MatchType),
     Wildcard,
     Infer(String),
 }
