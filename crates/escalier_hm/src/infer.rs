@@ -132,7 +132,6 @@ pub fn infer_expression(
                 None => unify_call(arena, ctx, args, None, func_type)?,
             }
         }
-        // TODO: Add support for explicit type parameters
         ExprKind::Function(syntax::Function {
             params,
             body,
@@ -196,6 +195,8 @@ pub fn infer_expression(
                 }
             };
 
+            // TODO: find all return statements return a union of their types
+
             if *is_async && !is_promise(&arena[body_t]) {
                 body_t = new_constructor(arena, "Promise", &[body_t]);
             }
@@ -221,13 +222,12 @@ pub fn infer_expression(
             let bool_type = new_primitive(arena, Primitive::Boolean);
             unify(arena, ctx, cond_type, bool_type)?;
             let consequent_type = infer_block(arena, consequent, ctx)?;
-            // TODO: handle the case where there is no alternate
             let alternate_type = match alternate {
                 Some(alternate) => match alternate {
                     BlockOrExpr::Block(block) => infer_block(arena, block, ctx)?,
                     BlockOrExpr::Expr(expr) => infer_expression(arena, expr, ctx)?,
                 },
-                None => todo!(),
+                None => new_keyword(arena, Keyword::Undefined),
             };
             new_union_type(arena, &[consequent_type, alternate_type])
         }
@@ -1246,6 +1246,7 @@ pub fn check_mutability(ctx: &Context, tpat: &TPat, init: &Expr) -> Result<bool,
     Ok(lhs_mutable && rhs_mutable)
 }
 
+// TODO: find the rest of the identifiers in the expression
 fn find_identifiers(expr: &Expr) -> Result<Vec<Ident>, Errors> {
     let mut idents = vec![];
 

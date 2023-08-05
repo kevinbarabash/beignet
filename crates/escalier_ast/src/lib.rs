@@ -11,6 +11,7 @@ pub mod span;
 pub mod stmt;
 pub mod type_ann;
 pub mod type_param;
+pub mod visitor;
 
 pub use block::*;
 pub use class::*;
@@ -25,3 +26,4 @@ pub use span::*;
 pub use stmt::*;
 pub use type_ann::*;
 pub use type_param::*;
+pub use visitor::*;

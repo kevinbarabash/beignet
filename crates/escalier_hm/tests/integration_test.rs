@@ -2345,6 +2345,30 @@ fn test_return_value_is_not_subtype_of_return_type() -> Result<(), Errors> {
 }
 
 #[test]
+fn test_multiple_returns() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let foo = fn (x) => {
+        if (x > 5) {
+            return true
+        }
+        return "hello"
+    }
+    "#;
+    let mut program = parse(src).unwrap();
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("foo").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"(x: number) => "hello""#
+    );
+
+    Ok(())
+}
+
+#[test]
 fn type_alias() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
