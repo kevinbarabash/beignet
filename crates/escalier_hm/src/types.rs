@@ -611,9 +611,10 @@ fn params_to_strings(arena: &Arena<Type>, params: &[FuncParam]) -> Vec<String> {
 
 fn tpat_to_string(_arena: &Arena<Type>, pattern: &TPat) -> String {
     match pattern {
-        TPat::Ident(BindingIdent {
-            name, mutable: _, ..
-        }) => name.to_owned(),
+        TPat::Ident(BindingIdent { name, mutable, .. }) => match mutable {
+            true => format!("mut {}", name.to_owned()),
+            false => name.to_owned(),
+        },
         TPat::Rest(RestPat { arg }) => format!("...{}", tpat_to_string(_arena, arg.as_ref())),
         TPat::Tuple(TuplePat { elems }) => format!(
             "[{}]",

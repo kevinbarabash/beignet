@@ -486,6 +486,15 @@ pub fn infer_type_ann(
 
         TypeAnnKind::Object(obj) => {
             let mut props: Vec<types::TObjElem> = Vec::new();
+            let mut obj_ctx = ctx.clone();
+            let self_idx = new_var_type(arena, None);
+            obj_ctx.schemes.insert(
+                "Self".to_string(),
+                Scheme {
+                    type_params: None,
+                    t: self_idx,
+                },
+            );
             for elem in obj.iter_mut() {
                 match elem {
                     ObjectProp::Indexer(Indexer { key, type_ann, .. }) => {
@@ -531,11 +540,7 @@ pub fn infer_type_ann(
                                 };
 
                                 Ok(types::FuncParam {
-                                    pattern: TPat::Ident(BindingIdent {
-                                        name: param.pattern.get_name(&i),
-                                        mutable: false,
-                                        span: Span { start: 0, end: 0 },
-                                    }),
+                                    pattern: pattern_to_tpat(&param.pattern, true),
                                     t,
                                     optional: param.optional,
                                 })
@@ -574,11 +579,7 @@ pub fn infer_type_ann(
                                 };
 
                                 Ok(types::FuncParam {
-                                    pattern: TPat::Ident(BindingIdent {
-                                        name: param.pattern.get_name(&i),
-                                        mutable: false,
-                                        span: Span { start: 0, end: 0 },
-                                    }),
+                                    pattern: pattern_to_tpat(&param.pattern, true),
                                     t,
                                     optional: param.optional,
                                 })
@@ -602,7 +603,7 @@ pub fn infer_type_ann(
                     }) => {
                         // TODO: dedupe with `Function` inference code above
                         // NOTE: We clone `ctx` so that type params don't escape the signature
-                        let mut sig_ctx = ctx.clone();
+                        let mut sig_ctx = obj_ctx.clone();
 
                         let type_params = infer_type_params(arena, type_params, &mut sig_ctx)?;
 
@@ -618,11 +619,7 @@ pub fn infer_type_ann(
                                 };
 
                                 Ok(types::FuncParam {
-                                    pattern: TPat::Ident(BindingIdent {
-                                        name: param.pattern.get_name(&i),
-                                        mutable: false,
-                                        span: Span { start: 0, end: 0 },
-                                    }),
+                                    pattern: pattern_to_tpat(&param.pattern, true),
                                     t,
                                     optional: param.optional,
                                 })
@@ -646,7 +643,7 @@ pub fn infer_type_ann(
                         ret,
                     }) => {
                         // NOTE: We clone `ctx` so that type params don't escape the signature
-                        let mut sig_ctx = ctx.clone();
+                        let mut sig_ctx = obj_ctx.clone();
                         let ret_idx = infer_type_ann(arena, ret.as_mut(), &mut sig_ctx)?;
 
                         let _self = &params[0];
@@ -662,7 +659,7 @@ pub fn infer_type_ann(
                         params,
                     }) => {
                         // NOTE: We clone `ctx` so that type params don't escape the signature
-                        let mut sig_ctx = ctx.clone();
+                        let mut sig_ctx = obj_ctx.clone();
 
                         let t = match &mut params[1].type_ann {
                             Some(type_ann) => infer_type_ann(arena, type_ann, &mut sig_ctx)?,
@@ -691,7 +688,10 @@ pub fn infer_type_ann(
                     }
                 }
             }
-            new_object_type(arena, &props)
+
+            let obj_idx = new_object_type(arena, &props);
+            unify(arena, &obj_ctx, self_idx, obj_idx)?;
+            obj_idx
         }
         TypeAnnKind::TypeRef(name, type_args) => {
             if ctx.schemes.get(name).is_none() {

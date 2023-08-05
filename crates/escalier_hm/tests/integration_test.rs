@@ -4199,3 +4199,26 @@ fn function_call_with_spread_args() -> Result<(), Errors> {
 
     Ok(())
 }
+
+#[test]
+fn test_mutable_obj_type() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Foo = {
+        fn bar(self: Self, x: number): number,
+        fn baz(mut self: Self, y: string): string,
+    }
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let scheme = my_ctx.schemes.get("Foo").unwrap();
+    assert_eq!(
+        arena[scheme.t].as_string(&arena),
+        r#"{fn bar(self: Self, x: number): number, fn baz(mut self: Self, y: string): string}"#
+    );
+
+    Ok(())
+}
