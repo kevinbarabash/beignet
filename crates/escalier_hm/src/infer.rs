@@ -3,6 +3,7 @@ use std::collections::{BTreeMap, HashSet};
 
 use escalier_ast::{self as syntax, *};
 
+use crate::ast_utils::find_returns;
 use crate::context::*;
 use crate::errors::*;
 use crate::infer_pattern::*;
@@ -180,10 +181,15 @@ pub fn infer_expression(
                     BlockOrExpr::Block(Block { stmts, .. }) => {
                         for stmt in stmts.iter_mut() {
                             body_ctx = body_ctx.clone();
-                            let t = infer_statement(arena, stmt, &mut body_ctx, false)?;
+                            infer_statement(arena, stmt, &mut body_ctx, false)?;
                             if let StmtKind::Return { arg: _ } = stmt.kind {
+                                let ret_types: Vec<Index> = find_returns(body)
+                                    .iter()
+                                    .filter_map(|ret| ret.inferred_type)
+                                    .collect();
+
                                 // TODO: warn about unreachable code.
-                                break 'outer t;
+                                break 'outer new_union_type(arena, &ret_types);
                             }
                         }
 
@@ -194,8 +200,6 @@ pub fn infer_expression(
                     BlockOrExpr::Expr(expr) => infer_expression(arena, expr, &mut body_ctx)?,
                 }
             };
-
-            // TODO: find all return statements return a union of their types
 
             if *is_async && !is_promise(&arena[body_t]) {
                 body_t = new_constructor(arena, "Promise", &[body_t]);

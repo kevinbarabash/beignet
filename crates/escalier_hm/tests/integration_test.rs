@@ -2362,7 +2362,7 @@ fn test_multiple_returns() -> Result<(), Errors> {
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"(x: number) => "hello""#
+        r#"(x: number) => true | "hello""#
     );
 
     Ok(())
