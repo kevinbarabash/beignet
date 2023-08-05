@@ -51,6 +51,7 @@ Expr {
                                                             span: 23..31,
                                                         },
                                                     ),
+                                                    opt_chain: false,
                                                 },
                                             ),
                                             span: 17..31,

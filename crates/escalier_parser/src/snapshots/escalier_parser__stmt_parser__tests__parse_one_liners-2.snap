@@ -136,6 +136,7 @@ expression: "parse(r#\"let add = fn(a, b) => a + b add(5, 10)\"#)"
                                 inferred_type: None,
                             },
                         ],
+                        opt_chain: false,
                     },
                 ),
                 span: 28..38,

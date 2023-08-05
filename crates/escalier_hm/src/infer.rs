@@ -54,7 +54,6 @@ pub fn infer_expression(
         ExprKind::Undefined(_) => {
             arena.insert(Type::from(TypeKind::Literal(syntax::Literal::Undefined)))
         }
-        // ExprKind::Lit(literal) => new_lit_type(arena, literal),
         ExprKind::Tuple(syntax::Tuple {
             elements: elems, ..
         }) => {
@@ -238,6 +237,7 @@ pub fn infer_expression(
         ExprKind::Member(Member {
             object: obj,
             property: prop,
+            opt_chain: _,
         }) => {
             let obj_idx = infer_expression(arena, obj, ctx)?;
             match prop {
@@ -251,7 +251,6 @@ pub fn infer_expression(
                 }
             }
         }
-        // ExprKind::New(_) => todo!(),
         ExprKind::JSXElement(_) => todo!(),
         ExprKind::Assign(Assign { left, op: _, right }) => {
             if !lvalue_mutability(ctx, left)? {
@@ -266,8 +265,6 @@ pub fn infer_expression(
 
             r_t
         }
-        // ExprKind::LetExpr(_) => todo!(),
-        // ExprKind::Keyword(_) => todo!(), // null, undefined, etc.
         ExprKind::Binary(Binary { op, left, right }) => {
             let number = new_primitive(arena, Primitive::Number);
             let boolean = new_primitive(arena, Primitive::Boolean);
@@ -382,9 +379,7 @@ pub fn infer_expression(
             new_union_type(arena, &body_types)
         }
         ExprKind::Class(_) => todo!(),
-        // ExprKind::Regex(_) => todo!(),
         ExprKind::Do(Do { body }) => infer_block(arena, body, ctx)?,
-        ExprKind::OptionalChain(_) => todo!(),
         ExprKind::Try(_) => todo!(),
         ExprKind::Yield(_) => todo!(),
         ExprKind::JSXFragment(_) => todo!(),

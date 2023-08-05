@@ -139,6 +139,7 @@ pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &Expr) {
             callee,
             type_args,
             args,
+            opt_chain: _,
         }) => {
             visitor.visit_expr(callee);
             if let Some(type_args) = type_args {
@@ -150,7 +151,11 @@ pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &Expr) {
                 visitor.visit_expr(arg);
             }
         }
-        crate::ExprKind::Member(Member { object, property }) => {
+        crate::ExprKind::Member(Member {
+            object,
+            property,
+            opt_chain: _,
+        }) => {
             visitor.visit_expr(object);
             match property {
                 MemberProp::Ident(_) => {}
@@ -159,7 +164,6 @@ pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &Expr) {
                 }
             };
         }
-        crate::ExprKind::OptionalChain(OptionalChain { base }) => visitor.visit_expr(base),
         crate::ExprKind::IfElse(IfElse {
             cond,
             consequent,

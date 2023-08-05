@@ -36,6 +36,7 @@ expression: "parse(r#\"p[\"y\"] = 10\"#)"
                                             },
                                         },
                                     ),
+                                    opt_chain: false,
                                 },
                             ),
                             span: 0..5,
