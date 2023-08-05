@@ -669,6 +669,7 @@ pub fn new_func_type(
     })))
 }
 
+// TODO: flatten union types
 pub fn new_union_type(arena: &mut Arena<Type>, types: &[Index]) -> Index {
     match types.len() {
         0 => new_keyword(arena, Keyword::Never),

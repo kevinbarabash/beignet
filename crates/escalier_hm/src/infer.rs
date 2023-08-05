@@ -237,10 +237,26 @@ pub fn infer_expression(
         ExprKind::Member(Member {
             object: obj,
             property: prop,
-            opt_chain: _,
+            opt_chain,
         }) => {
-            let obj_idx = infer_expression(arena, obj, ctx)?;
-            match prop {
+            let mut obj_idx = infer_expression(arena, obj, ctx)?;
+            let mut has_undefined = false;
+            if *opt_chain {
+                if let TypeKind::Union(union) = &arena[obj_idx].kind {
+                    let types: Vec<Index> = union
+                        .types
+                        .iter()
+                        .filter(|t| {
+                            !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Undefined))
+                        })
+                        .cloned()
+                        .collect();
+                    has_undefined = types.len() != union.types.len();
+                    obj_idx = new_union_type(arena, &types);
+                }
+            }
+
+            let result = match prop {
                 MemberProp::Ident(Ident { name, .. }) => {
                     let key_idx = new_lit_type(arena, &Literal::String(name.to_owned()));
                     get_ident_member(arena, ctx, obj_idx, key_idx)?
@@ -249,6 +265,36 @@ pub fn infer_expression(
                     let prop_type = infer_expression(arena, expr, ctx)?;
                     get_computed_member(arena, ctx, obj_idx, prop_type)?
                 }
+            };
+
+            match *opt_chain && has_undefined {
+                true => {
+                    let undefined = new_keyword(arena, Keyword::Undefined);
+
+                    if let TypeKind::Union(union) = &arena[result].kind {
+                        let mut types: Vec<Index> = union
+                            .types
+                            .iter()
+                            .filter(|t| {
+                                !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Undefined))
+                            })
+                            .cloned()
+                            .collect();
+
+                        if types.len() != union.types.len() {
+                            // If we didn't end up removing any `undefined`s then
+                            // itmeans that `result` already contains `undefined`
+                            // and we can return it as is.
+                            result
+                        } else {
+                            types.push(undefined);
+                            new_union_type(arena, &types)
+                        }
+                    } else {
+                        new_union_type(arena, &[result, undefined])
+                    }
+                }
+                false => result,
             }
         }
         ExprKind::JSXElement(_) => todo!(),

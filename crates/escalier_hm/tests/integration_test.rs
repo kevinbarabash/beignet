@@ -2598,6 +2598,76 @@ fn maybe_property_accesses_on_unions() -> Result<(), Errors> {
 }
 
 #[test]
+fn optional_chaining() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Point = {x: number, y: string}
+    let p: Point | undefined = {x: 5, y: "hello"}
+    let x = p?.x
+    let y = p?.["y"]
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("x").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"number | undefined"#
+    );
+
+    let binding = my_ctx.values.get("y").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"string | undefined"#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn optional_chaining_unnecessary_chaining() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Obj = {msg: string}
+    let obj: Obj = {msg: "hello"}
+    let msg = obj?.msg
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("msg").unwrap();
+    assert_eq!(arena[binding.index].as_string(&arena), r#"string"#);
+
+    Ok(())
+}
+
+#[test]
+fn optional_chaining_multiple_levels() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Obj = {a?: {b?: {c?: number}}}
+    let obj: Obj = {a: {b: {c: 5}}}
+    let c = obj?.a?.b?.c
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("c").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"number | undefined"#
+    );
+
+    Ok(())
+}
+
+#[test]
 #[ignore]
 fn destructuring_unions() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
