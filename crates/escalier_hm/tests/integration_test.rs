@@ -2369,6 +2369,53 @@ fn test_multiple_returns() -> Result<(), Errors> {
 }
 
 #[test]
+fn test_no_returns() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let foo = fn (x) => {
+        if (x > 5) { }
+    }
+    "#;
+    let mut program = parse(src).unwrap();
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("foo").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"(x: number) => undefined"#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_multiple_returns_with_nested_functions() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let foo = fn (x) => {
+        if (x > 5) {
+            return fn () => {
+                return true
+            }
+        }
+        return "hello"
+    }
+    "#;
+    let mut program = parse(src).unwrap();
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("foo").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"(x: number) => () => true | "hello""#
+    );
+
+    Ok(())
+}
+
+#[test]
 fn type_alias() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
