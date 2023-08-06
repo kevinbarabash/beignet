@@ -129,6 +129,7 @@ Expr {
                         is_public: true,
                         is_async: false,
                         is_gen: false,
+                        is_mutating: false,
                         type_params: None,
                         params: [
                             FuncParam {

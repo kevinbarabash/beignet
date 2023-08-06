@@ -97,7 +97,7 @@ impl<'a> Parser<'a> {
                     }
                     Some('>') => {
                         self.scanner.pop();
-                        TokenKind::Arrow
+                        TokenKind::DoubleArrow
                     }
                     _ => TokenKind::Assign,
                 },
@@ -112,6 +112,10 @@ impl<'a> Parser<'a> {
                     Some('=') => {
                         self.scanner.pop();
                         TokenKind::MinusAssign
+                    }
+                    Some('>') => {
+                        self.scanner.pop();
+                        TokenKind::SingleArrow
                     }
                     _ => TokenKind::Minus,
                 },

@@ -344,85 +344,53 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             let mut constructors_2: Vec<&TCallable> = vec![];
             let mut indexes_2: Vec<&TIndex> = vec![];
 
-            enum NamedElem<'a> {
-                Getter(&'a TGetter),
-                Method(&'a TMethod),
-                Prop(&'a TProp),
-            }
-
-            let named_elems_1: HashMap<_, _> = object1
+            let named_props_1: HashMap<_, _> = object1
                 .elems
                 .iter()
                 .filter_map(|elem| match elem {
                     TObjElem::Call(_) => None,
                     TObjElem::Constructor(_) => None,
-                    TObjElem::Method(method) => {
-                        Some((method.name.to_string(), NamedElem::Method(method)))
-                    }
-                    TObjElem::Getter(getter) => {
-                        Some((getter.name.to_string(), NamedElem::Getter(getter)))
-                    }
-                    TObjElem::Setter(_) => None,
                     TObjElem::Index(_) => None,
-                    TObjElem::Prop(prop) => Some((prop.name.to_string(), NamedElem::Prop(prop))),
+                    TObjElem::Prop(prop) => {
+                        // TODO: handle getters/setters properly
+                        Some((prop.name.to_string(), prop))
+                    }
                 })
                 .collect();
 
-            let named_elems_2: HashMap<_, _> = object2
+            let named_props_2: HashMap<_, _> = object2
                 .elems
                 .iter()
                 .filter_map(|elem| match elem {
                     TObjElem::Call(_) => None,
                     TObjElem::Constructor(_) => None,
-                    TObjElem::Method(method) => {
-                        Some((method.name.to_string(), NamedElem::Method(method)))
-                    }
-                    TObjElem::Getter(getter) => {
-                        Some((getter.name.to_string(), NamedElem::Getter(getter)))
-                    }
-                    TObjElem::Setter(_) => None,
                     TObjElem::Index(_) => None,
-                    TObjElem::Prop(prop) => Some((prop.name.to_string(), NamedElem::Prop(prop))),
+                    TObjElem::Prop(prop) => {
+                        // TODO: handle getters/setters properly
+                        Some((prop.name.to_string(), prop))
+                    }
                 })
                 .collect();
 
             // object1 must have at least as the same named elements as object2
             // TODO: handle the case where object1 has an indexer that covers
             // some of the named elements of object2
-            for (name, elem_2) in &named_elems_2 {
-                match named_elems_1.get(name) {
-                    Some(elem_1) => {
-                        let t1 = match elem_1 {
-                            NamedElem::Getter(getter) => getter.ret,
-                            NamedElem::Method(TMethod {
-                                params,
-                                ret,
-                                type_params,
-                                ..
-                            }) => new_func_type(arena, &params[1..], *ret, type_params),
-                            NamedElem::Prop(prop) => match prop.optional {
-                                true => {
-                                    let undefined = new_keyword(arena, Keyword::Undefined);
-                                    new_union_type(arena, &[prop.t, undefined])
-                                }
-                                false => prop.t,
-                            },
+            for (name, prop_2) in &named_props_2 {
+                match named_props_1.get(name) {
+                    Some(prop_1) => {
+                        let t1 = match prop_1.optional {
+                            true => {
+                                let undefined = new_keyword(arena, Keyword::Undefined);
+                                new_union_type(arena, &[prop_1.t, undefined])
+                            }
+                            false => prop_1.t,
                         };
-                        let t2 = match elem_2 {
-                            NamedElem::Getter(getter) => getter.ret,
-                            NamedElem::Method(TMethod {
-                                params,
-                                ret,
-                                type_params,
-                                ..
-                            }) => new_func_type(arena, &params[1..], *ret, type_params),
-                            NamedElem::Prop(prop) => match prop.optional {
-                                true => {
-                                    let undefined = new_keyword(arena, Keyword::Undefined);
-                                    new_union_type(arena, &[prop.t, undefined])
-                                }
-                                false => prop.t,
-                            },
+                        let t2 = match prop_2.optional {
+                            true => {
+                                let undefined = new_keyword(arena, Keyword::Undefined);
+                                new_union_type(arena, &[prop_2.t, undefined])
+                            }
+                            false => prop_2.t,
                         };
 
                         unify(arena, ctx, t1, t2)?;
@@ -460,21 +428,12 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 1 => {
                     match indexes_1.len() {
                         0 => {
-                            for (_, elem_1) in named_elems_1 {
+                            for (_, prop_1) in named_props_1 {
                                 let undefined = new_keyword(arena, Keyword::Undefined);
 
-                                let t1 = match elem_1 {
-                                    NamedElem::Getter(getter) => getter.ret,
-                                    NamedElem::Method(TMethod {
-                                        params,
-                                        ret,
-                                        type_params,
-                                        ..
-                                    }) => new_func_type(arena, &params[1..], *ret, type_params),
-                                    NamedElem::Prop(prop) => match prop.optional {
-                                        true => new_union_type(arena, &[prop.t, undefined]),
-                                        false => prop.t,
-                                    },
+                                let t1 = match prop_1.optional {
+                                    true => new_union_type(arena, &[prop_1.t, undefined]),
+                                    false => prop_1.t,
                                 };
 
                                 let t2 = new_union_type(arena, &[indexes_2[0].t, undefined]);
@@ -876,9 +835,6 @@ pub fn simplify_intersection(arena: &mut Arena<Type>, in_types: &[Index]) -> Ind
                 // What do we do with Call and Index signatures
                 TObjElem::Call(_) => todo!(),
                 TObjElem::Constructor(_) => todo!(),
-                TObjElem::Method(_) => todo!(),
-                TObjElem::Getter(_) => todo!(),
-                TObjElem::Setter(_) => todo!(),
                 TObjElem::Index(_) => todo!(),
                 TObjElem::Prop(prop) => {
                     let key = match &prop.name {
@@ -898,11 +854,13 @@ pub fn simplify_intersection(arena: &mut Arena<Type>, in_types: &[Index]) -> Ind
             let t: Index = if types.len() == 1 {
                 types[0]
             } else {
+                // TODO: handle getter/setters correctly
                 new_intersection_type(arena, &types)
                 // checker.from_type_kind(TypeKind::Intersection(types))
             };
             TObjElem::Prop(TProp {
                 name: TPropKey::StringKey(name.to_owned()),
+                modifier: None,
                 // TODO: determine this field from all of the TProps with
                 // the same name.  This should only be optional if all of
                 // the TProps with the current name are optional.
@@ -916,9 +874,6 @@ pub fn simplify_intersection(arena: &mut Arena<Type>, in_types: &[Index]) -> Ind
     elems.sort_by_key(|elem| match elem {
         TObjElem::Call(_) => todo!(),
         TObjElem::Constructor(_) => todo!(),
-        TObjElem::Method(_) => todo!(),
-        TObjElem::Getter(_) => todo!(),
-        TObjElem::Setter(_) => todo!(),
         TObjElem::Index(_) => todo!(),
         TObjElem::Prop(prop) => prop.name.clone(),
     }); // ensure a stable order

@@ -66,6 +66,7 @@ pub fn infer_pattern(
 
                             elems.push(types::TObjElem::Prop(types::TProp {
                                 name: TPropKey::StringKey(key.name.to_owned()),
+                                modifier: None,
                                 optional: false,
                                 mutable: false,
                                 t: value_type,
@@ -92,6 +93,7 @@ pub fn infer_pattern(
 
                             elems.push(types::TObjElem::Prop(types::TProp {
                                 name: TPropKey::StringKey(ident.name.to_owned()),
+                                modifier: None,
                                 optional: false,
                                 mutable: false,
                                 t,

@@ -62,6 +62,7 @@ Expr {
                         is_public: false,
                         is_async: false,
                         is_gen: false,
+                        is_mutating: false,
                         type_params: None,
                         params: [
                             FuncParam {
@@ -99,6 +100,7 @@ Expr {
                         is_public: false,
                         is_async: true,
                         is_gen: false,
+                        is_mutating: false,
                         type_params: None,
                         params: [
                             FuncParam {
@@ -178,6 +180,7 @@ Expr {
                         is_public: false,
                         is_async: false,
                         is_gen: true,
+                        is_mutating: false,
                         type_params: None,
                         params: [
                             FuncParam {

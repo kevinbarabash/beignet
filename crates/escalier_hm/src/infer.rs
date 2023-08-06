@@ -78,6 +78,7 @@ pub fn infer_expression(
                         expr::Prop::Shorthand(ident) => {
                             prop_types.push(types::TObjElem::Prop(types::TProp {
                                 name: TPropKey::StringKey(ident.to_owned()),
+                                modifier: None,
                                 t: get_type(arena, ident, ctx)?,
                                 mutable: false,
                                 optional: false,
@@ -87,18 +88,21 @@ pub fn infer_expression(
                             let prop = match key {
                                 ObjectKey::Ident(ident) => types::TProp {
                                     name: TPropKey::StringKey(ident.name.to_owned()),
+                                    modifier: None,
                                     t: infer_expression(arena, value, ctx)?,
                                     mutable: false,
                                     optional: false,
                                 },
                                 ObjectKey::String(name) => types::TProp {
                                     name: TPropKey::StringKey(name.to_owned()),
+                                    modifier: None,
                                     t: infer_expression(arena, value, ctx)?,
                                     mutable: false,
                                     optional: false,
                                 },
                                 ObjectKey::Number(name) => types::TProp {
                                     name: TPropKey::StringKey(name.to_owned()),
+                                    modifier: None,
                                     t: infer_expression(arena, value, ctx)?,
                                     mutable: false,
                                     optional: false,
@@ -562,8 +566,13 @@ pub fn infer_type_ann(
                         }));
                     }
                     ObjectProp::Prop(prop) => {
+                        let modifier = prop.modifier.as_ref().map(|modifier| match modifier {
+                            PropModifier::Getter => TPropModifier::Getter,
+                            PropModifier::Setter => TPropModifier::Setter,
+                        });
                         props.push(types::TObjElem::Prop(types::TProp {
                             name: TPropKey::StringKey(prop.name.to_owned()),
+                            modifier,
                             t: infer_type_ann(arena, &mut prop.type_ann, ctx)?,
                             mutable: prop.mutable,
                             optional: prop.optional,
@@ -654,103 +663,101 @@ pub fn infer_type_ann(
                             ret: ret_idx,
                             type_params,
                         }))
-                    }
-                    ObjectProp::Method(ObjMethod {
-                        span: _,
-                        name,
-                        type_params,
-                        params,
-                        ret,
-                    }) => {
-                        // TODO: dedupe with `Function` inference code above
-                        // NOTE: We clone `ctx` so that type params don't escape the signature
-                        let mut sig_ctx = ctx.clone();
+                    } // ObjectProp::Method(ObjMethod {
+                      //     span: _,
+                      //     name,
+                      //     type_params,
+                      //     params,
+                      //     ret,
+                      // }) => {
+                      //     // TODO: dedupe with `Function` inference code above
+                      //     // NOTE: We clone `ctx` so that type params don't escape the signature
+                      //     let mut sig_ctx = ctx.clone();
 
-                        let type_params = infer_type_params(arena, type_params, &mut sig_ctx)?;
+                      //     let type_params = infer_type_params(arena, type_params, &mut sig_ctx)?;
 
-                        let func_params = params
-                            .iter_mut()
-                            .enumerate()
-                            .map(|(i, param)| {
-                                let t = match &mut param.type_ann {
-                                    Some(type_ann) => {
-                                        infer_type_ann(arena, type_ann, &mut sig_ctx)?
-                                    }
-                                    None => new_var_type(arena, None),
-                                };
+                      //     let func_params = params
+                      //         .iter_mut()
+                      //         .enumerate()
+                      //         .map(|(i, param)| {
+                      //             let t = match &mut param.type_ann {
+                      //                 Some(type_ann) => {
+                      //                     infer_type_ann(arena, type_ann, &mut sig_ctx)?
+                      //                 }
+                      //                 None => new_var_type(arena, None),
+                      //             };
 
-                                Ok(types::FuncParam {
-                                    pattern: TPat::Ident(BindingIdent {
-                                        name: param.pattern.get_name(&i),
-                                        mutable: false,
-                                        span: Span { start: 0, end: 0 },
-                                    }),
-                                    t,
-                                    optional: param.optional,
-                                })
-                            })
-                            .collect::<Result<Vec<_>, _>>()?;
+                      //             Ok(types::FuncParam {
+                      //                 pattern: TPat::Ident(BindingIdent {
+                      //                     name: param.pattern.get_name(&i),
+                      //                     mutable: false,
+                      //                     span: Span { start: 0, end: 0 },
+                      //                 }),
+                      //                 t,
+                      //                 optional: param.optional,
+                      //             })
+                      //         })
+                      //         .collect::<Result<Vec<_>, _>>()?;
 
-                        let ret_idx = infer_type_ann(arena, ret.as_mut(), &mut sig_ctx)?;
+                      //     let ret_idx = infer_type_ann(arena, ret.as_mut(), &mut sig_ctx)?;
 
-                        props.push(TObjElem::Method(TMethod {
-                            name: TPropKey::StringKey(name.to_owned()),
-                            params: func_params,
-                            ret: ret_idx,
-                            type_params,
-                            is_mutating: false,
-                        }))
-                    }
-                    ObjectProp::Getter(ObjGetter {
-                        span: _,
-                        name,
-                        params,
-                        ret,
-                    }) => {
-                        // NOTE: We clone `ctx` so that type params don't escape the signature
-                        let mut sig_ctx = ctx.clone();
-                        let ret_idx = infer_type_ann(arena, ret.as_mut(), &mut sig_ctx)?;
+                      //     props.push(TObjElem::Method(TMethod {
+                      //         name: TPropKey::StringKey(name.to_owned()),
+                      //         params: func_params,
+                      //         ret: ret_idx,
+                      //         type_params,
+                      //         is_mutating: false,
+                      //     }))
+                      // }
+                      // ObjectProp::Getter(FunctionType {
+                      //     type_params: _,
+                      //     params,
+                      //     ret,
+                      // }) => {
+                      //     // NOTE: We clone `ctx` so that type params don't escape the signature
+                      //     let mut sig_ctx = ctx.clone();
+                      //     let ret_idx = infer_type_ann(arena, ret.as_mut(), &mut sig_ctx)?;
 
-                        let _self = &params[0];
+                      //     let _self = &params[0];
 
-                        props.push(TObjElem::Getter(TGetter {
-                            name: TPropKey::StringKey(name.to_owned()),
-                            ret: ret_idx,
-                        }));
-                    }
-                    ObjectProp::Setter(ObjSetter {
-                        span: _,
-                        name,
-                        params,
-                    }) => {
-                        // NOTE: We clone `ctx` so that type params don't escape the signature
-                        let mut sig_ctx = ctx.clone();
+                      //     props.push(TObjElem::Getter(TGetter {
+                      //         name: TPropKey::StringKey(name.to_owned()),
+                      //         ret: ret_idx,
+                      //     }));
+                      // }
+                      // ObjectProp::Setter(FunctionType {
+                      //     params,
+                      //     type_params: _,
+                      //     ret,
+                      // }) => {
+                      //     // NOTE: We clone `ctx` so that type params don't escape the signature
+                      //     let mut sig_ctx = ctx.clone();
 
-                        let t = match &mut params[1].type_ann {
-                            Some(type_ann) => infer_type_ann(arena, type_ann, &mut sig_ctx)?,
-                            None => new_var_type(arena, None),
-                        };
+                      //     let t = match &mut params[1].type_ann {
+                      //         Some(type_ann) => infer_type_ann(arena, type_ann, &mut sig_ctx)?,
+                      //         None => new_var_type(arena, None),
+                      //     };
 
-                        let _self = &params[0];
+                      //     let _self = &params[0];
 
-                        // TODO: add `self` to `sig_ctx` before inferring the body
-                        // TODO: when inferring the body of the setter, `ret` should be `void`
+                      //     // TODO: add `self` to `sig_ctx` before inferring the body
+                      //     // TODO: when inferring the body of the setter, `ret` should be `void`
 
-                        let func_param = types::FuncParam {
-                            pattern: TPat::Ident(BindingIdent {
-                                name: params[1].pattern.get_name(&0),
-                                mutable: false,
-                                span: Span { start: 0, end: 0 },
-                            }),
-                            t,
-                            optional: params[1].optional, // TODO: This should never be optional
-                        };
+                      //     let func_param = types::FuncParam {
+                      //         pattern: TPat::Ident(BindingIdent {
+                      //             name: params[1].pattern.get_name(&0),
+                      //             mutable: false,
+                      //             span: Span { start: 0, end: 0 },
+                      //         }),
+                      //         t,
+                      //         optional: params[1].optional, // TODO: This should never be optional
+                      //     };
 
-                        props.push(TObjElem::Setter(TSetter {
-                            name: TPropKey::StringKey(name.to_owned()),
-                            param: func_param,
-                        }));
-                    }
+                      //     props.push(TObjElem::Setter(TSetter {
+                      //         name: TPropKey::StringKey(name.to_owned()),
+                      //         param: func_param,
+                      //     }));
+                      // }
                 }
             }
             new_object_type(arena, &props)

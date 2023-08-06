@@ -194,7 +194,7 @@ mod tests {
     #[test]
     fn parse_declare_let() {
         insta::assert_debug_snapshot!(parse(r#"declare let foo: number"#));
-        insta::assert_debug_snapshot!(parse(r#"declare let bar: fn () => number"#));
+        insta::assert_debug_snapshot!(parse(r#"declare let bar: fn () -> number"#));
     }
 
     #[test]
@@ -237,7 +237,7 @@ mod tests {
     #[test]
     fn parse_let_fn_with_fn_type() {
         insta::assert_debug_snapshot!(parse(
-            r#"let add: fn (a: number, b: number) => number = fn (a, b) => a + b"#
+            r#"let add: fn (a: number, b: number) -> number = fn (a, b) => a + b"#
         ));
     }
 
@@ -261,8 +261,8 @@ mod tests {
         insta::assert_debug_snapshot!(parse(r#"type Point<T> = {x: T, y: T}"#));
         insta::assert_debug_snapshot!(parse(
             r#"
-            type ReturnType<T: fn (...args: Array<_>) => _> = if (
-                T: fn (...args: Array<_>) => infer R
+            type ReturnType<T: fn (...args: Array<_>) -> _> = if (
+                T: fn (...args: Array<_>) -> infer R
             ) { 
                 R
             } else {
@@ -277,7 +277,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse(r#"var i = 0"#));
         insta::assert_debug_snapshot!(parse(r#"var mut p = {x: 5, y: 10}"#));
         insta::assert_debug_snapshot!(parse(
-            r#"declare let scale: fn (mut p: Point, scale: number) => void"#
+            r#"declare let scale: fn (mut p: Point, scale: number) -> void"#
         ));
     }
 }

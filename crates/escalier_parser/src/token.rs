@@ -90,7 +90,8 @@ pub enum TokenKind {
     RightBrace,
     LeftBracket,
     RightBracket,
-    Arrow,
+    DoubleArrow,
+    SingleArrow,
     Underscore,
     Question,
     QuestionDot, // used for optional chaining

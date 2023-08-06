@@ -231,6 +231,7 @@ impl<'a> Parser<'a> {
                 is_public,
                 is_async,
                 is_gen,
+                is_mutating: false, // TODO
                 params,
                 body,
                 type_params,

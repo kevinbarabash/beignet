@@ -46,13 +46,6 @@ pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
                 let param_types: Vec<_> = call.params.iter().map(|param| param.t).collect();
                 occurs_in(arena, v, &param_types) || occurs_in_type(arena, v, call.ret)
             }
-            TObjElem::Method(method) => {
-                // TODO: check constraints and default on type_params
-                let param_types: Vec<_> = method.params.iter().map(|param| param.t).collect();
-                occurs_in(arena, v, &param_types) || occurs_in_type(arena, v, method.ret)
-            }
-            TObjElem::Getter(getter) => occurs_in_type(arena, v, getter.ret),
-            TObjElem::Setter(setter) => occurs_in_type(arena, v, setter.param.t),
             TObjElem::Index(index) => occurs_in_type(arena, v, index.t),
             TObjElem::Prop(prop) => occurs_in_type(arena, v, prop.t),
         }),
@@ -282,18 +275,18 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
                 match elem {
                     TObjElem::Call(_) => (),
                     TObjElem::Constructor(_) => (),
-                    TObjElem::Method(TMethod { name, .. }) => match name {
-                        TPropKey::StringKey(name) => {
-                            string_keys
-                                .push(new_lit_type(arena, &Literal::String(name.to_owned())));
-                        }
-                        TPropKey::NumberKey(name) => {
-                            number_keys
-                                .push(new_lit_type(arena, &Literal::Number(name.to_owned())));
-                        }
-                    },
-                    TObjElem::Getter(_) => todo!(),
-                    TObjElem::Setter(_) => todo!(),
+                    // TObjElem::Method(TMethod { name, .. }) => match name {
+                    //     TPropKey::StringKey(name) => {
+                    //         string_keys
+                    //             .push(new_lit_type(arena, &Literal::String(name.to_owned())));
+                    //     }
+                    //     TPropKey::NumberKey(name) => {
+                    //         number_keys
+                    //             .push(new_lit_type(arena, &Literal::Number(name.to_owned())));
+                    //     }
+                    // },
+                    // TObjElem::Getter(_) => todo!(),
+                    // TObjElem::Setter(_) => todo!(),
                     TObjElem::Index(TIndex { key, .. }) => match &arena[key.t].kind {
                         TypeKind::Primitive(Primitive::String) => {
                             maybe_string = Some(key.t);
@@ -699,31 +692,6 @@ pub fn get_prop(
                         // Callable signatures have no name so we ignore them.
                         TObjElem::Constructor(_) => continue,
                         TObjElem::Call(_) => continue,
-                        TObjElem::Method(method) => {
-                            // This only makes sense when we're getting the property
-                            // as rvalue
-                            match &method.name {
-                                TPropKey::StringKey(_) if primitive == &Primitive::String => (),
-                                TPropKey::NumberKey(_) if primitive == &Primitive::Number => (),
-                                _ => continue,
-                            };
-
-                            values.push(arena.insert(Type::from(TypeKind::Function(Function {
-                                params: method.params.clone(),
-                                ret: method.ret,
-                                type_params: method.type_params.clone(),
-                            }))));
-                        }
-                        TObjElem::Getter(_getter) => {
-                            // This only makes sense when we're getting the property
-                            // as rvalue
-                            todo!()
-                        }
-                        TObjElem::Setter(_setter) => {
-                            // This only makes sense when we're getting the property
-                            // as lvalue
-                            todo!()
-                        }
                         TObjElem::Index(index) => {
                             if maybe_index.is_some() {
                                 return Err(Errors::InferenceError(
@@ -778,51 +746,6 @@ pub fn get_prop(
                         // Callable signatures have no name so we ignore them.
                         TObjElem::Constructor(_) => continue,
                         TObjElem::Call(_) => continue,
-                        TObjElem::Method(method) => {
-                            let key = match &method.name {
-                                TPropKey::StringKey(key) => key,
-                                TPropKey::NumberKey(key) => key,
-                            };
-                            if key == name {
-                                return Ok(arena.insert(Type::from(TypeKind::Function(
-                                    Function {
-                                        params: method.params.clone(),
-                                        ret: method.ret,
-                                        type_params: method.type_params.clone(),
-                                    },
-                                ))));
-                            }
-                        }
-                        TObjElem::Getter(getter) => {
-                            let key = match &getter.name {
-                                TPropKey::StringKey(key) => key,
-                                TPropKey::NumberKey(key) => key,
-                            };
-                            if key == name {
-                                return Ok(arena.insert(Type::from(TypeKind::Function(
-                                    Function {
-                                        params: vec![],
-                                        ret: getter.ret,
-                                        type_params: None,
-                                    },
-                                ))));
-                            }
-                        }
-                        TObjElem::Setter(setter) => {
-                            let key = match &setter.name {
-                                TPropKey::StringKey(key) => key,
-                                TPropKey::NumberKey(key) => key,
-                            };
-                            if key == name {
-                                return Ok(arena.insert(Type::from(TypeKind::Function(
-                                    Function {
-                                        params: vec![setter.param.to_owned()],
-                                        ret: undefined,
-                                        type_params: None,
-                                    },
-                                ))));
-                            }
-                        }
                         TObjElem::Index(index) => {
                             if maybe_index.is_some() {
                                 return Err(Errors::InferenceError(

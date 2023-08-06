@@ -87,16 +87,87 @@ impl<'a> Parser<'a> {
                                     false
                                 };
                             assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
-                            let type_ann = self.parse_type_ann()?;
 
-                            props.push(ObjectProp::Prop(type_ann::Prop {
-                                name,
-                                optional,
-                                mutable: false, // TODO
-                                type_ann: Box::new(type_ann),
-                                // TODO(#642): compute correct spans for type annotations
-                                span: Span { start: 0, end: 0 },
-                            }));
+                            let prop = match self.peek().unwrap_or(&EOF).kind {
+                                TokenKind::Get => {
+                                    self.next(); // consume `get`
+
+                                    // TODO - `params` should only be `self`
+                                    let params = self.parse_params()?;
+                                    assert_eq!(
+                                        self.next().unwrap_or(EOF.clone()).kind,
+                                        TokenKind::SingleArrow
+                                    );
+                                    let ret = self.parse_type_ann()?;
+
+                                    let type_ann = TypeAnn {
+                                        kind: TypeAnnKind::Function(FunctionType {
+                                            type_params: None,
+                                            params,
+                                            ret: Box::new(ret),
+                                        }),
+                                        span: Span { start: 0, end: 0 }, // TODO
+                                        inferred_type: None,
+                                    };
+
+                                    ObjectProp::Prop(type_ann::Prop {
+                                        name,
+                                        modifier: Some(PropModifier::Getter),
+                                        optional,
+                                        mutable: false, // TODO
+                                        type_ann: Box::new(type_ann),
+                                        // TODO(#642): compute correct spans for type annotations
+                                        span: Span { start: 0, end: 0 },
+                                    })
+                                }
+                                TokenKind::Set => {
+                                    self.next(); // consume `set`
+
+                                    // TODO - `params` should only be `mut self, value`
+                                    let params = self.parse_params()?;
+                                    assert_eq!(
+                                        self.next().unwrap_or(EOF.clone()).kind,
+                                        TokenKind::SingleArrow
+                                    );
+                                    let ret = self.parse_type_ann()?;
+
+                                    let type_ann = TypeAnn {
+                                        kind: TypeAnnKind::Function(FunctionType {
+                                            type_params: None,
+                                            params,
+                                            ret: Box::new(ret),
+                                        }),
+                                        span: Span { start: 0, end: 0 }, // TODO
+                                        inferred_type: None,
+                                    };
+
+                                    ObjectProp::Prop(type_ann::Prop {
+                                        name,
+                                        modifier: Some(PropModifier::Setter),
+                                        optional,
+                                        mutable: false, // TODO
+                                        type_ann: Box::new(type_ann),
+                                        // TODO(#642): compute correct spans for type annotations
+                                        span: Span { start: 0, end: 0 },
+                                    })
+                                }
+                                _ => {
+                                    // This means we can get rid of the difference
+                                    // between methods and properties that are functions.
+                                    let type_ann = self.parse_type_ann()?;
+                                    ObjectProp::Prop(type_ann::Prop {
+                                        name,
+                                        modifier: None,
+                                        optional,
+                                        mutable: false, // TODO
+                                        type_ann: Box::new(type_ann),
+                                        // TODO(#642): compute correct spans for type annotations
+                                        span: Span { start: 0, end: 0 },
+                                    })
+                                }
+                            };
+
+                            props.push(prop);
                         }
                         TokenKind::LeftBracket => {
                             let name = match self.next().unwrap_or(EOF.clone()).kind {
@@ -132,32 +203,12 @@ impl<'a> Parser<'a> {
                         }
                         TokenKind::Fn => {
                             match self.peek().unwrap_or(&EOF).kind.clone() {
-                                TokenKind::Identifier(name) => {
-                                    self.next(); // consume identifier
-
-                                    let type_params = self.maybe_parse_type_params()?;
-                                    let params = self.parse_params()?;
-                                    assert_eq!(
-                                        self.next().unwrap_or(EOF.clone()).kind,
-                                        TokenKind::Colon
-                                    );
-                                    let ret = self.parse_type_ann()?;
-
-                                    props.push(ObjectProp::Method(ObjMethod {
-                                        name,
-                                        type_params,
-                                        params,
-                                        ret: Box::new(ret),
-                                        // TODO(#642): compute correct spans for type annotations
-                                        span: Span { start: 0, end: 0 },
-                                    }));
-                                }
                                 TokenKind::LeftParen => {
                                     let type_params = self.maybe_parse_type_params()?;
                                     let params = self.parse_params()?;
                                     assert_eq!(
                                         self.next().unwrap_or(EOF.clone()).kind,
-                                        TokenKind::Colon
+                                        TokenKind::SingleArrow
                                     );
                                     let ret = self.parse_type_ann()?;
 
@@ -175,51 +226,6 @@ impl<'a> Parser<'a> {
                                     })
                                 }
                             }
-                        }
-                        TokenKind::Get => {
-                            let name = match self.next().unwrap_or(EOF.clone()).kind {
-                                TokenKind::Identifier(name) => name,
-                                _ => {
-                                    return Err(ParseError {
-                                        message: "expected identifier".to_string(),
-                                    })
-                                }
-                            };
-
-                            let params = self.parse_params()?;
-                            assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
-                            let ret = self.parse_type_ann()?;
-
-                            props.push(ObjectProp::Getter(ObjGetter {
-                                name,
-                                ret: Box::new(ret),
-                                params,
-                                // TODO(#642): compute correct spans for type annotations
-                                span: Span { start: 0, end: 0 },
-                            }));
-                        }
-                        TokenKind::Set => {
-                            let name = match self.next().unwrap_or(EOF.clone()).kind {
-                                TokenKind::Identifier(name) => name,
-                                _ => {
-                                    return Err(ParseError {
-                                        message: "expected identifier".to_string(),
-                                    })
-                                }
-                            };
-
-                            let params = self.parse_params()?;
-                            assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
-                            let _ret = self.parse_type_ann()?;
-
-                            // TODO: check that _ret is undefined
-
-                            props.push(ObjectProp::Setter(ObjSetter {
-                                name,
-                                params,
-                                // TODO(#642): compute correct spans for type annotations
-                                span: Span { start: 0, end: 0 },
-                            }));
                         }
                         _ => {
                             return Err(ParseError {
@@ -324,7 +330,10 @@ impl<'a> Parser<'a> {
 
                 let type_params = self.maybe_parse_type_params()?;
                 let params = self.parse_params()?;
-                assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Arrow);
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::SingleArrow
+                );
                 let return_type = self.parse_type_ann()?;
 
                 // TODO: handle generics
@@ -384,7 +393,10 @@ impl<'a> Parser<'a> {
                 let mut cases: Vec<MatchTypeCase> = vec![];
                 while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
                     let extends = self.parse_type_ann()?;
-                    assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Arrow);
+                    assert_eq!(
+                        self.next().unwrap_or(EOF.clone()).kind,
+                        TokenKind::DoubleArrow
+                    );
                     let true_type = self.parse_type_ann()?;
 
                     cases.push(MatchTypeCase {
@@ -670,11 +682,11 @@ mod tests {
     fn parse_object_type_all_sig_types() -> Result<(), ParseError> {
         let input = r#"
             {
-                fn (a: number): string,
-                fn foo(a: number): string,
-                fn bar(self, a: number): string,
-                get baz(): string,
-                set baz(value: string): undefined,
+                fn (a: number) -> string,
+                foo: fn (a: number) -> string,
+                bar: fn (self, a: number) -> string,
+                baz: get (self) -> string,
+                baz: set (mut self, value: string) -> undefined,
                 [key: string]: number,
                 qux: string,
             }
@@ -734,7 +746,7 @@ mod tests {
 
     #[test]
     fn parse_fn_type_ann() {
-        insta::assert_debug_snapshot!(parse("fn (a: number, b: number) => number"));
+        insta::assert_debug_snapshot!(parse("fn (a: number, b: number) -> number"));
     }
 
     #[test]
@@ -787,9 +799,9 @@ mod tests {
 
     #[test]
     fn parse_func_with_rest_param() {
-        insta::assert_debug_snapshot!(parse("fn (...args: Array<number>) => number"));
-        insta::assert_debug_snapshot!(parse("fn (...args: Array<_>) => _"));
-        insta::assert_debug_snapshot!(parse("fn (...args: _) => _"));
+        insta::assert_debug_snapshot!(parse("fn (...args: Array<number>) -> number"));
+        insta::assert_debug_snapshot!(parse("fn (...args: Array<_>) -> _"));
+        insta::assert_debug_snapshot!(parse("fn (...args: _) -> _"));
     }
 
     #[test]

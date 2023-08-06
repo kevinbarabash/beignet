@@ -117,27 +117,6 @@ pub trait Visitor: KeyValueStore<Index, Type> {
                     ret: self.visit_index(ret),
                     type_params: self.visit_type_params(type_params),
                 }),
-                TObjElem::Method(TMethod {
-                    name,
-                    params,
-                    ret,
-                    type_params,
-                    is_mutating,
-                }) => TObjElem::Method(TMethod {
-                    name: name.to_owned(),
-                    params: self.visit_func_params(params),
-                    ret: self.visit_index(ret),
-                    type_params: self.visit_type_params(type_params),
-                    is_mutating: *is_mutating,
-                }),
-                TObjElem::Getter(TGetter { name, ret }) => TObjElem::Getter(TGetter {
-                    name: name.to_owned(),
-                    ret: self.visit_index(ret),
-                }),
-                TObjElem::Setter(TSetter { name, param }) => TObjElem::Setter(TSetter {
-                    name: name.to_owned(),
-                    param: self.visit_func_param(param),
-                }),
                 TObjElem::Index(index) => TObjElem::Index(TIndex {
                     t: self.visit_index(&index.t),
                     ..index.clone()

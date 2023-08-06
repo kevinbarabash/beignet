@@ -23,6 +23,7 @@ pub struct Method {
     pub is_public: bool,
     pub is_async: bool,
     pub is_gen: bool,
+    pub is_mutating: bool,
     pub type_params: Option<Vec<TypeParam>>,
     pub params: Vec<FuncParam>,
     pub body: Block,

@@ -282,7 +282,7 @@ impl<'a> Parser<'a> {
                 let arms = self.parse_many(
                     |p| {
                         let pattern = p.parse_pattern()?;
-                        assert_eq!(p.next().unwrap_or(EOF.clone()).kind, TokenKind::Arrow);
+                        assert_eq!(p.next().unwrap_or(EOF.clone()).kind, TokenKind::DoubleArrow);
 
                         let (body, end) = match p.peek().unwrap_or(&EOF).kind {
                             TokenKind::LeftBrace => {
@@ -556,7 +556,10 @@ impl<'a> Parser<'a> {
             _ => None,
         };
 
-        assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Arrow);
+        assert_eq!(
+            self.next().unwrap_or(EOF.clone()).kind,
+            TokenKind::DoubleArrow
+        );
 
         let (body, span) = match self.peek().unwrap_or(&EOF).kind {
             TokenKind::LeftBrace => {

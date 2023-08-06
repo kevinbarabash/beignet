@@ -9,9 +9,6 @@ use crate::type_param::TypeParam;
 pub enum ObjectProp {
     Call(ObjCallable),
     Constructor(ObjCallable),
-    Method(ObjMethod),
-    Getter(ObjGetter),
-    Setter(ObjSetter),
     Indexer(Indexer),
     Prop(Prop),
 }
@@ -51,10 +48,18 @@ pub struct ObjSetter {
     pub params: Vec<FuncParam>,
 }
 
+// TODO: dedupe with TPropModifier
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum PropModifier {
+    Getter,
+    Setter,
+}
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Prop {
     pub span: Span,
     pub name: String,
+    pub modifier: Option<PropModifier>,
     pub optional: bool,
     pub mutable: bool,
     pub type_ann: Box<TypeAnn>,
@@ -76,6 +81,8 @@ pub struct Indexer {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct FunctionType {
+    // TODO
+    // pub span: Span,
     pub type_params: Option<Vec<TypeParam>>,
     pub params: Vec<FuncParam>,
     pub ret: Box<TypeAnn>,
