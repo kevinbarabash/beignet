@@ -907,3 +907,14 @@ pub fn get_prop(
         ))
     }
 }
+
+pub fn filter_nullables(arena: &Arena<Type>, types: &[Index]) -> Vec<Index> {
+    types
+        .iter()
+        .filter(|t| {
+            !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Undefined))
+                && !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Null))
+        })
+        .cloned()
+        .collect()
+}

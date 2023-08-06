@@ -122,15 +122,7 @@ pub fn infer_expression(
             let mut has_undefined = false;
             if *opt_chain {
                 if let TypeKind::Union(union) = &arena[func_idx].kind {
-                    let types: Vec<Index> = union
-                        .types
-                        .iter()
-                        .filter(|t| {
-                            !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Undefined))
-                                && !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Null))
-                        })
-                        .cloned()
-                        .collect();
+                    let types = filter_nullables(arena, &union.types);
                     has_undefined = types.len() != union.types.len();
                     func_idx = new_union_type(arena, &types);
                 }
@@ -153,15 +145,7 @@ pub fn infer_expression(
                     let undefined = new_keyword(arena, Keyword::Undefined);
 
                     if let TypeKind::Union(union) = &arena[result].kind {
-                        let mut types: Vec<Index> = union
-                            .types
-                            .iter()
-                            .filter(|t| {
-                                !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Undefined))
-                                    && !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Null))
-                            })
-                            .cloned()
-                            .collect();
+                        let mut types = filter_nullables(arena, &union.types);
 
                         if types.len() != union.types.len() {
                             // If we didn't end up removing any `undefined`s then
@@ -290,15 +274,7 @@ pub fn infer_expression(
             let mut has_undefined = false;
             if *opt_chain {
                 if let TypeKind::Union(union) = &arena[obj_idx].kind {
-                    let types: Vec<Index> = union
-                        .types
-                        .iter()
-                        .filter(|t| {
-                            !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Undefined))
-                                && !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Null))
-                        })
-                        .cloned()
-                        .collect();
+                    let types = filter_nullables(arena, &union.types);
                     has_undefined = types.len() != union.types.len();
                     obj_idx = new_union_type(arena, &types);
                 }
@@ -320,15 +296,7 @@ pub fn infer_expression(
                     let undefined = new_keyword(arena, Keyword::Undefined);
 
                     if let TypeKind::Union(union) = &arena[result].kind {
-                        let mut types: Vec<Index> = union
-                            .types
-                            .iter()
-                            .filter(|t| {
-                                !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Undefined))
-                                    && !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Null))
-                            })
-                            .cloned()
-                            .collect();
+                        let mut types = filter_nullables(arena, &union.types);
 
                         if types.len() != union.types.len() {
                             // If we didn't end up removing any `undefined`s then
