@@ -71,7 +71,7 @@ impl<'a> Parser<'a> {
             }
 
             let kind = match character {
-                'a'..='z' | 'A'..='Z' | '_' => {
+                'a'..='z' | 'A'..='Z' | '_' | '$' => {
                     // avoids an extra scanner.pop() call after the match
                     return Some(self.lex_ident_or_keyword());
                 }
@@ -239,7 +239,7 @@ impl<'a> Parser<'a> {
         while !self.scanner.is_done() {
             let character = self.scanner.peek(0).unwrap();
             match character {
-                'a'..='z' | 'A'..='Z' | '_' | '0'..='9' => {
+                'a'..='z' | 'A'..='Z' | '_' | '$' | '0'..='9' => {
                     ident.push(character);
                     self.scanner.pop();
                 }
@@ -477,7 +477,7 @@ mod tests {
 
     #[test]
     fn lex_identifiers() {
-        let parser = Parser::new("abc _a0 123");
+        let parser = Parser::new("abc _a0 123 $foo");
 
         let tokens = parser.collect::<Vec<_>>();
 
@@ -492,6 +492,10 @@ mod tests {
         assert_eq!(
             tokens[2].kind,
             crate::token::TokenKind::NumLit("123".to_string())
+        );
+        assert_eq!(
+            tokens[3].kind,
+            crate::token::TokenKind::Identifier("$foo".to_string())
         );
     }
 

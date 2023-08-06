@@ -250,6 +250,27 @@ pub fn expand_type(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<I
         TypeKind::Constructor(Constructor { name, types, .. }) => {
             expand_alias_by_name(arena, ctx, name, types)?
         }
+        TypeKind::Union(Union { types }) => {
+            let types: Vec<Index> = types
+                .iter()
+                .filter_map(|t| {
+                    let expanded_t = expand_type(arena, ctx, *t).unwrap();
+
+                    if let TypeKind::Keyword(kw) = &arena[expanded_t].kind {
+                        if kw == &Keyword::Never {
+                            None
+                        } else {
+                            Some(*t)
+                        }
+                    } else {
+                        Some(*t)
+                    }
+                })
+                .collect();
+
+            // TODO: if there's a single type, expand it
+            return Ok(new_union_type(arena, &types));
+        }
         _ => return Ok(t), // Early return to avoid infinite loop
     };
 

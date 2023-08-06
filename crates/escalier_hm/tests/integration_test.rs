@@ -4411,3 +4411,25 @@ fn function_call_with_spread_args() -> Result<(), Errors> {
 
     Ok(())
 }
+
+#[test]
+fn throws_tracking() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type $Throws<T> = never
+    declare let div: fn (a: number, b: number) => number | $Throws<"div by zero">
+    let foo = fn (a, b) => div(a, b) + 0
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("foo").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"(a: number, b: number) => number"#
+    );
+
+    Ok(())
+}

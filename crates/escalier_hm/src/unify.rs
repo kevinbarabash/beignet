@@ -649,10 +649,15 @@ pub fn unify_call(
     type_args: Option<&[Index]>,
     t2: Index,
 ) -> Result<Index, Errors> {
+    // QUESTION: Can we avoid introducing a type variable here?
+    // We need to avoid unifying with the return type of the function.
+    // When we do, that removes the $Throwable part of the return type.
     let ret_type = new_var_type(arena, None);
 
     let b = prune(arena, t2);
     let b_t = arena.get(b).unwrap().clone();
+
+    eprintln!("b_t = {}", b_t.as_string(arena));
 
     match b_t.kind {
         TypeKind::Variable(_) => {
@@ -812,6 +817,8 @@ pub fn unify_call(
             )));
         }
     }
+
+    eprintln!("ret_type = {:?}", arena[ret_type].as_string(arena));
 
     // We need to prune the return type, because it might be a type variable.
     let result = prune(arena, ret_type);

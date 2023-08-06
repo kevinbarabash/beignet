@@ -119,6 +119,7 @@ pub fn infer_expression(
             opt_chain,
         }) => {
             let mut func_idx = infer_expression(arena, func, ctx)?;
+            eprintln!("func_idx = {:?}", arena[func_idx].as_string(arena));
             let mut has_undefined = false;
             if *opt_chain {
                 if let TypeKind::Union(union) = &arena[func_idx].kind {
@@ -140,7 +141,9 @@ pub fn infer_expression(
                 None => unify_call(arena, ctx, args, None, func_idx)?,
             };
 
-            match *opt_chain && has_undefined {
+            eprintln!("Call result: {:?}", arena[result].as_string(arena));
+
+            let result = match *opt_chain && has_undefined {
                 true => {
                     let undefined = new_keyword(arena, Keyword::Undefined);
 
@@ -161,7 +164,11 @@ pub fn infer_expression(
                     }
                 }
                 false => result,
-            }
+            };
+
+            eprintln!("Call result: {:?}", arena[result].as_string(arena));
+
+            result
         }
         ExprKind::Function(syntax::Function {
             params,
