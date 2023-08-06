@@ -2627,6 +2627,35 @@ fn optional_chaining() -> Result<(), Errors> {
 }
 
 #[test]
+fn optional_chaining_with_alias() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type OptPoint = {x: number, y: string} | undefined
+    let p: OptPoint = {x: 5, y: "hello"}
+    let x = p?.x
+    let y = p?.["y"]
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("x").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"number | undefined"#
+    );
+
+    let binding = my_ctx.values.get("y").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"string | undefined"#
+    );
+
+    Ok(())
+}
+
+#[test]
 fn optional_chaining_unnecessary_chaining() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
@@ -2659,6 +2688,68 @@ fn optional_chaining_multiple_levels() -> Result<(), Errors> {
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("c").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"number | undefined"#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn calling_variable_whose_type_is_aliased_function_type() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Fn = fn () => number
+    declare let foo: Fn
+    let result = foo()
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("result").unwrap();
+    assert_eq!(arena[binding.index].as_string(&arena), r#"number"#);
+
+    Ok(())
+}
+
+#[test]
+fn optional_chaining_call() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let foo: (fn () => number) | undefined
+    let result = foo?.()
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("result").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"number | undefined"#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn optional_chaining_call_2() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Fn = fn () => number
+    declare let foo: Fn | undefined
+    let result = foo?.()
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
         r#"number | undefined"#

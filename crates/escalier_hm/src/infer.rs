@@ -116,20 +116,67 @@ pub fn infer_expression(
             callee: func,
             args,
             type_args,
-            ..
+            opt_chain,
         }) => {
-            let func_type = infer_expression(arena, func, ctx)?;
+            let mut func_idx = infer_expression(arena, func, ctx)?;
 
-            match type_args {
+            // TODO: filter any `null`s as well
+            let mut has_undefined = false;
+            if *opt_chain {
+                if let TypeKind::Union(union) = &arena[func_idx].kind {
+                    let types: Vec<Index> = union
+                        .types
+                        .iter()
+                        .filter(|t| {
+                            !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Undefined))
+                        })
+                        .cloned()
+                        .collect();
+                    has_undefined = types.len() != union.types.len();
+                    func_idx = new_union_type(arena, &types);
+                }
+            }
+
+            let result = match type_args {
                 Some(type_args) => {
                     let type_args = type_args
                         .iter_mut()
                         .map(|type_arg| infer_type_ann(arena, type_arg, ctx))
                         .collect::<Result<Vec<_>, _>>()?;
 
-                    unify_call(arena, ctx, args, Some(&type_args), func_type)?
+                    unify_call(arena, ctx, args, Some(&type_args), func_idx)?
                 }
-                None => unify_call(arena, ctx, args, None, func_type)?,
+                None => unify_call(arena, ctx, args, None, func_idx)?,
+            };
+
+            match *opt_chain && has_undefined {
+                true => {
+                    let undefined = new_keyword(arena, Keyword::Undefined);
+
+                    if let TypeKind::Union(union) = &arena[result].kind {
+                        let mut types: Vec<Index> = union
+                            .types
+                            .iter()
+                            .filter(|t| {
+                                !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Undefined))
+                            })
+                            .cloned()
+                            .collect();
+
+                        if types.len() != union.types.len() {
+                            // If we didn't end up removing any `undefined`s then
+                            // itmeans that `result` already contains `undefined`
+                            // and we can return it as is.
+                            result
+                        } else {
+                            types.push(undefined);
+                            new_union_type(arena, &types)
+                        }
+                    } else {
+                        new_union_type(arena, &[result, undefined])
+                    }
+                }
+                false => result,
             }
         }
         ExprKind::Function(syntax::Function {
@@ -239,6 +286,7 @@ pub fn infer_expression(
             property: prop,
             opt_chain,
         }) => {
+            // TODO: filter any `null`s as well
             let mut obj_idx = infer_expression(arena, obj, ctx)?;
             let mut has_undefined = false;
             if *opt_chain {
