@@ -2604,8 +2604,9 @@ fn optional_chaining() -> Result<(), Errors> {
     let src = r#"
     type Point = {x: number, y: string}
     let p: Point | undefined = {x: 5, y: "hello"}
+    let q: Point | null = {x: 5, y: "hello"}
     let x = p?.x
-    let y = p?.["y"]
+    let y = q?.["y"]
     "#;
     let mut program = parse(src).unwrap();
 
@@ -2720,29 +2721,8 @@ fn optional_chaining_call() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    declare let foo: (fn () => number) | undefined
-    let result = foo?.()
-    "#;
-    let mut program = parse(src).unwrap();
-
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
-
-    let binding = my_ctx.values.get("result").unwrap();
-    assert_eq!(
-        arena[binding.index].as_string(&arena),
-        r#"number | undefined"#
-    );
-
-    Ok(())
-}
-
-#[test]
-fn optional_chaining_call_2() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
-
-    let src = r#"
     type Fn = fn () => number
-    declare let foo: Fn | undefined
+    declare let foo: Fn | undefined | null
     let result = foo?.()
     "#;
     let mut program = parse(src).unwrap();

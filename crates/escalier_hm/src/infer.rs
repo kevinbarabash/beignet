@@ -119,8 +119,6 @@ pub fn infer_expression(
             opt_chain,
         }) => {
             let mut func_idx = infer_expression(arena, func, ctx)?;
-
-            // TODO: filter any `null`s as well
             let mut has_undefined = false;
             if *opt_chain {
                 if let TypeKind::Union(union) = &arena[func_idx].kind {
@@ -129,6 +127,7 @@ pub fn infer_expression(
                         .iter()
                         .filter(|t| {
                             !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Undefined))
+                                && !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Null))
                         })
                         .cloned()
                         .collect();
@@ -159,6 +158,7 @@ pub fn infer_expression(
                             .iter()
                             .filter(|t| {
                                 !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Undefined))
+                                    && !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Null))
                             })
                             .cloned()
                             .collect();
@@ -286,7 +286,6 @@ pub fn infer_expression(
             property: prop,
             opt_chain,
         }) => {
-            // TODO: filter any `null`s as well
             let mut obj_idx = infer_expression(arena, obj, ctx)?;
             let mut has_undefined = false;
             if *opt_chain {
@@ -296,6 +295,7 @@ pub fn infer_expression(
                         .iter()
                         .filter(|t| {
                             !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Undefined))
+                                && !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Null))
                         })
                         .cloned()
                         .collect();
@@ -325,6 +325,7 @@ pub fn infer_expression(
                             .iter()
                             .filter(|t| {
                                 !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Undefined))
+                                    && !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Null))
                             })
                             .cloned()
                             .collect();

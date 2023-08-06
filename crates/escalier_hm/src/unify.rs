@@ -679,8 +679,6 @@ pub fn unify_call(
             bind(arena, ctx, b, call_type)?
         }
         TypeKind::Union(Union { types }) => {
-            // TODO:
-
             let mut ret_types = vec![];
             for t in types.iter() {
                 let ret_type = unify_call(arena, ctx, args, type_args, *t)?;
