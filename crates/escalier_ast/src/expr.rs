@@ -115,12 +115,14 @@ pub struct Call {
     pub callee: Box<Expr>,
     pub type_args: Option<Vec<TypeAnn>>,
     pub args: Vec<Expr>,
+    pub opt_chain: bool,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Member {
     pub object: Box<Expr>,
     pub property: MemberProp,
+    pub opt_chain: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -185,6 +187,8 @@ pub enum ExprKind {
     Null(Null),
     Undefined(Undefined),
     TemplateLiteral(TemplateLiteral),
+    // TODO: Add regex support
+    // Regex(Regex),
     Object(Object),
     Tuple(Tuple),
     Assign(Assign),
@@ -194,8 +198,6 @@ pub enum ExprKind {
     Class(Class),
     Call(Call),
     Member(Member),
-    // Index(Member),
-    OptionalChain(OptionalChain),
     IfElse(IfElse),
     Match(Match),
     Try(Try),

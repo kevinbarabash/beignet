@@ -707,10 +707,31 @@ pub fn unify_call(
         TypeKind::Tuple(_) => {
             return Err(Errors::InferenceError("tuple is not callable".to_string()))
         }
-        TypeKind::Constructor(Constructor { name, types: _ }) => {
-            // TODO: lookup name in scope, and see if it has any callable signatures
-            todo!("check if {name} has any callable signatures");
-        }
+        TypeKind::Constructor(Constructor {
+            name,
+            types: type_args,
+        }) => match ctx.schemes.get(&name) {
+            Some(scheme) => {
+                let mut mapping: HashMap<String, Index> = HashMap::new();
+                if let Some(type_params) = &scheme.type_params {
+                    for (param, arg) in type_params.iter().zip(type_args.iter()) {
+                        mapping.insert(param.name.clone(), arg.to_owned());
+                    }
+                }
+
+                let t = instantiate_scheme(arena, scheme.t, &mapping);
+                let type_args = if type_args.is_empty() {
+                    None
+                } else {
+                    Some(type_args.as_slice())
+                };
+
+                return unify_call(arena, ctx, args, type_args, t);
+            }
+            None => {
+                panic!("Couldn't find scheme for {name:#?}");
+            }
+        },
         TypeKind::Literal(lit) => {
             return Err(Errors::InferenceError(format!(
                 "literal {lit:#?} is not callable"
@@ -793,7 +814,11 @@ pub fn unify_call(
     }
 
     // We need to prune the return type, because it might be a type variable.
-    Ok(prune(arena, ret_type))
+    let result = prune(arena, ret_type);
+
+    eprintln!("unify_call result = {:#?}", arena[result].as_string(arena));
+
+    Ok(result)
 }
 
 fn bind(arena: &mut Arena<Type>, ctx: &Context, a: Index, b: Index) -> Result<(), Errors> {

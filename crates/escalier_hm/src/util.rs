@@ -697,8 +697,8 @@ pub fn get_prop(
                 for elem in &object.elems {
                     match elem {
                         // Callable signatures have no name so we ignore them.
-                        TObjElem::Constructor(constructor) => continue,
-                        TObjElem::Call(call) => continue,
+                        TObjElem::Constructor(_) => continue,
+                        TObjElem::Call(_) => continue,
                         TObjElem::Method(method) => {
                             // This only makes sense when we're getting the property
                             // as rvalue
@@ -714,12 +714,12 @@ pub fn get_prop(
                                 type_params: method.type_params.clone(),
                             }))));
                         }
-                        TObjElem::Getter(getter) => {
+                        TObjElem::Getter(_getter) => {
                             // This only makes sense when we're getting the property
                             // as rvalue
                             todo!()
                         }
-                        TObjElem::Setter(setter) => {
+                        TObjElem::Setter(_setter) => {
                             // This only makes sense when we're getting the property
                             // as lvalue
                             todo!()
@@ -906,4 +906,15 @@ pub fn get_prop(
             "Can't access property on non-object type".to_string(),
         ))
     }
+}
+
+pub fn filter_nullables(arena: &Arena<Type>, types: &[Index]) -> Vec<Index> {
+    types
+        .iter()
+        .filter(|t| {
+            !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Undefined))
+                && !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Null))
+        })
+        .cloned()
+        .collect()
 }

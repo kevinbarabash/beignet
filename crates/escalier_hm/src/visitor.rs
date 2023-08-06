@@ -195,7 +195,7 @@ pub trait Visitor: KeyValueStore<Index, Type> {
         }
     }
 
-    fn visit_infer(&mut self, infer: &Infer, idx: Index) -> Index {
+    fn visit_infer(&mut self, _infer: &Infer, idx: Index) -> Index {
         idx // Do nothing by default
     }
 

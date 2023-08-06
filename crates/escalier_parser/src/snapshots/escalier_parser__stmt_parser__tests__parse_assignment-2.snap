@@ -27,6 +27,7 @@ expression: "parse(r#\"p.x = 5\"#)"
                                             span: 2..3,
                                         },
                                     ),
+                                    opt_chain: false,
                                 },
                             ),
                             span: 0..3,

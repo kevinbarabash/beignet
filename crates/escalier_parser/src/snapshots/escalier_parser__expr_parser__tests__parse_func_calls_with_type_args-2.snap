@@ -50,6 +50,7 @@ Expr {
                     inferred_type: None,
                 },
             ],
+            opt_chain: false,
         },
     ),
     span: 0..31,

@@ -45,6 +45,7 @@ Expr {
                                                             },
                                                             type_args: None,
                                                             args: [],
+                                                            opt_chain: false,
                                                         },
                                                     ),
                                                     span: 61..66,

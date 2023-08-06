@@ -627,7 +627,7 @@ impl<'a> Parser<'a> {
                     return Ok(lhs);
                 }
 
-                if let Some(result) = self.parse_postfix(lhs.clone(), next_precedence)? {
+                if let Some(result) = self.parse_postfix(lhs.clone(), next_precedence, false)? {
                     lhs = result;
                     continue;
                 }
@@ -727,6 +727,7 @@ impl<'a> Parser<'a> {
         &mut self,
         lhs: Expr,
         next_precedence: (u8, Associativity),
+        opt_chain: bool,
     ) -> Result<Option<Expr>, ParseError> {
         let precedence = if next_precedence.1 == Associativity::Left {
             next_precedence.0
@@ -752,6 +753,7 @@ impl<'a> Parser<'a> {
                             span,
                             expr: Box::new(rhs),
                         }),
+                        opt_chain,
                     }),
                     span,
                     inferred_type: None,
@@ -771,6 +773,7 @@ impl<'a> Parser<'a> {
                     callee: Box::new(lhs),
                     type_args: None,
                     args,
+                    opt_chain,
                 });
 
                 Expr {
@@ -819,6 +822,7 @@ impl<'a> Parser<'a> {
                     callee: Box::new(lhs),
                     type_args: Some(type_args),
                     args,
+                    opt_chain,
                 });
 
                 Expr {
@@ -837,6 +841,7 @@ impl<'a> Parser<'a> {
                             kind: ExprKind::Member(Member {
                                 object: Box::new(lhs),
                                 property: MemberProp::Ident(ident.to_owned()),
+                                opt_chain: false,
                             }),
                             span,
                             inferred_type: None,
@@ -851,11 +856,10 @@ impl<'a> Parser<'a> {
             }
             TokenKind::QuestionDot => {
                 self.next(); // consumes '?.'
-                let lhs_span = lhs.get_span();
 
-                let base = match self.peek().unwrap_or(&EOF).kind {
+                let result = match self.peek().unwrap_or(&EOF).kind {
                     TokenKind::LeftParen | TokenKind::LeftBracket => {
-                        self.parse_postfix(lhs, next_precedence)?
+                        self.parse_postfix(lhs, next_precedence, true)?
                     }
                     _ => {
                         let rhs = self.parse_expr_with_precedence(precedence)?;
@@ -866,6 +870,7 @@ impl<'a> Parser<'a> {
                                     kind: ExprKind::Member(Member {
                                         object: Box::new(lhs),
                                         property: MemberProp::Ident(ident.to_owned()),
+                                        opt_chain: true,
                                     }),
                                     span,
                                     inferred_type: None,
@@ -881,23 +886,13 @@ impl<'a> Parser<'a> {
                     }
                 };
 
-                let base = match base {
-                    Some(base) => base,
+                match result {
+                    Some(result) => result,
                     None => {
                         return Err(ParseError {
                             message: "base is None when parsing optional chain".to_string(),
                         })
                     }
-                };
-
-                let span = merge_spans(&lhs_span, &base.get_span());
-
-                Expr {
-                    kind: ExprKind::OptionalChain(OptionalChain {
-                        base: Box::new(base),
-                    }),
-                    span,
-                    inferred_type: None,
                 }
             }
             _ => panic!("unexpected token: {:?}", token),

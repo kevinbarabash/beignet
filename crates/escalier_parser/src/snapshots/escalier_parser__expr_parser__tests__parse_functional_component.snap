@@ -60,6 +60,7 @@ Expr {
                                                             span: 26..34,
                                                         },
                                                     ),
+                                                    opt_chain: false,
                                                 },
                                             ),
                                             span: 20..34,
