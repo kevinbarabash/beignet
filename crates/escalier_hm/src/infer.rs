@@ -617,6 +617,7 @@ pub fn infer_type_ann(
                             params: func_params,
                             ret: ret_idx,
                             type_params,
+                            throws: None,
                         }))
                     }
                     ObjectProp::Constructor(ObjCallable {
@@ -660,6 +661,7 @@ pub fn infer_type_ann(
                             params: func_params,
                             ret: ret_idx,
                             type_params,
+                            throws: None,
                         }))
                     }
                     ObjectProp::Method(ObjMethod {
@@ -706,6 +708,7 @@ pub fn infer_type_ann(
                             ret: ret_idx,
                             type_params,
                             is_mutating: false,
+                            throws: None,
                         }))
                     }
                     ObjectProp::Getter(ObjGetter {
@@ -723,6 +726,7 @@ pub fn infer_type_ann(
                         props.push(TObjElem::Getter(TGetter {
                             name: TPropKey::StringKey(name.to_owned()),
                             ret: ret_idx,
+                            throws: None,
                         }));
                     }
                     ObjectProp::Setter(ObjSetter {
@@ -756,6 +760,7 @@ pub fn infer_type_ann(
                         props.push(TObjElem::Setter(TSetter {
                             name: TPropKey::StringKey(name.to_owned()),
                             param: func_param,
+                            throws: None,
                         }));
                     }
                 }

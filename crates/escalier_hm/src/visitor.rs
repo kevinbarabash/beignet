@@ -103,19 +103,23 @@ pub trait Visitor: KeyValueStore<Index, Type> {
                     params,
                     ret,
                     type_params,
+                    throws,
                 }) => TObjElem::Constructor(TCallable {
                     params: self.visit_func_params(params),
                     ret: self.visit_index(ret),
                     type_params: self.visit_type_params(type_params),
+                    throws: throws.map(|t| self.visit_index(&t)),
                 }),
                 TObjElem::Call(TCallable {
                     params,
                     ret,
                     type_params,
+                    throws,
                 }) => TObjElem::Call(TCallable {
                     params: self.visit_func_params(params),
                     ret: self.visit_index(ret),
                     type_params: self.visit_type_params(type_params),
+                    throws: throws.map(|t| self.visit_index(&t)),
                 }),
                 TObjElem::Method(TMethod {
                     name,
@@ -123,20 +127,28 @@ pub trait Visitor: KeyValueStore<Index, Type> {
                     ret,
                     type_params,
                     is_mutating,
+                    throws,
                 }) => TObjElem::Method(TMethod {
                     name: name.to_owned(),
                     params: self.visit_func_params(params),
                     ret: self.visit_index(ret),
                     type_params: self.visit_type_params(type_params),
                     is_mutating: *is_mutating,
+                    throws: throws.map(|t| self.visit_index(&t)),
                 }),
-                TObjElem::Getter(TGetter { name, ret }) => TObjElem::Getter(TGetter {
+                TObjElem::Getter(TGetter { name, ret, throws }) => TObjElem::Getter(TGetter {
                     name: name.to_owned(),
                     ret: self.visit_index(ret),
+                    throws: throws.map(|t| self.visit_index(&t)),
                 }),
-                TObjElem::Setter(TSetter { name, param }) => TObjElem::Setter(TSetter {
+                TObjElem::Setter(TSetter {
+                    name,
+                    param,
+                    throws,
+                }) => TObjElem::Setter(TSetter {
                     name: name.to_owned(),
                     param: self.visit_func_param(param),
+                    throws: throws.map(|t| self.visit_index(&t)),
                 }),
                 TObjElem::Index(index) => TObjElem::Index(TIndex {
                     t: self.visit_index(&index.t),
@@ -160,10 +172,12 @@ pub trait Visitor: KeyValueStore<Index, Type> {
             .collect::<Vec<_>>();
         let ret = self.visit_index(&func.ret);
         let type_params = self.visit_type_params(&func.type_params);
+        let throws = func.throws.map(|t| self.visit_index(&t));
         Function {
             params,
             ret,
             type_params,
+            throws,
         }
     }
 

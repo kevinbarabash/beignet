@@ -80,6 +80,7 @@ pub struct Function {
     pub params: Vec<FuncParam>,
     pub ret: Index,
     pub type_params: Option<Vec<TypeParam>>,
+    pub throws: Option<Index>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -166,6 +167,7 @@ pub struct TMethod {
     pub ret: Index,
     pub type_params: Option<Vec<TypeParam>>,
     pub is_mutating: bool,
+    pub throws: Option<Index>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -209,6 +211,7 @@ pub struct TCallable {
     pub params: Vec<FuncParam>,
     pub ret: Index,
     pub type_params: Option<Vec<TypeParam>>,
+    pub throws: Option<Index>,
     // TODO: support mutating callables? ...they'd still need have the same type
 }
 
@@ -216,12 +219,14 @@ pub struct TCallable {
 pub struct TGetter {
     pub name: TPropKey,
     pub ret: Index,
+    pub throws: Option<Index>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TSetter {
     pub name: TPropKey,
     pub param: FuncParam,
+    pub throws: Option<Index>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -390,6 +395,7 @@ impl Type {
                             params,
                             ret,
                             type_params,
+                            throws: _, // TODO
                         }) => {
                             let mut result = "fn".to_string();
                             match type_params {
@@ -420,6 +426,7 @@ impl Type {
                             params,
                             ret,
                             type_params,
+                            throws: _, // TODO
                         }) => {
                             let mut result = "fn".to_string();
                             match type_params {
@@ -452,6 +459,7 @@ impl Type {
                             ret,
                             type_params,
                             is_mutating: _, // TODO
+                            throws: _,      // TODO
                         }) => {
                             let name = match name {
                                 TPropKey::StringKey(s) => s,
@@ -482,7 +490,11 @@ impl Type {
                             ));
                             fields.push(result);
                         }
-                        TObjElem::Getter(TGetter { name, ret }) => {
+                        TObjElem::Getter(TGetter {
+                            name,
+                            ret,
+                            throws: _, // TODO
+                        }) => {
                             let name = match name {
                                 TPropKey::StringKey(s) => s,
                                 TPropKey::NumberKey(n) => n,
@@ -492,7 +504,11 @@ impl Type {
                                 arena[*ret].as_string(arena)
                             ))
                         }
-                        TObjElem::Setter(TSetter { name, param }) => {
+                        TObjElem::Setter(TSetter {
+                            name,
+                            param,
+                            throws: _, // TODO
+                        }) => {
                             let name = match name {
                                 TPropKey::StringKey(s) => s,
                                 TPropKey::NumberKey(n) => n,
@@ -666,6 +682,7 @@ pub fn new_func_type(
         params: params.to_vec(),
         ret: ret.to_owned(),
         type_params: type_params.to_owned(),
+        throws: None,
     })))
 }
 

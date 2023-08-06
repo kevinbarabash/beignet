@@ -42,6 +42,7 @@ fn test_env() -> (Arena<Type>, Context) {
                 ret: number,
                 type_params: None,
                 is_mutating: true,
+                throws: None,
             }),
             // .length: number;
             types::TObjElem::Prop(types::TProp {
@@ -4413,12 +4414,70 @@ fn function_call_with_spread_args() -> Result<(), Errors> {
 }
 
 #[test]
+#[ignore]
 fn throws_tracking() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    type $Throws<T> = never
-    declare let div: fn (a: number, b: number) => number | $Throws<"div by zero">
+    let div = fn (a: number, b: number) -> number throws "div by zero" {
+        if (b == 0) {
+            throw "div by zero"
+        }
+        return a / b
+    }
+    let foo = fn (a, b) => div(a, b) + 0
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("foo").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"(a: number, b: number) => number"#
+    );
+
+    Ok(())
+}
+
+#[test]
+#[ignore]
+fn throws_tracking_with_partial_inference() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let div = fn (a, b) throws "div by zero" {
+        if (b == 0) {
+            throw "div by zero"
+        }
+        return a / b
+    }
+    let foo = fn (a, b) => div(a, b) + 0
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("foo").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"(a: number, b: number) => number"#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn throws_tracking_with_total_inference() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let div = fn (a, b) {
+        if (b == 0) {
+            throw "div by zero"
+        }
+        return a / b
+    }
     let foo = fn (a, b) => div(a, b) + 0
     "#;
     let mut program = parse(src).unwrap();

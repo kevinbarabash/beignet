@@ -206,6 +206,7 @@ pub fn instantiate_func(
         params,
         ret,
         type_params: None,
+        throws: func.throws,
     })
 }
 

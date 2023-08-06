@@ -1100,6 +1100,21 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
+    fn parse_function_with_throws() {
+        let src = r#"fn (x, y): throws => { return x + y }"#;
+        insta::assert_debug_snapshot!(parse(src));
+    }
+
+    #[test]
+    #[ignore]
+    fn parse_function_with_type_annotations_an_throws() {
+        let src =
+            r#"fn (x: number, y: number) => number throws DivByZeroError => { return x + y }"#;
+        insta::assert_debug_snapshot!(parse(src));
+    }
+
+    #[test]
     fn parse_lambdas() {
         insta::assert_debug_snapshot!(parse("fn (x, y) => x + y"));
         insta::assert_debug_snapshot!(parse("fn (x) => fn (y) => x + y"));
