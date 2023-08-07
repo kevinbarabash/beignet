@@ -171,10 +171,25 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             let func_a = instantiate_func(arena, func_a, None)?;
             let func_b = instantiate_func(arena, func_b, None)?;
 
+            let mut params_a = func_a.params;
+            let mut params_b = func_b.params;
+
+            if let Some(param) = params_a.get(0) {
+                if param.is_self() {
+                    params_a.remove(0);
+                }
+            }
+
+            if let Some(param) = params_b.get(0) {
+                if param.is_self() {
+                    params_b.remove(0);
+                }
+            }
+
             let mut rest_a = None;
             let mut rest_b = None;
 
-            for param in &func_a.params {
+            for param in &params_a {
                 if let TPat::Rest(rest) = &param.pattern {
                     if rest_a.is_some() {
                         return Err(Errors::InferenceError(
@@ -185,7 +200,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 }
             }
 
-            for param in &func_b.params {
+            for param in &params_b {
                 if let TPat::Rest(rest) = &param.pattern {
                     if rest_b.is_some() {
                         return Err(Errors::InferenceError(
@@ -196,14 +211,16 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 }
             }
 
-            let min_params_a = func_a.params.len() - rest_a.is_some() as usize;
-            let min_params_b = func_b.params.len() - rest_b.is_some() as usize;
+            // TODO: remove leading `self` or `mut self` param before proceding
+
+            let min_params_a = params_a.len() - rest_a.is_some() as usize;
+            let min_params_b = params_b.len() - rest_b.is_some() as usize;
 
             if min_params_a > min_params_b {
                 if let Some(rest_b) = rest_b {
                     for i in 0..min_params_b {
-                        let p = &func_a.params[i];
-                        let q = &func_b.params[i];
+                        let p = &params_a[i];
+                        let q = &params_b[i];
                         // NOTE: We reverse the order of the params here because func_a
                         // should be able to accept any params that func_b can accept,
                         // its params may be more lenient.
@@ -212,7 +229,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
 
                     let mut remaining_args_a = vec![];
 
-                    for p in &func_a.params[min_params_b..] {
+                    for p in &params_a[min_params_b..] {
                         let arg = match &p.pattern {
                             TPat::Rest(_) => match &arena[p.t].kind {
                                 TypeKind::Tuple(tuple) => {
@@ -258,8 +275,8 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             }
 
             for i in 0..min_params_a {
-                let p = &func_a.params[i];
-                let q = &func_b.params[i];
+                let p = &params_a[i];
+                let q = &params_b[i];
                 // NOTE: We reverse the order of the params here because func_a
                 // should be able to accept any params that func_b can accept,
                 // its params may be more lenient.
@@ -267,8 +284,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             }
 
             if let Some(rest_a) = rest_a {
-                for i in min_params_a..min_params_b {
-                    let q = &func_b.params[i];
+                for q in params_b.iter().take(min_params_b).skip(min_params_a) {
                     // NOTE: We reverse the order of the params here because func_a
                     // should be able to accept any params that func_b can accept,
                     // its params may be more lenient.
@@ -378,21 +394,8 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             for (name, prop_2) in &named_props_2 {
                 match named_props_1.get(name) {
                     Some(prop_1) => {
-                        let t1 = match prop_1.optional {
-                            true => {
-                                let undefined = new_keyword(arena, Keyword::Undefined);
-                                new_union_type(arena, &[prop_1.t, undefined])
-                            }
-                            false => prop_1.t,
-                        };
-                        let t2 = match prop_2.optional {
-                            true => {
-                                let undefined = new_keyword(arena, Keyword::Undefined);
-                                new_union_type(arena, &[prop_2.t, undefined])
-                            }
-                            false => prop_2.t,
-                        };
-
+                        let t1 = prop_1.get_type(arena);
+                        let t2 = prop_2.get_type(arena);
                         unify(arena, ctx, t1, t2)?;
                     }
                     None => {
@@ -430,14 +433,8 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                         0 => {
                             for (_, prop_1) in named_props_1 {
                                 let undefined = new_keyword(arena, Keyword::Undefined);
-
-                                let t1 = match prop_1.optional {
-                                    true => new_union_type(arena, &[prop_1.t, undefined]),
-                                    false => prop_1.t,
-                                };
-
+                                let t1 = prop_1.get_type(arena);
                                 let t2 = new_union_type(arena, &[indexes_2[0].t, undefined]);
-
                                 unify(arena, ctx, t1, t2)?;
                             }
                         }

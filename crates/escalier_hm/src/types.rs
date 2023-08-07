@@ -89,6 +89,15 @@ pub struct FuncParam {
     pub optional: bool,
 }
 
+impl FuncParam {
+    pub fn is_self(&self) -> bool {
+        match &self.pattern {
+            TPat::Ident(BindingIdent { name, .. }) => name == "self",
+            _ => false,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum TPat {
     Ident(BindingIdent),
@@ -210,6 +219,30 @@ pub struct TProp {
     pub optional: bool,
     pub mutable: bool,
     pub t: Index,
+}
+
+impl TProp {
+    pub fn get_type(&self, arena: &mut Arena<Type>) -> Index {
+        let t = match self.modifier {
+            Some(TPropModifier::Getter) => {
+                if let TypeKind::Function(func) = &arena[self.t].kind {
+                    func.ret
+                } else {
+                    todo!()
+                }
+            }
+            Some(TPropModifier::Setter) => todo!(),
+            None => self.t,
+        };
+
+        match self.optional {
+            true => {
+                let undefined = new_keyword(arena, Keyword::Undefined);
+                new_union_type(arena, &[t, undefined])
+            }
+            false => t,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]

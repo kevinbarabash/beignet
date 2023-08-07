@@ -979,10 +979,10 @@ fn object_method_subtyping() -> Result<(), Errors> {
 
     let src = r#"
     declare let foo: {
-        fn method(self, a: number | string): string,
+        method: fn (self, a: number | string) -> string,
     }
     let bar: {
-        fn method(self, a: number): number | string,
+        method: fn (self, a: number) -> number | string,
     } = foo
     "#;
     let mut program = parse(src).unwrap();
@@ -1033,17 +1033,16 @@ fn object_indexer_subtyping() -> Result<(), Errors> {
     Ok(())
 }
 
-// TODO
 #[test]
 fn object_methods_and_properties_should_unify() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
     declare let foo: {
-        fn foo(self, a: number): string,
+        foo: fn (self, a: number) -> string,
     }
     let bar: {
-        foo: fn (a: number) => string,
+        foo: fn (a: number) -> string,
     } = foo
     "#;
     let mut program = parse(src).unwrap();
@@ -1917,7 +1916,7 @@ fn member_access_on_type_variable() -> Result<(), Errors> {
     assert_eq!(
         result,
         Err(Errors::InferenceError(
-            "Can't access properties on t5".to_string()
+            "Can't access properties on t6".to_string()
         ))
     );
 
