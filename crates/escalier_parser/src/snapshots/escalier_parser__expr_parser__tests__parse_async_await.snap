@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(r#\"\n            async fn () => { \n                let x = await foo()\n                return x\n            }\n        \"#)"
+expression: "parse(r#\"\n            async fn () { \n                let x = await foo()\n                return x\n            }\n        \"#)"
 ---
 Expr {
     kind: Function(
@@ -9,7 +9,7 @@ Expr {
             params: [],
             body: Block(
                 Block {
-                    span: 27..105,
+                    span: 24..102,
                     stmts: [
                         Stmt {
                             kind: Let {
@@ -19,11 +19,11 @@ Expr {
                                     kind: Ident(
                                         BindingIdent {
                                             name: "x",
-                                            span: 51..52,
+                                            span: 48..49,
                                             mutable: false,
                                         },
                                     ),
-                                    span: 51..52,
+                                    span: 48..49,
                                     inferred_type: None,
                                 },
                                 expr: Some(
@@ -37,10 +37,10 @@ Expr {
                                                                 kind: Ident(
                                                                     Ident {
                                                                         name: "foo",
-                                                                        span: 61..64,
+                                                                        span: 58..61,
                                                                     },
                                                                 ),
-                                                                span: 61..64,
+                                                                span: 58..61,
                                                                 inferred_type: None,
                                                             },
                                                             type_args: None,
@@ -48,18 +48,18 @@ Expr {
                                                             opt_chain: false,
                                                         },
                                                     ),
-                                                    span: 61..66,
+                                                    span: 58..63,
                                                     inferred_type: None,
                                                 },
                                             },
                                         ),
-                                        span: 55..66,
+                                        span: 52..63,
                                         inferred_type: None,
                                     },
                                 ),
                                 type_ann: None,
                             },
-                            span: 47..66,
+                            span: 44..63,
                             inferred_type: None,
                         },
                         Stmt {
@@ -69,15 +69,15 @@ Expr {
                                         kind: Ident(
                                             Ident {
                                                 name: "x",
-                                                span: 90..91,
+                                                span: 87..88,
                                             },
                                         ),
-                                        span: 90..91,
+                                        span: 87..88,
                                         inferred_type: None,
                                     },
                                 ),
                             },
-                            span: 90..91,
+                            span: 87..88,
                             inferred_type: None,
                         },
                     ],
@@ -88,6 +88,6 @@ Expr {
             is_gen: false,
         },
     ),
-    span: 13..105,
+    span: 13..102,
     inferred_type: None,
 }

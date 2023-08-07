@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(r#\"fn ({x, y}: Point): number => { return x + y }\"#)"
+expression: "parse(r#\"fn ({x, y}: Point) -> number { return x + y }\"#)"
 ---
 Expr {
     kind: Function(
@@ -56,7 +56,7 @@ Expr {
             ],
             body: Block(
                 Block {
-                    span: 29..46,
+                    span: 28..45,
                     stmts: [
                         Stmt {
                             kind: Return {
@@ -68,10 +68,10 @@ Expr {
                                                     kind: Ident(
                                                         Ident {
                                                             name: "x",
-                                                            span: 39..40,
+                                                            span: 38..39,
                                                         },
                                                     ),
-                                                    span: 39..40,
+                                                    span: 38..39,
                                                     inferred_type: None,
                                                 },
                                                 op: Plus,
@@ -79,20 +79,20 @@ Expr {
                                                     kind: Ident(
                                                         Ident {
                                                             name: "y",
-                                                            span: 43..44,
+                                                            span: 42..43,
                                                         },
                                                     ),
-                                                    span: 43..44,
+                                                    span: 42..43,
                                                     inferred_type: None,
                                                 },
                                             },
                                         ),
-                                        span: 39..44,
+                                        span: 38..43,
                                         inferred_type: None,
                                     },
                                 ),
                             },
-                            span: 39..44,
+                            span: 38..43,
                             inferred_type: None,
                         },
                     ],
@@ -101,7 +101,7 @@ Expr {
             type_ann: Some(
                 TypeAnn {
                     kind: Number,
-                    span: 20..26,
+                    span: 22..28,
                     inferred_type: None,
                 },
             ),
@@ -109,6 +109,6 @@ Expr {
             is_gen: false,
         },
     ),
-    span: 0..46,
+    span: 0..45,
     inferred_type: None,
 }

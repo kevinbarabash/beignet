@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(r#\"\n            gen fn () => { \n                yield 1\n                yield 2\n                yield 3\n            }\n        \"#)"
+expression: "parse(r#\"\n            gen fn () { \n                yield 1\n                yield 2\n                yield 3\n            }\n        \"#)"
 ---
 Expr {
     kind: Function(
@@ -9,7 +9,7 @@ Expr {
             params: [],
             body: Block(
                 Block {
-                    span: 25..114,
+                    span: 22..111,
                     stmts: [
                         Stmt {
                             kind: Expr {
@@ -22,16 +22,16 @@ Expr {
                                                         value: "1",
                                                     },
                                                 ),
-                                                span: 51..52,
+                                                span: 48..49,
                                                 inferred_type: None,
                                             },
                                         },
                                     ),
-                                    span: 45..52,
+                                    span: 42..49,
                                     inferred_type: None,
                                 },
                             },
-                            span: 45..52,
+                            span: 42..49,
                             inferred_type: None,
                         },
                         Stmt {
@@ -45,16 +45,16 @@ Expr {
                                                         value: "2",
                                                     },
                                                 ),
-                                                span: 75..76,
+                                                span: 72..73,
                                                 inferred_type: None,
                                             },
                                         },
                                     ),
-                                    span: 69..76,
+                                    span: 66..73,
                                     inferred_type: None,
                                 },
                             },
-                            span: 69..76,
+                            span: 66..73,
                             inferred_type: None,
                         },
                         Stmt {
@@ -68,16 +68,16 @@ Expr {
                                                         value: "3",
                                                     },
                                                 ),
-                                                span: 99..100,
+                                                span: 96..97,
                                                 inferred_type: None,
                                             },
                                         },
                                     ),
-                                    span: 93..100,
+                                    span: 90..97,
                                     inferred_type: None,
                                 },
                             },
-                            span: 93..100,
+                            span: 90..97,
                             inferred_type: None,
                         },
                     ],
@@ -88,6 +88,6 @@ Expr {
             is_gen: true,
         },
     ),
-    span: 13..114,
+    span: 13..111,
     inferred_type: None,
 }

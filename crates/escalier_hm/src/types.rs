@@ -436,7 +436,7 @@ impl Type {
                                 _ => (),
                             };
                             result.push_str(&format!(
-                                "({}): {}",
+                                "({}) -> {}",
                                 params_to_strings(arena, params).join(", "),
                                 arena[*ret].as_string(arena)
                             ));
@@ -466,7 +466,7 @@ impl Type {
                                 _ => (),
                             };
                             result.push_str(&format!(
-                                "({}): {}",
+                                "({}) -> {}",
                                 params_to_strings(arena, params).join(", "),
                                 arena[*ret].as_string(arena)
                             ));

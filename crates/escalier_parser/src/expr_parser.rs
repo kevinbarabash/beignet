@@ -549,28 +549,32 @@ impl<'a> Parser<'a> {
         let params = self.parse_params()?;
 
         let type_ann = match self.peek().unwrap_or(&EOF).kind {
-            TokenKind::Colon => {
-                self.next().unwrap_or(EOF.clone());
+            TokenKind::SingleArrow => {
+                self.next();
                 Some(self.parse_type_ann()?)
             }
             _ => None,
         };
 
-        assert_eq!(
-            self.next().unwrap_or(EOF.clone()).kind,
-            TokenKind::DoubleArrow
-        );
-
         let (body, span) = match self.peek().unwrap_or(&EOF).kind {
+            TokenKind::DoubleArrow => {
+                self.next(); // consume '=>'
+                let expr = self.parse_expr()?;
+                let span = merge_spans(&start.span, &expr.get_span());
+                (BlockOrExpr::Expr(Box::new(expr)), span)
+            }
             TokenKind::LeftBrace => {
                 let block = self.parse_block()?;
                 let span = merge_spans(&start.span, &block.span);
                 (BlockOrExpr::Block(block), span)
             }
             _ => {
-                let expr = self.parse_expr()?;
-                let span = merge_spans(&start.span, &expr.get_span());
-                (BlockOrExpr::Expr(Box::new(expr)), span)
+                return Err(ParseError {
+                    message: format!(
+                        "expected '=>' or '{{' after function declaration, found {:?}",
+                        self.peek().unwrap_or(&EOF).clone()
+                    ),
+                })
             }
         };
 
@@ -1069,44 +1073,42 @@ mod tests {
 
     #[test]
     fn parse_function() {
-        insta::assert_debug_snapshot!(parse("fn () => { let x = 5 let y = 10 return x + y }"));
+        insta::assert_debug_snapshot!(parse("fn () { let x = 5 let y = 10 return x + y }"));
     }
 
     #[test]
     fn parse_function_with_params() {
-        let src = r#"fn (x, y) => { return x + y }"#;
+        let src = r#"fn (x, y) { return x + y }"#;
         insta::assert_debug_snapshot!(parse(src));
     }
 
     #[test]
     fn parse_function_with_type_annotations() {
-        insta::assert_debug_snapshot!(parse(
-            r#"fn (x: number, y: number): number => { return x + y }"#
-        ));
+        insta::assert_debug_snapshot!(parse(r#"fn (x: number, y: number) -> number => x + y"#));
     }
 
     #[test]
     fn parse_function_with_optional_params() {
         insta::assert_debug_snapshot!(parse(
-            r#"fn (x: number, y: number, z?: number): number => { return x + y }"#
+            r#"fn (x: number, y: number, z?: number) -> number { return x + y }"#
         ));
     }
 
     #[test]
     fn parse_function_with_destructuring() {
-        insta::assert_debug_snapshot!(parse(r#"fn ({x, y}) => { return x + y }"#));
+        insta::assert_debug_snapshot!(parse(r#"fn ({x, y}) => x + y"#));
     }
 
     #[test]
     fn parse_function_with_destructuring_and_type_annotation() {
-        insta::assert_debug_snapshot!(parse(r#"fn ({x, y}: Point): number => { return x + y }"#));
+        insta::assert_debug_snapshot!(parse(r#"fn ({x, y}: Point) -> number { return x + y }"#));
     }
 
     #[test]
     fn parse_lambdas() {
         insta::assert_debug_snapshot!(parse("fn (x, y) => x + y"));
         insta::assert_debug_snapshot!(parse("fn (x) => fn (y) => x + y"));
-        insta::assert_debug_snapshot!(parse(r#"fn (x: number, y: number): number => x + y"#));
+        insta::assert_debug_snapshot!(parse(r#"fn (x: number, y: number) -> number => x + y"#));
     }
 
     #[test]
@@ -1181,7 +1183,7 @@ mod tests {
 
     #[test]
     fn parse_param_destructuring() {
-        insta::assert_debug_snapshot!(parse("fn ({x, y}) => { return x + y }"));
+        insta::assert_debug_snapshot!(parse("fn ({x, y}) { return x + y }"));
         insta::assert_debug_snapshot!(parse("fn ([head, ...tail]) => head"));
     }
 
@@ -1308,7 +1310,7 @@ mod tests {
     fn parse_async_await() {
         insta::assert_debug_snapshot!(parse(
             r#"
-            async fn () => { 
+            async fn () { 
                 let x = await foo()
                 return x
             }
@@ -1320,7 +1322,7 @@ mod tests {
     fn parse_generator_function() {
         insta::assert_debug_snapshot!(parse(
             r#"
-            gen fn () => { 
+            gen fn () { 
                 yield 1
                 yield 2
                 yield 3
@@ -1332,8 +1334,8 @@ mod tests {
     #[test]
     fn parse_func_with_type_params() {
         insta::assert_debug_snapshot!(parse("fn <T> (x: T) => x"));
-        insta::assert_debug_snapshot!(parse("fn <A, B> (a: A, b: B): A => a"));
-        insta::assert_debug_snapshot!(parse("fn <A: number, B: number> (a: A, b: B): A => a"));
+        insta::assert_debug_snapshot!(parse("fn <A, B> (a: A, b: B) -> A => a"));
+        insta::assert_debug_snapshot!(parse("fn <A: number, B: number> (a: A, b: B) -> A => a"));
     }
 
     #[test]

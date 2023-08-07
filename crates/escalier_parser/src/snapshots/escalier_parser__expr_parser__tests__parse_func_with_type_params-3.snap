@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(\"fn <A: number, B: number> (a: A, b: B): A => a\")"
+expression: "parse(\"fn <A: number, B: number> (a: A, b: B) -> A => a\")"
 ---
 Expr {
     kind: Function(
@@ -88,10 +88,10 @@ Expr {
                     kind: Ident(
                         Ident {
                             name: "a",
-                            span: 45..46,
+                            span: 47..48,
                         },
                     ),
-                    span: 45..46,
+                    span: 47..48,
                     inferred_type: None,
                 },
             ),
@@ -101,7 +101,7 @@ Expr {
                         "A",
                         None,
                     ),
-                    span: 40..41,
+                    span: 42..43,
                     inferred_type: None,
                 },
             ),
@@ -109,6 +109,6 @@ Expr {
             is_gen: false,
         },
     ),
-    span: 0..46,
+    span: 0..48,
     inferred_type: None,
 }

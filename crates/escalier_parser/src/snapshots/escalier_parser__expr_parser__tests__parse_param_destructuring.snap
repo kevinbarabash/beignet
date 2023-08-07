@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(\"fn ({x, y}) => { return x + y }\")"
+expression: "parse(\"fn ({x, y}) { return x + y }\")"
 ---
 Expr {
     kind: Function(
@@ -47,7 +47,7 @@ Expr {
             ],
             body: Block(
                 Block {
-                    span: 14..31,
+                    span: 11..28,
                     stmts: [
                         Stmt {
                             kind: Return {
@@ -59,10 +59,10 @@ Expr {
                                                     kind: Ident(
                                                         Ident {
                                                             name: "x",
-                                                            span: 24..25,
+                                                            span: 21..22,
                                                         },
                                                     ),
-                                                    span: 24..25,
+                                                    span: 21..22,
                                                     inferred_type: None,
                                                 },
                                                 op: Plus,
@@ -70,20 +70,20 @@ Expr {
                                                     kind: Ident(
                                                         Ident {
                                                             name: "y",
-                                                            span: 28..29,
+                                                            span: 25..26,
                                                         },
                                                     ),
-                                                    span: 28..29,
+                                                    span: 25..26,
                                                     inferred_type: None,
                                                 },
                                             },
                                         ),
-                                        span: 24..29,
+                                        span: 21..26,
                                         inferred_type: None,
                                     },
                                 ),
                             },
-                            span: 24..29,
+                            span: 21..26,
                             inferred_type: None,
                         },
                     ],
@@ -94,6 +94,6 @@ Expr {
             is_gen: false,
         },
     ),
-    span: 0..31,
+    span: 0..28,
     inferred_type: None,
 }
