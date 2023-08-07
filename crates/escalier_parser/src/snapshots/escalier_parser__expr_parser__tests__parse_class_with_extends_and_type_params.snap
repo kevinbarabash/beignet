@@ -36,6 +36,7 @@ Expr {
                         is_public: false,
                         is_async: false,
                         is_gen: false,
+                        is_mutating: false,
                         type_params: Some(
                             [
                                 TypeParam {

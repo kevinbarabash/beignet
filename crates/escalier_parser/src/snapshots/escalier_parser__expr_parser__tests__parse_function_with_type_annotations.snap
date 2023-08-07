@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(r#\"fn (x: number, y: number): number => { return x + y }\"#)"
+expression: "parse(r#\"fn (x: number, y: number) -> number => x + y\"#)"
 ---
 Expr {
     kind: Function(
@@ -50,54 +50,41 @@ Expr {
                     optional: false,
                 },
             ],
-            body: Block(
-                Block {
-                    span: 36..53,
-                    stmts: [
-                        Stmt {
-                            kind: Return {
-                                arg: Some(
-                                    Expr {
-                                        kind: Binary(
-                                            Binary {
-                                                left: Expr {
-                                                    kind: Ident(
-                                                        Ident {
-                                                            name: "x",
-                                                            span: 46..47,
-                                                        },
-                                                    ),
-                                                    span: 46..47,
-                                                    inferred_type: None,
-                                                },
-                                                op: Plus,
-                                                right: Expr {
-                                                    kind: Ident(
-                                                        Ident {
-                                                            name: "y",
-                                                            span: 50..51,
-                                                        },
-                                                    ),
-                                                    span: 50..51,
-                                                    inferred_type: None,
-                                                },
-                                            },
-                                        ),
-                                        span: 46..51,
-                                        inferred_type: None,
+            body: Expr(
+                Expr {
+                    kind: Binary(
+                        Binary {
+                            left: Expr {
+                                kind: Ident(
+                                    Ident {
+                                        name: "x",
+                                        span: 39..40,
                                     },
                                 ),
+                                span: 39..40,
+                                inferred_type: None,
                             },
-                            span: 46..51,
-                            inferred_type: None,
+                            op: Plus,
+                            right: Expr {
+                                kind: Ident(
+                                    Ident {
+                                        name: "y",
+                                        span: 43..44,
+                                    },
+                                ),
+                                span: 43..44,
+                                inferred_type: None,
+                            },
                         },
-                    ],
+                    ),
+                    span: 39..44,
+                    inferred_type: None,
                 },
             ),
             type_ann: Some(
                 TypeAnn {
                     kind: Number,
-                    span: 27..33,
+                    span: 29..35,
                     inferred_type: None,
                 },
             ),
@@ -105,6 +92,6 @@ Expr {
             is_gen: false,
         },
     ),
-    span: 0..53,
+    span: 0..44,
     inferred_type: None,
 }

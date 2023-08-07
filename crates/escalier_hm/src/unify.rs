@@ -171,10 +171,25 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             let func_a = instantiate_func(arena, func_a, None)?;
             let func_b = instantiate_func(arena, func_b, None)?;
 
+            let mut params_a = func_a.params;
+            let mut params_b = func_b.params;
+
+            if let Some(param) = params_a.get(0) {
+                if param.is_self() {
+                    params_a.remove(0);
+                }
+            }
+
+            if let Some(param) = params_b.get(0) {
+                if param.is_self() {
+                    params_b.remove(0);
+                }
+            }
+
             let mut rest_a = None;
             let mut rest_b = None;
 
-            for param in &func_a.params {
+            for param in &params_a {
                 if let TPat::Rest(rest) = &param.pattern {
                     if rest_a.is_some() {
                         return Err(Errors::InferenceError(
@@ -185,7 +200,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 }
             }
 
-            for param in &func_b.params {
+            for param in &params_b {
                 if let TPat::Rest(rest) = &param.pattern {
                     if rest_b.is_some() {
                         return Err(Errors::InferenceError(
@@ -196,14 +211,16 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 }
             }
 
-            let min_params_a = func_a.params.len() - rest_a.is_some() as usize;
-            let min_params_b = func_b.params.len() - rest_b.is_some() as usize;
+            // TODO: remove leading `self` or `mut self` param before proceding
+
+            let min_params_a = params_a.len() - rest_a.is_some() as usize;
+            let min_params_b = params_b.len() - rest_b.is_some() as usize;
 
             if min_params_a > min_params_b {
                 if let Some(rest_b) = rest_b {
                     for i in 0..min_params_b {
-                        let p = &func_a.params[i];
-                        let q = &func_b.params[i];
+                        let p = &params_a[i];
+                        let q = &params_b[i];
                         // NOTE: We reverse the order of the params here because func_a
                         // should be able to accept any params that func_b can accept,
                         // its params may be more lenient.
@@ -212,7 +229,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
 
                     let mut remaining_args_a = vec![];
 
-                    for p in &func_a.params[min_params_b..] {
+                    for p in &params_a[min_params_b..] {
                         let arg = match &p.pattern {
                             TPat::Rest(_) => match &arena[p.t].kind {
                                 TypeKind::Tuple(tuple) => {
@@ -258,8 +275,8 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             }
 
             for i in 0..min_params_a {
-                let p = &func_a.params[i];
-                let q = &func_b.params[i];
+                let p = &params_a[i];
+                let q = &params_b[i];
                 // NOTE: We reverse the order of the params here because func_a
                 // should be able to accept any params that func_b can accept,
                 // its params may be more lenient.
@@ -267,8 +284,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             }
 
             if let Some(rest_a) = rest_a {
-                for i in min_params_a..min_params_b {
-                    let q = &func_b.params[i];
+                for q in params_b.iter().take(min_params_b).skip(min_params_a) {
                     // NOTE: We reverse the order of the params here because func_a
                     // should be able to accept any params that func_b can accept,
                     // its params may be more lenient.
@@ -344,87 +360,42 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             let mut constructors_2: Vec<&TCallable> = vec![];
             let mut indexes_2: Vec<&TIndex> = vec![];
 
-            enum NamedElem<'a> {
-                Getter(&'a TGetter),
-                Method(&'a TMethod),
-                Prop(&'a TProp),
-            }
-
-            let named_elems_1: HashMap<_, _> = object1
+            let named_props_1: HashMap<_, _> = object1
                 .elems
                 .iter()
                 .filter_map(|elem| match elem {
                     TObjElem::Call(_) => None,
                     TObjElem::Constructor(_) => None,
-                    TObjElem::Method(method) => {
-                        Some((method.name.to_string(), NamedElem::Method(method)))
-                    }
-                    TObjElem::Getter(getter) => {
-                        Some((getter.name.to_string(), NamedElem::Getter(getter)))
-                    }
-                    TObjElem::Setter(_) => None,
                     TObjElem::Index(_) => None,
-                    TObjElem::Prop(prop) => Some((prop.name.to_string(), NamedElem::Prop(prop))),
+                    TObjElem::Prop(prop) => {
+                        // TODO: handle getters/setters properly
+                        Some((prop.name.to_string(), prop))
+                    }
                 })
                 .collect();
 
-            let named_elems_2: HashMap<_, _> = object2
+            let named_props_2: HashMap<_, _> = object2
                 .elems
                 .iter()
                 .filter_map(|elem| match elem {
                     TObjElem::Call(_) => None,
                     TObjElem::Constructor(_) => None,
-                    TObjElem::Method(method) => {
-                        Some((method.name.to_string(), NamedElem::Method(method)))
-                    }
-                    TObjElem::Getter(getter) => {
-                        Some((getter.name.to_string(), NamedElem::Getter(getter)))
-                    }
-                    TObjElem::Setter(_) => None,
                     TObjElem::Index(_) => None,
-                    TObjElem::Prop(prop) => Some((prop.name.to_string(), NamedElem::Prop(prop))),
+                    TObjElem::Prop(prop) => {
+                        // TODO: handle getters/setters properly
+                        Some((prop.name.to_string(), prop))
+                    }
                 })
                 .collect();
 
             // object1 must have at least as the same named elements as object2
             // TODO: handle the case where object1 has an indexer that covers
             // some of the named elements of object2
-            for (name, elem_2) in &named_elems_2 {
-                match named_elems_1.get(name) {
-                    Some(elem_1) => {
-                        let t1 = match elem_1 {
-                            NamedElem::Getter(getter) => getter.ret,
-                            NamedElem::Method(TMethod {
-                                params,
-                                ret,
-                                type_params,
-                                ..
-                            }) => new_func_type(arena, &params[1..], *ret, type_params),
-                            NamedElem::Prop(prop) => match prop.optional {
-                                true => {
-                                    let undefined = new_keyword(arena, Keyword::Undefined);
-                                    new_union_type(arena, &[prop.t, undefined])
-                                }
-                                false => prop.t,
-                            },
-                        };
-                        let t2 = match elem_2 {
-                            NamedElem::Getter(getter) => getter.ret,
-                            NamedElem::Method(TMethod {
-                                params,
-                                ret,
-                                type_params,
-                                ..
-                            }) => new_func_type(arena, &params[1..], *ret, type_params),
-                            NamedElem::Prop(prop) => match prop.optional {
-                                true => {
-                                    let undefined = new_keyword(arena, Keyword::Undefined);
-                                    new_union_type(arena, &[prop.t, undefined])
-                                }
-                                false => prop.t,
-                            },
-                        };
-
+            for (name, prop_2) in &named_props_2 {
+                match named_props_1.get(name) {
+                    Some(prop_1) => {
+                        let t1 = prop_1.get_type(arena);
+                        let t2 = prop_2.get_type(arena);
                         unify(arena, ctx, t1, t2)?;
                     }
                     None => {
@@ -460,25 +431,10 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 1 => {
                     match indexes_1.len() {
                         0 => {
-                            for (_, elem_1) in named_elems_1 {
+                            for (_, prop_1) in named_props_1 {
                                 let undefined = new_keyword(arena, Keyword::Undefined);
-
-                                let t1 = match elem_1 {
-                                    NamedElem::Getter(getter) => getter.ret,
-                                    NamedElem::Method(TMethod {
-                                        params,
-                                        ret,
-                                        type_params,
-                                        ..
-                                    }) => new_func_type(arena, &params[1..], *ret, type_params),
-                                    NamedElem::Prop(prop) => match prop.optional {
-                                        true => new_union_type(arena, &[prop.t, undefined]),
-                                        false => prop.t,
-                                    },
-                                };
-
+                                let t1 = prop_1.get_type(arena);
                                 let t2 = new_union_type(arena, &[indexes_2[0].t, undefined]);
-
                                 unify(arena, ctx, t1, t2)?;
                             }
                         }
@@ -876,9 +832,6 @@ pub fn simplify_intersection(arena: &mut Arena<Type>, in_types: &[Index]) -> Ind
                 // What do we do with Call and Index signatures
                 TObjElem::Call(_) => todo!(),
                 TObjElem::Constructor(_) => todo!(),
-                TObjElem::Method(_) => todo!(),
-                TObjElem::Getter(_) => todo!(),
-                TObjElem::Setter(_) => todo!(),
                 TObjElem::Index(_) => todo!(),
                 TObjElem::Prop(prop) => {
                     let key = match &prop.name {
@@ -898,11 +851,13 @@ pub fn simplify_intersection(arena: &mut Arena<Type>, in_types: &[Index]) -> Ind
             let t: Index = if types.len() == 1 {
                 types[0]
             } else {
+                // TODO: handle getter/setters correctly
                 new_intersection_type(arena, &types)
                 // checker.from_type_kind(TypeKind::Intersection(types))
             };
             TObjElem::Prop(TProp {
                 name: TPropKey::StringKey(name.to_owned()),
+                modifier: None,
                 // TODO: determine this field from all of the TProps with
                 // the same name.  This should only be optional if all of
                 // the TProps with the current name are optional.
@@ -916,9 +871,6 @@ pub fn simplify_intersection(arena: &mut Arena<Type>, in_types: &[Index]) -> Ind
     elems.sort_by_key(|elem| match elem {
         TObjElem::Call(_) => todo!(),
         TObjElem::Constructor(_) => todo!(),
-        TObjElem::Method(_) => todo!(),
-        TObjElem::Getter(_) => todo!(),
-        TObjElem::Setter(_) => todo!(),
         TObjElem::Index(_) => todo!(),
         TObjElem::Prop(prop) => prop.name.clone(),
     }); // ensure a stable order

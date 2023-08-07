@@ -9,6 +9,7 @@ TypeAnn {
                 Prop {
                     span: 0..0,
                     name: "a",
+                    modifier: None,
                     optional: false,
                     mutable: false,
                     type_ann: TypeAnn {
@@ -18,6 +19,7 @@ TypeAnn {
                                     Prop {
                                         span: 0..0,
                                         name: "b",
+                                        modifier: None,
                                         optional: false,
                                         mutable: false,
                                         type_ann: TypeAnn {
@@ -27,6 +29,7 @@ TypeAnn {
                                                         Prop {
                                                             span: 0..0,
                                                             name: "c",
+                                                            modifier: None,
                                                             optional: false,
                                                             mutable: false,
                                                             type_ann: TypeAnn {

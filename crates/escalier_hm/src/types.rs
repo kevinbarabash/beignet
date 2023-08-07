@@ -89,6 +89,15 @@ pub struct FuncParam {
     pub optional: bool,
 }
 
+impl FuncParam {
+    pub fn is_self(&self) -> bool {
+        match &self.pattern {
+            TPat::Ident(BindingIdent { name, .. }) => name == "self",
+            _ => false,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum TPat {
     Ident(BindingIdent),
@@ -196,12 +205,44 @@ impl fmt::Display for TPropKey {
     }
 }
 
+// TODO: dedupe with PropModifier
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum TPropModifier {
+    Getter,
+    Setter,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TProp {
     pub name: TPropKey,
+    pub modifier: Option<TPropModifier>,
     pub optional: bool,
     pub mutable: bool,
     pub t: Index,
+}
+
+impl TProp {
+    pub fn get_type(&self, arena: &mut Arena<Type>) -> Index {
+        let t = match self.modifier {
+            Some(TPropModifier::Getter) => {
+                if let TypeKind::Function(func) = &arena[self.t].kind {
+                    func.ret
+                } else {
+                    todo!()
+                }
+            }
+            Some(TPropModifier::Setter) => todo!(),
+            None => self.t,
+        };
+
+        match self.optional {
+            true => {
+                let undefined = new_keyword(arena, Keyword::Undefined);
+                new_union_type(arena, &[t, undefined])
+            }
+            false => t,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -213,26 +254,11 @@ pub struct TCallable {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TGetter {
-    pub name: TPropKey,
-    pub ret: Index,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TSetter {
-    pub name: TPropKey,
-    pub param: FuncParam,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TObjElem {
     Call(TCallable),
     // NOTE: type_params on constructors should be a subset of type_params on
     // the object scheme in which they live
     Constructor(TCallable),
-    Method(TMethod),
-    Getter(TGetter),
-    Setter(TSetter),
     Index(TIndex),
     Prop(TProp),
     // RestSpread - we can use this instead of converting {a, ...x} to {a} & tvar
@@ -410,7 +436,7 @@ impl Type {
                                 _ => (),
                             };
                             result.push_str(&format!(
-                                "({}): {}",
+                                "({}) -> {}",
                                 params_to_strings(arena, params).join(", "),
                                 arena[*ret].as_string(arena)
                             ));
@@ -440,67 +466,11 @@ impl Type {
                                 _ => (),
                             };
                             result.push_str(&format!(
-                                "({}): {}",
+                                "({}) -> {}",
                                 params_to_strings(arena, params).join(", "),
                                 arena[*ret].as_string(arena)
                             ));
                             fields.push(result);
-                        }
-                        TObjElem::Method(TMethod {
-                            name,
-                            params,
-                            ret,
-                            type_params,
-                            is_mutating: _, // TODO
-                        }) => {
-                            let name = match name {
-                                TPropKey::StringKey(s) => s,
-                                TPropKey::NumberKey(n) => n,
-                            };
-                            let mut result = format!("fn {name}");
-                            match type_params {
-                                Some(type_params) if !type_params.is_empty() => {
-                                    let type_params = type_params
-                                        .iter()
-                                        .map(|tp| match &tp.constraint {
-                                            Some(constraint) => format!(
-                                                "{}:{}",
-                                                tp.name.clone(),
-                                                arena[*constraint].as_string(arena)
-                                            ),
-                                            None => tp.name.clone(),
-                                        })
-                                        .collect::<Vec<_>>();
-                                    result.push_str(&format!("<{}>", type_params.join(", ")))
-                                }
-                                _ => (),
-                            };
-                            result.push_str(&format!(
-                                "({}): {}",
-                                params_to_strings(arena, params).join(", "),
-                                arena[*ret].as_string(arena)
-                            ));
-                            fields.push(result);
-                        }
-                        TObjElem::Getter(TGetter { name, ret }) => {
-                            let name = match name {
-                                TPropKey::StringKey(s) => s,
-                                TPropKey::NumberKey(n) => n,
-                            };
-                            fields.push(format!(
-                                "get {name}(self): {}",
-                                arena[*ret].as_string(arena)
-                            ))
-                        }
-                        TObjElem::Setter(TSetter { name, param }) => {
-                            let name = match name {
-                                TPropKey::StringKey(s) => s,
-                                TPropKey::NumberKey(n) => n,
-                            };
-                            fields.push(format!(
-                                "set {name}(self, {}): undefined",
-                                param_to_string(arena, param)
-                            ))
                         }
                         TObjElem::Index(TIndex { key, mutable, t }) => {
                             let t = arena[*t].as_string(arena);
@@ -514,6 +484,7 @@ impl Type {
                         }
                         TObjElem::Prop(TProp {
                             name,
+                            modifier, // TODO
                             optional,
                             mutable: _,
                             t,
@@ -523,11 +494,22 @@ impl Type {
                                 TPropKey::NumberKey(n) => n,
                             };
                             let t = arena[*t].as_string(arena);
-                            if *optional {
-                                fields.push(format!("{}?: {}", name, t));
-                            } else {
-                                fields.push(format!("{}: {}", name, t));
+                            let mut str = "".to_string();
+
+                            if let Some(modifier) = modifier {
+                                match modifier {
+                                    TPropModifier::Getter => str += "get ",
+                                    TPropModifier::Setter => str += "set ",
+                                }
                             }
+
+                            str += name;
+                            if *optional {
+                                str += "?";
+                            }
+                            str += &format!(": {t}");
+
+                            fields.push(str);
                         }
                     }
                 }
@@ -555,7 +537,7 @@ impl Type {
                     _ => "".to_string(),
                 };
                 format!(
-                    "{type_params}({}) => {}",
+                    "{type_params}({}) -> {}",
                     params_to_strings(arena, &func.params).join(", "),
                     arena[func.ret].as_string(arena),
                 )
@@ -832,15 +814,6 @@ fn types_equal(arena: &Arena<Type>, types1: &[Index], types2: &[Index]) -> bool 
 
 fn obj_elem_equals(arena: &Arena<Type>, elem1: &TObjElem, elem2: &TObjElem) -> bool {
     match (elem1, elem2) {
-        (TObjElem::Method(m1), TObjElem::Method(m2)) => {
-            m1.name == m2.name
-                && m1.params.len() == m2.params.len()
-                && m1.params.iter().zip(m2.params.iter()).all(|(a, b)| {
-                    let a = &arena[a.t];
-                    let b = &arena[b.t];
-                    a.equals(b, arena)
-                })
-        }
         (TObjElem::Index(i1), TObjElem::Index(i2)) => {
             // TODO: compare key types as well
             let t1 = &arena[i1.t];

@@ -24,28 +24,36 @@ fn test_env() -> (Arena<Type>, Context) {
     let number = new_primitive(&mut arena, Primitive::Number);
     let type_param_t = new_constructor(&mut arena, "T", &[]);
 
+    let push_t = new_func_type(
+        &mut arena,
+        &[types::FuncParam {
+            pattern: TPat::Ident(BindingIdent {
+                name: "item".to_string(),
+                mutable: false,
+                span: Span { start: 0, end: 0 },
+            }),
+            t: type_param_t,
+            optional: false,
+        }],
+        number,
+        &None,
+    );
+
     let array_interface = new_object_type(
         &mut arena,
         &[
-            // .push(item: T): number;
-            types::TObjElem::Method(types::TMethod {
+            // .push(item: T) -> number;
+            types::TObjElem::Prop(types::TProp {
                 name: types::TPropKey::StringKey("push".to_string()),
-                params: vec![types::FuncParam {
-                    pattern: TPat::Ident(BindingIdent {
-                        name: "item".to_string(),
-                        mutable: false,
-                        span: Span { start: 0, end: 0 },
-                    }),
-                    t: type_param_t,
-                    optional: false,
-                }],
-                ret: number,
-                type_params: None,
-                is_mutating: true,
+                modifier: None,
+                t: push_t,
+                optional: false,
+                mutable: false,
             }),
             // .length: number;
             types::TObjElem::Prop(types::TProp {
                 name: types::TPropKey::StringKey("length".to_string()),
+                modifier: None,
                 optional: false,
                 mutable: false,
                 t: number,
@@ -165,7 +173,7 @@ fn test_factorial() -> Result<(), Errors> {
 
     // factorial
     let src = r#"
-    let fact = fn (n) => {
+    let fact = fn (n) {
         return if (n == 0) {
             1
         } else {
@@ -180,7 +188,7 @@ fn test_factorial() -> Result<(), Errors> {
 
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"(n: number) => 1 | number"#
+        r#"(n: number) -> 1 | number"#
     );
     Ok(())
 }
@@ -208,12 +216,12 @@ fn test_mutual_recursion() -> Result<(), Errors> {
     let binding = my_ctx.values.get("even").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"(x: number) => true | boolean"#
+        r#"(x: number) -> true | boolean"#
     );
     let binding = my_ctx.values.get("odd").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"(x: number) => true | boolean"#
+        r#"(x: number) -> true | boolean"#
     );
 
     Ok(())
@@ -243,12 +251,12 @@ fn test_mutual_recursion_using_destructuring() -> Result<(), Errors> {
     let binding = my_ctx.values.get("even").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"(x: number) => true | boolean"#
+        r#"(x: number) -> true | boolean"#
     );
     let binding = my_ctx.values.get("odd").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"(x: number) => true | boolean"#
+        r#"(x: number) -> true | boolean"#
     );
 
     Ok(())
@@ -347,7 +355,7 @@ fn test_generic_nongeneric() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let result = fn (g) => {
+    let result = fn (g) {
         let f = fn (x) => g
         return [f(3), f(true)]
     }"#;
@@ -359,7 +367,7 @@ fn test_generic_nongeneric() -> Result<(), Errors> {
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"<A>(g: A) => [A, A]"#
+        r#"<A>(g: A) -> [A, A]"#
     );
     Ok(())
 }
@@ -374,7 +382,7 @@ fn test_basic_generics() -> Result<(), Errors> {
 
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"<A>(x: A) => A"#);
+    assert_eq!(arena[binding.index].as_string(&arena), r#"<A>(x: A) -> A"#);
 
     Ok(())
 }
@@ -392,7 +400,7 @@ fn test_composition() -> Result<(), Errors> {
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"<A, C, B>(f: (arg0: A) => B) => (g: (arg0: B) => C) => (arg: A) => C"#
+        r#"<A, C, B>(f: (arg0: A) -> B) -> (g: (arg0: B) -> C) -> (arg: A) -> C"#
     );
     Ok(())
 }
@@ -413,15 +421,15 @@ fn test_skk() -> Result<(), Errors> {
     let binding = my_ctx.values.get("S").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"<A, C, B>(f: (arg0: A) => (arg0: B) => C) => (g: (arg0: A) => B) => (x: A) => C"#
+        r#"<A, C, B>(f: (arg0: A) -> (arg0: B) -> C) -> (g: (arg0: A) -> B) -> (x: A) -> C"#
     );
     let binding = my_ctx.values.get("K").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"<A, B>(x: A) => (y: B) => A"#
+        r#"<A, B>(x: A) -> (y: B) -> A"#
     );
     let binding = my_ctx.values.get("I").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"<A>(x: A) => A"#);
+    assert_eq!(arena[binding.index].as_string(&arena), r#"<A>(x: A) -> A"#);
 
     Ok(())
 }
@@ -432,8 +440,8 @@ fn test_composition_with_statements() -> Result<(), Errors> {
 
     // Function composition
     let src = r#"
-    let result = fn (f) => {
-        let mantel = fn (g) => {
+    let result = fn (f) {
+        let mantel = fn (g) {
             let core = fn (arg) => g(f(arg))
             return core
         }
@@ -446,7 +454,7 @@ fn test_composition_with_statements() -> Result<(), Errors> {
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"<A, B, C>(f: (arg0: A) => B) => (g: (arg0: B) => C) => (arg: A) => C"#
+        r#"<A, B, C>(f: (arg0: A) -> B) -> (g: (arg0: B) -> C) -> (arg: A) -> C"#
     );
     Ok(())
 }
@@ -477,8 +485,8 @@ fn test_callback_subtyping() -> Result<(), Errors> {
     // types.  Lastly, it's okay for the return type to be a subtype of the
     // expected return type since it still conforms to the expected type.
     let src = r#"
-    declare let foo: fn (cb: fn (a: number, b: string) => boolean) => boolean
-    declare let bar: fn (x: number | string) => boolean
+    declare let foo: fn (cb: fn (a: number, b: string) -> boolean) -> boolean
+    declare let bar: fn (x: number | string) -> boolean
     let result = foo(bar)
     "#;
     let mut program = parse(src).unwrap();
@@ -494,8 +502,8 @@ fn test_callback_error_too_many_params() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    declare let foo: fn (cb: fn (x: number) => boolean) => boolean
-    declare let bar: fn (a: number, b: string) => boolean
+    declare let foo: fn (cb: fn (x: number) -> boolean) -> boolean
+    declare let bar: fn (a: number, b: string) -> boolean
     let result = foo(bar)
     "#;
     let mut program = parse(src).unwrap();
@@ -503,7 +511,7 @@ fn test_callback_error_too_many_params() -> Result<(), Errors> {
     let result = infer_program(&mut arena, &mut program, &mut my_ctx);
     assert_eq!(
         result,
-        Err(Errors::InferenceError("(a: number, b: string) => boolean is not a subtype of (x: number) => boolean since it requires more params".to_string())),
+        Err(Errors::InferenceError("(a: number, b: string) -> boolean is not a subtype of (x: number) -> boolean since it requires more params".to_string())),
     );
     Ok(())
 }
@@ -734,7 +742,7 @@ fn tuple_subtyping() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    declare let foo: fn (x: [number, string]) => boolean
+    declare let foo: fn (x: [number, string]) -> boolean
     let result = foo([5, "hello", true])
     "#;
     let mut program = parse(src).unwrap();
@@ -772,7 +780,7 @@ fn tuple_subtyping_not_enough_elements() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    declare let foo: fn (x: [number, string]) => boolean
+    declare let foo: fn (x: [number, string]) -> boolean
     let result = foo([5])
     "#;
     let mut program = parse(src).unwrap();
@@ -876,7 +884,7 @@ fn object_subtyping() -> Result<(), Errors> {
     // Each prop must be a subtype of the expected element type
     // It's okay to pass an object with extra props
     let src = r#"
-    declare let foo: fn (x: {a: number, b: string}) => boolean
+    declare let foo: fn (x: {a: number, b: string}) -> boolean
     let result = foo({a: 5, b: "hello", c: true})
     "#;
     let mut program = parse(src).unwrap();
@@ -900,11 +908,11 @@ fn object_signatures() -> Result<(), Errors> {
     // It's okay to pass an object with extra props
     let src = r#"
     declare let obj: {
-        fn (a: number): string,
-        fn foo(a: number): string,
-        fn bar(self, a: number): string,
-        get baz(self): string,
-        set baz(self, value: string): undefined,
+        fn (a: number) -> string,
+        foo: fn (a: number) -> string,
+        bar: fn (self, a: number) -> string,
+        baz: get (self) -> string,
+        baz: set (mut self, value: string) -> undefined,
         [key: string]: number,
         qux: string,
     }
@@ -916,7 +924,7 @@ fn object_signatures() -> Result<(), Errors> {
 
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        "{fn(a: number): string, fn foo(a: number): string, fn bar(self: t9, a: number): string, get baz(self): string, set baz(self, value: string): undefined, [key: string]: number, qux: string}".to_string(),
+        "{fn(a: number) -> string, foo: (a: number) -> string, bar: (self: t11, a: number) -> string, get baz: (self: t15) -> string, set baz: (self: t18, value: string) -> undefined, [key: string]: number, qux: string}".to_string(),
     );
 
     Ok(())
@@ -928,10 +936,10 @@ fn object_callable_subtyping() -> Result<(), Errors> {
 
     let src = r#"
     declare let foo: {
-        fn (self, a: number | string): string,
+        fn (self, a: number | string) -> string,
     }
     let bar: {
-        fn (self, a: number): number | string,
+        fn (self, a: number) -> number | string,
     } = foo
     "#;
     let mut program = parse(src).unwrap();
@@ -950,19 +958,24 @@ fn object_callable_subtyping_failure_case() -> Result<(), Errors> {
 
     let src = r#"
     declare let foo: {
-        fn (self, a: string): string,
+        fn (self, a: string) -> string,
     }
     let bar: {
-        fn (self, a: number): number,
+        fn (self, a: number) -> number,
     } = foo
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
 
-    Err(Errors::InferenceError(
-        "Expected type number, found type string".to_string(),
-    ))
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "Expected type number, found type string".to_string(),
+        ))
+    );
+
+    Ok(())
 }
 
 #[test]
@@ -971,10 +984,10 @@ fn object_method_subtyping() -> Result<(), Errors> {
 
     let src = r#"
     declare let foo: {
-        fn method(self, a: number | string): string,
+        method: fn (self, a: number | string) -> string,
     }
     let bar: {
-        fn method(self, a: number): number | string,
+        method: fn (self, a: number) -> number | string,
     } = foo
     "#;
     let mut program = parse(src).unwrap();
@@ -990,12 +1003,12 @@ fn object_property_subtyping() -> Result<(), Errors> {
 
     let src = r#"
     declare let foo: {
-        fn method(self, a: number): string,
+        method: fn (self, a: number) -> string,
         x: number,
         y: boolean,
     }
     let bar: {
-        fn method(self, a: number): string,
+        method: fn (self, a: number) -> string,
         x: number | string,
     } = foo
     "#;
@@ -1025,17 +1038,16 @@ fn object_indexer_subtyping() -> Result<(), Errors> {
     Ok(())
 }
 
-// TODO
 #[test]
 fn object_methods_and_properties_should_unify() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
     declare let foo: {
-        fn foo(self, a: number): string,
+        foo: fn (self, a: number) -> string,
     }
     let bar: {
-        foo: fn (a: number) => string,
+        foo: fn (a: number) -> string,
     } = foo
     "#;
     let mut program = parse(src).unwrap();
@@ -1051,13 +1063,13 @@ fn object_indexers_should_unify_with_all_named_obj_elems() -> Result<(), Errors>
 
     let src = r#"
     declare let foo: {
-        a: fn () => number,
-        b?: fn () => number,
-        get c(self): fn () => number,
-        fn d(self): number,
+        a: fn () -> number,
+        b?: fn () -> number,
+        c: get (self) -> (fn () -> number),
+        d: fn (self) -> number,
     }
     let bar: {
-        [key: string]: fn () => number,
+        [key: string]: fn () -> number,
     } = foo
     "#;
 
@@ -1101,7 +1113,7 @@ fn object_properties_and_getter_should_unify() -> Result<(), Errors> {
 
     let src = r#"
     declare let foo: {
-        get foo(self): number,
+        foo: get (self) -> number,
     }
     let bar: {
         foo: number,
@@ -1125,8 +1137,8 @@ fn mutable_object_properties_unify_with_getters_setters() -> Result<(), Errors> 
         x: number,
     }
     let mut bar: {
-        get x(self): number,
-        set x(self, value: number): undefined,
+        x: get (self) -> number,
+        x: set (mut self, value: number) -> undefined,
     } = foo
     "#;
     let mut program = parse(src).unwrap();
@@ -1141,7 +1153,7 @@ fn object_subtyping_missing_prop() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    declare let foo: fn (x: {a: number, b: string}) => boolean
+    declare let foo: fn (x: {a: number, b: string}) -> boolean
     let result = foo({b: "hello"})
     "#;
     let mut program = parse(src).unwrap();
@@ -1278,7 +1290,7 @@ fn test_program_with_generic_func() -> Result<(), Errors> {
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("id").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"<A>(x: A) => A"#);
+    assert_eq!(arena[binding.index].as_string(&arena), r#"<A>(x: A) -> A"#);
 
     let binding = my_ctx.values.get("a").unwrap();
     assert_eq!(arena[binding.index].as_string(&arena), r#"5"#);
@@ -1304,13 +1316,13 @@ fn test_program_with_generic_func_multiple_type_params() -> Result<(), Errors> {
     let binding = my_ctx.values.get("fst").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"<A, B>(x: A, y: B) => A"#
+        r#"<A, B>(x: A, y: B) -> A"#
     );
 
     let binding = my_ctx.values.get("snd").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"<A, B>(x: A, y: B) => B"#
+        r#"<A, B>(x: A, y: B) -> B"#
     );
 
     Ok(())
@@ -1321,7 +1333,7 @@ fn test_function_with_multiple_statements() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let result = fn () => {
+    let result = fn () {
         let x = 5
         let y = 10
         return x * y
@@ -1332,7 +1344,7 @@ fn test_function_with_multiple_statements() -> Result<(), Errors> {
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("result").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"() => number"#);
+    assert_eq!(arena[binding.index].as_string(&arena), r#"() -> number"#);
 
     if let StmtKind::Let {
         expr: Some(init), ..
@@ -1359,7 +1371,7 @@ fn test_function_with_multiple_statements() -> Result<(), Errors> {
 
     // TODO: implement std::fmt for Program et al
     // insta::assert_snapshot!(syntax.to_string(), @r###"
-    // fn () => {let x = 5
+    // fn () {let x = 5
     // let y = 10
     // return times(x, y)}
     // "###);
@@ -1408,7 +1420,7 @@ fn test_unary_op() -> Result<(), Errors> {
 
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"(x: number) => number"#
+        r#"(x: number) -> number"#
     );
     Ok(())
 }
@@ -1427,7 +1439,7 @@ fn test_async_return_type() -> Result<(), Errors> {
 
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"() => Promise<5>"#
+        r#"() -> Promise<5>"#
     );
     Ok(())
 }
@@ -1437,7 +1449,7 @@ fn test_async_without_return() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let foo = async fn () => {
+    let foo = async fn () {
         let sum = 5 + 10
     }
     "#;
@@ -1448,7 +1460,7 @@ fn test_async_without_return() -> Result<(), Errors> {
 
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"() => Promise<undefined>"#
+        r#"() -> Promise<undefined>"#
     );
     Ok(())
 }
@@ -1459,7 +1471,7 @@ fn test_await_in_async() -> Result<(), Errors> {
 
     let src = r#"
     let foo = async fn () => 5
-    let bar = async fn () => {
+    let bar = async fn () {
         let x = await foo()
         return x
     }
@@ -1472,13 +1484,13 @@ fn test_await_in_async() -> Result<(), Errors> {
     let binding = my_ctx.values.get("bar").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"() => Promise<5>"#
+        r#"() -> Promise<5>"#
     );
 
     let binding = my_ctx.values.get("baz").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"() => Promise<5>"#
+        r#"() -> Promise<5>"#
     );
 
     Ok(())
@@ -1490,7 +1502,7 @@ fn test_await_outside_of_async() -> Result<(), Errors> {
 
     let src = r#"
     let foo = async fn () => 5
-    let bar = fn () => {
+    let bar = fn () {
         let x = await foo()
         return x
     }
@@ -1521,7 +1533,7 @@ fn test_await_non_promise() -> Result<(), Errors> {
     assert_eq!(
         result,
         Err(Errors::InferenceError(
-            "type mismatch: unify(5, Promise<t6>) failed".to_string()
+            "type mismatch: unify(5, Promise<t7>) failed".to_string()
         ))
     );
 
@@ -1584,8 +1596,8 @@ fn test_let_with_type_ann() -> Result<(), Errors> {
     let src = r#"
     let x: number = 5
     let flag: boolean = true
-    let foo: fn () => number = fn () => 10
-    let bar: fn () => undefined = fn () => {}
+    let foo: fn () -> number = fn () => 10
+    let bar: fn () -> undefined = fn () {}
     let arr1: number[] = [1, 2, 3]
     let arr2: Array<string> = ["hello", "world"]
     let p: { x: number, y: number } = { x: 5, y: 10 }
@@ -1610,7 +1622,7 @@ fn test_function_overloads() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    declare let add: (fn (a: number, b: number) => number) & (fn (a: string, b: string) => string)
+    declare let add: (fn (a: number, b: number) -> number) & (fn (a: string, b: string) -> string)
     let sum = add(5, 10)
     let msg = add("hello, ", "world")
     "#;
@@ -1631,7 +1643,7 @@ fn test_function_no_valid_overload() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    declare let add: (fn (a: number, b: number) => number) & (fn (a: string, b: string) => string)
+    declare let add: (fn (a: number, b: number) -> number) & (fn (a: string, b: string) -> string)
     add(5, "world")
     "#;
     let mut program = parse(src).unwrap();
@@ -1652,7 +1664,7 @@ fn test_declare_cant_have_initializer() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    declare let add: fn (a: number, b: number) => number = fn (a, b) => a + b
+    declare let add: fn (a: number, b: number) -> number = fn (a, b) => a + b
     "#;
     let mut program = parse(src).unwrap();
     let result = infer_program(&mut arena, &mut program, &mut my_ctx);
@@ -1692,7 +1704,7 @@ fn test_normal_decl_must_have_initializer() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let add: fn (a: number, b: number) => number
+    let add: fn (a: number, b: number) -> number
     "#;
     let mut program = parse(src).unwrap();
     let result = infer_program(&mut arena, &mut program, &mut my_ctx);
@@ -1909,7 +1921,7 @@ fn member_access_on_type_variable() -> Result<(), Errors> {
     assert_eq!(
         result,
         Err(Errors::InferenceError(
-            "Can't access properties on t5".to_string()
+            "Can't access properties on t6".to_string()
         ))
     );
 
@@ -2136,7 +2148,7 @@ fn test_type_param_with_constraint() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let identity = fn <T: number | string>(x: T): T => x
+    let identity = fn <T: number | string>(x: T) -> T => x
     let x = identity(5)
     let y = identity("hello")
     "#;
@@ -2146,7 +2158,7 @@ fn test_type_param_with_constraint() -> Result<(), Errors> {
     let binding = my_ctx.values.get("identity").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"<T:number | string>(x: T) => T"#
+        r#"<T:number | string>(x: T) -> T"#
     );
     let binding = my_ctx.values.get("x").unwrap();
     assert_eq!(arena[binding.index].as_string(&arena), r#"5"#);
@@ -2162,7 +2174,7 @@ fn test_mix_explicit_implicit_type_params() -> Result<(), Errors> {
 
     let src = r#"
     let fst = fn <B>(a, b: B) => a
-    let snd = fn <B>(a, b: B): B => b
+    let snd = fn <B>(a, b: B) -> B => b
     "#;
     let mut program = parse(src).unwrap();
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
@@ -2170,12 +2182,12 @@ fn test_mix_explicit_implicit_type_params() -> Result<(), Errors> {
     let binding = my_ctx.values.get("fst").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"<B, A>(a: A, b: B) => A"#
+        r#"<B, A>(a: A, b: B) -> A"#
     );
     let binding = my_ctx.values.get("snd").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"<B, A>(a: A, b: B) => B"#
+        r#"<B, A>(a: A, b: B) -> B"#
     );
 
     Ok(())
@@ -2186,7 +2198,7 @@ fn test_duplicate_type_param_names_error() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let fst = fn <T, T>(a: T, b: T): T => a
+    let fst = fn <T, T>(a: T, b: T) -> T => a
     "#;
     let mut program = parse(src).unwrap();
     let result = infer_program(&mut arena, &mut program, &mut my_ctx);
@@ -2206,7 +2218,7 @@ fn test_type_param_with_violated_constraint() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let identity = fn <T: number | string>(x: T): T => x
+    let identity = fn <T: number | string>(x: T) -> T => x
     identity(true)
     "#;
     let mut program = parse(src).unwrap();
@@ -2227,7 +2239,7 @@ fn test_type_ann_func_with_type_constraint() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let identity: fn <T: number | string>(x: T) => T = fn (x) => x
+    let identity: fn <T: number | string>(x: T) -> T = fn (x) => x
     let x = identity<number>(5)
     "#;
     let mut program = parse(src).unwrap();
@@ -2236,7 +2248,7 @@ fn test_type_ann_func_with_type_constraint() -> Result<(), Errors> {
     let binding = my_ctx.values.get("identity").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"<T:number | string>(x: T) => T"#
+        r#"<T:number | string>(x: T) -> T"#
     );
     let binding = my_ctx.values.get("x").unwrap();
     assert_eq!(arena[binding.index].as_string(&arena), r#"number"#);
@@ -2249,8 +2261,8 @@ fn test_type_ann_func_with_type_constraint_error() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let id1 = fn <T: number | string>(x: T): T => x
-    let id2: fn <T: boolean>(x: T) => T = id1
+    let id1 = fn <T: number | string>(x: T) -> T => x
+    let id2: fn <T: boolean>(x: T) -> T = id1
     "#;
     let mut program = parse(src).unwrap();
     let result = infer_program(&mut arena, &mut program, &mut my_ctx);
@@ -2270,8 +2282,8 @@ fn test_callback_with_type_param_subtyping() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    declare let foo: fn (callback: fn <T: number>(x: T) => T) => boolean
-    let identity = fn <T: number | string>(x: T): T => x
+    declare let foo: fn (callback: fn <T: number>(x: T) -> T) -> boolean
+    let identity = fn <T: number | string>(x: T) -> T => x
     let result = foo(identity)
     "#;
     let mut program = parse(src).unwrap();
@@ -2288,8 +2300,8 @@ fn test_callback_with_type_param_subtyping_error() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    declare let foo: fn (callback: fn <T: number | string>(x: T) => T) => boolean
-    let identity = fn <T: number>(x: T): T => x
+    declare let foo: fn (callback: fn <T: number | string>(x: T) -> T) -> boolean
+    let identity = fn <T: number>(x: T) -> T => x
     let result = foo(identity)
     "#;
     let mut program = parse(src).unwrap();
@@ -2310,14 +2322,14 @@ fn test_return_type_checking() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let foo = fn (): string => "hello"
+    let foo = fn () -> string => "hello"
     let result = foo()
     "#;
     let mut program = parse(src).unwrap();
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("foo").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"() => string"#);
+    assert_eq!(arena[binding.index].as_string(&arena), r#"() -> string"#);
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(arena[binding.index].as_string(&arena), r#"string"#);
 
@@ -2329,7 +2341,7 @@ fn test_return_value_is_not_subtype_of_return_type() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let foo = fn (): number => "hello"
+    let foo = fn () -> number => "hello"
     "#;
     let mut program = parse(src).unwrap();
     let result = infer_program(&mut arena, &mut program, &mut my_ctx);
@@ -2349,7 +2361,7 @@ fn test_multiple_returns() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let foo = fn (x) => {
+    let foo = fn (x) {
         if (x > 5) {
             return true
         }
@@ -2362,7 +2374,7 @@ fn test_multiple_returns() -> Result<(), Errors> {
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"(x: number) => true | "hello""#
+        r#"(x: number) -> true | "hello""#
     );
 
     Ok(())
@@ -2373,7 +2385,7 @@ fn test_no_returns() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let foo = fn (x) => {
+    let foo = fn (x) {
         if (x > 5) { }
     }
     "#;
@@ -2383,7 +2395,7 @@ fn test_no_returns() -> Result<(), Errors> {
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"(x: number) => undefined"#
+        r#"(x: number) -> undefined"#
     );
 
     Ok(())
@@ -2394,9 +2406,9 @@ fn test_multiple_returns_with_nested_functions() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let foo = fn (x) => {
+    let foo = fn (x) {
         if (x > 5) {
-            return fn () => {
+            return fn () {
                 return true
             }
         }
@@ -2409,7 +2421,7 @@ fn test_multiple_returns_with_nested_functions() -> Result<(), Errors> {
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"(x: number) => () => true | "hello""#
+        r#"(x: number) -> () -> true | "hello""#
     );
 
     Ok(())
@@ -2702,7 +2714,7 @@ fn calling_variable_whose_type_is_aliased_function_type() -> Result<(), Errors> 
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    type Fn = fn () => number
+    type Fn = fn () -> number
     declare let foo: Fn
     let result = foo()
     "#;
@@ -2721,7 +2733,7 @@ fn optional_chaining_call() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    type Fn = fn () => number
+    type Fn = fn () -> number
     declare let foo: Fn | undefined | null
     let result = foo?.()
     "#;
@@ -2951,7 +2963,7 @@ fn test_type_param_explicit_unknown_constraint() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let add = fn <T: unknown>(a: T, b: T): T => {
+    let add = fn <T: unknown>(a: T, b: T) -> T {
         return a + b
     }
     "#;
@@ -2974,7 +2986,7 @@ fn test_type_param_implicit_unknown_constraint() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let add = fn <T>(a: T, b: T): T => {
+    let add = fn <T>(a: T, b: T) -> T {
         return a + b
     }
     "#;
@@ -2997,7 +3009,7 @@ fn test_optional_function_params() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let foo = fn (a: number, b?: number): number => {
+    let foo = fn (a: number, b?: number) -> number {
         return a
     }
     "#;
@@ -3008,7 +3020,7 @@ fn test_optional_function_params() -> Result<(), Errors> {
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"(a: number, b?: number) => number"#
+        r#"(a: number, b?: number) -> number"#
     );
 
     Ok(())
@@ -3019,10 +3031,10 @@ fn test_func_param_patterns() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let foo = fn ({ a: x, b }: { a: number, b: string }) => {
+    let foo = fn ({ a: x, b }: { a: number, b: string }) {
         return x
     }
-    let bar = fn ([a, b]: [number, string]) => {
+    let bar = fn ([a, b]: [number, string]) {
         return b
     }
     "#;
@@ -3033,12 +3045,12 @@ fn test_func_param_patterns() -> Result<(), Errors> {
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"({a, b}: {a: number, b: string}) => number"#
+        r#"({a, b}: {a: number, b: string}) -> number"#
     );
     let binding = my_ctx.values.get("bar").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"([a, b]: [number, string]) => string"#
+        r#"([a, b]: [number, string]) -> string"#
     );
 
     Ok(())
@@ -3049,7 +3061,7 @@ fn test_func_param_object_rest_patterns() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let foo = fn ({ a, ...rest }: { a: number, b: string }) => {
+    let foo = fn ({ a, ...rest }: { a: number, b: string }) {
         return rest.b
     }
     "#;
@@ -3060,7 +3072,7 @@ fn test_func_param_object_rest_patterns() -> Result<(), Errors> {
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"({a, ...rest}: {a: number, b: string}) => string"#
+        r#"({a, ...rest}: {a: number, b: string}) -> string"#
     );
 
     Ok(())
@@ -3071,7 +3083,7 @@ fn test_func_param_object_multiple_rest_patterns() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let foo = fn ({ a, ...rest1, ...rest2 }: { a: number, b: string }) => {
+    let foo = fn ({ a, ...rest1, ...rest2 }: { a: number, b: string }) {
         return rest.b
     }
     "#;
@@ -3094,7 +3106,7 @@ fn test_func_param_tuple_rest_patterns() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let bar = fn ([a, ...rest]: [number, string, boolean]) => {
+    let bar = fn ([a, ...rest]: [number, string, boolean]) {
         return rest[1]
     }
     "#;
@@ -3105,7 +3117,7 @@ fn test_func_param_tuple_rest_patterns() -> Result<(), Errors> {
     let binding = my_ctx.values.get("bar").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"([a, ...rest]: [number, string, boolean]) => boolean"#
+        r#"([a, ...rest]: [number, string, boolean]) -> boolean"#
     );
 
     Ok(())
@@ -3466,14 +3478,14 @@ fn test_keyof_literal() -> Result<(), Errors> {
     let src = r#"
     type String = {
         length: number,
-        slice: fn (start: number, end: number) => string,
+        slice: fn (start: number, end: number) -> string,
     }
     type Number = {
-        toFixed: fn (precision: number) => string,
-        toString: fn () => string,
+        toFixed: fn (precision: number) -> string,
+        toString: fn () -> string,
     }
     type Boolean = {
-        valueOf: fn () => boolean,
+        valueOf: fn () -> boolean,
     }
     type A = keyof "hello"
     type B = keyof 5
@@ -3505,14 +3517,14 @@ fn test_keyof_primitive() -> Result<(), Errors> {
     let src = r#"
     type String = {
         length: number,
-        slice: fn (start: number, end: number) => string,
+        slice: fn (start: number, end: number) -> string,
     }
     type Number = {
-        toFixed: fn (precision: number) => string,
-        toString: fn () => string,
+        toFixed: fn (precision: number) -> string,
+        toString: fn () -> string,
     }
     type Boolean = {
-        valueOf: fn () => boolean,
+        valueOf: fn () -> boolean,
     }
     type A = keyof string
     type B = keyof number
@@ -3675,7 +3687,7 @@ fn test_mutable_error_arg_passing() -> Result<(), Errors> {
     // TODO: handle `declare let scale: fn(mut p: Point, ...);
     let src = r#"
     type Point = {x: number, y: number}
-    let scale = fn (mut p: Point, factor: number) => {
+    let scale = fn (mut p: Point, factor: number) {
         return p
     }
     let p: Point = {x: 5, y: 10}
@@ -3701,7 +3713,7 @@ fn test_mutable_error_arg_passing_with_subtyping() -> Result<(), Errors> {
 
     // TODO: handle `declare let scale: fn(mut p: Point, ...);
     let src = r#"
-    declare let foo: fn (mut items: Array<number | string>) => undefined
+    declare let foo: fn (mut items: Array<number | string>) -> undefined
     let mut numbers: Array<number> = [1, 2, 3]
     foo(numbers)
     "#;
@@ -3726,14 +3738,14 @@ fn test_mutable_ok_arg_passing() -> Result<(), Errors> {
     // TODO: handle `declare let scale: fn(mut p: Point, ...);
     let src = r#"
     type Point = {x: number, y: number}
-    let mut_scale = fn (mut p: Point, factor: number) => {
+    let mut_scale = fn (mut p: Point, factor: number) {
         return p
     }
-    let scale = fn (p: Point, factor: number) => {
+    let scale = fn (p: Point, factor: number) {
         return p
     }
 
-    let main = fn () => {
+    let main = fn () {
         let mut p: Point = {x: 5, y: 10}
         mut_scale(p, 2)
         mut_scale({x: 5, y: 10}, 2)
@@ -3760,7 +3772,7 @@ fn test_mutable_error_arg_passing_declared_fn() -> Result<(), Errors> {
 
     let src = r#"
     type Point = {x: number, y: number}
-    declare let scale: fn (mut p: Point, factor: number) => Point
+    declare let scale: fn (mut p: Point, factor: number) -> Point
     let p: Point = {x: 5, y: 10}
     scale(p, 2)
     "#;
@@ -3785,10 +3797,10 @@ fn test_mutable_ok_arg_passing_declared_fns() -> Result<(), Errors> {
     // TODO: handle `declare let scale: fn(mut p: Point, ...);
     let src = r#"
     type Point = {x: number, y: number}
-    declare let mut_scale: fn (mut p: Point, factor: number) => Point
-    declare let scale: fn (p: Point, factor: number) => Point
+    declare let mut_scale: fn (mut p: Point, factor: number) -> Point
+    declare let scale: fn (p: Point, factor: number) -> Point
 
-    let main = fn () => {
+    let main = fn () {
         let mut p: Point = {x: 5, y: 10}
         mut_scale(p, 2)
         mut_scale({x: 5, y: 10}, 2)
@@ -3839,7 +3851,7 @@ fn test_mutable_ok_assignments() -> Result<(), Errors> {
     let src = r#"
     type Point = {x: number, y: number}
     
-    let main = fn () => {
+    let main = fn () {
         let mut p: Point = {x: 5, y: 10}
         let mut q = p
     
@@ -3931,8 +3943,8 @@ fn test_function_type_equality() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    declare let add: fn(a: number, b: number) => number
-    declare let sub: fn(a: number, b: number) => number
+    declare let add: fn(a: number, b: number) -> number
+    declare let sub: fn(a: number, b: number) -> number
     "#;
     let mut program = parse(src).unwrap();
 
@@ -4211,8 +4223,8 @@ fn conditional_type_with_function_subtyping() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-        type IsFunction<T> = if (T: fn (...args: _) => _) { true } else { false }
-        type T = IsFunction<fn (a: number) => string>
+        type IsFunction<T> = if (T: fn (...args: _) -> _) { true } else { false }
+        type T = IsFunction<fn (a: number) -> string>
         type F = IsFunction<number>
     "#;
     let mut program = parse(src).unwrap();
@@ -4237,15 +4249,15 @@ fn return_type_rest_placeholder() -> Result<(), Errors> {
     // TODO: introduce a placeholder type that will unify with anything
     let src = r#"
         type ReturnType<
-            T: fn (...args: _) => _
-        > = if (T: fn (...args: _) => infer R) { 
+            T: fn (...args: _) -> _
+        > = if (T: fn (...args: _) -> infer R) { 
             R 
         } else {
             never
         }
-        type RT1 = ReturnType<fn (a: string, b: number) => boolean> 
-        type RT2 = ReturnType<fn (a: string) => number>
-        type RT3 = ReturnType<fn () => string> 
+        type RT1 = ReturnType<fn (a: string, b: number) -> boolean> 
+        type RT2 = ReturnType<fn (a: string) -> number>
+        type RT3 = ReturnType<fn () -> string> 
     "#;
     let mut program = parse(src).unwrap();
 
@@ -4271,17 +4283,17 @@ fn parameters_utility_type() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    type Parameters<T : fn (...args: _) => _> = if (
-        T: fn (...args: infer P) => _
+    type Parameters<T : fn (...args: _) -> _> = if (
+        T: fn (...args: infer P) -> _
     ) { 
         P
     } else { 
         never
     }
-    type P1 = Parameters<fn (a: string, b: number) => boolean>
-    type P2 = Parameters<fn (a: string, ...rest: Array<number>) => boolean>
-    type P3 = Parameters<fn (a: string, ...rest: [number, boolean]) => boolean>
-    type P4 = Parameters<fn (a: string, ...rest: [number, boolean, ...string[]]) => boolean>
+    type P1 = Parameters<fn (a: string, b: number) -> boolean>
+    type P2 = Parameters<fn (a: string, ...rest: Array<number>) -> boolean>
+    type P3 = Parameters<fn (a: string, ...rest: [number, boolean]) -> boolean>
+    type P4 = Parameters<fn (a: string, ...rest: [number, boolean, ...string[]]) -> boolean>
     "#;
 
     let mut program = parse(src).unwrap();
@@ -4315,14 +4327,14 @@ fn function_subtyping_with_rest_placeholder() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let none: fn (...args: _) => boolean = fn () => true
-    let one: fn (...args: _) => boolean = fn (a: string) => true
-    let many: fn (...args: _) => boolean = fn (a: string, b: number) => true
-    let one_req: fn (a: string, ...args: _) => boolean = fn (a: string, b: number) => true
-    let array: fn (...args: Array<_>) => boolean = fn (...args: Array<number>) => true
-    let tuple1: fn (...args: [_, _]) => boolean = fn (...args: [number, string]) => true
-    let tuple2: fn (...args: [_, _]) => boolean = fn (a: string, b: number) => true
-    let tuple3: fn (...args: [string, number]) => boolean = fn (a: string, b: number) => true
+    let none: fn (...args: _) -> boolean = fn () => true
+    let one: fn (...args: _) -> boolean = fn (a: string) => true
+    let many: fn (...args: _) -> boolean = fn (a: string, b: number) => true
+    let one_req: fn (a: string, ...args: _) -> boolean = fn (a: string, b: number) => true
+    let array: fn (...args: Array<_>) -> boolean = fn (...args: Array<number>) => true
+    let tuple1: fn (...args: [_, _]) -> boolean = fn (...args: [number, string]) => true
+    let tuple2: fn (...args: [_, _]) -> boolean = fn (a: string, b: number) => true
+    let tuple3: fn (...args: [string, number]) -> boolean = fn (a: string, b: number) => true
     "#;
     let mut program = parse(src).unwrap();
 
@@ -4336,7 +4348,7 @@ fn function_subtyping_with_rest_array_fails() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let result: fn (...args: Array<_>) => boolean = fn (a: string, b: number) => true
+    let result: fn (...args: Array<_>) -> boolean = fn (a: string, b: number) => true
     "#;
     let mut program = parse(src).unwrap();
 
@@ -4357,7 +4369,7 @@ fn function_multiple_rest_params_in_type_fails() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let result: fn (...args: _, ...moar_args: _) => boolean = fn (a: string, b: number) => true
+    let result: fn (...args: _, ...moar_args: _) -> boolean = fn (a: string, b: number) => true
     "#;
     let mut program = parse(src).unwrap();
 
@@ -4378,7 +4390,7 @@ fn function_multiple_rest_params_function_fails() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    let result: fn (...args: _) => boolean = fn (...args: _, ...moar_args: _) => true
+    let result: fn (...args: _) -> boolean = fn (...args: _, ...moar_args: _) => true
     "#;
     let mut program = parse(src).unwrap();
 

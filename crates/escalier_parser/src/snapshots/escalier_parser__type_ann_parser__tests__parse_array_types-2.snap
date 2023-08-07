@@ -11,6 +11,7 @@ TypeAnn {
                         Prop {
                             span: 0..0,
                             name: "x",
+                            modifier: None,
                             optional: false,
                             mutable: false,
                             type_ann: TypeAnn {
@@ -24,6 +25,7 @@ TypeAnn {
                         Prop {
                             span: 0..0,
                             name: "y",
+                            modifier: None,
                             optional: false,
                             mutable: false,
                             type_ann: TypeAnn {
