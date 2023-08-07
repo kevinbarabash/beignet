@@ -275,18 +275,6 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
                 match elem {
                     TObjElem::Call(_) => (),
                     TObjElem::Constructor(_) => (),
-                    // TObjElem::Method(TMethod { name, .. }) => match name {
-                    //     TPropKey::StringKey(name) => {
-                    //         string_keys
-                    //             .push(new_lit_type(arena, &Literal::String(name.to_owned())));
-                    //     }
-                    //     TPropKey::NumberKey(name) => {
-                    //         number_keys
-                    //             .push(new_lit_type(arena, &Literal::Number(name.to_owned())));
-                    //     }
-                    // },
-                    // TObjElem::Getter(_) => todo!(),
-                    // TObjElem::Setter(_) => todo!(),
                     TObjElem::Index(TIndex { key, .. }) => match &arena[key.t].kind {
                         TypeKind::Primitive(Primitive::String) => {
                             maybe_string = Some(key.t);
