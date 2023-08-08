@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(\"fn (x, y) => x + y\")"
+expression: "parse(r#\"fn (x: number, y: number) -> number throws string => x + y\"#)"
 ---
 Expr {
     kind: Function(
@@ -19,7 +19,13 @@ Expr {
                         span: 4..5,
                         inferred_type: None,
                     },
-                    type_ann: None,
+                    type_ann: Some(
+                        TypeAnn {
+                            kind: Number,
+                            span: 7..13,
+                            inferred_type: None,
+                        },
+                    ),
                     optional: false,
                 },
                 FuncParam {
@@ -27,14 +33,20 @@ Expr {
                         kind: Ident(
                             BindingIdent {
                                 name: "y",
-                                span: 7..8,
+                                span: 15..16,
                                 mutable: false,
                             },
                         ),
-                        span: 7..8,
+                        span: 15..16,
                         inferred_type: None,
                     },
-                    type_ann: None,
+                    type_ann: Some(
+                        TypeAnn {
+                            kind: Number,
+                            span: 18..24,
+                            inferred_type: None,
+                        },
+                    ),
                     optional: false,
                 },
             ],
@@ -46,10 +58,10 @@ Expr {
                                 kind: Ident(
                                     Ident {
                                         name: "x",
-                                        span: 13..14,
+                                        span: 53..54,
                                     },
                                 ),
-                                span: 13..14,
+                                span: 53..54,
                                 inferred_type: None,
                             },
                             op: Plus,
@@ -57,24 +69,36 @@ Expr {
                                 kind: Ident(
                                     Ident {
                                         name: "y",
-                                        span: 17..18,
+                                        span: 57..58,
                                     },
                                 ),
-                                span: 17..18,
+                                span: 57..58,
                                 inferred_type: None,
                             },
                         },
                     ),
-                    span: 13..18,
+                    span: 53..58,
                     inferred_type: None,
                 },
             ),
-            type_ann: None,
-            throws: None,
+            type_ann: Some(
+                TypeAnn {
+                    kind: Number,
+                    span: 29..35,
+                    inferred_type: None,
+                },
+            ),
+            throws: Some(
+                TypeAnn {
+                    kind: String,
+                    span: 43..49,
+                    inferred_type: None,
+                },
+            ),
             is_async: false,
             is_gen: false,
         },
     ),
-    span: 0..18,
+    span: 0..58,
     inferred_type: None,
 }

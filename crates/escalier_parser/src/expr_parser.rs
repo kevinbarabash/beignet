@@ -556,6 +556,14 @@ impl<'a> Parser<'a> {
             _ => None,
         };
 
+        let throws = match self.peek().unwrap_or(&EOF).kind {
+            TokenKind::Throws => {
+                self.next();
+                Some(self.parse_type_ann()?)
+            }
+            _ => None,
+        };
+
         let (body, span) = match self.peek().unwrap_or(&EOF).kind {
             TokenKind::DoubleArrow => {
                 self.next(); // consume '=>'
@@ -583,6 +591,7 @@ impl<'a> Parser<'a> {
             params,
             body,
             type_ann,
+            throws, // TODO
             is_async,
             is_gen,
         });
@@ -1088,6 +1097,18 @@ mod tests {
     }
 
     #[test]
+    fn parse_function_with_throws() {
+        insta::assert_debug_snapshot!(parse(r#"fn (x, y) throws string => x + y"#));
+    }
+
+    #[test]
+    fn parse_function_with_type_annotation_and_throws() {
+        insta::assert_debug_snapshot!(parse(
+            r#"fn (x: number, y: number) -> number throws string => x + y"#
+        ));
+    }
+
+    #[test]
     fn parse_function_with_optional_params() {
         insta::assert_debug_snapshot!(parse(
             r#"fn (x: number, y: number, z?: number) -> number { return x + y }"#
@@ -1336,6 +1357,9 @@ mod tests {
         insta::assert_debug_snapshot!(parse("fn <T> (x: T) => x"));
         insta::assert_debug_snapshot!(parse("fn <A, B> (a: A, b: B) -> A => a"));
         insta::assert_debug_snapshot!(parse("fn <A: number, B: number> (a: A, b: B) -> A => a"));
+        insta::assert_debug_snapshot!(parse(
+            "fn <A, B, E> (a: A, b: B) -> A throws E | string => a"
+        ));
     }
 
     #[test]

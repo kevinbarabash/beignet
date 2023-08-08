@@ -22,32 +22,6 @@ pub struct ObjCallable {
     pub ret: Box<TypeAnn>,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct ObjMethod {
-    pub span: Span,
-    pub name: String, // TODO: allow computed names, e.g. `Symbol.iterator`
-    pub type_params: Option<Vec<TypeParam>>,
-    pub params: Vec<FuncParam>,
-    pub ret: Box<TypeAnn>,
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct ObjGetter {
-    pub span: Span,
-    pub name: String, // TODO: allow computed names, e.g. `Symbol.iterator`
-    // The first param must always be self and there should only be a single param
-    pub params: Vec<FuncParam>,
-    pub ret: Box<TypeAnn>,
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct ObjSetter {
-    pub span: Span,
-    pub name: String, // TODO: allow computed names, e.g. `Symbol.iterator`
-    // The first param must always be self and there should only be two params
-    pub params: Vec<FuncParam>,
-}
-
 // TODO: dedupe with TPropModifier
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum PropModifier {
@@ -86,6 +60,7 @@ pub struct FunctionType {
     pub type_params: Option<Vec<TypeParam>>,
     pub params: Vec<FuncParam>,
     pub ret: Box<TypeAnn>,
+    pub throws: Option<Box<TypeAnn>>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

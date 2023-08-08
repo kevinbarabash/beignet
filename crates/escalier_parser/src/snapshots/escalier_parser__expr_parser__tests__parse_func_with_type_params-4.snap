@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(\"fn <A, B> (a: A, b: B) -> A => a\")"
+expression: "parse(\"fn <A, B, E> (a: A, b: B) -> A throws E | string => a\")"
 ---
 Expr {
     kind: Function(
@@ -19,6 +19,12 @@ Expr {
                         bound: None,
                         default: None,
                     },
+                    TypeParam {
+                        span: 11..12,
+                        name: "E",
+                        bound: None,
+                        default: None,
+                    },
                 ],
             ),
             params: [
@@ -27,11 +33,11 @@ Expr {
                         kind: Ident(
                             BindingIdent {
                                 name: "a",
-                                span: 11..12,
+                                span: 14..15,
                                 mutable: false,
                             },
                         ),
-                        span: 11..12,
+                        span: 14..15,
                         inferred_type: None,
                     },
                     type_ann: Some(
@@ -40,7 +46,7 @@ Expr {
                                 "A",
                                 None,
                             ),
-                            span: 14..15,
+                            span: 17..18,
                             inferred_type: None,
                         },
                     ),
@@ -51,11 +57,11 @@ Expr {
                         kind: Ident(
                             BindingIdent {
                                 name: "b",
-                                span: 17..18,
+                                span: 20..21,
                                 mutable: false,
                             },
                         ),
-                        span: 17..18,
+                        span: 20..21,
                         inferred_type: None,
                     },
                     type_ann: Some(
@@ -64,7 +70,7 @@ Expr {
                                 "B",
                                 None,
                             ),
-                            span: 20..21,
+                            span: 23..24,
                             inferred_type: None,
                         },
                     ),
@@ -76,10 +82,10 @@ Expr {
                     kind: Ident(
                         Ident {
                             name: "a",
-                            span: 31..32,
+                            span: 52..53,
                         },
                     ),
-                    span: 31..32,
+                    span: 52..53,
                     inferred_type: None,
                 },
             ),
@@ -89,15 +95,37 @@ Expr {
                         "A",
                         None,
                     ),
-                    span: 26..27,
+                    span: 29..30,
                     inferred_type: None,
                 },
             ),
-            throws: None,
+            throws: Some(
+                TypeAnn {
+                    kind: Union(
+                        [
+                            TypeAnn {
+                                kind: TypeRef(
+                                    "E",
+                                    None,
+                                ),
+                                span: 38..39,
+                                inferred_type: None,
+                            },
+                            TypeAnn {
+                                kind: String,
+                                span: 42..48,
+                                inferred_type: None,
+                            },
+                        ],
+                    ),
+                    span: 38..48,
+                    inferred_type: None,
+                },
+            ),
             is_async: false,
             is_gen: false,
         },
     ),
-    span: 0..32,
+    span: 0..53,
     inferred_type: None,
 }

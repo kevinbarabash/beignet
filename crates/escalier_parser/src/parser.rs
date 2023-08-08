@@ -275,6 +275,7 @@ impl<'a> Parser<'a> {
             "extends" => TokenKind::Extends,
             "infer" => TokenKind::Infer,
             "return" => TokenKind::Return,
+            "throws" => TokenKind::Throws,
             "if" => TokenKind::If,
             "else" => TokenKind::Else,
             "true" => TokenKind::BoolLit(true),

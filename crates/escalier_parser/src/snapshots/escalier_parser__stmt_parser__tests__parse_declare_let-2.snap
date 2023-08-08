@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/stmt_parser.rs
-expression: "parse(r#\"declare let bar: fn () => number\"#)"
+expression: "parse(r#\"declare let bar: fn () -> number\"#)"
 ---
 [
     Stmt {
@@ -30,6 +30,7 @@ expression: "parse(r#\"declare let bar: fn () => number\"#)"
                                 span: 26..32,
                                 inferred_type: None,
                             },
+                            throws: None,
                         },
                     ),
                     span: 17..19,
