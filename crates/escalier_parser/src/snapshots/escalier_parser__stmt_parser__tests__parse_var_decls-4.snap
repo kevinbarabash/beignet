@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/stmt_parser.rs
-expression: "parse(r#\"declare let scale: fn (mut p: Point, scale: number) => void\"#)"
+expression: "parse(r#\"declare let scale: fn (mut p: Point, scale: number) -> void\"#)"
 ---
 [
     Stmt {
@@ -79,6 +79,7 @@ expression: "parse(r#\"declare let scale: fn (mut p: Point, scale: number) => vo
                                 span: 55..59,
                                 inferred_type: None,
                             },
+                            throws: None,
                         },
                     ),
                     span: 19..21,

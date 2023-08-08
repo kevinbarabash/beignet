@@ -105,6 +105,7 @@ impl<'a> Parser<'a> {
                                             type_params: None,
                                             params,
                                             ret: Box::new(ret),
+                                            throws: None,
                                         }),
                                         span: Span { start: 0, end: 0 }, // TODO
                                         inferred_type: None,
@@ -136,6 +137,7 @@ impl<'a> Parser<'a> {
                                             type_params: None,
                                             params,
                                             ret: Box::new(ret),
+                                            throws: None,
                                         }),
                                         span: Span { start: 0, end: 0 }, // TODO
                                         inferred_type: None,
@@ -336,11 +338,20 @@ impl<'a> Parser<'a> {
                 );
                 let return_type = self.parse_type_ann()?;
 
-                // TODO: handle generics
+                let throws = match self.peek().unwrap_or(&EOF).kind {
+                    TokenKind::Throws => {
+                        self.next(); // consume `throws`
+                        let type_ann = self.parse_type_ann()?;
+                        Some(Box::new(type_ann))
+                    }
+                    _ => None,
+                };
+
                 TypeAnnKind::Function(FunctionType {
                     type_params,
                     params,
                     ret: Box::new(return_type),
+                    throws,
                 })
             }
             TokenKind::KeyOf => {
@@ -747,6 +758,7 @@ mod tests {
     #[test]
     fn parse_fn_type_ann() {
         insta::assert_debug_snapshot!(parse("fn (a: number, b: number) -> number"));
+        insta::assert_debug_snapshot!(parse("fn (a: number, b: number) -> number throws string"));
     }
 
     #[test]

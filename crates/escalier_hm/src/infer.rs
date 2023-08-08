@@ -174,6 +174,7 @@ pub fn infer_expression(
             is_gen: _,
             type_params,
             type_ann: return_type,
+            throws: _, // TODO
         }) => {
             let mut func_params: Vec<types::FuncParam> = vec![];
             let mut sig_ctx = ctx.clone();
@@ -495,6 +496,7 @@ pub fn infer_type_ann(
             params,
             ret,
             type_params,
+            throws: _, // TODO
         }) => {
             // NOTE: We clone `ctx` so that type params don't escape the signature
             let mut sig_ctx = ctx.clone();

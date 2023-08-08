@@ -73,6 +73,7 @@ pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &Expr) {
             params,
             body,
             type_ann,
+            throws,
             is_async: _,
             is_gen: _,
         }) => {
@@ -98,6 +99,10 @@ pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &Expr) {
 
             if let Some(type_ann) = type_ann {
                 visitor.visit_type_ann(type_ann);
+            }
+
+            if let Some(throws) = throws {
+                visitor.visit_type_ann(throws);
             }
         }
         crate::ExprKind::Class(Class {

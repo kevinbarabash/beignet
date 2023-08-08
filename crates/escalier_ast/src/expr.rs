@@ -24,10 +24,6 @@ pub enum ObjectKey {
 pub enum Prop {
     Shorthand(String), // TODO: use Identifier
     Property { key: ObjectKey, value: Expr },
-    // TODO:
-    // - method
-    // - getter
-    // - setter
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -106,6 +102,7 @@ pub struct Function {
     pub params: Vec<FuncParam>,
     pub body: BlockOrExpr,
     pub type_ann: Option<TypeAnn>, // return type
+    pub throws: Option<TypeAnn>,
     pub is_async: bool,
     pub is_gen: bool,
 }

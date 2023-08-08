@@ -30,6 +30,7 @@ pub enum TokenKind {
     Var, // denotes a re-assignable binding
     Fn,
     Return,
+    Throws,
     Get,
     Set,
     Pub,

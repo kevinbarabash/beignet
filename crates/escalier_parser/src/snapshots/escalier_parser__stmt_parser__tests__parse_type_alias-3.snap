@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/stmt_parser.rs
-expression: "parse(r#\"\n            type ReturnType<T: fn (...args: Array<_>) => _> = if (\n                T: fn (...args: Array<_>) => infer R\n            ) { \n                R\n            } else {\n                never \n            }\"#)"
+expression: "parse(r#\"\n            type ReturnType<T: fn (...args: Array<_>) -> _> = if (\n                T: fn (...args: Array<_>) -> infer R\n            ) { \n                R\n            } else {\n                never \n            }\"#)"
 ---
 [
     Stmt {
@@ -70,6 +70,7 @@ expression: "parse(r#\"\n            type ReturnType<T: fn (...args: Array<_>) =
                                         span: 113..118,
                                         inferred_type: None,
                                     },
+                                    throws: None,
                                 },
                             ),
                             span: 87..89,
@@ -150,6 +151,7 @@ expression: "parse(r#\"\n            type ReturnType<T: fn (...args: Array<_>) =
                                             span: 58..59,
                                             inferred_type: None,
                                         },
+                                        throws: None,
                                     },
                                 ),
                                 span: 32..34,

@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/type_ann_parser.rs
-expression: "parse(\"fn (a: number, b: number) => number\")"
+expression: "parse(\"fn (a: number, b: number) -> number\")"
 ---
 TypeAnn {
     kind: Function(
@@ -55,6 +55,7 @@ TypeAnn {
                 span: 29..35,
                 inferred_type: None,
             },
+            throws: None,
         },
     ),
     span: 0..2,

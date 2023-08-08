@@ -1,17 +1,17 @@
 ---
-source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(r#\"fn (x: number, y: number) -> number => x + y\"#)"
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(\"fn (a: number, b: number) -> number throws string\")"
 ---
-Expr {
+TypeAnn {
     kind: Function(
-        Function {
+        FunctionType {
             type_params: None,
             params: [
                 FuncParam {
                     pattern: Pattern {
                         kind: Ident(
                             BindingIdent {
-                                name: "x",
+                                name: "a",
                                 span: 4..5,
                                 mutable: false,
                             },
@@ -32,7 +32,7 @@ Expr {
                     pattern: Pattern {
                         kind: Ident(
                             BindingIdent {
-                                name: "y",
+                                name: "b",
                                 span: 15..16,
                                 mutable: false,
                             },
@@ -50,49 +50,20 @@ Expr {
                     optional: false,
                 },
             ],
-            body: Expr(
-                Expr {
-                    kind: Binary(
-                        Binary {
-                            left: Expr {
-                                kind: Ident(
-                                    Ident {
-                                        name: "x",
-                                        span: 39..40,
-                                    },
-                                ),
-                                span: 39..40,
-                                inferred_type: None,
-                            },
-                            op: Plus,
-                            right: Expr {
-                                kind: Ident(
-                                    Ident {
-                                        name: "y",
-                                        span: 43..44,
-                                    },
-                                ),
-                                span: 43..44,
-                                inferred_type: None,
-                            },
-                        },
-                    ),
-                    span: 39..44,
-                    inferred_type: None,
-                },
-            ),
-            type_ann: Some(
+            ret: TypeAnn {
+                kind: Number,
+                span: 29..35,
+                inferred_type: None,
+            },
+            throws: Some(
                 TypeAnn {
-                    kind: Number,
-                    span: 29..35,
+                    kind: String,
+                    span: 43..49,
                     inferred_type: None,
                 },
             ),
-            throws: None,
-            is_async: false,
-            is_gen: false,
         },
     ),
-    span: 0..44,
+    span: 0..2,
     inferred_type: None,
 }

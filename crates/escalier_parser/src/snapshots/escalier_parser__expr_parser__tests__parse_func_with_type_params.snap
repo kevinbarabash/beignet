@@ -54,6 +54,7 @@ Expr {
                 },
             ),
             type_ann: None,
+            throws: None,
             is_async: false,
             is_gen: false,
         },

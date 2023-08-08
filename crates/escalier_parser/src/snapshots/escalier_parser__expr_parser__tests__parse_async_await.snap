@@ -84,6 +84,7 @@ Expr {
                 },
             ),
             type_ann: None,
+            throws: None,
             is_async: true,
             is_gen: false,
         },

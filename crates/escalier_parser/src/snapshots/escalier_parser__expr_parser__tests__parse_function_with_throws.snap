@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(\"fn (x, y) => x + y\")"
+expression: "parse(r#\"fn (x, y) throws string => x + y\"#)"
 ---
 Expr {
     kind: Function(
@@ -46,10 +46,10 @@ Expr {
                                 kind: Ident(
                                     Ident {
                                         name: "x",
-                                        span: 13..14,
+                                        span: 27..28,
                                     },
                                 ),
-                                span: 13..14,
+                                span: 27..28,
                                 inferred_type: None,
                             },
                             op: Plus,
@@ -57,24 +57,30 @@ Expr {
                                 kind: Ident(
                                     Ident {
                                         name: "y",
-                                        span: 17..18,
+                                        span: 31..32,
                                     },
                                 ),
-                                span: 17..18,
+                                span: 31..32,
                                 inferred_type: None,
                             },
                         },
                     ),
-                    span: 13..18,
+                    span: 27..32,
                     inferred_type: None,
                 },
             ),
             type_ann: None,
-            throws: None,
+            throws: Some(
+                TypeAnn {
+                    kind: String,
+                    span: 17..23,
+                    inferred_type: None,
+                },
+            ),
             is_async: false,
             is_gen: false,
         },
     ),
-    span: 0..18,
+    span: 0..32,
     inferred_type: None,
 }
