@@ -770,11 +770,7 @@ pub fn unify_call(
     }
 
     // We need to prune the return type, because it might be a type variable.
-    let result = prune(arena, ret_type);
-
-    eprintln!("unify_call result = {:#?}", arena[result].as_string(arena));
-
-    Ok(result)
+    Ok(prune(arena, ret_type))
 }
 
 fn bind(arena: &mut Arena<Type>, ctx: &Context, a: Index, b: Index) -> Result<(), Errors> {

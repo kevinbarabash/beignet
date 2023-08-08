@@ -4426,13 +4426,17 @@ fn function_call_with_spread_args() -> Result<(), Errors> {
 }
 
 #[test]
-fn throws_test_1() -> Result<(), Errors> {
+fn basic_throws_test() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
+    declare let add: fn (a: number, b: number) -> number
     declare let div: fn (a: number, b: number) -> number throws "DIV_BY_ZERO"
     let foo = fn (a, b) {
         return div(a, b)
+    }
+    let bar = fn (a, b) {
+        return add(a, b)
     }
     "#;
     let mut program = parse(src).unwrap();
@@ -4447,10 +4451,16 @@ fn throws_test_1() -> Result<(), Errors> {
 
     // TODO:
     // - search for `throw` expressions
-    // - search for function calls that throw
     // - collect those exception types
     // - add them to the function type
+
     let binding = my_ctx.values.get("foo").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"(a: number, b: number) -> number throws "DIV_BY_ZERO""#
+    );
+
+    let binding = my_ctx.values.get("bar").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
         r#"(a: number, b: number) -> number"#

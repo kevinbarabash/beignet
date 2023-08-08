@@ -3,6 +3,7 @@ use std::collections::{BTreeMap, HashSet};
 
 use escalier_ast::{self as syntax, *};
 
+use crate::ast_utils::find_call_throws;
 use crate::ast_utils::find_returns;
 use crate::context::*;
 use crate::errors::*;
@@ -232,7 +233,10 @@ pub fn infer_expression(
                         // the return type is `undefined`.
                         new_keyword(arena, Keyword::Undefined)
                     }
-                    BlockOrExpr::Expr(expr) => infer_expression(arena, expr, &mut body_ctx)?,
+                    BlockOrExpr::Expr(expr) => {
+                        // TODO: use `find_returns` here as well
+                        infer_expression(arena, expr, &mut body_ctx)?
+                    }
                 }
             };
 
@@ -240,10 +244,27 @@ pub fn infer_expression(
                 body_t = new_constructor(arena, "Promise", &[body_t]);
             }
 
+            // TODO: search for `throw` expressions in the body and include
+            // them in the throws type.
+
+            let call_throws = find_call_throws(arena, body);
+
             let throws = throws
                 .as_mut()
                 .map(|t| infer_type_ann(arena, t, &mut sig_ctx))
                 .transpose()?;
+
+            // TODO: unification between call_throws and throws
+            let throws = match throws {
+                Some(throws) => Some(throws),
+                None => {
+                    if call_throws.is_empty() {
+                        None
+                    } else {
+                        Some(new_union_type(arena, &call_throws))
+                    }
+                }
+            };
 
             match return_type {
                 Some(return_type) => {
@@ -1051,6 +1072,7 @@ pub fn generalize_func(arena: &'_ mut Arena<Type>, func: &types::Function) -> In
         })
         .collect::<Vec<_>>();
     let ret = generalize.visit_index(&func.ret);
+    let throws = func.throws.map(|throws| generalize.visit_index(&throws));
 
     let mut type_params: Vec<types::TypeParam> = vec![];
 
@@ -1067,9 +1089,9 @@ pub fn generalize_func(arena: &'_ mut Arena<Type>, func: &types::Function) -> In
     }
 
     if type_params.is_empty() {
-        new_func_type(arena, &params, ret, &None, None)
+        new_func_type(arena, &params, ret, &None, throws)
     } else {
-        new_func_type(arena, &params, ret, &Some(type_params), None)
+        new_func_type(arena, &params, ret, &Some(type_params), throws)
     }
 }
 
