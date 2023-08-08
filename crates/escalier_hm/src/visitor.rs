@@ -139,10 +139,13 @@ pub trait Visitor: KeyValueStore<Index, Type> {
             .collect::<Vec<_>>();
         let ret = self.visit_index(&func.ret);
         let type_params = self.visit_type_params(&func.type_params);
+        let throws = func.throws.map(|t| self.visit_index(&t));
+
         Function {
             params,
             ret,
             type_params,
+            throws,
         }
     }
 

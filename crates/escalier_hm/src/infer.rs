@@ -174,7 +174,7 @@ pub fn infer_expression(
             is_gen: _,
             type_params,
             type_ann: return_type,
-            throws: _, // TODO
+            throws,
         }) => {
             let mut func_params: Vec<types::FuncParam> = vec![];
             let mut sig_ctx = ctx.clone();
@@ -240,6 +240,11 @@ pub fn infer_expression(
                 body_t = new_constructor(arena, "Promise", &[body_t]);
             }
 
+            let throws = throws
+                .as_mut()
+                .map(|t| infer_type_ann(arena, t, &mut sig_ctx))
+                .transpose()?;
+
             match return_type {
                 Some(return_type) => {
                     let ret_t = infer_type_ann(arena, return_type, &mut sig_ctx)?;
@@ -247,9 +252,9 @@ pub fn infer_expression(
                     // the type params added to sig_ctx.schemes so that they can
                     // be looked up.
                     unify(arena, &sig_ctx, body_t, ret_t)?;
-                    new_func_type(arena, &func_params, ret_t, &type_params)
+                    new_func_type(arena, &func_params, ret_t, &type_params, throws)
                 }
-                None => new_func_type(arena, &func_params, body_t, &type_params),
+                None => new_func_type(arena, &func_params, body_t, &type_params, throws),
             }
         }
         ExprKind::IfElse(IfElse {
@@ -496,7 +501,7 @@ pub fn infer_type_ann(
             params,
             ret,
             type_params,
-            throws: _, // TODO
+            throws,
         }) => {
             // NOTE: We clone `ctx` so that type params don't escape the signature
             let mut sig_ctx = ctx.clone();
@@ -521,7 +526,12 @@ pub fn infer_type_ann(
 
             let ret_idx = infer_type_ann(arena, ret.as_mut(), &mut sig_ctx)?;
 
-            new_func_type(arena, &func_params, ret_idx, &type_params)
+            let throws = throws
+                .as_mut()
+                .map(|throws| infer_type_ann(arena, throws, &mut sig_ctx))
+                .transpose()?;
+
+            new_func_type(arena, &func_params, ret_idx, &type_params, throws)
         }
         TypeAnnKind::NumLit(value) => arena.insert(Type::from(TypeKind::Literal(
             syntax::Literal::Number(value.to_owned()),
@@ -1057,9 +1067,9 @@ pub fn generalize_func(arena: &'_ mut Arena<Type>, func: &types::Function) -> In
     }
 
     if type_params.is_empty() {
-        new_func_type(arena, &params, ret, &None)
+        new_func_type(arena, &params, ret, &None, None)
     } else {
-        new_func_type(arena, &params, ret, &Some(type_params))
+        new_func_type(arena, &params, ret, &Some(type_params), None)
     }
 }
 

@@ -631,7 +631,7 @@ pub fn unify_call(
                     Ok(param)
                 })
                 .collect::<Result<Vec<_>, _>>()?;
-            let call_type = new_func_type(arena, &arg_types, ret_type, &None);
+            let call_type = new_func_type(arena, &arg_types, ret_type, &None, None);
             bind(arena, ctx, b, call_type)?
         }
         TypeKind::Union(Union { types }) => {

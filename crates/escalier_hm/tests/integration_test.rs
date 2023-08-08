@@ -37,6 +37,7 @@ fn test_env() -> (Arena<Type>, Context) {
         }],
         number,
         &None,
+        None,
     );
 
     let array_interface = new_object_type(
@@ -548,8 +549,8 @@ fn test_calling_a_union() -> Result<(), Errors> {
 
     let bool = new_primitive(&mut arena, Primitive::Boolean);
     let str = new_primitive(&mut arena, Primitive::String);
-    let fn1 = new_func_type(&mut arena, &[], bool, &None);
-    let fn2 = new_func_type(&mut arena, &[], str, &None);
+    let fn1 = new_func_type(&mut arena, &[], bool, &None, None);
+    let fn2 = new_func_type(&mut arena, &[], str, &None, None);
     my_ctx.values.insert(
         "foo".to_string(),
         Binding {
@@ -4420,6 +4421,40 @@ fn function_call_with_spread_args() -> Result<(), Errors> {
     let mut program = parse(src).unwrap();
 
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    Ok(())
+}
+
+#[test]
+fn throws_test_1() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let div: fn (a: number, b: number) -> number throws "DIV_BY_ZERO"
+    let foo = fn (a, b) {
+        return div(a, b)
+    }
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("div").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"(a: number, b: number) -> number throws "DIV_BY_ZERO""#
+    );
+
+    // TODO:
+    // - search for `throw` expressions
+    // - search for function calls that throw
+    // - collect those exception types
+    // - add them to the function type
+    let binding = my_ctx.values.get("foo").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"(a: number, b: number) -> number"#
+    );
 
     Ok(())
 }
