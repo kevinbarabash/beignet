@@ -1,7 +1,5 @@
 use escalier_ast::*;
-use generational_arena::{Arena, Index};
-
-use crate::types::{Function as FunctionType, Type, TypeKind};
+use generational_arena::Index;
 
 struct ReturnVisitor {
     pub returns: Vec<Expr>,
@@ -39,27 +37,17 @@ pub fn find_returns(body: &BlockOrExpr) -> Vec<Expr> {
     visitor.returns
 }
 
-struct CallVisitor<'a> {
-    pub arena: &'a mut Arena<Type>,
+struct CallVisitor {
     pub throws: Vec<Index>,
 }
 
-impl<'a> Visitor for CallVisitor<'a> {
+impl Visitor for CallVisitor {
     fn visit_expr(&mut self, expr: &Expr) {
         match &expr.kind {
             // Don't walk into functions, since we don't want to include returns
             // from nested functions
             ExprKind::Function(_) => {}
             ExprKind::Call(Call { throws, .. }) => {
-                // if let Some(callee) = callee.inferred_type {
-                //     if let TypeKind::Function(FunctionType {
-                //         throws: Some(throws),
-                //         ..
-                //     }) = &self.arena[callee].kind
-                //     {
-                //         self.throws.push(*throws);
-                //     }
-                // }
                 if let Some(throws) = throws {
                     self.throws.push(*throws);
                 }
@@ -70,11 +58,8 @@ impl<'a> Visitor for CallVisitor<'a> {
     }
 }
 
-pub fn find_call_throws(arena: &mut Arena<Type>, body: &BlockOrExpr) -> Vec<Index> {
-    let mut visitor = CallVisitor {
-        arena,
-        throws: vec![],
-    };
+pub fn find_call_throws(body: &BlockOrExpr) -> Vec<Index> {
+    let mut visitor = CallVisitor { throws: vec![] };
 
     match body {
         BlockOrExpr::Block(block) => {

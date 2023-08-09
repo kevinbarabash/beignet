@@ -305,12 +305,6 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
             let throws_a = func_a.throws.unwrap_or(never);
             let throws_b = func_b.throws.unwrap_or(never);
 
-            eprintln!(
-                "throws_a = {}, throws_b = {}",
-                arena[throws_a].as_string(arena),
-                arena[throws_b].as_string(arena)
-            );
-
             unify(arena, ctx, throws_a, throws_b)?;
 
             Ok(())

@@ -1,4 +1,5 @@
 use generational_arena::{Arena, Index};
+use itertools::Itertools;
 use std::collections::{BTreeMap, HashSet};
 
 use escalier_ast::{self as syntax, *};
@@ -180,7 +181,7 @@ pub fn infer_expression(
             is_gen: _,
             type_params,
             type_ann: return_type,
-            throws,
+            throws: sig_throws,
         }) => {
             let mut func_params: Vec<types::FuncParam> = vec![];
             let mut sig_ctx = ctx.clone();
@@ -252,23 +253,32 @@ pub fn infer_expression(
             // TODO: search for `throw` expressions in the body and include
             // them in the throws type.
 
-            let call_throws = find_call_throws(arena, body);
+            let call_throws = find_call_throws(body);
+            let call_throws = if call_throws.is_empty() {
+                None
+            } else {
+                Some(new_union_type(
+                    arena,
+                    // TODO: compare string reps of the types for deduplication
+                    &call_throws.into_iter().unique().collect_vec(),
+                ))
+            };
 
-            let throws = throws
+            let sig_throws = sig_throws
                 .as_mut()
                 .map(|t| infer_type_ann(arena, t, &mut sig_ctx))
                 .transpose()?;
 
-            // TODO: unification between call_throws and throws
-            let throws = match throws {
-                Some(throws) => Some(throws),
-                None => {
-                    if call_throws.is_empty() {
-                        None
-                    } else {
-                        Some(new_union_type(arena, &call_throws))
-                    }
+            let throws = match (call_throws, sig_throws) {
+                (Some(call_throws), Some(sig_throws)) => {
+                    unify(arena, &sig_ctx, call_throws, sig_throws)?;
+                    Some(sig_throws)
                 }
+                (Some(call_throws), None) => Some(call_throws),
+                // This should probably be a warning.  If the function doesn't
+                // throw anything, then it shouldn't be marked as such.
+                (None, Some(sig_throws)) => Some(sig_throws),
+                (None, None) => None,
             };
 
             match return_type {

@@ -4494,6 +4494,55 @@ fn throws_multiple_exceptions() -> Result<(), Errors> {
 }
 
 #[test]
+fn unify_call_throws_with_func_sig_throws() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let sqrt: fn (a: number) -> number throws "NEGATIVE_NUMBER"
+    declare let div: fn (a: number, b: number) -> number throws "DIV_BY_ZERO"
+    let foo = fn (a, b) throws string {
+        return sqrt(div(a, b))
+    }
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("foo").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"(a: number, b: number) -> number throws string"#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn unify_call_throws_with_func_sig_throws_failure() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let sqrt: fn (a: number) -> number throws "NEGATIVE_NUMBER"
+    declare let div: fn (a: number, b: number) -> number throws "DIV_BY_ZERO"
+    let foo = fn (a, b) throws number {
+        return sqrt(div(a, b))
+    }
+    "#;
+    let mut program = parse(src).unwrap();
+
+    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "type mismatch: unify(\"NEGATIVE_NUMBER\", number) failed".to_string()
+        ))
+    );
+
+    Ok(())
+}
+
+#[test]
 fn scoped_throws() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
