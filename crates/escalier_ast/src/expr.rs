@@ -113,6 +113,7 @@ pub struct Call {
     pub type_args: Option<Vec<TypeAnn>>,
     pub args: Vec<Expr>,
     pub opt_chain: bool,
+    pub throws: Option<Index>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

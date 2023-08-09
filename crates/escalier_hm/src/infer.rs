@@ -122,6 +122,7 @@ pub fn infer_expression(
             args,
             type_args,
             opt_chain,
+            throws,
         }) => {
             let mut func_idx = infer_expression(arena, func, ctx)?;
             let mut has_undefined = false;
@@ -133,7 +134,7 @@ pub fn infer_expression(
                 }
             }
 
-            let result = match type_args {
+            let (result, new_throws) = match type_args {
                 Some(type_args) => {
                     let type_args = type_args
                         .iter_mut()
@@ -144,6 +145,10 @@ pub fn infer_expression(
                 }
                 None => unify_call(arena, ctx, args, None, func_idx)?,
             };
+
+            if let Some(new_throws) = new_throws {
+                throws.replace(new_throws);
+            }
 
             match *opt_chain && has_undefined {
                 true => {

@@ -790,6 +790,7 @@ impl<'a> Parser<'a> {
                     type_args: None,
                     args,
                     opt_chain,
+                    throws: None, // will be filled in later
                 });
 
                 Expr {
@@ -839,6 +840,7 @@ impl<'a> Parser<'a> {
                     type_args: Some(type_args),
                     args,
                     opt_chain,
+                    throws: None, // will be filled in later
                 });
 
                 Expr {

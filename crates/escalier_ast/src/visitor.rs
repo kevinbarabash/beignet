@@ -145,6 +145,7 @@ pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &Expr) {
             type_args,
             args,
             opt_chain: _,
+            throws: _,
         }) => {
             visitor.visit_expr(callee);
             if let Some(type_args) = type_args {

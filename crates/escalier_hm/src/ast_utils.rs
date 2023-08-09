@@ -50,15 +50,18 @@ impl<'a> Visitor for CallVisitor<'a> {
             // Don't walk into functions, since we don't want to include returns
             // from nested functions
             ExprKind::Function(_) => {}
-            ExprKind::Call(Call { callee, .. }) => {
-                if let Some(callee) = callee.inferred_type {
-                    if let TypeKind::Function(FunctionType {
-                        throws: Some(throws),
-                        ..
-                    }) = &self.arena[callee].kind
-                    {
-                        self.throws.push(*throws);
-                    }
+            ExprKind::Call(Call { throws, .. }) => {
+                // if let Some(callee) = callee.inferred_type {
+                //     if let TypeKind::Function(FunctionType {
+                //         throws: Some(throws),
+                //         ..
+                //     }) = &self.arena[callee].kind
+                //     {
+                //         self.throws.push(*throws);
+                //     }
+                // }
+                if let Some(throws) = throws {
+                    self.throws.push(*throws);
                 }
                 walk_expr(self, expr);
             }

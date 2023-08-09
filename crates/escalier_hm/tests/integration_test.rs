@@ -4468,3 +4468,113 @@ fn basic_throws_test() -> Result<(), Errors> {
 
     Ok(())
 }
+
+#[test]
+fn throws_multiple_exceptions() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let sqrt: fn (a: number) -> number throws "NEGATIVE_NUMBER"
+    declare let div: fn (a: number, b: number) -> number throws "DIV_BY_ZERO"
+    let foo = fn (a, b) {
+        return sqrt(div(a, b))
+    }
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("foo").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"(a: number, b: number) -> number throws "NEGATIVE_NUMBER" | "DIV_BY_ZERO""#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn scoped_throws() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let div: fn (a: number, b: number) -> number throws "DIV_BY_ZERO"
+    let foo = fn (a, b) {
+        let inner = fn () => div(a, b)
+        return a + b
+    }
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("foo").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"(a: number, b: number) -> number"#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn throws_coalesces_duplicate_exceptions() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let div: fn (a: number, b: number) -> number throws "DIV_BY_ZERO"
+    let foo = fn (a, b) {
+        return div(1, a) + div(1, b)
+    }
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("foo").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        // TODO: dedupe this
+        r#"(a: number, b: number) -> number throws "DIV_BY_ZERO" | "DIV_BY_ZERO""#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn callback_with_throws() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let map: fn<T, U, E>(
+        elems: Array<T>,
+        callback: fn(elem: T, index: number) -> U throws E,
+    ) -> Array<U> throws E
+    let array: Array<number> = [1, 2, 3]
+    let foo = fn () {
+        let result = map(array, fn (elem, index) throws "OOM" => elem * elem)
+        return result
+    }
+    let bar = fn () {
+        let result = map(array, fn (elem, index) => elem * elem)
+        return result
+    }
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("foo").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"() -> Array<number> throws "OOM""#
+    );
+
+    let binding = my_ctx.values.get("bar").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"() -> Array<number>"#
+    );
+
+    Ok(())
+}
