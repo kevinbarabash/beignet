@@ -36,6 +36,7 @@ Expr {
                 },
             ],
             opt_chain: false,
+            throws: None,
         },
     ),
     span: 0..13,

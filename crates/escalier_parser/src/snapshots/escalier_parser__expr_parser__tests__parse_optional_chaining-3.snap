@@ -18,6 +18,7 @@ Expr {
             type_args: None,
             args: [],
             opt_chain: true,
+            throws: None,
         },
     ),
     span: 0..7,

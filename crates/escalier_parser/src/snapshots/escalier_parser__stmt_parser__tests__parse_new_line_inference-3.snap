@@ -36,6 +36,7 @@ expression: "parse(\"foo\\n.bar()\")"
                         type_args: None,
                         args: [],
                         opt_chain: false,
+                        throws: None,
                     },
                 ),
                 span: 0..10,
