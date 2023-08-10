@@ -664,7 +664,12 @@ pub fn new_union_type(arena: &mut Arena<Type>, types: &[Index]) -> Index {
         0 => new_keyword(arena, Keyword::Never),
         1 => types[0],
         _ => arena.insert(Type::from(TypeKind::Union(Union {
-            types: types.to_owned(),
+            types: types
+                .to_owned()
+                .iter()
+                .filter(|t| !matches!(arena[**t].kind, TypeKind::Keyword(Keyword::Never)))
+                .cloned()
+                .collect(),
         }))),
     }
 }

@@ -799,12 +799,6 @@ pub fn unify_call(
 
     // We need to prune the return type, because it might be a type variable.
     let ret_type = prune(arena, ret_type);
-    // let throws_type = prune(arena, throws_type);
-
-    // let throws_type = match &arena[throws_type].kind {
-    //     TypeKind::Keyword(Keyword::Never) => None,
-    //     _ => Some(throws_type),
-    // };
 
     Ok((ret_type, maybe_throws_type))
 }

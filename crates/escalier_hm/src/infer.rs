@@ -253,14 +253,14 @@ pub fn infer_expression(
             // TODO: search for `throw` expressions in the body and include
             // them in the throws type.
 
-            let call_throws = find_throws(body);
-            let call_throws = if call_throws.is_empty() {
+            let body_throws = find_throws(body);
+            let body_throws = if body_throws.is_empty() {
                 None
             } else {
                 Some(new_union_type(
                     arena,
                     // TODO: compare string reps of the types for deduplication
-                    &call_throws.into_iter().unique().collect_vec(),
+                    &body_throws.into_iter().unique().collect_vec(),
                 ))
             };
 
@@ -269,7 +269,7 @@ pub fn infer_expression(
                 .map(|t| infer_type_ann(arena, t, &mut sig_ctx))
                 .transpose()?;
 
-            let throws = match (call_throws, sig_throws) {
+            let throws = match (body_throws, sig_throws) {
                 (Some(call_throws), Some(sig_throws)) => {
                     unify(arena, &sig_ctx, call_throws, sig_throws)?;
                     Some(sig_throws)
@@ -498,7 +498,8 @@ pub fn infer_expression(
 
             match catch {
                 Some(catch) => {
-                    let throws = find_throws_in_block(&body);
+                    let throws = find_throws_in_block(body);
+
                     let init_idx = new_union_type(arena, &throws);
 
                     if let Some(pattern) = &mut catch.param {
