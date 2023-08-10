@@ -45,6 +45,7 @@ pub enum TokenKind {
     Try,
     Catch,
     Finally,
+    Throw,
     Do,
     Class,
     Extends,

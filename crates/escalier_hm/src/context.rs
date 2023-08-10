@@ -202,10 +202,13 @@ pub fn instantiate_func(
 
     let ret = instantiate.visit_index(&func.ret);
 
+    let throws = func.throws.map(|t| instantiate.visit_index(&t));
+
     Ok(Function {
         params,
         ret,
         type_params: None,
+        throws,
     })
 }
 

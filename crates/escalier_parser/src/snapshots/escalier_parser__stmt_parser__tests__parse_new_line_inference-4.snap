@@ -22,6 +22,7 @@ expression: "parse(\"return\\nfoo()\")"
                             type_args: None,
                             args: [],
                             opt_chain: false,
+                            throws: None,
                         },
                     ),
                     span: 7..12,

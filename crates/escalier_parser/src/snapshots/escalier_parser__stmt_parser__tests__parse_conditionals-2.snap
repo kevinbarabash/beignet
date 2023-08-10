@@ -65,6 +65,7 @@ expression: "parse(\"if (foo) { console.log(foo) }\")"
                                                         },
                                                     ],
                                                     opt_chain: false,
+                                                    throws: None,
                                                 },
                                             ),
                                             span: 11..27,

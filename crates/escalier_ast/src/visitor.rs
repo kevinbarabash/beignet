@@ -145,6 +145,7 @@ pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &Expr) {
             type_args,
             args,
             opt_chain: _,
+            throws: _,
         }) => {
             visitor.visit_expr(callee);
             if let Some(type_args) = type_args {
@@ -215,6 +216,7 @@ pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &Expr) {
         crate::ExprKind::Do(Do { body }) => walk_block(visitor, body),
         crate::ExprKind::Await(Await { arg }) => visitor.visit_expr(arg),
         crate::ExprKind::Yield(Yield { arg }) => visitor.visit_expr(arg),
+        crate::ExprKind::Throw(Throw { arg, throws: _ }) => visitor.visit_expr(arg),
         crate::ExprKind::JSXElement(_) => {}  // TODO
         crate::ExprKind::JSXFragment(_) => {} // TODO
     }

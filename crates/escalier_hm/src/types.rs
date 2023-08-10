@@ -80,6 +80,7 @@ pub struct Function {
     pub params: Vec<FuncParam>,
     pub ret: Index,
     pub type_params: Option<Vec<TypeParam>>,
+    pub throws: Option<Index>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -536,8 +537,12 @@ impl Type {
                     }
                     _ => "".to_string(),
                 };
+                let throws = match func.throws {
+                    Some(throws) => format!(" throws {}", arena[throws].as_string(arena)),
+                    None => "".to_string(),
+                };
                 format!(
-                    "{type_params}({}) -> {}",
+                    "{type_params}({}) -> {}{throws}",
                     params_to_strings(arena, &func.params).join(", "),
                     arena[func.ret].as_string(arena),
                 )
@@ -643,11 +648,13 @@ pub fn new_func_type(
     params: &[FuncParam],
     ret: Index,
     type_params: &Option<Vec<TypeParam>>,
+    throws: Option<Index>,
 ) -> Index {
     arena.insert(Type::from(TypeKind::Function(Function {
         params: params.to_vec(),
         ret: ret.to_owned(),
         type_params: type_params.to_owned(),
+        throws,
     })))
 }
 
@@ -657,7 +664,12 @@ pub fn new_union_type(arena: &mut Arena<Type>, types: &[Index]) -> Index {
         0 => new_keyword(arena, Keyword::Never),
         1 => types[0],
         _ => arena.insert(Type::from(TypeKind::Union(Union {
-            types: types.to_owned(),
+            types: types
+                .to_owned()
+                .iter()
+                .filter(|t| !matches!(arena[**t].kind, TypeKind::Keyword(Keyword::Never)))
+                .cloned()
+                .collect(),
         }))),
     }
 }

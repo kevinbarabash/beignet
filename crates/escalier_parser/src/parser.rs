@@ -270,6 +270,7 @@ impl<'a> Parser<'a> {
             "try" => TokenKind::Try,
             "catch" => TokenKind::Catch,
             "finally" => TokenKind::Finally,
+            "throw" => TokenKind::Throw,
             "do" => TokenKind::Do,
             "class" => TokenKind::Class,
             "extends" => TokenKind::Extends,

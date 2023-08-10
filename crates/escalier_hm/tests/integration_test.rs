@@ -37,6 +37,7 @@ fn test_env() -> (Arena<Type>, Context) {
         }],
         number,
         &None,
+        None,
     );
 
     let array_interface = new_object_type(
@@ -548,8 +549,8 @@ fn test_calling_a_union() -> Result<(), Errors> {
 
     let bool = new_primitive(&mut arena, Primitive::Boolean);
     let str = new_primitive(&mut arena, Primitive::String);
-    let fn1 = new_func_type(&mut arena, &[], bool, &None);
-    let fn2 = new_func_type(&mut arena, &[], str, &None);
+    let fn1 = new_func_type(&mut arena, &[], bool, &None, None);
+    let fn2 = new_func_type(&mut arena, &[], str, &None, None);
     my_ctx.values.insert(
         "foo".to_string(),
         Binding {

@@ -113,6 +113,7 @@ pub struct Call {
     pub type_args: Option<Vec<TypeAnn>>,
     pub args: Vec<Expr>,
     pub opt_chain: bool,
+    pub throws: Option<Index>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -176,6 +177,12 @@ pub struct Yield {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Throw {
+    pub arg: Box<Expr>,
+    pub throws: Option<Index>, // the type of the thrown value
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ExprKind {
     Ident(Ident),
     Num(Num),
@@ -201,6 +208,7 @@ pub enum ExprKind {
     Do(Do),
     Await(Await),
     Yield(Yield),
+    Throw(Throw),
     JSXElement(JSXElement),
     JSXFragment(JSXFragment),
 }

@@ -1,9 +1,11 @@
 use generational_arena::{Arena, Index};
+use itertools::Itertools;
 use std::collections::{BTreeMap, HashSet};
 
 use escalier_ast::{self as syntax, *};
 
 use crate::ast_utils::find_returns;
+use crate::ast_utils::{find_throws, find_throws_in_block};
 use crate::context::*;
 use crate::errors::*;
 use crate::infer_pattern::*;
@@ -121,6 +123,7 @@ pub fn infer_expression(
             args,
             type_args,
             opt_chain,
+            throws,
         }) => {
             let mut func_idx = infer_expression(arena, func, ctx)?;
             let mut has_undefined = false;
@@ -132,7 +135,7 @@ pub fn infer_expression(
                 }
             }
 
-            let result = match type_args {
+            let (result, new_throws) = match type_args {
                 Some(type_args) => {
                     let type_args = type_args
                         .iter_mut()
@@ -143,6 +146,10 @@ pub fn infer_expression(
                 }
                 None => unify_call(arena, ctx, args, None, func_idx)?,
             };
+
+            if let Some(new_throws) = new_throws {
+                throws.replace(new_throws);
+            }
 
             match *opt_chain && has_undefined {
                 true => {
@@ -174,7 +181,7 @@ pub fn infer_expression(
             is_gen: _,
             type_params,
             type_ann: return_type,
-            throws: _, // TODO
+            throws: sig_throws,
         }) => {
             let mut func_params: Vec<types::FuncParam> = vec![];
             let mut sig_ctx = ctx.clone();
@@ -232,13 +239,47 @@ pub fn infer_expression(
                         // the return type is `undefined`.
                         new_keyword(arena, Keyword::Undefined)
                     }
-                    BlockOrExpr::Expr(expr) => infer_expression(arena, expr, &mut body_ctx)?,
+                    BlockOrExpr::Expr(expr) => {
+                        // TODO: use `find_returns` here as well
+                        infer_expression(arena, expr, &mut body_ctx)?
+                    }
                 }
             };
 
             if *is_async && !is_promise(&arena[body_t]) {
                 body_t = new_constructor(arena, "Promise", &[body_t]);
             }
+
+            // TODO: search for `throw` expressions in the body and include
+            // them in the throws type.
+
+            let body_throws = find_throws(body);
+            let body_throws = if body_throws.is_empty() {
+                None
+            } else {
+                Some(new_union_type(
+                    arena,
+                    // TODO: compare string reps of the types for deduplication
+                    &body_throws.into_iter().unique().collect_vec(),
+                ))
+            };
+
+            let sig_throws = sig_throws
+                .as_mut()
+                .map(|t| infer_type_ann(arena, t, &mut sig_ctx))
+                .transpose()?;
+
+            let throws = match (body_throws, sig_throws) {
+                (Some(call_throws), Some(sig_throws)) => {
+                    unify(arena, &sig_ctx, call_throws, sig_throws)?;
+                    Some(sig_throws)
+                }
+                (Some(call_throws), None) => Some(call_throws),
+                // This should probably be a warning.  If the function doesn't
+                // throw anything, then it shouldn't be marked as such.
+                (None, Some(sig_throws)) => Some(sig_throws),
+                (None, None) => None,
+            };
 
             match return_type {
                 Some(return_type) => {
@@ -247,9 +288,9 @@ pub fn infer_expression(
                     // the type params added to sig_ctx.schemes so that they can
                     // be looked up.
                     unify(arena, &sig_ctx, body_t, ret_t)?;
-                    new_func_type(arena, &func_params, ret_t, &type_params)
+                    new_func_type(arena, &func_params, ret_t, &type_params, throws)
                 }
-                None => new_func_type(arena, &func_params, body_t, &type_params),
+                None => new_func_type(arena, &func_params, body_t, &type_params, throws),
             }
         }
         ExprKind::IfElse(IfElse {
@@ -448,8 +489,42 @@ pub fn infer_expression(
         }
         ExprKind::Class(_) => todo!(),
         ExprKind::Do(Do { body }) => infer_block(arena, body, ctx)?,
-        ExprKind::Try(_) => todo!(),
+        ExprKind::Try(Try {
+            body,
+            catch,
+            finally: _, // Don't include this in the result
+        }) => {
+            let body_t = infer_block(arena, body, ctx)?;
+
+            match catch {
+                Some(catch) => {
+                    let throws = find_throws_in_block(body);
+
+                    let init_idx = new_union_type(arena, &throws);
+
+                    if let Some(pattern) = &mut catch.param {
+                        let (pat_bindings, pat_type) = infer_pattern(arena, pattern, ctx)?;
+
+                        unify(arena, ctx, init_idx, pat_type)?;
+
+                        for (name, binding) in pat_bindings {
+                            ctx.values.insert(name.clone(), binding);
+                        }
+
+                        pattern.inferred_type = Some(init_idx);
+                    }
+
+                    let catch_t = infer_block(arena, &mut catch.body, ctx)?;
+                    new_union_type(arena, &[body_t, catch_t])
+                }
+                None => body_t,
+            }
+        }
         ExprKind::Yield(_) => todo!(),
+        ExprKind::Throw(Throw { arg, throws }) => {
+            throws.replace(infer_expression(arena, arg, ctx)?);
+            new_keyword(arena, Keyword::Never)
+        }
         ExprKind::JSXFragment(_) => todo!(),
     };
 
@@ -496,7 +571,7 @@ pub fn infer_type_ann(
             params,
             ret,
             type_params,
-            throws: _, // TODO
+            throws,
         }) => {
             // NOTE: We clone `ctx` so that type params don't escape the signature
             let mut sig_ctx = ctx.clone();
@@ -521,7 +596,12 @@ pub fn infer_type_ann(
 
             let ret_idx = infer_type_ann(arena, ret.as_mut(), &mut sig_ctx)?;
 
-            new_func_type(arena, &func_params, ret_idx, &type_params)
+            let throws = throws
+                .as_mut()
+                .map(|throws| infer_type_ann(arena, throws, &mut sig_ctx))
+                .transpose()?;
+
+            new_func_type(arena, &func_params, ret_idx, &type_params, throws)
         }
         TypeAnnKind::NumLit(value) => arena.insert(Type::from(TypeKind::Literal(
             syntax::Literal::Number(value.to_owned()),
@@ -1041,6 +1121,7 @@ pub fn generalize_func(arena: &'_ mut Arena<Type>, func: &types::Function) -> In
         })
         .collect::<Vec<_>>();
     let ret = generalize.visit_index(&func.ret);
+    let throws = func.throws.map(|throws| generalize.visit_index(&throws));
 
     let mut type_params: Vec<types::TypeParam> = vec![];
 
@@ -1057,9 +1138,9 @@ pub fn generalize_func(arena: &'_ mut Arena<Type>, func: &types::Function) -> In
     }
 
     if type_params.is_empty() {
-        new_func_type(arena, &params, ret, &None)
+        new_func_type(arena, &params, ret, &None, throws)
     } else {
-        new_func_type(arena, &params, ret, &Some(type_params))
+        new_func_type(arena, &params, ret, &Some(type_params), throws)
     }
 }
 

@@ -301,6 +301,12 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
 
             unify(arena, ctx, func_a.ret, func_b.ret)?;
 
+            let never = new_keyword(arena, Keyword::Never);
+            let throws_a = func_a.throws.unwrap_or(never);
+            let throws_b = func_b.throws.unwrap_or(never);
+
+            unify(arena, ctx, throws_a, throws_b)?;
+
             Ok(())
         }
         (TypeKind::Literal(lit1), TypeKind::Literal(lit2)) => {
@@ -604,8 +610,10 @@ pub fn unify_call(
     args: &mut [Expr],
     type_args: Option<&[Index]>,
     t2: Index,
-) -> Result<Index, Errors> {
+) -> Result<(Index, Option<Index>), Errors> {
     let ret_type = new_var_type(arena, None);
+    let mut maybe_throws_type: Option<Index> = None;
+    // let throws_type = new_var_type(arena, None);
 
     let b = prune(arena, t2);
     let b_t = arena.get(b).unwrap().clone();
@@ -631,20 +639,29 @@ pub fn unify_call(
                     Ok(param)
                 })
                 .collect::<Result<Vec<_>, _>>()?;
-            let call_type = new_func_type(arena, &arg_types, ret_type, &None);
+            let call_type = new_func_type(arena, &arg_types, ret_type, &None, None);
             bind(arena, ctx, b, call_type)?
         }
         TypeKind::Union(Union { types }) => {
             let mut ret_types = vec![];
+            let mut throws_types = vec![];
             for t in types.iter() {
-                let ret_type = unify_call(arena, ctx, args, type_args, *t)?;
+                let (ret_type, throws_type) = unify_call(arena, ctx, args, type_args, *t)?;
                 ret_types.push(ret_type);
+                if let Some(throws_type) = throws_type {
+                    throws_types.push(throws_type);
+                }
             }
 
-            return Ok(new_union_type(
-                arena,
-                &ret_types.into_iter().unique().collect_vec(),
-            ));
+            let ret = new_union_type(arena, &ret_types.into_iter().unique().collect_vec());
+            let throws = new_union_type(arena, &throws_types.into_iter().unique().collect_vec());
+
+            let throws = match &arena[throws].kind {
+                TypeKind::Keyword(Keyword::Never) => None,
+                _ => Some(throws),
+            };
+
+            return Ok((ret, throws));
         }
         TypeKind::Intersection(Intersection { types }) => {
             for t in types.iter() {
@@ -740,6 +757,17 @@ pub fn unify_call(
             }
 
             unify(arena, ctx, ret_type, func.ret)?;
+
+            if let Some(throws) = func.throws {
+                let throws_type = new_var_type(arena, None);
+                unify(arena, ctx, throws_type, throws)?;
+
+                let throws_type = prune(arena, throws_type);
+                maybe_throws_type = match &arena[throws_type].kind {
+                    TypeKind::Keyword(Keyword::Never) => None,
+                    _ => Some(throws_type),
+                };
+            }
         }
         TypeKind::KeyOf(KeyOf { t }) => {
             return Err(Errors::InferenceError(format!(
@@ -770,11 +798,9 @@ pub fn unify_call(
     }
 
     // We need to prune the return type, because it might be a type variable.
-    let result = prune(arena, ret_type);
+    let ret_type = prune(arena, ret_type);
 
-    eprintln!("unify_call result = {:#?}", arena[result].as_string(arena));
-
-    Ok(result)
+    Ok((ret_type, maybe_throws_type))
 }
 
 fn bind(arena: &mut Arena<Type>, ctx: &Context, a: Index, b: Index) -> Result<(), Errors> {

@@ -53,7 +53,8 @@ pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
         TypeKind::Function(Function {
             params,
             ret,
-            type_params: _,
+            type_params: _, // TODO
+            throws: _,      // TODO
         }) => {
             // TODO: check constraints and default on type_params
             let param_types: Vec<_> = params.iter().map(|param| param.t).collect();
