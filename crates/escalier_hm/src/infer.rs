@@ -4,8 +4,8 @@ use std::collections::{BTreeMap, HashSet};
 
 use escalier_ast::{self as syntax, *};
 
-use crate::ast_utils::find_call_throws;
 use crate::ast_utils::find_returns;
+use crate::ast_utils::{find_throws, find_throws_in_block};
 use crate::context::*;
 use crate::errors::*;
 use crate::infer_pattern::*;
@@ -253,7 +253,7 @@ pub fn infer_expression(
             // TODO: search for `throw` expressions in the body and include
             // them in the throws type.
 
-            let call_throws = find_call_throws(body);
+            let call_throws = find_throws(body);
             let call_throws = if call_throws.is_empty() {
                 None
             } else {
@@ -489,8 +489,41 @@ pub fn infer_expression(
         }
         ExprKind::Class(_) => todo!(),
         ExprKind::Do(Do { body }) => infer_block(arena, body, ctx)?,
-        ExprKind::Try(_) => todo!(),
+        ExprKind::Try(Try {
+            body,
+            catch,
+            finally: _, // Don't include this in the result
+        }) => {
+            let body_t = infer_block(arena, body, ctx)?;
+
+            match catch {
+                Some(catch) => {
+                    let throws = find_throws_in_block(&body);
+                    let init_idx = new_union_type(arena, &throws);
+
+                    if let Some(pattern) = &mut catch.param {
+                        let (pat_bindings, pat_type) = infer_pattern(arena, pattern, ctx)?;
+
+                        unify(arena, ctx, init_idx, pat_type)?;
+
+                        for (name, binding) in pat_bindings {
+                            ctx.values.insert(name.clone(), binding);
+                        }
+
+                        pattern.inferred_type = Some(init_idx);
+                    }
+
+                    let catch_t = infer_block(arena, &mut catch.body, ctx)?;
+                    new_union_type(arena, &[body_t, catch_t])
+                }
+                None => body_t,
+            }
+        }
         ExprKind::Yield(_) => todo!(),
+        ExprKind::Throw(Throw { arg, throws }) => {
+            throws.replace(infer_expression(arena, arg, ctx)?);
+            new_keyword(arena, Keyword::Never)
+        }
         ExprKind::JSXFragment(_) => todo!(),
     };
 

@@ -4627,3 +4627,91 @@ fn callback_with_throws() -> Result<(), Errors> {
 
     Ok(())
 }
+
+#[test]
+fn infer_throws_from_throw() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let div = fn (a, b) {
+        if (b == 0) {
+            throw "DIV_BY_ZERO"
+        }
+        return a / b
+    }
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("div").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"(a: number, b: number) -> number throws "DIV_BY_ZERO""#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn try_catches_throw() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let log: fn (msg: string) -> undefined
+    let div = fn (a, b) => try {
+        if (b == 0) {
+            throw "DIV_BY_ZERO"
+        }
+        a / b
+    } catch (e) {
+        log(e)
+        0
+    }
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("div").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"(a: number, b: number) -> number | 0 throws "DIV_BY_ZERO""#
+    );
+
+    Ok(())
+}
+
+#[test]
+fn try_catches_throw_return_inside_try_catch() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let log: fn (msg: string) -> undefined
+    let div = fn (a, b) {
+        try {
+            if (b == 0) {
+                throw "DIV_BY_ZERO"
+            }
+            return a / b
+        } catch (e) {
+            log(e)
+            return 0
+        }
+    }
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("div").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        // TODO: the return type should be `number` because all `return` statements
+        // return numbers and code appearing after the `try-catch` is
+        // unreachable.
+        r#"(a: number, b: number) -> undefined throws "DIV_BY_ZERO""#
+    );
+
+    Ok(())
+}

@@ -37,11 +37,11 @@ pub fn find_returns(body: &BlockOrExpr) -> Vec<Expr> {
     visitor.returns
 }
 
-struct CallVisitor {
+struct ThrowsVisitor {
     pub throws: Vec<Index>,
 }
 
-impl Visitor for CallVisitor {
+impl Visitor for ThrowsVisitor {
     fn visit_expr(&mut self, expr: &Expr) {
         match &expr.kind {
             // Don't walk into functions, since we don't want to include returns
@@ -53,13 +53,19 @@ impl Visitor for CallVisitor {
                 }
                 walk_expr(self, expr);
             }
+            ExprKind::Throw(Throw { throws, .. }) => {
+                if let Some(throws) = throws {
+                    self.throws.push(*throws);
+                }
+                walk_expr(self, expr);
+            }
             _ => walk_expr(self, expr),
         }
     }
 }
 
-pub fn find_call_throws(body: &BlockOrExpr) -> Vec<Index> {
-    let mut visitor = CallVisitor { throws: vec![] };
+pub fn find_throws(body: &BlockOrExpr) -> Vec<Index> {
+    let mut visitor = ThrowsVisitor { throws: vec![] };
 
     match body {
         BlockOrExpr::Block(block) => {
@@ -68,6 +74,16 @@ pub fn find_call_throws(body: &BlockOrExpr) -> Vec<Index> {
             }
         }
         BlockOrExpr::Expr(expr) => visitor.visit_expr(expr),
+    }
+
+    visitor.throws
+}
+
+pub fn find_throws_in_block(block: &Block) -> Vec<Index> {
+    let mut visitor = ThrowsVisitor { throws: vec![] };
+
+    for stmt in &block.stmts {
+        visitor.visit_stmt(stmt);
     }
 
     visitor.throws

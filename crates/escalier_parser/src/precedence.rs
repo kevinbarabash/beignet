@@ -40,6 +40,7 @@ pub enum Operator {
     Void,
     Delete,
     Await,
+    Throw,
 
     // 13
     Exponentiation,
@@ -124,6 +125,7 @@ lazy_static! {
         table.insert(Operator::Void, (14, Associativity::NotApplicable));
         table.insert(Operator::Delete, (14, Associativity::NotApplicable));
         table.insert(Operator::Await, (14, Associativity::NotApplicable));
+        table.insert(Operator::Throw, (14, Associativity::NotApplicable));
 
         table.insert(Operator::Exponentiation, (13, Associativity::Right));
 
