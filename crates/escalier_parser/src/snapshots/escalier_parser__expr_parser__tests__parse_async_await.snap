@@ -52,6 +52,7 @@ Expr {
                                                     span: 58..63,
                                                     inferred_type: None,
                                                 },
+                                                throws: None,
                                             },
                                         ),
                                         span: 52..63,
