@@ -1492,6 +1492,39 @@ fn await_async_func_with_throw() -> Result<(), Errors> {
 }
 
 #[test]
+fn catch_await_async_func_that_throws() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let foo = async fn (cond) => if (cond) { throw "error" } else { 5 }
+    let bar = async fn () {
+        return try {
+            await foo(true)
+        } catch (e) {
+            10
+        }
+    }
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("foo").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"(cond: boolean) -> Promise<5, "error">"#
+    );
+
+    let binding = my_ctx.values.get("bar").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"() -> Promise<5 | 10, never>"#
+    );
+
+    Ok(())
+}
+
+#[test]
 fn test_async_without_return() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
