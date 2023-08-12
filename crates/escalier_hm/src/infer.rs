@@ -402,18 +402,59 @@ pub fn infer_expression(
                 | BinaryOp::Minus
                 | BinaryOp::Times
                 | BinaryOp::Divide
-                | BinaryOp::Modulo => {
-                    unify(arena, ctx, left_type, number)?;
-                    unify(arena, ctx, right_type, number)?;
-                    number
-                }
+                | BinaryOp::Modulo => match (&arena[left_type].kind, &arena[right_type].kind) {
+                    (
+                        TypeKind::Literal(Literal::Number(left)),
+                        TypeKind::Literal(Literal::Number(right)),
+                    ) => {
+                        let left = left.parse::<f64>().unwrap();
+                        let right = right.parse::<f64>().unwrap();
+
+                        let result = match op {
+                            BinaryOp::Plus => left + right,
+                            BinaryOp::Minus => left - right,
+                            BinaryOp::Times => left * right,
+                            BinaryOp::Divide => left / right,
+                            BinaryOp::Modulo => left % right,
+                            _ => unreachable!(),
+                        };
+
+                        new_lit_type(arena, &Literal::Number(result.to_string()))
+                    }
+                    (_, _) => {
+                        unify(arena, ctx, left_type, number)?;
+                        unify(arena, ctx, right_type, number)?;
+                        number
+                    }
+                },
                 BinaryOp::GreaterThan
                 | BinaryOp::GreaterThanOrEqual
                 | BinaryOp::LessThan
                 | BinaryOp::LessThanOrEqual => {
-                    unify(arena, ctx, left_type, number)?;
-                    unify(arena, ctx, right_type, number)?;
-                    boolean
+                    match (&arena[left_type].kind, &arena[right_type].kind) {
+                        (
+                            TypeKind::Literal(Literal::Number(left)),
+                            TypeKind::Literal(Literal::Number(right)),
+                        ) => {
+                            let left = left.parse::<f64>().unwrap();
+                            let right = right.parse::<f64>().unwrap();
+
+                            let result = match op {
+                                BinaryOp::GreaterThan => left > right,
+                                BinaryOp::GreaterThanOrEqual => left >= right,
+                                BinaryOp::LessThan => left < right,
+                                BinaryOp::LessThanOrEqual => left <= right,
+                                _ => unreachable!(),
+                            };
+
+                            new_lit_type(arena, &Literal::Boolean(result))
+                        }
+                        (_, _) => {
+                            unify(arena, ctx, left_type, number)?;
+                            unify(arena, ctx, right_type, number)?;
+                            boolean
+                        }
+                    }
                 }
                 BinaryOp::And | BinaryOp::Or => {
                     unify(arena, ctx, left_type, boolean)?;
@@ -421,11 +462,39 @@ pub fn infer_expression(
                     boolean
                 }
                 BinaryOp::Equals | BinaryOp::NotEquals => {
-                    let var_a = new_var_type(arena, None);
-                    let var_b = new_var_type(arena, None);
-                    unify(arena, ctx, left_type, var_a)?;
-                    unify(arena, ctx, right_type, var_b)?;
-                    boolean
+                    match (&arena[left_type].kind, &arena[right_type].kind) {
+                        (
+                            TypeKind::Literal(Literal::Number(left)),
+                            TypeKind::Literal(Literal::Number(right)),
+                        ) => {
+                            let result = match op {
+                                BinaryOp::Equals => left == right,
+                                BinaryOp::NotEquals => left != right,
+                                _ => unreachable!(),
+                            };
+
+                            new_lit_type(arena, &Literal::Boolean(result))
+                        }
+                        (
+                            TypeKind::Literal(Literal::String(left)),
+                            TypeKind::Literal(Literal::String(right)),
+                        ) => {
+                            let result = match op {
+                                BinaryOp::Equals => left == right,
+                                BinaryOp::NotEquals => left != right,
+                                _ => unreachable!(),
+                            };
+
+                            new_lit_type(arena, &Literal::Boolean(result))
+                        }
+                        (_, _) => {
+                            let var_a = new_var_type(arena, None);
+                            let var_b = new_var_type(arena, None);
+                            unify(arena, ctx, left_type, var_a)?;
+                            unify(arena, ctx, right_type, var_b)?;
+                            boolean
+                        }
+                    }
                 }
             }
         }

@@ -1345,7 +1345,7 @@ fn test_function_with_multiple_statements() -> Result<(), Errors> {
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("result").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"() -> number"#);
+    assert_eq!(arena[binding.index].as_string(&arena), r#"() -> 50"#);
 
     if let StmtKind::Let {
         expr: Some(init), ..
@@ -1647,10 +1647,7 @@ fn test_do_expr() -> Result<(), Errors> {
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("sum").unwrap();
-    assert_eq!(
-        arena[binding.index].as_string(&arena),
-        r#"["hello", number]"#
-    );
+    assert_eq!(arena[binding.index].as_string(&arena), r#"["hello", 15]"#);
 
     Ok(())
 }
@@ -4500,6 +4497,109 @@ fn function_call_with_spread_args() -> Result<(), Errors> {
     let mut program = parse(src).unwrap();
 
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    Ok(())
+}
+
+#[test]
+fn arithmetic_op_const_folding() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let a = 3
+    let b = 2
+    let sum = a + b
+    let diff = a - b
+    let prod = a * b
+    let quot = a / b
+    let rem = a % b
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("sum").unwrap();
+    assert_eq!(arena[binding.index].as_string(&arena), r#"5"#);
+
+    let binding = my_ctx.values.get("diff").unwrap();
+    assert_eq!(arena[binding.index].as_string(&arena), r#"1"#);
+
+    let binding = my_ctx.values.get("prod").unwrap();
+    assert_eq!(arena[binding.index].as_string(&arena), r#"6"#);
+
+    let binding = my_ctx.values.get("quot").unwrap();
+    assert_eq!(arena[binding.index].as_string(&arena), r#"1.5"#);
+
+    let binding = my_ctx.values.get("rem").unwrap();
+    assert_eq!(arena[binding.index].as_string(&arena), r#"1"#);
+
+    Ok(())
+}
+
+#[test]
+fn comparison_op_const_folding() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let a = 3
+    let b = 2
+    let gt = a > b
+    let gte = a >= b
+    let lt = a < b
+    let lte = a <= b
+    let eq = a == b
+    let neq = a != b
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("gt").unwrap();
+    assert_eq!(arena[binding.index].as_string(&arena), r#"true"#);
+
+    let binding = my_ctx.values.get("gte").unwrap();
+    assert_eq!(arena[binding.index].as_string(&arena), r#"true"#);
+
+    let binding = my_ctx.values.get("lt").unwrap();
+    assert_eq!(arena[binding.index].as_string(&arena), r#"false"#);
+
+    let binding = my_ctx.values.get("lte").unwrap();
+    assert_eq!(arena[binding.index].as_string(&arena), r#"false"#);
+
+    let binding = my_ctx.values.get("eq").unwrap();
+    assert_eq!(arena[binding.index].as_string(&arena), r#"false"#);
+
+    let binding = my_ctx.values.get("neq").unwrap();
+    assert_eq!(arena[binding.index].as_string(&arena), r#"true"#);
+
+    Ok(())
+}
+
+#[test]
+fn other_equality_checks() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let a = "foo" == "bar"
+    let b = "foo" != "bar"
+    let c = "hello" == 5
+    let d = "hello" != 5
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("a").unwrap();
+    assert_eq!(arena[binding.index].as_string(&arena), r#"false"#);
+
+    let binding = my_ctx.values.get("b").unwrap();
+    assert_eq!(arena[binding.index].as_string(&arena), r#"true"#);
+
+    let binding = my_ctx.values.get("c").unwrap();
+    assert_eq!(arena[binding.index].as_string(&arena), r#"boolean"#);
+
+    let binding = my_ctx.values.get("d").unwrap();
+    assert_eq!(arena[binding.index].as_string(&arena), r#"boolean"#);
 
     Ok(())
 }
