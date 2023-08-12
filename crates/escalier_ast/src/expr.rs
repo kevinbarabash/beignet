@@ -169,6 +169,8 @@ pub struct Do {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Await {
     pub arg: Box<Expr>,
+    // Awaiting a rejected promise turns it into a throw.
+    pub throws: Option<Index>, // the type of the thrown value
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

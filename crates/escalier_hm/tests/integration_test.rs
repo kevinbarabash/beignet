@@ -1440,8 +1440,54 @@ fn test_async_return_type() -> Result<(), Errors> {
 
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"() -> Promise<5>"#
+        r#"() -> Promise<5, never>"#
     );
+    Ok(())
+}
+
+#[test]
+fn throws_in_async() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let foo = async fn (cond) => if (cond) { throw "error" } else { 5 }
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    let binding = my_ctx.values.get("foo").unwrap();
+
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"(cond: boolean) -> Promise<5, "error">"#
+    );
+    Ok(())
+}
+
+#[test]
+fn await_async_func_with_throw() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    let foo = async fn (cond) => if (cond) { throw "error" } else { 5 }
+    let bar = async fn () => await foo(true)
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("foo").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"(cond: boolean) -> Promise<5, "error">"#
+    );
+
+    let binding = my_ctx.values.get("bar").unwrap();
+    assert_eq!(
+        arena[binding.index].as_string(&arena),
+        r#"() -> Promise<5, "error">"#
+    );
+
     Ok(())
 }
 
@@ -1461,7 +1507,7 @@ fn test_async_without_return() -> Result<(), Errors> {
 
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"() -> Promise<undefined>"#
+        r#"() -> Promise<undefined, never>"#
     );
     Ok(())
 }
@@ -1485,13 +1531,13 @@ fn test_await_in_async() -> Result<(), Errors> {
     let binding = my_ctx.values.get("bar").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"() -> Promise<5>"#
+        r#"() -> Promise<5, never>"#
     );
 
     let binding = my_ctx.values.get("baz").unwrap();
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        r#"() -> Promise<5>"#
+        r#"() -> Promise<5, never>"#
     );
 
     Ok(())
@@ -1534,7 +1580,7 @@ fn test_await_non_promise() -> Result<(), Errors> {
     assert_eq!(
         result,
         Err(Errors::InferenceError(
-            "type mismatch: unify(5, Promise<t7>) failed".to_string()
+            "type mismatch: unify(5, Promise<t7, t8>) failed".to_string()
         ))
     );
 
