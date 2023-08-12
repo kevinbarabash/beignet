@@ -246,10 +246,6 @@ pub fn infer_expression(
                 }
             };
 
-            if *is_async && !is_promise(&arena[body_t]) {
-                body_t = new_constructor(arena, "Promise", &[body_t]);
-            }
-
             // TODO: search for `throw` expressions in the body and include
             // them in the throws type.
 
@@ -281,16 +277,37 @@ pub fn infer_expression(
                 (None, None) => None,
             };
 
-            match return_type {
-                Some(return_type) => {
-                    let ret_t = infer_type_ann(arena, return_type, &mut sig_ctx)?;
-                    // TODO: add sig_ctx which is a copy of ctx but with all of
-                    // the type params added to sig_ctx.schemes so that they can
-                    // be looked up.
-                    unify(arena, &sig_ctx, body_t, ret_t)?;
-                    new_func_type(arena, &func_params, ret_t, &type_params, throws)
+            // TODO: Make the return type `Promise<body_t, throws>` if the function
+            // is async.  Async functions cannot throw.  They can only return a
+            // rejected promise.
+            if *is_async && !is_promise(&arena[body_t]) {
+                let never = new_keyword(arena, Keyword::Never);
+                let throws_t = throws.unwrap_or(never);
+                body_t = new_constructor(arena, "Promise", &[body_t, throws_t]);
+
+                match return_type {
+                    Some(return_type) => {
+                        let ret_t = infer_type_ann(arena, return_type, &mut sig_ctx)?;
+                        // TODO: add sig_ctx which is a copy of ctx but with all of
+                        // the type params added to sig_ctx.schemes so that they can
+                        // be looked up.
+                        unify(arena, &sig_ctx, body_t, ret_t)?;
+                        new_func_type(arena, &func_params, ret_t, &type_params, None)
+                    }
+                    None => new_func_type(arena, &func_params, body_t, &type_params, None),
                 }
-                None => new_func_type(arena, &func_params, body_t, &type_params, throws),
+            } else {
+                match return_type {
+                    Some(return_type) => {
+                        let ret_t = infer_type_ann(arena, return_type, &mut sig_ctx)?;
+                        // TODO: add sig_ctx which is a copy of ctx but with all of
+                        // the type params added to sig_ctx.schemes so that they can
+                        // be looked up.
+                        unify(arena, &sig_ctx, body_t, ret_t)?;
+                        new_func_type(arena, &func_params, ret_t, &type_params, throws)
+                    }
+                    None => new_func_type(arena, &func_params, body_t, &type_params, throws),
+                }
             }
         }
         ExprKind::IfElse(IfElse {
@@ -435,7 +452,7 @@ pub fn infer_expression(
                 }
             }
         }
-        ExprKind::Await(Await { arg: expr, .. }) => {
+        ExprKind::Await(Await { arg: expr, throws }) => {
             if !ctx.is_async {
                 return Err(Errors::InferenceError(
                     "Can't use await outside of an async function".to_string(),
@@ -444,11 +461,13 @@ pub fn infer_expression(
 
             let expr_t = infer_expression(arena, expr, ctx)?;
             let inner_t = new_var_type(arena, None);
+            let throws_t = new_var_type(arena, None);
             // TODO: Merge Constructor and TypeRef
             // NOTE: This isn't quite right because we can await non-promise values.
             // That being said, we should avoid doing so.
-            let promise_t = new_constructor(arena, "Promise", &[inner_t]);
+            let promise_t = new_constructor(arena, "Promise", &[inner_t, throws_t]);
             unify(arena, ctx, expr_t, promise_t)?;
+            *throws = Some(throws_t);
 
             inner_t
         }

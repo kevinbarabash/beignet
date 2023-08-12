@@ -73,6 +73,12 @@ impl Visitor for ThrowsVisitor {
                 }
                 walk_expr(self, expr);
             }
+            ExprKind::Await(Await { throws, .. }) => {
+                if let Some(throws) = throws {
+                    self.throws.push(*throws);
+                }
+                walk_expr(self, expr);
+            }
             _ => walk_expr(self, expr),
         }
     }

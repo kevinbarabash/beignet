@@ -445,7 +445,10 @@ impl<'a> Parser<'a> {
                                 op: UnaryOp::Not,
                                 right: Box::new(rhs),
                             }),
-                            TokenKind::Await => ExprKind::Await(Await { arg: Box::new(rhs) }),
+                            TokenKind::Await => ExprKind::Await(Await {
+                                arg: Box::new(rhs),
+                                throws: None,
+                            }),
                             TokenKind::Yield => ExprKind::Yield(Yield { arg: Box::new(rhs) }),
                             TokenKind::Throw => ExprKind::Throw(Throw {
                                 arg: Box::new(rhs),
