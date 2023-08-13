@@ -4609,7 +4609,11 @@ fn type_level_arithmetic() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-    type A = 5 + 10
+    type A = 10 + 5
+    type B = 10 - 5
+    type C = 10 * 5
+    type D = 10 / 5
+    type E = 10 % 5
     "#;
     let mut program = parse(src).unwrap();
 
@@ -4619,6 +4623,22 @@ fn type_level_arithmetic() -> Result<(), Errors> {
     let t = expand_type(&mut arena, &my_ctx, result.t)?;
     assert_eq!(arena[t].as_string(&arena), r#"15"#);
 
+    let result = my_ctx.schemes.get("B").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"5"#);
+
+    let result = my_ctx.schemes.get("C").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"50"#);
+
+    let result = my_ctx.schemes.get("D").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"2"#);
+
+    let result = my_ctx.schemes.get("E").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"0"#);
+
     Ok(())
 }
 
@@ -4626,8 +4646,9 @@ fn type_level_arithmetic() -> Result<(), Errors> {
 fn type_level_arithmetic_with_alias() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
+    // TODO: check type constraints on type aliases
     let src = r#"
-    type Add<A, B> = A + B
+    type Add<A: string, B: string> = A + B
     type A = Add<5, 10>
     type B = Add<5, number>
     type C = Add<number, 10>
@@ -4660,9 +4681,9 @@ fn type_level_arithmetic_with_alias() -> Result<(), Errors> {
 fn type_level_arithmetic_with_incorrect_types() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
-    // TODO: expand type aliases eagerly
+    // TODO: check type constraints eagerly
     let src = r#"
-    type Add<A, B> = A + B
+    type Add<A: number, B: number> = A + B
     type Sum = Add<string, boolean>
     "#;
     let mut program = parse(src).unwrap();
