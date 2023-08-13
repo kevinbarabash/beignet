@@ -590,7 +590,7 @@ impl Type {
                 )
             }
             TypeKind::Infer(Infer { name }) => format!("infer {}", name),
-            TypeKind::Wildcard => format!("_"),
+            TypeKind::Wildcard => "_".to_string(),
             TypeKind::Binary(BinaryT { op, left, right }) => {
                 let op = match op {
                     TBinaryOp::Add => "+",

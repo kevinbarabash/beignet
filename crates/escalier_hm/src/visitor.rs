@@ -2,12 +2,8 @@ use generational_arena::Index;
 
 use escalier_ast::Literal as Lit;
 
+use crate::key_value_store::KeyValueStore;
 use crate::types::*;
-
-pub trait KeyValueStore<K, V> {
-    fn get_type(&mut self, idx: &K) -> (K, V);
-    fn put_type(&mut self, t: V) -> K;
-}
 
 pub trait Visitor: KeyValueStore<Index, Type> {
     fn visit_type_var(&mut self, _: &Variable, idx: &Index) -> Index;

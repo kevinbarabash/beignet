@@ -276,7 +276,7 @@ fn throws_coalesces_duplicate_exceptions() -> Result<(), Errors> {
     assert_eq!(
         arena[binding.index].as_string(&arena),
         // TODO: dedupe this
-        r#"(a: number, b: number) -> number throws "DIV_BY_ZERO" | "DIV_BY_ZERO""#
+        r#"(a: number, b: number) -> number throws "DIV_BY_ZERO""#
     );
 
     Ok(())
