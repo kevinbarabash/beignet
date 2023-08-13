@@ -4273,7 +4273,6 @@ fn match_type_with_tuples() -> Result<(), Errors> {
 fn conditional_type_with_placeholders() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
-    // TODO: introduce a placeholder type that will unify with anything
     let src = r#"
         type IsArray<T> = if (T: Array<_>) { true } else { false }
         type T = IsArray<Array<number>>
@@ -4290,6 +4289,45 @@ fn conditional_type_with_placeholders() -> Result<(), Errors> {
     let result = my_ctx.schemes.get("F").unwrap();
     let t = expand_type(&mut arena, &my_ctx, result.t)?;
     assert_eq!(arena[t].as_string(&arena), r#"false"#);
+
+    Ok(())
+}
+
+#[test]
+fn conditional_type_with_placeholder_and_constraint() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+        type IsArrayOfNumbers<T> = if (T: Array<_: number>) { true } else { false }
+        type T = IsArrayOfNumbers<[1, 2, 3]>
+        type F = IsArrayOfNumbers<["hello", "world"]>
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let result = my_ctx.schemes.get("T").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"true"#);
+
+    let result = my_ctx.schemes.get("F").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"false"#);
+
+    Ok(())
+}
+
+#[test]
+fn unify_tuple_and_array() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+        let tuple = [1, 2, 3]
+        let array: Array<number> = tuple
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
     Ok(())
 }

@@ -79,7 +79,6 @@ pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
                 || occurs_in_type(arena, v, true_type)
                 || occurs_in_type(arena, v, false_type)
         }
-        TypeKind::Const(Const { t }) => occurs_in_type(arena, v, t),
         TypeKind::Binary(BinaryT { op: _, left, right }) => {
             occurs_in_type(arena, v, left) || occurs_in_type(arena, v, right)
         }

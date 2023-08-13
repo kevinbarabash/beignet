@@ -341,11 +341,6 @@ pub struct Wildcard {
     pub constraint: Option<Index>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Const {
-    pub t: Index,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TBinaryOp {
     Add,
@@ -381,7 +376,6 @@ pub enum TypeKind {
     Conditional(Conditional),
     Infer(Infer),
     Wildcard(Wildcard),
-    Const(Const),
     Binary(BinaryT),
 }
 
@@ -602,7 +596,6 @@ impl Type {
                 // TODO: handle constraint
                 format!("_")
             }
-            TypeKind::Const(Const { t }) => format!("const {}", arena[*t].as_string(arena)),
             TypeKind::Binary(BinaryT { op, left, right }) => {
                 let op = match op {
                     TBinaryOp::Add => "+",

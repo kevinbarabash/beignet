@@ -209,7 +209,6 @@ pub trait Visitor: KeyValueStore<Index, Type> {
                 TypeKind::Conditional(self.visit_conditional(conditional))
             }
             TypeKind::Infer(infer) => return self.visit_infer(infer, idx),
-            TypeKind::Const(Const { t }) => return self.visit_index(t),
             TypeKind::Binary(BinaryT { op, left, right }) => {
                 let left = self.visit_index(left);
                 let right = self.visit_index(right);
