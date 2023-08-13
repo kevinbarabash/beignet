@@ -10,7 +10,7 @@ use crate::context::*;
 use crate::errors::*;
 use crate::folder::{self, Folder};
 use crate::infer_pattern::*;
-use crate::key_value_store::KeyValueStore2;
+use crate::key_value_store::KeyValueStore;
 use crate::provenance::Provenance;
 use crate::types::{self, *};
 use crate::unify::*;
@@ -1186,7 +1186,7 @@ struct Generalize<'a> {
     mapping: &'a mut BTreeMap<Index, String>,
 }
 
-impl<'a> KeyValueStore2<Index, Type> for Generalize<'a> {
+impl<'a> KeyValueStore<Index, Type> for Generalize<'a> {
     fn get_type(&mut self, index: &Index) -> Type {
         self.arena[*index].clone()
     }

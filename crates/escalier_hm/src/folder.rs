@@ -1,9 +1,9 @@
 use generational_arena::Index;
 
-use crate::key_value_store::KeyValueStore2;
+use crate::key_value_store::KeyValueStore;
 use crate::types::*;
 
-pub trait Folder: KeyValueStore2<Index, Type> + Sized {
+pub trait Folder: KeyValueStore<Index, Type> + Sized {
     fn fold_index(&mut self, index: &Index) -> Index {
         walk_index(self, index)
     }

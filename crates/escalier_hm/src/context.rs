@@ -5,7 +5,7 @@ use im::hashset::HashSet;
 use crate::errors::*;
 use crate::folder::walk_index;
 use crate::folder::{self, Folder};
-use crate::key_value_store::KeyValueStore2;
+use crate::key_value_store::KeyValueStore;
 use crate::types::*;
 use crate::util::*;
 
@@ -57,7 +57,7 @@ struct Fresh<'a> {
     mapping: HashMap<Index, Index>,
 }
 
-impl<'a> KeyValueStore2<Index, Type> for Fresh<'a> {
+impl<'a> KeyValueStore<Index, Type> for Fresh<'a> {
     fn get_type(&mut self, index: &Index) -> Type {
         self.arena[*index].clone()
     }
@@ -116,7 +116,7 @@ pub struct Instantiate<'a> {
     pub mapping: &'a std::collections::HashMap<String, Index>,
 }
 
-impl<'a> KeyValueStore2<Index, Type> for Instantiate<'a> {
+impl<'a> KeyValueStore<Index, Type> for Instantiate<'a> {
     // NOTE: The reason we return both an Index and a Type is that
     // this method calls `prune` which maybe return a different Index
     // from the one passed to it. We need to ensure this method returns

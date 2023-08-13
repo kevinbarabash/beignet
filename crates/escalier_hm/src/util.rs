@@ -8,10 +8,10 @@ use crate::context::*;
 use crate::errors::*;
 use crate::folder::walk_index;
 use crate::folder::Folder;
-use crate::key_value_store::{KeyValueStore, KeyValueStore2};
+use crate::key_value_store::KeyValueStore;
 use crate::types::*;
 use crate::unify::*;
-use crate::visitor::Visitor;
+use crate::visitor::{self, Visitor};
 
 /// Checks whether a type variable occurs in a type expression.
 ///
@@ -541,10 +541,8 @@ impl<'a> KeyValueStore<Index, Type> for FindInferVisitor<'a> {
     // this method calls `prune` which maybe return a different Index
     // from the one passed to it. We need to ensure this method returns
     // an Index that corresponds to the returned Type.
-    fn get_type(&mut self, idx: &Index) -> (Index, Type) {
-        let idx = prune(self.arena, *idx);
-        let t = self.arena[idx].clone();
-        (idx, t)
+    fn get_type(&mut self, idx: &Index) -> Type {
+        self.arena[*idx].clone()
     }
     fn put_type(&mut self, t: Type) -> Index {
         self.arena.insert(t)
@@ -552,14 +550,16 @@ impl<'a> KeyValueStore<Index, Type> for FindInferVisitor<'a> {
 }
 
 impl<'a> Visitor for FindInferVisitor<'a> {
-    fn visit_type_var(&mut self, _: &Variable, idx: &Index) -> Index {
-        // We assume that any type variables were created by instantiate and
-        // thus there is no need to process them further.
-        *idx
-    }
-    fn visit_infer(&mut self, infer: &Infer, idx: Index) -> Index {
-        self.infer_types.push(infer.to_owned());
-        idx
+    fn visit_index(&mut self, index: &Index) {
+        let t = self.get_type(index);
+        match &t.kind {
+            TypeKind::Infer(infer) => {
+                self.infer_types.push(infer.to_owned());
+            }
+            _ => {
+                visitor::walk_index(self, index);
+            }
+        }
     }
 }
 
@@ -579,7 +579,7 @@ pub struct ReplaceVisitor<'a> {
     pub mapping: &'a std::collections::HashMap<String, Index>,
 }
 
-impl<'a> KeyValueStore2<Index, Type> for ReplaceVisitor<'a> {
+impl<'a> KeyValueStore<Index, Type> for ReplaceVisitor<'a> {
     fn get_type(&mut self, idx: &Index) -> Type {
         self.arena[*idx].clone()
     }

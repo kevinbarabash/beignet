@@ -1,229 +1,133 @@
 use generational_arena::Index;
 
-use escalier_ast::Literal as Lit;
-
 use crate::key_value_store::KeyValueStore;
 use crate::types::*;
 
-pub trait Visitor: KeyValueStore<Index, Type> {
-    fn visit_type_var(&mut self, _: &Variable, idx: &Index) -> Index;
-
-    fn visit_type_ref(&mut self, tref: &Constructor, idx: &Index) -> Index {
-        let t = self.get_type(idx).1;
-        let t = Type {
-            kind: TypeKind::Constructor(Constructor {
-                types: self.visit_indexes(&tref.types),
-                ..tref.to_owned()
-            }),
-            provenance: t.provenance,
-        };
-        self.put_type(t)
+pub trait Visitor: KeyValueStore<Index, Type> + Sized {
+    fn visit_index(&mut self, index: &Index) {
+        walk_index(self, index)
     }
+}
 
-    fn visit_union(&mut self, union: &Union) -> Union {
-        Union {
-            types: self.visit_indexes(&union.types),
+pub fn walk_index<V: Visitor>(visitor: &mut V, index: &Index) {
+    let t = visitor.get_type(index);
+
+    match &t.kind {
+        TypeKind::Variable(Variable {
+            id: _,
+            instance,
+            constraint,
+        }) => {
+            instance.map(|instance| visitor.visit_index(&instance));
+            constraint.map(|constraint| visitor.visit_index(&constraint));
         }
-    }
-
-    fn visit_intersection(&mut self, union: &Intersection) -> Intersection {
-        Intersection {
-            types: self.visit_indexes(&union.types),
+        TypeKind::Constructor(Constructor { name: _, types }) => {
+            walk_indexes(visitor, types);
         }
-    }
-
-    fn visit_tuple(&mut self, tuple: &Tuple) -> Tuple {
-        Tuple {
-            types: self.visit_indexes(&tuple.types),
+        TypeKind::Union(Union { types }) => {
+            walk_indexes(visitor, types);
         }
-    }
-
-    fn visit_keyword(&self, keyword: &Keyword) -> Keyword {
-        keyword.clone()
-    }
-
-    fn visit_primitive(&self, primitive: &Primitive) -> Primitive {
-        primitive.clone()
-    }
-
-    fn visit_literal(&self, lit: &Lit) -> Lit {
-        lit.clone()
-    }
-
-    fn visit_type_param(&mut self, type_param: &TypeParam) -> TypeParam {
-        TypeParam {
-            name: type_param.name.to_owned(),
-            constraint: type_param
-                .constraint
-                .as_ref()
-                .map(|constraint| self.visit_index(constraint)),
-            default: type_param
-                .default
-                .as_ref()
-                .map(|default| self.visit_index(default)),
+        TypeKind::Intersection(Intersection { types }) => {
+            walk_indexes(visitor, types);
         }
-    }
-
-    fn visit_type_params(
-        &mut self,
-        type_params: &Option<Vec<TypeParam>>,
-    ) -> Option<Vec<TypeParam>> {
-        type_params.as_ref().map(|type_params| {
-            type_params
-                .iter()
-                .map(|type_param| self.visit_type_param(type_param))
-                .collect::<Vec<_>>()
-        })
-    }
-
-    fn visit_func_param(&mut self, func_param: &FuncParam) -> FuncParam {
-        FuncParam {
-            t: self.visit_index(&func_param.t),
-            ..func_param.to_owned()
+        TypeKind::Tuple(Tuple { types }) => {
+            walk_indexes(visitor, types);
         }
-    }
-
-    fn visit_func_params(&mut self, params: &[FuncParam]) -> Vec<FuncParam> {
-        params
-            .iter()
-            .map(|param| self.visit_func_param(param))
-            .collect::<Vec<_>>()
-    }
-
-    fn visit_object(&mut self, obj: &Object) -> Object {
-        let elems: Vec<_> = obj
-            .elems
-            .iter()
-            .map(|elem| match elem {
-                TObjElem::Constructor(TCallable {
-                    params,
-                    ret,
-                    type_params,
-                }) => TObjElem::Constructor(TCallable {
-                    params: self.visit_func_params(params),
-                    ret: self.visit_index(ret),
-                    type_params: self.visit_type_params(type_params),
-                }),
-                TObjElem::Call(TCallable {
-                    params,
-                    ret,
-                    type_params,
-                }) => TObjElem::Call(TCallable {
-                    params: self.visit_func_params(params),
-                    ret: self.visit_index(ret),
-                    type_params: self.visit_type_params(type_params),
-                }),
-                TObjElem::Index(index) => TObjElem::Index(TIndex {
-                    t: self.visit_index(&index.t),
-                    ..index.clone()
-                }),
-                TObjElem::Prop(prop) => TObjElem::Prop(TProp {
-                    t: self.visit_index(&prop.t),
-                    ..prop.clone()
-                }),
-            })
-            .collect();
-
-        Object { elems }
-    }
-
-    fn visit_function(&mut self, func: &Function) -> Function {
-        let params = func
-            .params
-            .iter()
-            .map(|param| self.visit_func_param(param))
-            .collect::<Vec<_>>();
-        let ret = self.visit_index(&func.ret);
-        let type_params = self.visit_type_params(&func.type_params);
-        let throws = func.throws.map(|t| self.visit_index(&t));
-
-        Function {
+        TypeKind::Keyword(_) => (),
+        TypeKind::Primitive(_) => (),
+        TypeKind::Literal(_) => (),
+        TypeKind::Function(Function {
             params,
             ret,
             type_params,
             throws,
+        }) => {
+            walk_func_params(visitor, params);
+            visitor.visit_index(ret);
+            walk_type_params(visitor, type_params);
+            throws.map(|throws| visitor.visit_index(&throws));
+        }
+        TypeKind::Object(Object { elems }) => {
+            elems.iter().for_each(|elem| match elem {
+                TObjElem::Constructor(TCallable {
+                    params,
+                    ret,
+                    type_params,
+                }) => {
+                    walk_func_params(visitor, params);
+                    visitor.visit_index(ret);
+                    walk_type_params(visitor, type_params);
+                }
+                TObjElem::Call(TCallable {
+                    params,
+                    ret,
+                    type_params,
+                }) => {
+                    walk_func_params(visitor, params);
+                    visitor.visit_index(ret);
+                    walk_type_params(visitor, type_params);
+                }
+                TObjElem::Index(index) => visitor.visit_index(&index.t),
+                TObjElem::Prop(prop) => visitor.visit_index(&prop.t),
+            });
+        }
+        TypeKind::Rest(Rest { arg }) => {
+            visitor.visit_index(arg);
+        }
+        TypeKind::KeyOf(KeyOf { t }) => {
+            visitor.visit_index(t);
+        }
+        TypeKind::IndexedAccess(IndexedAccess { obj, index }) => {
+            visitor.visit_index(obj);
+            visitor.visit_index(index);
+        }
+        TypeKind::Conditional(Conditional {
+            check,
+            extends,
+            true_type,
+            false_type,
+        }) => {
+            visitor.visit_index(check);
+            visitor.visit_index(extends);
+            visitor.visit_index(true_type);
+            visitor.visit_index(false_type);
+        }
+        TypeKind::Infer(_) => (),
+        TypeKind::Wildcard => (),
+        TypeKind::Binary(BinaryT { op: _, left, right }) => {
+            visitor.visit_index(left);
+            visitor.visit_index(right);
         }
     }
+}
 
-    fn visit_rest(&mut self, rest: &Rest) -> Rest {
-        Rest {
-            arg: self.visit_index(&rest.arg),
-        }
+pub fn walk_indexes<V: Visitor>(visitor: &mut V, indexes: &[Index]) {
+    indexes.iter().for_each(|index| visitor.visit_index(index))
+}
+
+fn walk_func_params<V: Visitor>(visitor: &mut V, params: &[FuncParam]) {
+    params
+        .iter()
+        .for_each(|param| walk_func_param(visitor, param))
+}
+
+fn walk_func_param<V: Visitor>(visitor: &mut V, func_param: &FuncParam) {
+    visitor.visit_index(&func_param.t)
+}
+
+fn walk_type_params<V: Visitor>(visitor: &mut V, type_params: &Option<Vec<TypeParam>>) {
+    if let Some(type_params) = type_params {
+        type_params
+            .iter()
+            .for_each(|type_param| walk_type_param(visitor, type_param))
     }
+}
 
-    fn visit_keyof(&mut self, keyof: &KeyOf) -> KeyOf {
-        KeyOf {
-            t: self.visit_index(&keyof.t),
-        }
+fn walk_type_param<V: Visitor>(visitor: &mut V, type_param: &TypeParam) {
+    if let Some(constraint) = type_param.constraint {
+        visitor.visit_index(&constraint);
     }
-
-    fn visit_indexed_access(&mut self, indexed_access: &IndexedAccess) -> IndexedAccess {
-        IndexedAccess {
-            obj: self.visit_index(&indexed_access.obj),
-            index: self.visit_index(&indexed_access.index),
-        }
-    }
-
-    fn visit_conditional(&mut self, conditional: &Conditional) -> Conditional {
-        Conditional {
-            check: self.visit_index(&conditional.check),
-            extends: self.visit_index(&conditional.extends),
-            true_type: self.visit_index(&conditional.true_type),
-            false_type: self.visit_index(&conditional.false_type),
-        }
-    }
-
-    fn visit_infer(&mut self, _infer: &Infer, idx: Index) -> Index {
-        idx // Do nothing by default
-    }
-
-    fn visit_wildcard(&mut self, idx: Index) -> Index {
-        idx // Do nothing by default
-    }
-
-    fn visit_index(&mut self, idx: &Index) -> Index {
-        let (idx, t) = self.get_type(idx);
-        let kind = match &t.kind {
-            TypeKind::Variable(tvar) => return self.visit_type_var(tvar, &idx),
-            TypeKind::Union(union) => TypeKind::Union(self.visit_union(union)),
-            TypeKind::Intersection(intersection) => {
-                TypeKind::Intersection(self.visit_intersection(intersection))
-            }
-            TypeKind::Tuple(tuple) => TypeKind::Tuple(self.visit_tuple(tuple)),
-            TypeKind::Constructor(tref) => return self.visit_type_ref(tref, &idx),
-            TypeKind::Keyword(keyword) => TypeKind::Keyword(self.visit_keyword(keyword)),
-            TypeKind::Primitive(primitive) => TypeKind::Primitive(self.visit_primitive(primitive)),
-            TypeKind::Literal(lit) => TypeKind::Literal(self.visit_literal(lit)),
-            TypeKind::Function(func) => TypeKind::Function(self.visit_function(func)),
-            TypeKind::Object(obj) => TypeKind::Object(self.visit_object(obj)),
-            TypeKind::Rest(rest) => TypeKind::Rest(self.visit_rest(rest)),
-            TypeKind::KeyOf(keyof) => TypeKind::KeyOf(self.visit_keyof(keyof)),
-            TypeKind::IndexedAccess(indexed_access) => {
-                TypeKind::IndexedAccess(self.visit_indexed_access(indexed_access))
-            }
-            TypeKind::Conditional(conditional) => {
-                TypeKind::Conditional(self.visit_conditional(conditional))
-            }
-            TypeKind::Infer(infer) => return self.visit_infer(infer, idx),
-            TypeKind::Binary(BinaryT { op, left, right }) => {
-                let left = self.visit_index(left);
-                let right = self.visit_index(right);
-                TypeKind::Binary(BinaryT {
-                    op: *op,
-                    left,
-                    right,
-                })
-            }
-            TypeKind::Wildcard => return self.visit_wildcard(idx),
-        };
-        let new_t = Type {
-            kind,
-            provenance: t.provenance,
-        };
-        self.put_type(new_t)
-    }
-
-    fn visit_indexes(&mut self, idxs: &[Index]) -> Vec<Index> {
-        idxs.iter().map(|idx| self.visit_index(idx)).collect()
+    if let Some(default) = type_param.default {
+        visitor.visit_index(&default);
     }
 }
