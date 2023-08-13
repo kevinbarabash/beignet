@@ -8,12 +8,13 @@ use crate::ast_utils::find_returns;
 use crate::ast_utils::{find_throws, find_throws_in_block};
 use crate::context::*;
 use crate::errors::*;
+use crate::folder::{self, Folder};
 use crate::infer_pattern::*;
+use crate::key_value_store::KeyValueStore;
 use crate::provenance::Provenance;
 use crate::types::{self, *};
 use crate::unify::*;
 use crate::util::*;
-use crate::visitor::{KeyValueStore, Visitor};
 
 /// Computes the type of the expression given by node.
 ///
@@ -1186,36 +1187,43 @@ struct Generalize<'a> {
 }
 
 impl<'a> KeyValueStore<Index, Type> for Generalize<'a> {
-    // NOTE: The reason we return both an Index and a Type is that
-    // this method calls `prune` which maybe return a different Index
-    // from the one passed to it. We need to ensure this method returns
-    // an Index that corresponds to the returned Type.
-    fn get_type(&mut self, idx: &Index) -> (Index, Type) {
-        let idx = prune(self.arena, *idx);
-        let t = self.arena[idx].clone();
-        (idx, t)
+    fn get_type(&mut self, index: &Index) -> Type {
+        self.arena[*index].clone()
     }
     fn put_type(&mut self, t: Type) -> Index {
         self.arena.insert(t)
     }
 }
 
-impl<'a> Visitor for Generalize<'a> {
-    fn visit_type_var(&mut self, _: &Variable, idx: &Index) -> Index {
-        // Replace with a type reference/constructor
-        let name = match self.mapping.get(idx) {
-            Some(name) => name.clone(),
-            None => {
-                // TODO: create a name generator that can avoid duplicating
-                // names of explicitly provided type params.
-                let name = ((self.mapping.len() as u8) + 65) as char;
-                let name = format!("{}", name);
-                // let name = format!("'{}", mappings.len());
-                self.mapping.insert(*idx, name.clone());
-                name
+impl<'a> Folder for Generalize<'a> {
+    fn fold_index(&mut self, index: &Index) -> Index {
+        // QUESTION: Why do we need to `prune` here?  Maybe because we don't
+        // copy the `instance` when creating an new type variable.
+        let index = prune(self.arena, *index);
+        let t = self.get_type(&index);
+
+        match &t.kind {
+            TypeKind::Variable(Variable {
+                id: _,
+                instance: _,
+                constraint: _,
+            }) => {
+                let name = match self.mapping.get(&index) {
+                    Some(name) => name.clone(),
+                    None => {
+                        // TODO: create a name generator that can avoid duplicating
+                        // names of explicitly provided type params.
+                        let name = ((self.mapping.len() as u8) + 65) as char;
+                        let name = format!("{}", name);
+                        // let name = format!("'{}", mappings.len());
+                        self.mapping.insert(index, name.clone());
+                        name
+                    }
+                };
+                new_constructor(self.arena, &name, &[])
             }
-        };
-        new_constructor(self.arena, &name, &[])
+            _ => folder::walk_index(self, &index),
+        }
     }
 }
 
@@ -1231,12 +1239,12 @@ pub fn generalize_func(arena: &'_ mut Arena<Type>, func: &types::Function) -> In
         .params
         .iter()
         .map(|param| types::FuncParam {
-            t: generalize.visit_index(&param.t),
+            t: generalize.fold_index(&param.t),
             ..param.to_owned()
         })
         .collect::<Vec<_>>();
-    let ret = generalize.visit_index(&func.ret);
-    let throws = func.throws.map(|throws| generalize.visit_index(&throws));
+    let ret = generalize.fold_index(&func.ret);
+    let throws = func.throws.map(|throws| generalize.fold_index(&throws));
 
     let mut type_params: Vec<types::TypeParam> = vec![];
 

@@ -3,9 +3,11 @@ use im::hashmap::HashMap;
 use im::hashset::HashSet;
 
 use crate::errors::*;
+use crate::folder::walk_index;
+use crate::folder::{self, Folder};
+use crate::key_value_store::KeyValueStore;
 use crate::types::*;
 use crate::util::*;
-use crate::visitor::{KeyValueStore, Visitor};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Binding {
@@ -56,29 +58,37 @@ struct Fresh<'a> {
 }
 
 impl<'a> KeyValueStore<Index, Type> for Fresh<'a> {
-    // NOTE: The reason we return both an Index and a Type is that
-    // this method calls `prune` which maybe return a different Index
-    // from the one passed to it. We need to ensure this method returns
-    // an Index that corresponds to the returned Type.
-    fn get_type(&mut self, idx: &Index) -> (Index, Type) {
-        let idx = prune(self.arena, *idx);
-        let t = self.arena[idx].clone();
-        (idx, t)
+    fn get_type(&mut self, index: &Index) -> Type {
+        self.arena[*index].clone()
     }
     fn put_type(&mut self, t: Type) -> Index {
         self.arena.insert(t)
     }
 }
 
-impl<'a> Visitor for Fresh<'a> {
-    fn visit_type_var(&mut self, _: &Variable, idx: &Index) -> Index {
-        if is_generic(self.arena, *idx, self.ctx) {
-            self.mapping
-                .entry(*idx)
-                .or_insert_with(|| new_var_type(self.arena, None))
-                .to_owned()
-        } else {
-            *idx
+impl<'a> Folder for Fresh<'a> {
+    fn fold_index(&mut self, index: &Index) -> Index {
+        // QUESTION: Why do we need to `prune` here?  Maybe because we don't
+        // copy the `instance` when creating an new type variable.
+        let index = prune(self.arena, *index);
+        let t = self.get_type(&index);
+
+        match &t.kind {
+            TypeKind::Variable(Variable {
+                id: _,
+                instance: _,
+                constraint,
+            }) => {
+                if is_generic(self.arena, index, self.ctx) {
+                    self.mapping
+                        .entry(index)
+                        .or_insert_with(|| new_var_type(self.arena, *constraint))
+                        .to_owned()
+                } else {
+                    index
+                }
+            }
+            _ => walk_index(self, &index),
         }
     }
 }
@@ -98,7 +108,7 @@ pub fn fresh(arena: &mut Arena<Type>, index: Index, ctx: &Context) -> Index {
         mapping: HashMap::default(),
     };
 
-    fresh.visit_index(&index)
+    fresh.fold_index(&index)
 }
 
 pub struct Instantiate<'a> {
@@ -111,41 +121,40 @@ impl<'a> KeyValueStore<Index, Type> for Instantiate<'a> {
     // this method calls `prune` which maybe return a different Index
     // from the one passed to it. We need to ensure this method returns
     // an Index that corresponds to the returned Type.
-    fn get_type(&mut self, idx: &Index) -> (Index, Type) {
-        let idx = prune(self.arena, *idx);
-        let t = self.arena[idx].clone();
-        (idx, t)
+    fn get_type(&mut self, idx: &Index) -> Type {
+        // let idx = prune(self.arena, *idx);
+        self.arena[*idx].clone()
     }
     fn put_type(&mut self, t: Type) -> Index {
         self.arena.insert(t)
     }
 }
 
-impl<'a> Visitor for Instantiate<'a> {
-    fn visit_type_var(&mut self, _: &Variable, idx: &Index) -> Index {
-        // We assume that any type variables were created by instantiate and
-        // thus there is no need to process them further.
-        *idx
-    }
-    // fn visit_wildcard(&mut self, wildcard: &Wildcard, _idx: Index) -> Index {
-    //     new_var_type(self.arena, wildcard.constraint)
-    // }
-    fn visit_type_ref(&mut self, tref: &Constructor, idx: &Index) -> Index {
-        let types = self.visit_indexes(&tref.types);
+impl<'a> Folder for Instantiate<'a> {
+    fn fold_index(&mut self, index: &Index) -> Index {
+        // let index = prune(self.arena, *index);
+        let t = self.get_type(index);
 
-        match self.mapping.get(&tref.name) {
-            Some(idx) => {
-                // What does it mean to replace the constructor name
-                // when it has type args?
-                *idx
-            }
-            None => {
-                if types != tref.types {
-                    new_constructor(self.arena, &tref.name, &types)
-                } else {
-                    *idx
+        match &t.kind {
+            TypeKind::Constructor(Constructor { name, types }) => {
+                let new_types = folder::walk_indexes(self, types);
+
+                match self.mapping.get(name) {
+                    Some(index) => {
+                        // What does it mean to replace the constructor name
+                        // when it has type args?
+                        *index
+                    }
+                    None => {
+                        if &new_types != types {
+                            new_constructor(self.arena, name, &new_types)
+                        } else {
+                            *index
+                        }
+                    }
                 }
             }
+            _ => walk_index(self, index),
         }
     }
 }
@@ -155,9 +164,10 @@ pub fn instantiate_scheme(
     t: Index,
     mapping: &std::collections::HashMap<String, Index>,
 ) -> Index {
-    let mut instantiate = Instantiate { arena, mapping };
-
-    instantiate.visit_index(&t)
+    let mut instantiate2 = Instantiate { arena, mapping };
+    instantiate2.fold_index(&t)
+    // let mut instantiate = Instantiate { arena, mapping };
+    // instantiate.visit_index(&t)
 }
 
 pub fn instantiate_func(
@@ -198,14 +208,14 @@ pub fn instantiate_func(
         .params
         .iter()
         .map(|param| FuncParam {
-            t: instantiate.visit_index(&param.t),
+            t: instantiate.fold_index(&param.t),
             ..param.to_owned()
         })
         .collect::<Vec<_>>();
 
-    let ret = instantiate.visit_index(&func.ret);
+    let ret = instantiate.fold_index(&func.ret);
 
-    let throws = func.throws.map(|t| instantiate.visit_index(&t));
+    let throws = func.throws.map(|t| instantiate.fold_index(&t));
 
     Ok(Function {
         params,
