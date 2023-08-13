@@ -2,13 +2,23 @@ use escalier_ast::*;
 
 use crate::parse_error::ParseError;
 use crate::parser::*;
-use crate::precedence::Associativity;
+use crate::precedence::{Associativity, Operator, PRECEDENCE_TABLE};
 use crate::token::*;
 
 fn get_infix_precedence(op: &Token) -> Option<(u8, Associativity)> {
     match &op.kind {
-        TokenKind::Ampersand => Some((11, Associativity::Left)),
-        TokenKind::Pipe => Some((10, Associativity::Left)),
+        // multiplicative
+        TokenKind::Times => PRECEDENCE_TABLE.get(&Operator::Multiplication).cloned(),
+        TokenKind::Divide => PRECEDENCE_TABLE.get(&Operator::Division).cloned(),
+        TokenKind::Modulo => PRECEDENCE_TABLE.get(&Operator::Remainder).cloned(),
+
+        // additive
+        TokenKind::Plus => PRECEDENCE_TABLE.get(&Operator::Addition).cloned(),
+        TokenKind::Minus => PRECEDENCE_TABLE.get(&Operator::Subtraction).cloned(),
+
+        TokenKind::Ampersand => Some((4, Associativity::Left)), // same as LogicalAnd
+        TokenKind::Pipe => Some((3, Associativity::Left)),      // same as LogicalOr
+
         _ => None,
     }
 }
@@ -69,7 +79,7 @@ impl<'a> Parser<'a> {
                 TypeAnnKind::Never
             }
             TokenKind::Underscore => {
-                self.next();
+                self.next(); // consumes '_'
                 TypeAnnKind::Wildcard
             }
             TokenKind::LeftBrace => {
@@ -577,7 +587,37 @@ impl<'a> Parser<'a> {
                             inferred_type: None,
                         }
                     }
-                    _ => panic!("unexpected token {:?}", next.kind),
+                    _ => {
+                        let op: BinaryOp = match &next.kind {
+                            TokenKind::Plus => BinaryOp::Plus,
+                            TokenKind::Minus => BinaryOp::Minus,
+                            TokenKind::Times => BinaryOp::Times,
+                            TokenKind::Divide => BinaryOp::Divide,
+                            TokenKind::Modulo => BinaryOp::Modulo,
+                            _ => panic!("unexpected token: {:?}", next),
+                        };
+
+                        let precedence = if next_precedence.1 == Associativity::Left {
+                            next_precedence.0
+                        } else {
+                            next_precedence.0 - 1
+                        };
+
+                        let rhs = self.parse_type_ann_with_precedence(precedence)?;
+                        // let span = merge_spans(&lhs.get_span(), &rhs.get_span());
+
+                        lhs = TypeAnn {
+                            kind: TypeAnnKind::Binary(BinaryTypeAnn {
+                                op,
+                                left: Box::new(lhs),
+                                right: Box::new(rhs),
+                            }),
+                            span: Span { start: 0, end: 0 },
+                            inferred_type: None,
+                        };
+
+                        continue;
+                    }
                 };
 
                 continue;
@@ -832,5 +872,16 @@ mod tests {
             }
         "#
         ));
+    }
+
+    #[test]
+    fn parse_arithmetic() {
+        insta::assert_debug_snapshot!(parse(r#"A + B"#));
+        insta::assert_debug_snapshot!(parse(r#"A - B"#));
+        insta::assert_debug_snapshot!(parse(r#"A * B"#));
+        insta::assert_debug_snapshot!(parse(r#"A / B"#));
+        insta::assert_debug_snapshot!(parse(r#"A % B"#));
+        insta::assert_debug_snapshot!(parse(r#"A * B + C"#));
+        insta::assert_debug_snapshot!(parse(r#"A * (B + C)"#));
     }
 }

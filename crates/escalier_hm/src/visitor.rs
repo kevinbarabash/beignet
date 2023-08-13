@@ -181,6 +181,10 @@ pub trait Visitor: KeyValueStore<Index, Type> {
         idx // Do nothing by default
     }
 
+    fn visit_wildcard(&mut self, idx: Index) -> Index {
+        idx // Do nothing by default
+    }
+
     fn visit_index(&mut self, idx: &Index) -> Index {
         let (idx, t) = self.get_type(idx);
         let kind = match &t.kind {
@@ -205,6 +209,16 @@ pub trait Visitor: KeyValueStore<Index, Type> {
                 TypeKind::Conditional(self.visit_conditional(conditional))
             }
             TypeKind::Infer(infer) => return self.visit_infer(infer, idx),
+            TypeKind::Binary(BinaryT { op, left, right }) => {
+                let left = self.visit_index(left);
+                let right = self.visit_index(right);
+                TypeKind::Binary(BinaryT {
+                    op: *op,
+                    left,
+                    right,
+                })
+            }
+            TypeKind::Wildcard => return self.visit_wildcard(idx),
         };
         let new_t = Type {
             kind,

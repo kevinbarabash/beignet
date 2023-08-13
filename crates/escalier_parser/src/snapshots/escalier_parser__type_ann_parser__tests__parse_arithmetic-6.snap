@@ -1,0 +1,46 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(r#\"A * B + C\"#)"
+---
+TypeAnn {
+    kind: Binary(
+        BinaryTypeAnn {
+            left: TypeAnn {
+                kind: Binary(
+                    BinaryTypeAnn {
+                        left: TypeAnn {
+                            kind: TypeRef(
+                                "A",
+                                None,
+                            ),
+                            span: 0..1,
+                            inferred_type: None,
+                        },
+                        op: Times,
+                        right: TypeAnn {
+                            kind: TypeRef(
+                                "B",
+                                None,
+                            ),
+                            span: 4..5,
+                            inferred_type: None,
+                        },
+                    },
+                ),
+                span: 0..0,
+                inferred_type: None,
+            },
+            op: Plus,
+            right: TypeAnn {
+                kind: TypeRef(
+                    "C",
+                    None,
+                ),
+                span: 8..9,
+                inferred_type: None,
+            },
+        },
+    ),
+    span: 0..0,
+    inferred_type: None,
+}

@@ -1,6 +1,6 @@
 use generational_arena::Index;
 
-use crate::expr::Expr;
+use crate::expr::{BinaryOp, Expr};
 use crate::func_param::FuncParam;
 use crate::span::*;
 use crate::type_param::TypeParam;
@@ -83,7 +83,13 @@ pub struct MatchTypeCase {
     pub true_type: Box<TypeAnn>,
 }
 
-// TODO: typeof, keyof, conditional types
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct BinaryTypeAnn {
+    pub left: Box<TypeAnn>,
+    pub op: BinaryOp,
+    pub right: Box<TypeAnn>,
+}
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TypeAnnKind {
     BoolLit(bool),
@@ -112,6 +118,7 @@ pub enum TypeAnnKind {
     Match(MatchType),
     Wildcard,
     Infer(String),
+    Binary(BinaryTypeAnn),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

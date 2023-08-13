@@ -4273,7 +4273,6 @@ fn match_type_with_tuples() -> Result<(), Errors> {
 fn conditional_type_with_placeholders() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
-    // TODO: introduce a placeholder type that will unify with anything
     let src = r#"
         type IsArray<T> = if (T: Array<_>) { true } else { false }
         type T = IsArray<Array<number>>
@@ -4290,6 +4289,45 @@ fn conditional_type_with_placeholders() -> Result<(), Errors> {
     let result = my_ctx.schemes.get("F").unwrap();
     let t = expand_type(&mut arena, &my_ctx, result.t)?;
     assert_eq!(arena[t].as_string(&arena), r#"false"#);
+
+    Ok(())
+}
+
+#[test]
+fn conditional_type_with_constraint() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+        type IsArrayOfNumbers<T> = if (T: Array<number>) { true } else { false }
+        type T = IsArrayOfNumbers<[1, 2, 3]>
+        type F = IsArrayOfNumbers<["hello", "world"]>
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let result = my_ctx.schemes.get("T").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"true"#);
+
+    let result = my_ctx.schemes.get("F").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"false"#);
+
+    Ok(())
+}
+
+#[test]
+fn unify_tuple_and_array() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+        let tuple = [1, 2, 3]
+        let array: Array<number> = tuple
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
     Ok(())
 }
@@ -4324,11 +4362,12 @@ fn return_type_rest_placeholder() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     // TODO: introduce a placeholder type that will unify with anything
+    // we need to make sure we aren't adding `_` to non_generic
     let src = r#"
         type ReturnType<
             T: fn (...args: _) -> _
         > = if (T: fn (...args: _) -> infer R) { 
-            R 
+            R
         } else {
             never
         }
@@ -4600,6 +4639,161 @@ fn other_equality_checks() -> Result<(), Errors> {
 
     let binding = my_ctx.values.get("d").unwrap();
     assert_eq!(arena[binding.index].as_string(&arena), r#"boolean"#);
+
+    Ok(())
+}
+
+#[test]
+fn type_level_arithmetic() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type A = 10 + 5
+    type B = 10 - 5
+    type C = 10 * 5
+    type D = 10 / 5
+    type E = 10 % 5
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let result = my_ctx.schemes.get("A").unwrap();
+    assert_eq!(arena[result.t].as_string(&arena), r#"10 + 5"#);
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"15"#);
+
+    let result = my_ctx.schemes.get("B").unwrap();
+    assert_eq!(arena[result.t].as_string(&arena), r#"10 - 5"#);
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"5"#);
+
+    let result = my_ctx.schemes.get("C").unwrap();
+    assert_eq!(arena[result.t].as_string(&arena), r#"10 * 5"#);
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"50"#);
+
+    let result = my_ctx.schemes.get("D").unwrap();
+    assert_eq!(arena[result.t].as_string(&arena), r#"10 / 5"#);
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"2"#);
+
+    let result = my_ctx.schemes.get("E").unwrap();
+    assert_eq!(arena[result.t].as_string(&arena), r#"10 % 5"#);
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"0"#);
+
+    Ok(())
+}
+
+#[test]
+fn type_level_arithmetic_incorrect_operands() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Sum = "hello" + true
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let result = my_ctx.schemes.get("Sum").unwrap();
+    assert_eq!(arena[result.t].as_string(&arena), r#""hello" + true"#);
+    let result = expand_type(&mut arena, &my_ctx, result.t);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "Cannot perform binary operation on types: \"\\\"hello\\\"\" and \"true\"".to_string()
+        ))
+    );
+
+    Ok(())
+}
+
+#[test]
+fn check_type_constraints() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Add<A: string, B: string> = A + B
+    type A = Add<5, 10>
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let result = my_ctx.schemes.get("A").unwrap();
+    let result = expand_type(&mut arena, &my_ctx, result.t);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "type mismatch: unify(5, string) failed".to_string()
+        ))
+    );
+
+    Ok(())
+}
+
+#[test]
+fn type_level_arithmetic_with_alias() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Add<A: number, B: number> = A + B
+    type A = Add<5, 10>
+    type B = Add<5, number>
+    type C = Add<number, 10>
+    type D = Add<number, number>
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let result = my_ctx.schemes.get("A").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"15"#);
+
+    let result = my_ctx.schemes.get("B").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"number"#);
+
+    let result = my_ctx.schemes.get("C").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"number"#);
+
+    let result = my_ctx.schemes.get("D").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"number"#);
+
+    Ok(())
+}
+
+#[test]
+fn type_level_arithmetic_with_incorrect_types() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    // TODO: Check type aliases without type parameters eagerly (this likely
+    // requires a separate pass) or something similar to how we handle mutual
+    // recursion with functions.
+    let src = r#"
+    type Add<A: number, B: number> = A + B
+    type Sum = Add<string, boolean>
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let result = my_ctx.schemes.get("Sum").unwrap();
+    let result = expand_type(&mut arena, &my_ctx, result.t);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "type mismatch: string != number".to_string()
+        ))
+    );
 
     Ok(())
 }
