@@ -4621,24 +4621,54 @@ fn type_level_arithmetic() -> Result<(), Errors> {
     infer_program(&mut arena, &mut program, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("A").unwrap();
+    assert_eq!(arena[result.t].as_string(&arena), r#"10 + 5"#);
     let t = expand_type(&mut arena, &my_ctx, result.t)?;
     assert_eq!(arena[t].as_string(&arena), r#"15"#);
 
     let result = my_ctx.schemes.get("B").unwrap();
+    assert_eq!(arena[result.t].as_string(&arena), r#"10 - 5"#);
     let t = expand_type(&mut arena, &my_ctx, result.t)?;
     assert_eq!(arena[t].as_string(&arena), r#"5"#);
 
     let result = my_ctx.schemes.get("C").unwrap();
+    assert_eq!(arena[result.t].as_string(&arena), r#"10 * 5"#);
     let t = expand_type(&mut arena, &my_ctx, result.t)?;
     assert_eq!(arena[t].as_string(&arena), r#"50"#);
 
     let result = my_ctx.schemes.get("D").unwrap();
+    assert_eq!(arena[result.t].as_string(&arena), r#"10 / 5"#);
     let t = expand_type(&mut arena, &my_ctx, result.t)?;
     assert_eq!(arena[t].as_string(&arena), r#"2"#);
 
     let result = my_ctx.schemes.get("E").unwrap();
+    assert_eq!(arena[result.t].as_string(&arena), r#"10 % 5"#);
     let t = expand_type(&mut arena, &my_ctx, result.t)?;
     assert_eq!(arena[t].as_string(&arena), r#"0"#);
+
+    Ok(())
+}
+
+#[test]
+fn type_level_arithmetic_incorrect_operands() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Sum = "hello" + true
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let result = my_ctx.schemes.get("Sum").unwrap();
+    assert_eq!(arena[result.t].as_string(&arena), r#""hello" + true"#);
+    let result = expand_type(&mut arena, &my_ctx, result.t);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "Cannot perform binary operation on types: \"\\\"hello\\\"\" and \"true\"".to_string()
+        ))
+    );
 
     Ok(())
 }
