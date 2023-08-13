@@ -333,6 +333,7 @@ pub fn walk_type_ann<V: Visitor>(_visitor: &mut V, type_ann: &TypeAnn) {
         crate::TypeAnnKind::Match(_) => {}
         crate::TypeAnnKind::Wildcard => {}
         crate::TypeAnnKind::Infer(_) => {}
+        crate::TypeAnnKind::Binary(_) => {}
     }
 }
 

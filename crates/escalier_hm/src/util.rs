@@ -79,6 +79,10 @@ pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
                 || occurs_in_type(arena, v, true_type)
                 || occurs_in_type(arena, v, false_type)
         }
+        TypeKind::Const(Const { t }) => occurs_in_type(arena, v, t),
+        TypeKind::Binary(BinaryT { op: _, left, right }) => {
+            occurs_in_type(arena, v, left) || occurs_in_type(arena, v, right)
+        }
     }
 }
 
@@ -244,6 +248,7 @@ pub fn expand_type(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<I
         TypeKind::Constructor(Constructor { name, types, .. }) => {
             expand_alias_by_name(arena, ctx, name, types)?
         }
+        TypeKind::Binary(binary) => expand_binary(arena, ctx, binary)?,
         _ => return Ok(t), // Early return to avoid infinite loop
     };
 
@@ -478,6 +483,47 @@ pub fn expand_conditional(
         }
         Err(_) => Ok(*false_type),
     }
+}
+
+pub fn expand_binary(
+    arena: &mut Arena<Type>,
+    _ctx: &Context,
+    binary: &BinaryT,
+) -> Result<Index, Errors> {
+    let t = match (&arena[binary.left].kind, &arena[binary.right].kind) {
+        (TypeKind::Literal(Literal::Number(left)), TypeKind::Literal(Literal::Number(right))) => {
+            let left = left.parse::<f64>().unwrap();
+            let right = right.parse::<f64>().unwrap();
+
+            let result = match binary.op {
+                TBinaryOp::Add => left + right,
+                TBinaryOp::Sub => left - right,
+                TBinaryOp::Mul => left * right,
+                TBinaryOp::Div => left / right,
+                TBinaryOp::Mod => left % right,
+            };
+
+            new_lit_type(arena, &Literal::Number(result.to_string()))
+        }
+        (TypeKind::Literal(Literal::Number(_)), TypeKind::Primitive(Primitive::Number)) => {
+            new_primitive(arena, Primitive::Number)
+        }
+        (TypeKind::Primitive(Primitive::Number), TypeKind::Literal(Literal::Number(_))) => {
+            new_primitive(arena, Primitive::Number)
+        }
+        (TypeKind::Primitive(Primitive::Number), TypeKind::Primitive(Primitive::Number)) => {
+            new_primitive(arena, Primitive::Number)
+        }
+        (_, _) => {
+            return Err(Errors::InferenceError(format!(
+                "Cannot perform binary operation on types: {:?} and {:?}",
+                arena[binary.left].as_string(arena),
+                arena[binary.right].as_string(arena)
+            )))
+        }
+    };
+
+    Ok(t)
 }
 
 pub struct FindInferVisitor<'a> {

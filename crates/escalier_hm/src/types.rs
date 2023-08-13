@@ -336,6 +336,28 @@ pub struct Infer {
     // pub constraint: Option<Index>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Const {
+    pub t: Index,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum TBinaryOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+    // TODO: fill this out with more operators
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct BinaryT {
+    pub op: TBinaryOp,
+    pub left: Index,
+    pub right: Index,
+}
+
 #[derive(Debug, Clone, Hash)]
 pub enum TypeKind {
     Variable(Variable),       // TODO: rename to TypeVar
@@ -353,6 +375,8 @@ pub enum TypeKind {
     IndexedAccess(IndexedAccess),
     Conditional(Conditional),
     Infer(Infer),
+    Const(Const),
+    Binary(BinaryT),
 }
 
 #[derive(Debug, Clone)]
@@ -568,6 +592,22 @@ impl Type {
                 )
             }
             TypeKind::Infer(Infer { name }) => format!("infer {}", name),
+            TypeKind::Const(Const { t }) => format!("const {}", arena[*t].as_string(arena)),
+            TypeKind::Binary(BinaryT { op, left, right }) => {
+                let op = match op {
+                    TBinaryOp::Add => "+",
+                    TBinaryOp::Sub => "-",
+                    TBinaryOp::Mul => "*",
+                    TBinaryOp::Div => "/",
+                    TBinaryOp::Mod => "%",
+                };
+                format!(
+                    "{} {} {}",
+                    arena[*left].as_string(arena),
+                    op,
+                    arena[*right].as_string(arena),
+                )
+            }
         }
     }
 }

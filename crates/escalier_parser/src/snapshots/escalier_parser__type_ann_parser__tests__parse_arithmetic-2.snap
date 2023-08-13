@@ -1,0 +1,29 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(r#\"A - B\"#)"
+---
+TypeAnn {
+    kind: Binary(
+        BinaryTypeAnn {
+            left: TypeAnn {
+                kind: TypeRef(
+                    "A",
+                    None,
+                ),
+                span: 0..1,
+                inferred_type: None,
+            },
+            op: Minus,
+            right: TypeAnn {
+                kind: TypeRef(
+                    "B",
+                    None,
+                ),
+                span: 4..5,
+                inferred_type: None,
+            },
+        },
+    ),
+    span: 0..0,
+    inferred_type: None,
+}

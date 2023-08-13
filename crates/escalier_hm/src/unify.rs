@@ -795,6 +795,12 @@ pub fn unify_call(
                 "infer {name} is not callable",
             )));
         }
+        TypeKind::Const(Const { t: _ }) => todo!(),
+        TypeKind::Binary(BinaryT {
+            op: _,
+            left: _,
+            right: _,
+        }) => todo!(),
     }
 
     // We need to prune the return type, because it might be a type variable.

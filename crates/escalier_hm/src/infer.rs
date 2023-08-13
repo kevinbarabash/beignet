@@ -951,6 +951,29 @@ pub fn infer_type_ann(
 
             cond_type
         }
+        // TODO: move this logic to `expand_type`.
+        TypeAnnKind::Binary(BinaryTypeAnn { left, op, right }) => {
+            let left = infer_type_ann(arena, left, ctx)?;
+            let right = infer_type_ann(arena, right, ctx)?;
+
+            let op = match op {
+                BinaryOp::Plus => TBinaryOp::Add,
+                BinaryOp::Minus => TBinaryOp::Sub,
+                BinaryOp::Times => TBinaryOp::Mul,
+                BinaryOp::Divide => TBinaryOp::Div,
+                BinaryOp::Modulo => TBinaryOp::Mod,
+                BinaryOp::Equals => todo!(),
+                BinaryOp::NotEquals => todo!(),
+                BinaryOp::LessThan => todo!(),
+                BinaryOp::LessThanOrEqual => todo!(),
+                BinaryOp::GreaterThan => todo!(),
+                BinaryOp::GreaterThanOrEqual => todo!(),
+                BinaryOp::Or => todo!(),
+                BinaryOp::And => todo!(),
+            };
+
+            arena.insert(Type::from(TypeKind::Binary(BinaryT { op, left, right })))
+        }
     };
 
     let t = &mut arena[idx];

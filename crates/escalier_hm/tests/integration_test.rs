@@ -4603,3 +4603,81 @@ fn other_equality_checks() -> Result<(), Errors> {
 
     Ok(())
 }
+
+#[test]
+fn type_level_arithmetic() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type A = 5 + 10
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let result = my_ctx.schemes.get("A").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"15"#);
+
+    Ok(())
+}
+
+#[test]
+fn type_level_arithmetic_with_alias() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Add<A, B> = A + B
+    type A = Add<5, 10>
+    type B = Add<5, number>
+    type C = Add<number, 10>
+    type D = Add<number, number>
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let result = my_ctx.schemes.get("A").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"15"#);
+
+    let result = my_ctx.schemes.get("B").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"number"#);
+
+    let result = my_ctx.schemes.get("C").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"number"#);
+
+    let result = my_ctx.schemes.get("D").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"number"#);
+
+    Ok(())
+}
+
+#[test]
+fn type_level_arithmetic_with_incorrect_types() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    // TODO: expand type aliases eagerly
+    let src = r#"
+    type Add<A, B> = A + B
+    type Sum = Add<string, boolean>
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let result = my_ctx.schemes.get("Sum").unwrap();
+    let result = expand_type(&mut arena, &my_ctx, result.t);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "Cannot perform binary operation on types: \"string\" and \"boolean\"".to_string()
+        ))
+    );
+
+    Ok(())
+}
