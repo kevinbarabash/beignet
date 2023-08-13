@@ -181,6 +181,10 @@ pub trait Visitor: KeyValueStore<Index, Type> {
         idx // Do nothing by default
     }
 
+    fn visit_wildcard(&mut self, _wildcard: &Wildcard, idx: Index) -> Index {
+        idx // Do nothing by default
+    }
+
     fn visit_index(&mut self, idx: &Index) -> Index {
         let (idx, t) = self.get_type(idx);
         let kind = match &t.kind {
@@ -215,6 +219,7 @@ pub trait Visitor: KeyValueStore<Index, Type> {
                     right,
                 })
             }
+            TypeKind::Wildcard(wildcard) => return self.visit_wildcard(wildcard, idx),
         };
         let new_t = Type {
             kind,

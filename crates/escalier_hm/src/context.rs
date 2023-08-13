@@ -127,6 +127,9 @@ impl<'a> Visitor for Instantiate<'a> {
         // thus there is no need to process them further.
         *idx
     }
+    fn visit_wildcard(&mut self, wildcard: &Wildcard, _idx: Index) -> Index {
+        new_var_type(self.arena, wildcard.constraint)
+    }
     fn visit_type_ref(&mut self, tref: &Constructor, idx: &Index) -> Index {
         let types = self.visit_indexes(&tref.types);
 

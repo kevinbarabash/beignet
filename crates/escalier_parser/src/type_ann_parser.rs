@@ -80,7 +80,8 @@ impl<'a> Parser<'a> {
             }
             TokenKind::Underscore => {
                 self.next();
-                TypeAnnKind::Wildcard
+                // TODO: parse type constraint on wildcard
+                TypeAnnKind::Wildcard(None)
             }
             TokenKind::LeftBrace => {
                 self.next(); // consumes '{'

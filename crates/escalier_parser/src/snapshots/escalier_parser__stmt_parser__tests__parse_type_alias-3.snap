@@ -49,7 +49,9 @@ expression: "parse(r#\"\n            type ReturnType<T: fn (...args: Array<_>) -
                                                         Some(
                                                             [
                                                                 TypeAnn {
-                                                                    kind: Wildcard,
+                                                                    kind: Wildcard(
+                                                                        None,
+                                                                    ),
                                                                     span: 106..107,
                                                                     inferred_type: None,
                                                                 },
@@ -132,7 +134,9 @@ expression: "parse(r#\"\n            type ReturnType<T: fn (...args: Array<_>) -
                                                             Some(
                                                                 [
                                                                     TypeAnn {
-                                                                        kind: Wildcard,
+                                                                        kind: Wildcard(
+                                                                            None,
+                                                                        ),
                                                                         span: 51..52,
                                                                         inferred_type: None,
                                                                     },
@@ -147,7 +151,9 @@ expression: "parse(r#\"\n            type ReturnType<T: fn (...args: Array<_>) -
                                             },
                                         ],
                                         ret: TypeAnn {
-                                            kind: Wildcard,
+                                            kind: Wildcard(
+                                                None,
+                                            ),
                                             span: 58..59,
                                             inferred_type: None,
                                         },

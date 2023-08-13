@@ -4324,11 +4324,12 @@ fn return_type_rest_placeholder() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     // TODO: introduce a placeholder type that will unify with anything
+    // we need to make sure we aren't adding `_` to non_generic
     let src = r#"
         type ReturnType<
             T: fn (...args: _) -> _
         > = if (T: fn (...args: _) -> infer R) { 
-            R 
+            R
         } else {
             never
         }
@@ -4643,12 +4644,36 @@ fn type_level_arithmetic() -> Result<(), Errors> {
 }
 
 #[test]
+fn check_type_constraints() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Add<A: string, B: string> = A + B
+    type A = Add<5, 10>
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let result = my_ctx.schemes.get("A").unwrap();
+    let result = expand_type(&mut arena, &my_ctx, result.t);
+
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "type mismatch: unify(5, string) failed".to_string()
+        ))
+    );
+
+    Ok(())
+}
+
+#[test]
 fn type_level_arithmetic_with_alias() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
-    // TODO: check type constraints on type aliases
     let src = r#"
-    type Add<A: string, B: string> = A + B
+    type Add<A: number, B: number> = A + B
     type A = Add<5, 10>
     type B = Add<5, number>
     type C = Add<number, 10>
@@ -4681,7 +4706,9 @@ fn type_level_arithmetic_with_alias() -> Result<(), Errors> {
 fn type_level_arithmetic_with_incorrect_types() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
-    // TODO: check type constraints eagerly
+    // TODO: Check type aliases without type parameters eagerly (this likely
+    // requires a separate pass) or something similar to how we handle mutual
+    // recursion with functions.
     let src = r#"
     type Add<A: number, B: number> = A + B
     type Sum = Add<string, boolean>
@@ -4696,7 +4723,7 @@ fn type_level_arithmetic_with_incorrect_types() -> Result<(), Errors> {
     assert_eq!(
         result,
         Err(Errors::InferenceError(
-            "Cannot perform binary operation on types: \"string\" and \"boolean\"".to_string()
+            "type mismatch: string != number".to_string()
         ))
     );
 

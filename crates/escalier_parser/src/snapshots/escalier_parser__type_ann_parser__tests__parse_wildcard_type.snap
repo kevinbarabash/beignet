@@ -8,7 +8,9 @@ TypeAnn {
         Some(
             [
                 TypeAnn {
-                    kind: Wildcard,
+                    kind: Wildcard(
+                        None,
+                    ),
                     span: 6..7,
                     inferred_type: None,
                 },

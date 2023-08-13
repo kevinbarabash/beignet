@@ -717,7 +717,16 @@ pub fn infer_type_ann(
         TypeAnnKind::Unknown => new_keyword(arena, Keyword::Unknown),
         TypeAnnKind::Never => new_keyword(arena, Keyword::Never),
 
-        TypeAnnKind::Wildcard => new_var_type(arena, None),
+        // TODO: How we make sure that create a fresh type variable for this
+        // whenever it's used?  Maybe we can have an actual TypeKind::Wildcard
+        // instead of creating a type variable here.
+        TypeAnnKind::Wildcard(constraint) => match constraint {
+            Some(constraint) => {
+                let constraint = infer_type_ann(arena, constraint, ctx)?;
+                new_wildcard_type(arena, Some(constraint))
+            }
+            None => new_wildcard_type(arena, None),
+        },
         TypeAnnKind::Infer(name) => new_infer_type(arena, name),
 
         TypeAnnKind::Object(obj) => {
@@ -905,12 +914,13 @@ pub fn infer_type_ann(
             true_type,
             false_type,
         }) => {
-            let check_idx = infer_type_ann(arena, check, ctx)?;
-            let extends_idx = infer_type_ann(arena, extends, ctx)?;
+            let mut cond_ctx = ctx.clone();
+            let check_idx = infer_type_ann(arena, check, &mut cond_ctx)?;
+            let extends_idx = infer_type_ann(arena, extends, &mut cond_ctx)?;
 
             // Create a copy of `ctx` so that we can add type aliases to it
             // without them leaking out of the conditional type.
-            let mut true_ctx = ctx.clone();
+            // let mut true_ctx = ctx.clone();
 
             let infer_types = find_infer_types(arena, &extends_idx);
             for infer in infer_types {
@@ -919,13 +929,13 @@ pub fn infer_type_ann(
                     type_params: None,
                     t: tp,
                 };
-                true_ctx.schemes.insert(infer.name, scheme);
+                cond_ctx.schemes.insert(infer.name, scheme);
                 // QUESTION: Do we need to do something with ctx.non_generic here?
                 // true_ctx.non_generic.insert(tp);
             }
 
-            let true_idx = infer_type_ann(arena, true_type, &mut true_ctx)?;
-            let false_idx = infer_type_ann(arena, false_type, ctx)?;
+            let true_idx = infer_type_ann(arena, true_type, &mut cond_ctx)?;
+            let false_idx = infer_type_ann(arena, false_type, &mut cond_ctx)?;
             new_conditional_type(arena, check_idx, extends_idx, true_idx, false_idx)
         }
         TypeAnnKind::Match(MatchType { matchable, cases }) => {
