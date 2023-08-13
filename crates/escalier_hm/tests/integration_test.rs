@@ -4294,11 +4294,11 @@ fn conditional_type_with_placeholders() -> Result<(), Errors> {
 }
 
 #[test]
-fn conditional_type_with_placeholder_and_constraint() -> Result<(), Errors> {
+fn conditional_type_with_constraint() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
-        type IsArrayOfNumbers<T> = if (T: Array<_: number>) { true } else { false }
+        type IsArrayOfNumbers<T> = if (T: Array<number>) { true } else { false }
         type T = IsArrayOfNumbers<[1, 2, 3]>
         type F = IsArrayOfNumbers<["hello", "world"]>
     "#;

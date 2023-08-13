@@ -79,15 +79,8 @@ impl<'a> Parser<'a> {
                 TypeAnnKind::Never
             }
             TokenKind::Underscore => {
-                self.next(); // consume '_'
-
-                if self.peek().unwrap_or(&EOF).kind == TokenKind::Colon {
-                    self.next(); // consume ':'
-                    let constraint = self.parse_type_ann()?;
-                    TypeAnnKind::Wildcard(Some(Box::new(constraint)))
-                } else {
-                    TypeAnnKind::Wildcard(None)
-                }
+                self.next(); // consumes '_'
+                TypeAnnKind::Wildcard
             }
             TokenKind::LeftBrace => {
                 self.next(); // consumes '{'

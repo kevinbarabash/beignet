@@ -116,7 +116,7 @@ pub enum TypeAnnKind {
     TypeOf(Box<Expr>),
     Condition(ConditionType),
     Match(MatchType),
-    Wildcard(Option<Box<TypeAnn>>),
+    Wildcard,
     Infer(String),
     Binary(BinaryTypeAnn),
 }

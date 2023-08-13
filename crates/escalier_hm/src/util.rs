@@ -34,7 +34,7 @@ pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
         TypeKind::Primitive(_) => false, // leaf node
         TypeKind::Keyword(_) => false,   // leaf node
         TypeKind::Infer(_) => false,     // leaf node
-        TypeKind::Wildcard(_) => false,  // leaf node
+        TypeKind::Wildcard => false,     // leaf node
         TypeKind::Object(Object { elems }) => elems.iter().any(|elem| match elem {
             TObjElem::Constructor(constructor) => {
                 // TODO: check constraints and default on type_params

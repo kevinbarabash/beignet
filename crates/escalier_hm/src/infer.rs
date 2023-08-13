@@ -720,13 +720,7 @@ pub fn infer_type_ann(
         // TODO: How we make sure that create a fresh type variable for this
         // whenever it's used?  Maybe we can have an actual TypeKind::Wildcard
         // instead of creating a type variable here.
-        TypeAnnKind::Wildcard(constraint) => match constraint {
-            Some(constraint) => {
-                let constraint = infer_type_ann(arena, constraint, ctx)?;
-                new_wildcard_type(arena, Some(constraint))
-            }
-            None => new_wildcard_type(arena, None),
-        },
+        TypeAnnKind::Wildcard => new_wildcard_type(arena),
         TypeAnnKind::Infer(name) => new_infer_type(arena, name),
 
         TypeAnnKind::Object(obj) => {

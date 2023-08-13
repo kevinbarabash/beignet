@@ -337,9 +337,7 @@ pub struct Infer {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Wildcard {
-    pub constraint: Option<Index>,
-}
+pub struct Wildcard {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TBinaryOp {
@@ -375,7 +373,7 @@ pub enum TypeKind {
     IndexedAccess(IndexedAccess),
     Conditional(Conditional),
     Infer(Infer),
-    Wildcard(Wildcard),
+    Wildcard,
     Binary(BinaryT),
 }
 
@@ -592,10 +590,7 @@ impl Type {
                 )
             }
             TypeKind::Infer(Infer { name }) => format!("infer {}", name),
-            TypeKind::Wildcard(Wildcard { constraint: _ }) => {
-                // TODO: handle constraint
-                format!("_")
-            }
+            TypeKind::Wildcard => format!("_"),
             TypeKind::Binary(BinaryT { op, left, right }) => {
                 let op = match op {
                     TBinaryOp::Add => "+",
@@ -800,8 +795,8 @@ pub fn new_infer_type(arena: &mut Arena<Type>, name: &str) -> Index {
     })))
 }
 
-pub fn new_wildcard_type(arena: &mut Arena<Type>, constraint: Option<Index>) -> Index {
-    arena.insert(Type::from(TypeKind::Wildcard(Wildcard { constraint })))
+pub fn new_wildcard_type(arena: &mut Arena<Type>) -> Index {
+    arena.insert(Type::from(TypeKind::Wildcard))
 }
 
 impl Type {

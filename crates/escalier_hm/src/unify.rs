@@ -39,18 +39,9 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
         (TypeKind::Variable(_), _) => bind(arena, ctx, a, b),
         (_, TypeKind::Variable(_)) => bind(arena, ctx, b, a),
 
-        (TypeKind::Wildcard(Wildcard { constraint }), _) => {
-            match constraint {
-                Some(constraint) => unify(arena, ctx, *constraint, b),
-                None => Ok(()), // Wildcards are always unifiable
-            }
-        }
-        (_, TypeKind::Wildcard(Wildcard { constraint })) => {
-            match constraint {
-                Some(constraint) => unify(arena, ctx, a, *constraint),
-                None => Ok(()), // Wildcards are always unifiable
-            }
-        }
+        // Wildcards are always unifiable
+        (TypeKind::Wildcard, _) => Ok(()),
+        (_, TypeKind::Wildcard) => Ok(()),
 
         (TypeKind::Keyword(kw1), TypeKind::Keyword(kw2)) => {
             if kw1 == kw2 {
@@ -808,7 +799,7 @@ pub fn unify_call(
                 "infer {name} is not callable",
             )));
         }
-        TypeKind::Wildcard(Wildcard { constraint: _ }) => {
+        TypeKind::Wildcard => {
             return Err(Errors::InferenceError("_ is not callable".to_string()));
         }
         TypeKind::Binary(BinaryT {

@@ -34,9 +34,7 @@ TypeAnn {
                                 Some(
                                     [
                                         TypeAnn {
-                                            kind: Wildcard(
-                                                None,
-                                            ),
+                                            kind: Wildcard,
                                             span: 19..20,
                                             inferred_type: None,
                                         },
@@ -51,9 +49,7 @@ TypeAnn {
                 },
             ],
             ret: TypeAnn {
-                kind: Wildcard(
-                    None,
-                ),
+                kind: Wildcard,
                 span: 26..27,
                 inferred_type: None,
             },

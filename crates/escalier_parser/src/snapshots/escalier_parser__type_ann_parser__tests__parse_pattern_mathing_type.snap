@@ -44,9 +44,7 @@ TypeAnn {
                 },
                 MatchTypeCase {
                     extends: TypeAnn {
-                        kind: Wildcard(
-                            None,
-                        ),
+                        kind: Wildcard,
                         span: 113..114,
                         inferred_type: None,
                     },
