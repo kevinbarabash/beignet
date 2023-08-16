@@ -1,0 +1,65 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(\"{[P]: number for P in string, [Q]: string for Q in numbber}\")"
+---
+TypeAnn {
+    kind: Object(
+        [
+            Mapped(
+                Mapped {
+                    key: TypeAnn {
+                        kind: TypeRef(
+                            "P",
+                            None,
+                        ),
+                        span: 2..3,
+                        inferred_type: None,
+                    },
+                    value: TypeAnn {
+                        kind: Number,
+                        span: 6..12,
+                        inferred_type: None,
+                    },
+                    target: "P",
+                    source: TypeAnn {
+                        kind: String,
+                        span: 22..28,
+                        inferred_type: None,
+                    },
+                    check: None,
+                    extends: None,
+                },
+            ),
+            Mapped(
+                Mapped {
+                    key: TypeAnn {
+                        kind: TypeRef(
+                            "Q",
+                            None,
+                        ),
+                        span: 31..32,
+                        inferred_type: None,
+                    },
+                    value: TypeAnn {
+                        kind: String,
+                        span: 35..41,
+                        inferred_type: None,
+                    },
+                    target: "Q",
+                    source: TypeAnn {
+                        kind: TypeRef(
+                            "numbber",
+                            None,
+                        ),
+                        span: 51..58,
+                        inferred_type: None,
+                    },
+                    check: None,
+                    extends: None,
+                },
+            ),
+        ],
+    ),
+    span: 0..59,
+    inferred_type: None,
+}

@@ -123,10 +123,34 @@ pub fn walk_index<F: Folder>(folder: &mut F, index: &Index) -> Index {
                         ret: folder.fold_index(ret),
                         type_params: walk_type_params(folder, type_params),
                     }),
-                    TObjElem::Index(index) => TObjElem::Index(TIndex {
-                        t: folder.fold_index(&index.t),
-                        ..index.clone()
-                    }),
+                    TObjElem::Mapped(MappedType {
+                        key,
+                        value,
+                        target,
+                        source,
+                        check,
+                        extends,
+                    }) => {
+                        let new_key = folder.fold_index(key);
+                        let new_value = folder.fold_index(value);
+                        let new_source = folder.fold_index(source);
+
+                        let new_check = check.map(|check| folder.fold_index(&check));
+                        let new_extends = extends.map(|extends| folder.fold_index(&extends));
+
+                        TObjElem::Mapped(MappedType {
+                            key: new_key,
+                            value: new_value,
+                            target: target.to_owned(),
+                            source: new_source,
+                            check: new_check,
+                            extends: new_extends,
+                        })
+                    }
+                    // TObjElem::Index(index) => TObjElem::Index(TIndex {
+                    //     t: folder.fold_index(&index.t),
+                    //     ..index.clone()
+                    // }),
                     TObjElem::Prop(prop) => TObjElem::Prop(TProp {
                         t: folder.fold_index(&prop.t),
                         ..prop.clone()

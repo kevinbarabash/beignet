@@ -49,7 +49,12 @@ pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
                 let param_types: Vec<_> = call.params.iter().map(|param| param.t).collect();
                 occurs_in(arena, v, &param_types) || occurs_in_type(arena, v, call.ret)
             }
-            TObjElem::Index(index) => occurs_in_type(arena, v, index.t),
+            TObjElem::Mapped(mapped) => {
+                occurs_in_type(arena, v, mapped.key)
+                    || occurs_in_type(arena, v, mapped.value)
+                    || occurs_in_type(arena, v, mapped.source)
+                // TODO: handle .check and .extends
+            }
             TObjElem::Prop(prop) => occurs_in_type(arena, v, prop.t),
         }),
         TypeKind::Rest(Rest { arg }) => occurs_in_type(arena, v, arg),
@@ -158,7 +163,10 @@ pub fn expand_alias_by_name(
 ) -> Result<Index, Errors> {
     match ctx.schemes.get(name) {
         Some(scheme) => expand_alias(arena, ctx, name, scheme, type_args),
-        None => Err(Errors::InferenceError(format!("{} isn't defined", name))),
+        None => {
+            panic!("{} isn't defined", name);
+            // Err(Errors::InferenceError(format!("{} isn't defined", name)))
+        }
     }
 }
 
@@ -179,49 +187,60 @@ pub fn expand_alias(
                 )));
             }
 
+            if let TypeKind::Conditional(Conditional { check, .. }) = arena[scheme.t].kind {
+                if let TypeKind::Constructor(tref) = &arena[check].kind.clone() {
+                    if let Some((index_of_check_type, _)) = type_params
+                        .iter()
+                        .find_position(|type_param| type_param.name == tref.name)
+                    {
+                        let type_arg = expand_type(arena, ctx, type_args[index_of_check_type])?;
+
+                        if let TypeKind::Union(Union { types: union_types }) =
+                            &arena[type_arg].kind.clone()
+                        {
+                            let mut types = vec![];
+
+                            for t in union_types.iter() {
+                                let mut mapping: HashMap<String, Index> = HashMap::new();
+
+                                for (type_param, type_arg) in
+                                    type_params.iter().zip(type_args.iter())
+                                {
+                                    if type_param.name == tref.name {
+                                        mapping.insert(type_param.name.to_owned(), *t);
+                                    } else {
+                                        mapping.insert(type_param.name.to_owned(), *type_arg);
+                                    }
+                                }
+
+                                let t = instantiate_scheme(arena, scheme.t, &mapping);
+                                types.push(expand_type(arena, ctx, t)?);
+                            }
+
+                            let filtered_types = types
+                                .into_iter()
+                                .filter(|t| {
+                                    if let TypeKind::Keyword(kw) = &arena[*t].kind {
+                                        kw != &Keyword::Never
+                                    } else {
+                                        true
+                                    }
+                                })
+                                .collect::<Vec<_>>();
+
+                            let t = new_union_type(arena, &filtered_types);
+                            return expand_type(arena, ctx, t);
+                        }
+                    }
+                }
+            }
+
             let mut mapping: HashMap<String, Index> = HashMap::new();
             for (param, arg) in type_params.iter().zip(type_args.iter()) {
                 if let Some(constraint) = param.constraint {
                     unify(arena, ctx, *arg, constraint)?;
                 }
                 mapping.insert(param.name.clone(), arg.to_owned());
-            }
-
-            if let TypeKind::Conditional(Conditional { check, .. }) = arena[scheme.t].kind {
-                if let TypeKind::Constructor(tref) = &arena[check].kind.clone() {
-                    if let Some((index_of_check_type, _)) = type_params
-                        .iter()
-                        .find_position(|param| param.name == tref.name)
-                    {
-                        let check_args = match &arena[type_args[index_of_check_type]].kind {
-                            TypeKind::Union(Union { types }) => types.to_owned(),
-                            _ => vec![type_args[index_of_check_type].to_owned()],
-                        };
-
-                        let types = check_args
-                            .iter()
-                            .map(|check_arg| {
-                                mapping.insert(tref.name.to_owned(), check_arg.to_owned());
-                                let t = instantiate_scheme(arena, scheme.t, &mapping);
-                                expand_type(arena, ctx, t)
-                            })
-                            .collect::<Result<Vec<_>, Errors>>()?;
-
-                        let filtered_types = types
-                            .into_iter()
-                            .filter(|t| {
-                                if let TypeKind::Keyword(kw) = &arena[*t].kind {
-                                    kw != &Keyword::Never
-                                } else {
-                                    true
-                                }
-                            })
-                            .collect::<Vec<_>>();
-
-                        let t = new_union_type(arena, &filtered_types);
-                        return expand_type(arena, ctx, t);
-                    }
-                }
             }
 
             let t = instantiate_scheme(arena, scheme.t, &mapping);
@@ -254,6 +273,7 @@ pub fn expand_type(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<I
             expand_alias_by_name(arena, ctx, name, types)?
         }
         TypeKind::Binary(binary) => expand_binary(arena, ctx, binary)?,
+        TypeKind::Object(object) => return expand_object(arena, ctx, object),
         _ => return Ok(t), // Early return to avoid infinite loop
     };
 
@@ -286,18 +306,22 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
                 match elem {
                     TObjElem::Call(_) => (),
                     TObjElem::Constructor(_) => (),
-                    TObjElem::Index(TIndex { key, .. }) => match &arena[key.t].kind {
-                        TypeKind::Primitive(Primitive::String) => {
-                            maybe_string = Some(key.t);
+                    TObjElem::Mapped(mapped) => {
+                        let mapped_key = get_mapped_key(arena, mapped);
+
+                        match &arena[mapped_key].kind {
+                            TypeKind::Primitive(Primitive::String) => {
+                                maybe_string = Some(mapped_key);
+                            }
+                            TypeKind::Primitive(Primitive::Number) => {
+                                maybe_number = Some(mapped_key);
+                            }
+                            TypeKind::Primitive(Primitive::Symbol) => {
+                                maybe_symbol = Some(mapped_key);
+                            }
+                            _ => todo!(),
                         }
-                        TypeKind::Primitive(Primitive::Number) => {
-                            maybe_number = Some(key.t);
-                        }
-                        TypeKind::Primitive(Primitive::Symbol) => {
-                            maybe_symbol = Some(key.t);
-                        }
-                        _ => todo!(),
-                    },
+                    }
                     TObjElem::Prop(TProp { name, .. }) => match name {
                         TPropKey::StringKey(name) => {
                             string_keys
@@ -531,6 +555,78 @@ pub fn expand_binary(
     Ok(t)
 }
 
+pub fn expand_object(
+    arena: &mut Arena<Type>,
+    ctx: &Context,
+    object: &Object,
+) -> Result<Index, Errors> {
+    let mut new_elems = vec![];
+
+    for elem in &object.elems {
+        match elem {
+            // TODO: Handle `check` and `extends`
+            TObjElem::Mapped(mapped) => {
+                let source = expand_type(arena, ctx, mapped.source)?;
+
+                match &arena[source].kind.clone() {
+                    TypeKind::Union(Union { types }) => {
+                        let mut non_literal_keys = vec![];
+
+                        for t in types {
+                            let mut mapping: HashMap<String, Index> = HashMap::new();
+                            mapping.insert(mapped.target.to_owned(), *t);
+                            let key = instantiate_scheme(arena, mapped.key, &mapping);
+                            let value = instantiate_scheme(arena, mapped.value, &mapping);
+
+                            let name = match &arena[key].kind {
+                                TypeKind::Literal(Literal::String(name)) => {
+                                    TPropKey::StringKey(name.to_owned())
+                                }
+                                TypeKind::Literal(Literal::Number(name)) => {
+                                    TPropKey::NumberKey(name.to_owned())
+                                }
+                                _ => {
+                                    non_literal_keys.push(key);
+                                    continue;
+                                }
+                            };
+
+                            new_elems.push(TObjElem::Prop(TProp {
+                                name,
+                                modifier: None,
+                                optional: false, // TODO
+                                mutable: false,  // TODO
+                                t: expand_type(arena, ctx, value)?,
+                            }));
+
+                            if !non_literal_keys.is_empty() {
+                                let union = new_union_type(arena, &non_literal_keys);
+                                new_elems.push(TObjElem::Mapped(MappedType {
+                                    target: mapped.target.to_owned(),
+                                    key: union,
+                                    value: mapped.value,
+                                    source: mapped.source,
+                                    check: mapped.check,
+                                    extends: mapped.extends,
+                                }));
+                            }
+                        }
+                    }
+                    _ => {
+                        new_elems.push(TObjElem::Mapped(mapped.to_owned()));
+                    }
+                }
+            }
+            _ => new_elems.push(elem.to_owned()),
+        }
+    }
+
+    Ok(arena.insert(Type {
+        kind: TypeKind::Object(Object { elems: new_elems }),
+        provenance: None, // TODO
+    }))
+}
+
 pub struct FindInferVisitor<'a> {
     pub arena: &'a mut Arena<Type>,
     pub infer_types: Vec<Infer>,
@@ -718,7 +814,7 @@ pub fn get_prop(
                     || primitive == &Primitive::String
                     || primitive == &Primitive::Symbol =>
             {
-                let mut maybe_index: Option<&TIndex> = None;
+                let mut maybe_mapped: Option<&MappedType> = None;
                 let mut values: Vec<Index> = vec![];
 
                 for elem in &object.elems {
@@ -726,13 +822,14 @@ pub fn get_prop(
                         // Callable signatures have no name so we ignore them.
                         TObjElem::Constructor(_) => continue,
                         TObjElem::Call(_) => continue,
-                        TObjElem::Index(index) => {
-                            if maybe_index.is_some() {
+                        TObjElem::Mapped(mapped) => {
+                            if maybe_mapped.is_some() {
                                 return Err(Errors::InferenceError(
-                                    "Object types can only have a single indexer".to_string(),
+                                    "Object types can only have a single mapped signature"
+                                        .to_string(),
                                 ));
                             }
-                            maybe_index = Some(index);
+                            maybe_mapped = Some(mapped);
                         }
                         TObjElem::Prop(prop) => {
                             match &prop.name {
@@ -751,11 +848,13 @@ pub fn get_prop(
                 }
 
                 // TODO: handle combinations of indexers and non-indexer elements
-                if let Some(indexer) = maybe_index {
-                    match unify(arena, ctx, key_idx, indexer.key.t) {
+                if let Some(mapped) = maybe_mapped {
+                    let mapped_key = get_mapped_key(arena, mapped);
+
+                    match unify(arena, ctx, key_idx, mapped_key) {
                         Ok(_) => {
                             let undefined = new_keyword(arena, Keyword::Undefined);
-                            Ok(new_union_type(arena, &[indexer.t, undefined]))
+                            Ok(new_union_type(arena, &[mapped.value, undefined]))
                         }
                         Err(_) => Err(Errors::InferenceError(format!(
                             "{} is not a valid indexer for {}",
@@ -774,19 +873,20 @@ pub fn get_prop(
                 }
             }
             TypeKind::Literal(Literal::String(name)) => {
-                let mut maybe_index: Option<&TIndex> = None;
+                let mut maybe_mapped: Option<&MappedType> = None;
                 for elem in &object.elems {
                     match elem {
                         // Callable signatures have no name so we ignore them.
                         TObjElem::Constructor(_) => continue,
                         TObjElem::Call(_) => continue,
-                        TObjElem::Index(index) => {
-                            if maybe_index.is_some() {
+                        TObjElem::Mapped(mapped) => {
+                            if maybe_mapped.is_some() {
                                 return Err(Errors::InferenceError(
-                                    "Object types can only have a single indexer".to_string(),
+                                    "Object types can only have a single mapped signature"
+                                        .to_string(),
                                 ));
                             }
-                            maybe_index = Some(index);
+                            maybe_mapped = Some(mapped);
                         }
                         TObjElem::Prop(prop) => {
                             let key = match &prop.name {
@@ -804,11 +904,13 @@ pub fn get_prop(
                     }
                 }
 
-                if let Some(indexer) = maybe_index {
-                    match unify(arena, ctx, key_idx, indexer.key.t) {
+                if let Some(mapped) = maybe_mapped {
+                    let mapped_key = get_mapped_key(arena, mapped);
+
+                    match unify(arena, ctx, key_idx, mapped_key) {
                         Ok(_) => {
                             let undefined = new_keyword(arena, Keyword::Undefined);
-                            Ok(new_union_type(arena, &[indexer.t, undefined]))
+                            Ok(new_union_type(arena, &[mapped.value, undefined]))
                         }
                         Err(_) => Err(Errors::InferenceError(format!(
                             "Couldn't find property {} in object",
@@ -822,25 +924,26 @@ pub fn get_prop(
                 }
             }
             TypeKind::Literal(Literal::Number(name)) => {
-                let mut maybe_index: Option<&TIndex> = None;
+                let mut maybe_mapped: Option<&MappedType> = None;
                 for elem in &object.elems {
-                    if let TObjElem::Index(index) = elem {
-                        if maybe_index.is_some() {
+                    if let TObjElem::Mapped(mapped) = elem {
+                        if maybe_mapped.is_some() {
                             return Err(Errors::InferenceError(
-                                "Object types can only have a single indexer".to_string(),
+                                "Object types can only have a single mapped signature".to_string(),
                             ));
                         }
-                        maybe_index = Some(index);
+                        maybe_mapped = Some(mapped);
                     }
                     // QUESTION: Do we care about allowing numbers as keys for
                     // methods and props?
                 }
 
-                if let Some(indexer) = maybe_index {
-                    match unify(arena, ctx, key_idx, indexer.key.t) {
+                if let Some(mapped) = maybe_mapped {
+                    let mapped_key = get_mapped_key(arena, mapped);
+                    match unify(arena, ctx, key_idx, mapped_key) {
                         Ok(_) => {
                             let undefined = new_keyword(arena, Keyword::Undefined);
-                            Ok(new_union_type(arena, &[indexer.t, undefined]))
+                            Ok(new_union_type(arena, &[mapped.value, undefined]))
                         }
                         Err(_) => Err(Errors::InferenceError(format!(
                             "Couldn't find property {} in object",
@@ -874,4 +977,10 @@ pub fn filter_nullables(arena: &Arena<Type>, types: &[Index]) -> Vec<Index> {
         })
         .cloned()
         .collect()
+}
+
+fn get_mapped_key(arena: &mut Arena<Type>, mapped: &MappedType) -> Index {
+    let mut mapping: HashMap<String, Index> = HashMap::new();
+    mapping.insert(mapped.target.to_owned(), mapped.source);
+    instantiate_scheme(arena, mapped.key, &mapping)
 }

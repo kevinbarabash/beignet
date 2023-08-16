@@ -272,6 +272,8 @@ impl<'a> Parser<'a> {
             "finally" => TokenKind::Finally,
             "throw" => TokenKind::Throw,
             "do" => TokenKind::Do,
+            "for" => TokenKind::For,
+            "in" => TokenKind::In,
             "class" => TokenKind::Class,
             "extends" => TokenKind::Extends,
             "infer" => TokenKind::Infer,

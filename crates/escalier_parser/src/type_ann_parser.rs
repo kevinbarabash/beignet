@@ -182,36 +182,48 @@ impl<'a> Parser<'a> {
                             props.push(prop);
                         }
                         TokenKind::LeftBracket => {
-                            let name = match self.next().unwrap_or(EOF.clone()).kind {
+                            let key = self.parse_type_ann()?;
+                            assert_eq!(
+                                self.next().unwrap_or_else(|| EOF.clone()).kind,
+                                TokenKind::RightBracket
+                            );
+                            assert_eq!(
+                                self.next().unwrap_or_else(|| EOF.clone()).kind,
+                                TokenKind::Colon
+                            );
+                            let value = self.parse_type_ann()?;
+
+                            assert_eq!(
+                                self.next().unwrap_or_else(|| EOF.clone()).kind,
+                                TokenKind::For
+                            );
+
+                            let target_token = self.next().unwrap_or_else(|| EOF.clone());
+                            let target = match target_token.kind {
                                 TokenKind::Identifier(name) => name,
                                 _ => {
                                     return Err(ParseError {
-                                        message: "expected identifier".to_string(),
+                                        message: "target must be an identifier".to_string(),
                                     })
                                 }
                             };
-                            assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
-                            let type_ann = self.parse_type_ann()?;
+
                             assert_eq!(
-                                self.next().unwrap_or(EOF.clone()).kind,
-                                TokenKind::RightBracket
+                                self.next().unwrap_or_else(|| EOF.clone()).kind,
+                                TokenKind::In
                             );
 
-                            let key = IndexerKey {
-                                name,
-                                type_ann: Box::new(type_ann),
-                            };
+                            let source = self.parse_type_ann()?; // should expand to a union of valid key types
 
-                            assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
-                            let type_ann = self.parse_type_ann()?;
-
-                            props.push(ObjectProp::Indexer(Indexer {
-                                key,
-                                mutable: false, // TODO
-                                type_ann: Box::new(type_ann),
-                                // TODO(#642): compute correct spans for type annotations
-                                span: Span { start: 0, end: 0 },
-                            }));
+                            props.push(ObjectProp::Mapped(Mapped {
+                                key: Box::new(key),
+                                value: Box::new(value),
+                                target,
+                                source: Box::new(source),
+                                // TODO: handle 'if' clause
+                                check: None,
+                                extends: None,
+                            }))
                         }
                         TokenKind::Fn => {
                             match self.peek().unwrap_or(&EOF).kind.clone() {
@@ -738,8 +750,8 @@ mod tests {
                 bar: fn (self, a: number) -> string,
                 baz: get (self) -> string,
                 baz: set (mut self, value: string) -> undefined,
-                [key: string]: number,
                 qux: string,
+                [P]: number for P in string,
             }
         "#;
         let mut parser = Parser::new(input);
@@ -831,9 +843,11 @@ mod tests {
     }
 
     #[test]
-    fn parse_indexer_type() {
-        insta::assert_debug_snapshot!(parse("{[key: string]: number}"));
-        insta::assert_debug_snapshot!(parse("{[key: string]: number, [key: number]: string}"));
+    fn parse_mapped_type() {
+        insta::assert_debug_snapshot!(parse("{[P]: number for P in string}"));
+        insta::assert_debug_snapshot!(parse(
+            "{[P]: number for P in string, [Q]: string for Q in numbber}"
+        ));
     }
 
     #[test]

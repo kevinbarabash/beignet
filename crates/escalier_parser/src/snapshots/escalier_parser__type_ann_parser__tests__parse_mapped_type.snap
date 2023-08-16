@@ -1,0 +1,37 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(\"{[P]: number for P in string}\")"
+---
+TypeAnn {
+    kind: Object(
+        [
+            Mapped(
+                Mapped {
+                    key: TypeAnn {
+                        kind: TypeRef(
+                            "P",
+                            None,
+                        ),
+                        span: 2..3,
+                        inferred_type: None,
+                    },
+                    value: TypeAnn {
+                        kind: Number,
+                        span: 6..12,
+                        inferred_type: None,
+                    },
+                    target: "P",
+                    source: TypeAnn {
+                        kind: String,
+                        span: 22..28,
+                        inferred_type: None,
+                    },
+                    check: None,
+                    extends: None,
+                },
+            ),
+        ],
+    ),
+    span: 0..29,
+    inferred_type: None,
+}

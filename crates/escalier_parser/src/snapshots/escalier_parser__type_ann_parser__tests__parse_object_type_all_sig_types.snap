@@ -255,25 +255,6 @@ TypeAnn {
                     },
                 },
             ),
-            Indexer(
-                Indexer {
-                    span: 0..0,
-                    key: IndexerKey {
-                        name: "key",
-                        type_ann: TypeAnn {
-                            kind: String,
-                            span: 287..293,
-                            inferred_type: None,
-                        },
-                    },
-                    mutable: false,
-                    type_ann: TypeAnn {
-                        kind: Number,
-                        span: 296..302,
-                        inferred_type: None,
-                    },
-                },
-            ),
             Prop(
                 Prop {
                     span: 0..0,
@@ -283,13 +264,38 @@ TypeAnn {
                     mutable: false,
                     type_ann: TypeAnn {
                         kind: String,
-                        span: 325..331,
+                        span: 286..292,
                         inferred_type: None,
                     },
                 },
             ),
+            Mapped(
+                Mapped {
+                    key: TypeAnn {
+                        kind: TypeRef(
+                            "P",
+                            None,
+                        ),
+                        span: 311..312,
+                        inferred_type: None,
+                    },
+                    value: TypeAnn {
+                        kind: Number,
+                        span: 315..321,
+                        inferred_type: None,
+                    },
+                    target: "P",
+                    source: TypeAnn {
+                        kind: String,
+                        span: 331..337,
+                        inferred_type: None,
+                    },
+                    check: None,
+                    extends: None,
+                },
+            ),
         ],
     ),
-    span: 0..346,
+    span: 0..352,
     inferred_type: None,
 }
