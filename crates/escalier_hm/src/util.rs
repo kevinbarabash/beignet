@@ -199,35 +199,47 @@ pub fn expand_alias(
                 if let TypeKind::Constructor(tref) = &arena[check].kind.clone() {
                     if let Some((index_of_check_type, _)) = type_params
                         .iter()
-                        .find_position(|param| param.name == tref.name)
+                        .find_position(|type_param| type_param.name == tref.name)
                     {
-                        let check_args = match &arena[type_args[index_of_check_type]].kind {
-                            TypeKind::Union(Union { types }) => types.to_owned(),
-                            _ => vec![type_args[index_of_check_type].to_owned()],
-                        };
+                        let type_arg = expand_type(arena, ctx, type_args[index_of_check_type])?;
 
-                        let types = check_args
-                            .iter()
-                            .map(|check_arg| {
-                                mapping.insert(tref.name.to_owned(), check_arg.to_owned());
-                                let t = instantiate_scheme(arena, scheme.t, &mapping);
-                                expand_type(arena, ctx, t)
-                            })
-                            .collect::<Result<Vec<_>, Errors>>()?;
+                        if let TypeKind::Union(Union { types: union_types }) =
+                            &arena[type_arg].kind.clone()
+                        {
+                            let mut types = vec![];
 
-                        let filtered_types = types
-                            .into_iter()
-                            .filter(|t| {
-                                if let TypeKind::Keyword(kw) = &arena[*t].kind {
-                                    kw != &Keyword::Never
-                                } else {
-                                    true
+                            for t in union_types.iter() {
+                                let mut mapping: HashMap<String, Index> = HashMap::new();
+
+                                for (type_param, type_arg) in
+                                    type_params.iter().zip(type_args.iter())
+                                {
+                                    if type_param.name == tref.name {
+                                        mapping.insert(type_param.name.to_owned(), *t);
+                                    } else {
+                                        mapping.insert(type_param.name.to_owned(), *type_arg);
+                                    }
                                 }
-                            })
-                            .collect::<Vec<_>>();
 
-                        let t = new_union_type(arena, &filtered_types);
-                        return expand_type(arena, ctx, t);
+                                // TODO: Update `instantiate_scheme` to work with refrences
+                                let t = instantiate_scheme(arena, scheme.t, &mapping);
+                                types.push(expand_type(arena, ctx, t)?);
+                            }
+
+                            let filtered_types = types
+                                .into_iter()
+                                .filter(|t| {
+                                    if let TypeKind::Keyword(kw) = &arena[*t].kind {
+                                        kw != &Keyword::Never
+                                    } else {
+                                        true
+                                    }
+                                })
+                                .collect::<Vec<_>>();
+
+                            let t = new_union_type(arena, &filtered_types);
+                            return expand_type(arena, ctx, t);
+                        }
                     }
                 }
             }
@@ -556,54 +568,58 @@ pub fn expand_object(
     for elem in &object.elems {
         match elem {
             // TODO: Handle `check` and `extends`
-            TObjElem::Mapped(mapped) => match &arena[mapped.source].kind.clone() {
-                TypeKind::Union(Union { types }) => {
-                    let mut non_literal_keys = vec![];
+            TObjElem::Mapped(mapped) => {
+                let source = expand_type(arena, ctx, mapped.source)?;
 
-                    for t in types {
-                        let mut mapping: HashMap<String, Index> = HashMap::new();
-                        mapping.insert(mapped.target.to_owned(), *t);
-                        let key = instantiate_scheme(arena, mapped.key, &mapping);
-                        let value = instantiate_scheme(arena, mapped.value, &mapping);
+                match &arena[source].kind.clone() {
+                    TypeKind::Union(Union { types }) => {
+                        let mut non_literal_keys = vec![];
 
-                        let name = match &arena[key].kind {
-                            TypeKind::Literal(Literal::String(name)) => {
-                                TPropKey::StringKey(name.to_owned())
-                            }
-                            TypeKind::Literal(Literal::Number(name)) => {
-                                TPropKey::NumberKey(name.to_owned())
-                            }
-                            _ => {
-                                non_literal_keys.push(key);
-                                continue;
-                            }
-                        };
+                        for t in types {
+                            let mut mapping: HashMap<String, Index> = HashMap::new();
+                            mapping.insert(mapped.target.to_owned(), *t);
+                            let key = instantiate_scheme(arena, mapped.key, &mapping);
+                            let value = instantiate_scheme(arena, mapped.value, &mapping);
 
-                        new_elems.push(TObjElem::Prop(TProp {
-                            name,
-                            modifier: None,
-                            optional: false, // TODO
-                            mutable: false,  // TODO
-                            t: expand_type(arena, ctx, value)?,
-                        }));
+                            let name = match &arena[key].kind {
+                                TypeKind::Literal(Literal::String(name)) => {
+                                    TPropKey::StringKey(name.to_owned())
+                                }
+                                TypeKind::Literal(Literal::Number(name)) => {
+                                    TPropKey::NumberKey(name.to_owned())
+                                }
+                                _ => {
+                                    non_literal_keys.push(key);
+                                    continue;
+                                }
+                            };
 
-                        if !non_literal_keys.is_empty() {
-                            let union = new_union_type(arena, &non_literal_keys);
-                            new_elems.push(TObjElem::Mapped(MappedType {
-                                target: mapped.target.to_owned(),
-                                key: union,
-                                value: mapped.value,
-                                source: mapped.source,
-                                check: mapped.check,
-                                extends: mapped.extends,
+                            new_elems.push(TObjElem::Prop(TProp {
+                                name,
+                                modifier: None,
+                                optional: false, // TODO
+                                mutable: false,  // TODO
+                                t: expand_type(arena, ctx, value)?,
                             }));
+
+                            if !non_literal_keys.is_empty() {
+                                let union = new_union_type(arena, &non_literal_keys);
+                                new_elems.push(TObjElem::Mapped(MappedType {
+                                    target: mapped.target.to_owned(),
+                                    key: union,
+                                    value: mapped.value,
+                                    source: mapped.source,
+                                    check: mapped.check,
+                                    extends: mapped.extends,
+                                }));
+                            }
                         }
                     }
+                    _ => {
+                        new_elems.push(TObjElem::Mapped(mapped.to_owned()));
+                    }
                 }
-                _ => {
-                    new_elems.push(TObjElem::Mapped(mapped.to_owned()));
-                }
-            },
+            }
             _ => new_elems.push(elem.to_owned()),
         }
     }

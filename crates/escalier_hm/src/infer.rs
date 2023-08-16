@@ -929,8 +929,8 @@ pub fn infer_type_ann(
         // TODO: Create types for all of these
         TypeAnnKind::KeyOf(type_ann) => {
             let t = infer_type_ann(arena, type_ann, ctx)?;
-            let t = new_keyof_type(arena, t);
-            expand_type(arena, ctx, t)?
+            new_keyof_type(arena, t)
+            // expand_type(arena, ctx, t)?
         }
         // TypeAnnKind::Mapped(_) => todo!(),
         TypeAnnKind::Condition(ConditionType {

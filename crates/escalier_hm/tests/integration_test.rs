@@ -3372,6 +3372,68 @@ fn test_mapped_type_pick() -> Result<(), Errors> {
 }
 
 #[test]
+fn test_pick_type() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Pick<T, K> = {[P]: T[P] for P in K}
+    type Obj = {a: string, b: number, c: boolean}
+    type Result = Pick<Obj, "a" | "b">
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let scheme = my_ctx.schemes.get("Result").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"{a: string, b: number}"#);
+
+    Ok(())
+}
+
+#[test]
+fn test_exclude_type() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Exclude<T, U> = if (T : U) { never } else { T }
+    type Obj = {a: string, b: number, c: boolean}
+    type Result = Exclude<keyof Obj, "c">
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let scheme = my_ctx.schemes.get("Result").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#""a" | "b""#);
+
+    Ok(())
+}
+
+#[test]
+fn test_omit_type() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Pick<T, K> = {[P]: T[P] for P in K}
+    type Exclude<T, U> = if (T : U) { never } else { T }
+    type Omit<T, K> = Pick<T, Exclude<keyof T, K>>
+    type Obj = {a: string, b: number, c: boolean}
+    type Result = Omit<Obj, "c">
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let scheme = my_ctx.schemes.get("Result").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"{a: string, b: number}"#);
+
+    Ok(())
+}
+
+#[test]
 fn test_index_access_type_on_tuple() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
