@@ -178,13 +178,6 @@ pub struct TMethod {
     pub is_mutating: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TIndex {
-    pub key: TIndexKey,
-    pub mutable: bool,
-    pub t: Index,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TIndexKey {
     pub name: String,
@@ -255,13 +248,26 @@ pub struct TCallable {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct MappedType {
+    pub key: Index,
+    pub value: Index,
+    pub target: String,
+    pub source: Index,
+
+    // First half of a Conditional
+    pub check: Option<Index>,
+    pub extends: Option<Index>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TObjElem {
     Call(TCallable),
     // NOTE: type_params on constructors should be a subset of type_params on
     // the object scheme in which they live
     Constructor(TCallable),
-    Index(TIndex),
+    // Index(TIndex),
     Prop(TProp),
+    Mapped(MappedType),
     // RestSpread - we can use this instead of converting {a, ...x} to {a} & tvar
 }
 
@@ -495,16 +501,32 @@ impl Type {
                             ));
                             fields.push(result);
                         }
-                        TObjElem::Index(TIndex { key, mutable, t }) => {
-                            let t = arena[*t].as_string(arena);
-                            let key_t = arena[key.t].as_string(arena);
-                            let name = &key.name;
-                            if *mutable {
-                                fields.push(format!("[{name}: {key_t}]: mut {t}"));
-                            } else {
-                                fields.push(format!("[{name}: {key_t}]: {t}"));
-                            }
+                        TObjElem::Mapped(MappedType {
+                            key,
+                            value,
+                            target,
+                            source,
+                            // TODO: handle `if`-clause
+                            check: _,
+                            extends: _,
+                        }) => {
+                            let key = arena[*key].as_string(arena);
+                            let value = arena[*value].as_string(arena);
+                            let source = arena[*source].as_string(arena);
+
+                            let result = format!("[{key}]: {value} for {target} in {source}",);
+                            fields.push(result);
                         }
+                        // TObjElem::Index(TIndex { key, mutable, t }) => {
+                        //     let t = arena[*t].as_string(arena);
+                        //     let key_t = arena[key.t].as_string(arena);
+                        //     let name = &key.name;
+                        //     if *mutable {
+                        //         fields.push(format!("[{name}: {key_t}]: mut {t}"));
+                        //     } else {
+                        //         fields.push(format!("[{name}: {key_t}]: {t}"));
+                        //     }
+                        // }
                         TObjElem::Prop(TProp {
                             name,
                             modifier, // TODO
@@ -868,10 +890,10 @@ fn types_equal(arena: &Arena<Type>, types1: &[Index], types2: &[Index]) -> bool 
 
 fn obj_elem_equals(arena: &Arena<Type>, elem1: &TObjElem, elem2: &TObjElem) -> bool {
     match (elem1, elem2) {
-        (TObjElem::Index(i1), TObjElem::Index(i2)) => {
+        (TObjElem::Mapped(map1), TObjElem::Mapped(map2)) => {
             // TODO: compare key types as well
-            let t1 = &arena[i1.t];
-            let t2 = &arena[i2.t];
+            let t1 = &arena[map1.value];
+            let t2 = &arena[map2.value];
             t1.equals(t2, arena)
         }
         (TObjElem::Prop(p1), TObjElem::Prop(p2)) => {
@@ -882,3 +904,11 @@ fn obj_elem_equals(arena: &Arena<Type>, elem1: &TObjElem, elem2: &TObjElem) -> b
         _ => false,
     }
 }
+
+/*
+
+type Record<K, V> = {[P]: V for P in K}
+
+type Foo = {[x]: number for x in number}
+
+*/

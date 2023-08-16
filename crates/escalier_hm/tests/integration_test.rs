@@ -40,6 +40,16 @@ fn test_env() -> (Arena<Type>, Context) {
         None,
     );
 
+    // [P]: T for P in number;
+    let mapped = types::TObjElem::Mapped(types::MappedType {
+        key: new_constructor(&mut arena, "P", &[]),
+        value: new_constructor(&mut arena, "T", &[]),
+        target: "P".to_string(),
+        source: new_primitive(&mut arena, Primitive::Number),
+        check: None,
+        extends: None,
+    });
+
     let array_interface = new_object_type(
         &mut arena,
         &[
@@ -59,15 +69,7 @@ fn test_env() -> (Arena<Type>, Context) {
                 mutable: false,
                 t: number,
             }),
-            // [n: number]: T;
-            types::TObjElem::Index(types::TIndex {
-                key: types::TIndexKey {
-                    name: "n".to_string(),
-                    t: number,
-                },
-                mutable: true, // we should have some sets to set properties on an array
-                t: type_param_t,
-            }),
+            mapped,
         ],
     );
     let array_scheme = Scheme {
@@ -914,7 +916,7 @@ fn object_signatures() -> Result<(), Errors> {
         bar: fn (self, a: number) -> string,
         baz: get (self) -> string,
         baz: set (mut self, value: string) -> undefined,
-        [key: string]: number,
+        [P]: number for P in string,
         qux: string,
     }
     "#;
@@ -925,7 +927,7 @@ fn object_signatures() -> Result<(), Errors> {
 
     assert_eq!(
         arena[binding.index].as_string(&arena),
-        "{fn(a: number) -> string, foo: (a: number) -> string, bar: (self: t11, a: number) -> string, get baz: (self: t15) -> string, set baz: (self: t18, value: string) -> undefined, [key: string]: number, qux: string}".to_string(),
+        "{fn(a: number) -> string, foo: (a: number) -> string, bar: (self: t14, a: number) -> string, get baz: (self: t18) -> string, set baz: (self: t21, value: string) -> undefined, [P]: number for P in string, qux: string}".to_string(),
     );
 
     Ok(())
@@ -1026,10 +1028,10 @@ fn object_indexer_subtyping() -> Result<(), Errors> {
 
     let src = r#"
     declare let foo: {
-        [key: string | number]: number,
+        [P]: number for P in string | number,
     }
     let bar: {
-        [key: string]: number | string,
+        [P]: number | string for P in string
     } = foo
     "#;
     let mut program = parse(src).unwrap();
@@ -1070,7 +1072,7 @@ fn object_indexers_should_unify_with_all_named_obj_elems() -> Result<(), Errors>
         d: fn (self) -> number,
     }
     let bar: {
-        [key: string]: fn () -> number,
+        [P]: fn () -> number for P in string,
     } = foo
     "#;
 
@@ -1090,7 +1092,7 @@ fn object_indexers_and_properties_unify_failure() -> Result<(), Errors> {
         x: number,
     }
     let bar: {
-        [key: string]: boolean,
+        [P]: boolean for P in string
     } = foo
     "#;
 
@@ -1613,7 +1615,7 @@ fn test_await_non_promise() -> Result<(), Errors> {
     assert_eq!(
         result,
         Err(Errors::InferenceError(
-            "type mismatch: unify(5, Promise<t7, t8>) failed".to_string()
+            "type mismatch: unify(5, Promise<t10, t11>) failed".to_string()
         ))
     );
 
@@ -1998,7 +2000,7 @@ fn member_access_on_type_variable() -> Result<(), Errors> {
     assert_eq!(
         result,
         Err(Errors::InferenceError(
-            "Can't access properties on t6".to_string()
+            "Can't access properties on t9".to_string()
         ))
     );
 
@@ -3205,7 +3207,7 @@ fn test_index_access_type() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"   
-    type Foo = {a: string, b?: number, [key: string]: boolean}
+    type Foo = {a: string, b?: number, [P]: boolean for P in string}
     type A = Foo["a"]
     type B = Foo["b"]
     type C = Foo["c"]
@@ -3257,7 +3259,7 @@ fn test_index_access_type_using_number_as_indexer() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"   
-    type Foo = {a: string, b: number, [key: number]: boolean}
+    type Foo = {a: string, b: number, [P]: boolean for P in number}
     type T = Foo[number]
     "#;
     let mut program = parse(src).unwrap();
@@ -3302,7 +3304,7 @@ fn test_index_access_type_missing_indexer() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"   
-    type Foo = {[key: number]: string}
+    type Foo = {[P]: string for P in number}
     type C = Foo["c"]
     "#;
     let mut program = parse(src).unwrap();
@@ -3328,7 +3330,7 @@ fn test_index_access_type_number_indexer() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"   
-    type Foo = {[key: number]: string}
+    type Foo = {[P]: string for P in number}
     type T = Foo[1]
     let t: T = "hello"
     "#;
@@ -3466,8 +3468,8 @@ fn test_keyof_obj() -> Result<(), Errors> {
     type B = keyof typeof b
     let c = {}
     type C = keyof typeof c
-    type D = keyof {[key: string]: number, x: number}
-    type E = keyof {[key: number]: boolean, x: boolean}
+    type D = keyof {[P]: number for P in string, x: number}
+    type E = keyof {[P]: boolean for P in number, x: boolean}
     "#;
     let mut program = parse(src).unwrap();
 
@@ -3667,7 +3669,7 @@ fn test_keyof_intersection() -> Result<(), Errors> {
     type A = keyof ({a: number} & {b: string})
     type B = keyof ({a: number, b: number} & {b: string, c: boolean})
     type C = keyof ({a: number} & undefined)
-    type D = keyof ({a: number} & {[key: string]: number})
+    type D = keyof ({a: number} & {[P]: number for P in string})
     "#;
     let mut program = parse(src).unwrap();
 

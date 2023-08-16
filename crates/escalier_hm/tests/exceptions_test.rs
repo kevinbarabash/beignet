@@ -31,6 +31,16 @@ fn test_env() -> (Arena<Type>, Context) {
         None,
     );
 
+    // [P]: T for P in number;
+    let mapped = types::TObjElem::Mapped(types::MappedType {
+        key: new_constructor(&mut arena, "P", &[]),
+        value: new_constructor(&mut arena, "T", &[]),
+        target: "P".to_string(),
+        source: new_primitive(&mut arena, Primitive::Number),
+        check: None,
+        extends: None,
+    });
+
     let array_interface = new_object_type(
         &mut arena,
         &[
@@ -50,15 +60,7 @@ fn test_env() -> (Arena<Type>, Context) {
                 mutable: false,
                 t: number,
             }),
-            // [n: number]: T;
-            types::TObjElem::Index(types::TIndex {
-                key: types::TIndexKey {
-                    name: "n".to_string(),
-                    t: number,
-                },
-                mutable: true, // we should have some sets to set properties on an array
-                t: type_param_t,
-            }),
+            mapped,
         ],
     );
     let array_scheme = Scheme {

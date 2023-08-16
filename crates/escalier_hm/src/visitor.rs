@@ -67,7 +67,17 @@ pub fn walk_index<V: Visitor>(visitor: &mut V, index: &Index) {
                     visitor.visit_index(ret);
                     walk_type_params(visitor, type_params);
                 }
-                TObjElem::Index(index) => visitor.visit_index(&index.t),
+                TObjElem::Mapped(mapped) => {
+                    visitor.visit_index(&mapped.key);
+                    visitor.visit_index(&mapped.value);
+                    visitor.visit_index(&mapped.source);
+                    if let Some(check) = mapped.check {
+                        visitor.visit_index(&check)
+                    }
+                    if let Some(extends) = mapped.extends {
+                        visitor.visit_index(&extends)
+                    }
+                }
                 TObjElem::Prop(prop) => visitor.visit_index(&prop.t),
             });
         }

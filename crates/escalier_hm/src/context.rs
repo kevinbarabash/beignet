@@ -159,6 +159,7 @@ impl<'a> Folder for Instantiate<'a> {
     }
 }
 
+// TODO: rename this to `replace_type_vars` or something like that
 pub fn instantiate_scheme(
     arena: &mut Arena<Type>,
     t: Index,

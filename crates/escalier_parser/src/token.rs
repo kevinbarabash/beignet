@@ -47,6 +47,8 @@ pub enum TokenKind {
     Finally,
     Throw,
     Do,
+    For,
+    In,
     Class,
     Extends,
     Type,

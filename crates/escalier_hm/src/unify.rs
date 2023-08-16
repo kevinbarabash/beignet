@@ -364,11 +364,11 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
 
             let mut calls_1: Vec<&TCallable> = vec![];
             let mut constructors_1: Vec<&TCallable> = vec![];
-            let mut indexes_1: Vec<&TIndex> = vec![];
+            let mut mapped_1: Vec<&MappedType> = vec![];
 
             let mut calls_2: Vec<&TCallable> = vec![];
             let mut constructors_2: Vec<&TCallable> = vec![];
-            let mut indexes_2: Vec<&TIndex> = vec![];
+            let mut mapped_2: Vec<&MappedType> = vec![];
 
             let named_props_1: HashMap<_, _> = object1
                 .elems
@@ -376,7 +376,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 .filter_map(|elem| match elem {
                     TObjElem::Call(_) => None,
                     TObjElem::Constructor(_) => None,
-                    TObjElem::Index(_) => None,
+                    TObjElem::Mapped(_) => None,
                     TObjElem::Prop(prop) => {
                         // TODO: handle getters/setters properly
                         Some((prop.name.to_string(), prop))
@@ -390,7 +390,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 .filter_map(|elem| match elem {
                     TObjElem::Call(_) => None,
                     TObjElem::Constructor(_) => None,
-                    TObjElem::Index(_) => None,
+                    TObjElem::Mapped(_) => None,
                     TObjElem::Prop(prop) => {
                         // TODO: handle getters/setters properly
                         Some((prop.name.to_string(), prop))
@@ -422,7 +422,7 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 match prop1 {
                     TObjElem::Call(call) => calls_1.push(call),
                     TObjElem::Constructor(constructor) => constructors_1.push(constructor),
-                    TObjElem::Index(indexer) => indexes_1.push(indexer),
+                    TObjElem::Mapped(mapped) => mapped_1.push(mapped),
                     _ => (),
                 }
             }
@@ -431,29 +431,41 @@ pub fn unify(arena: &mut Arena<Type>, ctx: &Context, t1: Index, t2: Index) -> Re
                 match prop2 {
                     TObjElem::Call(call) => calls_2.push(call),
                     TObjElem::Constructor(constructor) => constructors_2.push(constructor),
-                    TObjElem::Index(indexer) => indexes_2.push(indexer),
+                    TObjElem::Mapped(mapped) => mapped_2.push(mapped),
                     _ => (),
                 }
             }
 
-            match indexes_2.len() {
+            match mapped_2.len() {
                 0 => (),
                 1 => {
-                    match indexes_1.len() {
+                    match mapped_1.len() {
                         0 => {
                             for (_, prop_1) in named_props_1 {
                                 let undefined = new_keyword(arena, Keyword::Undefined);
                                 let t1 = prop_1.get_type(arena);
-                                let t2 = new_union_type(arena, &[indexes_2[0].t, undefined]);
+                                let t2 = new_union_type(arena, &[mapped_2[0].value, undefined]);
                                 unify(arena, ctx, t1, t2)?;
                             }
                         }
                         1 => {
-                            unify(arena, ctx, indexes_1[0].t, indexes_2[0].t)?;
+                            unify(arena, ctx, mapped_1[0].value, mapped_2[0].value)?;
                             // NOTE: the order is reverse here because object1
                             // has to have at least the same keys as object2,
                             // but it can have more.
-                            unify(arena, ctx, indexes_2[0].key.t, indexes_1[0].key.t)?;
+                            // TODO: lookup source instead of key... we only need
+                            // to look at key when it's not using the source or if
+                            // it's modifying the source.
+
+                            let mut mapping: HashMap<String, Index> = HashMap::new();
+                            mapping.insert(mapped_1[0].target.to_owned(), mapped_1[0].source);
+                            let mapped_1_key = instantiate_scheme(arena, mapped_1[0].key, &mapping);
+
+                            let mut mapping: HashMap<String, Index> = HashMap::new();
+                            mapping.insert(mapped_2[0].target.to_owned(), mapped_2[0].source);
+                            let mapped_2_key = instantiate_scheme(arena, mapped_2[0].key, &mapping);
+
+                            unify(arena, ctx, mapped_2_key, mapped_1_key)?;
                         }
                         _ => {
                             return Err(Errors::InferenceError(format!(
@@ -870,7 +882,7 @@ pub fn simplify_intersection(arena: &mut Arena<Type>, in_types: &[Index]) -> Ind
                 // What do we do with Call and Index signatures
                 TObjElem::Call(_) => todo!(),
                 TObjElem::Constructor(_) => todo!(),
-                TObjElem::Index(_) => todo!(),
+                TObjElem::Mapped(_) => todo!(),
                 TObjElem::Prop(prop) => {
                     let key = match &prop.name {
                         TPropKey::StringKey(key) => key.to_owned(),
@@ -909,7 +921,7 @@ pub fn simplify_intersection(arena: &mut Arena<Type>, in_types: &[Index]) -> Ind
     elems.sort_by_key(|elem| match elem {
         TObjElem::Call(_) => todo!(),
         TObjElem::Constructor(_) => todo!(),
-        TObjElem::Index(_) => todo!(),
+        TObjElem::Mapped(_) => todo!(),
         TObjElem::Prop(prop) => prop.name.clone(),
     }); // ensure a stable order
 

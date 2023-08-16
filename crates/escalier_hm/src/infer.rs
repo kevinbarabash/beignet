@@ -1,6 +1,6 @@
 use generational_arena::{Arena, Index};
 use itertools::Itertools;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use escalier_ast::{self as syntax, *};
 
@@ -728,15 +728,45 @@ pub fn infer_type_ann(
             let mut props: Vec<types::TObjElem> = Vec::new();
             for elem in obj.iter_mut() {
                 match elem {
-                    ObjectProp::Indexer(Indexer { key, type_ann, .. }) => {
-                        let key = types::TIndexKey {
-                            name: key.name.to_owned(),
-                            t: infer_type_ann(arena, &mut key.type_ann, ctx)?,
+                    ObjectProp::Mapped(Mapped {
+                        key,
+                        value,
+                        target,
+                        source,
+                        check,
+                        extends,
+                    }) => {
+                        let mut type_ctx = ctx.clone();
+
+                        let source = infer_type_ann(arena, source, &mut type_ctx)?;
+                        let scheme = Scheme {
+                            type_params: None,
+                            t: source,
                         };
-                        props.push(types::TObjElem::Index(types::TIndex {
+                        type_ctx.schemes.insert(target.to_owned(), scheme);
+
+                        let key = infer_type_ann(arena, key, &mut type_ctx)?;
+                        // let mut mapping: HashMap<String, Index> = HashMap::new();
+                        // mapping.insert(target.to_owned(), source);
+                        // let key = instantiate_scheme(arena, key, &mapping);
+
+                        let value = infer_type_ann(arena, value, &mut type_ctx)?;
+                        let check = match check {
+                            Some(check) => Some(infer_type_ann(arena, check, &mut type_ctx)?),
+                            None => None,
+                        };
+                        let extends = match extends {
+                            Some(extends) => Some(infer_type_ann(arena, extends, &mut type_ctx)?),
+                            None => None,
+                        };
+
+                        props.push(types::TObjElem::Mapped(types::MappedType {
                             key,
-                            t: infer_type_ann(arena, type_ann, ctx)?,
-                            mutable: false,
+                            value,
+                            target: target.to_owned(),
+                            source,
+                            check,
+                            extends,
                         }));
                     }
                     ObjectProp::Prop(prop) => {

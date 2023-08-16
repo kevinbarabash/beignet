@@ -49,7 +49,12 @@ pub fn occurs_in_type(arena: &mut Arena<Type>, v: Index, type2: Index) -> bool {
                 let param_types: Vec<_> = call.params.iter().map(|param| param.t).collect();
                 occurs_in(arena, v, &param_types) || occurs_in_type(arena, v, call.ret)
             }
-            TObjElem::Index(index) => occurs_in_type(arena, v, index.t),
+            TObjElem::Mapped(mapped) => {
+                occurs_in_type(arena, v, mapped.key)
+                    || occurs_in_type(arena, v, mapped.value)
+                    || occurs_in_type(arena, v, mapped.source)
+                // TODO: handle .check and .extends
+            }
             TObjElem::Prop(prop) => occurs_in_type(arena, v, prop.t),
         }),
         TypeKind::Rest(Rest { arg }) => occurs_in_type(arena, v, arg),
@@ -158,7 +163,10 @@ pub fn expand_alias_by_name(
 ) -> Result<Index, Errors> {
     match ctx.schemes.get(name) {
         Some(scheme) => expand_alias(arena, ctx, name, scheme, type_args),
-        None => Err(Errors::InferenceError(format!("{} isn't defined", name))),
+        None => {
+            panic!("{} isn't defined", name);
+            // Err(Errors::InferenceError(format!("{} isn't defined", name)))
+        }
     }
 }
 
@@ -286,18 +294,24 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
                 match elem {
                     TObjElem::Call(_) => (),
                     TObjElem::Constructor(_) => (),
-                    TObjElem::Index(TIndex { key, .. }) => match &arena[key.t].kind {
-                        TypeKind::Primitive(Primitive::String) => {
-                            maybe_string = Some(key.t);
+                    TObjElem::Mapped(mapped) => {
+                        let mut mapping: HashMap<String, Index> = HashMap::new();
+                        mapping.insert(mapped.target.to_owned(), mapped.source);
+                        let mapped_key = instantiate_scheme(arena, mapped.key, &mapping);
+
+                        match &arena[mapped_key].kind {
+                            TypeKind::Primitive(Primitive::String) => {
+                                maybe_string = Some(mapped_key);
+                            }
+                            TypeKind::Primitive(Primitive::Number) => {
+                                maybe_number = Some(mapped_key);
+                            }
+                            TypeKind::Primitive(Primitive::Symbol) => {
+                                maybe_symbol = Some(mapped_key);
+                            }
+                            _ => todo!(),
                         }
-                        TypeKind::Primitive(Primitive::Number) => {
-                            maybe_number = Some(key.t);
-                        }
-                        TypeKind::Primitive(Primitive::Symbol) => {
-                            maybe_symbol = Some(key.t);
-                        }
-                        _ => todo!(),
-                    },
+                    }
                     TObjElem::Prop(TProp { name, .. }) => match name {
                         TPropKey::StringKey(name) => {
                             string_keys
@@ -718,7 +732,7 @@ pub fn get_prop(
                     || primitive == &Primitive::String
                     || primitive == &Primitive::Symbol =>
             {
-                let mut maybe_index: Option<&TIndex> = None;
+                let mut maybe_mapped: Option<&MappedType> = None;
                 let mut values: Vec<Index> = vec![];
 
                 for elem in &object.elems {
@@ -726,13 +740,14 @@ pub fn get_prop(
                         // Callable signatures have no name so we ignore them.
                         TObjElem::Constructor(_) => continue,
                         TObjElem::Call(_) => continue,
-                        TObjElem::Index(index) => {
-                            if maybe_index.is_some() {
+                        TObjElem::Mapped(mapped) => {
+                            if maybe_mapped.is_some() {
                                 return Err(Errors::InferenceError(
-                                    "Object types can only have a single indexer".to_string(),
+                                    "Object types can only have a single mapped signature"
+                                        .to_string(),
                                 ));
                             }
-                            maybe_index = Some(index);
+                            maybe_mapped = Some(mapped);
                         }
                         TObjElem::Prop(prop) => {
                             match &prop.name {
@@ -751,11 +766,15 @@ pub fn get_prop(
                 }
 
                 // TODO: handle combinations of indexers and non-indexer elements
-                if let Some(indexer) = maybe_index {
-                    match unify(arena, ctx, key_idx, indexer.key.t) {
+                if let Some(mapped) = maybe_mapped {
+                    let mut mapping: HashMap<String, Index> = HashMap::new();
+                    mapping.insert(mapped.target.to_owned(), mapped.source);
+                    let mapped_key = instantiate_scheme(arena, mapped.key, &mapping);
+
+                    match unify(arena, ctx, key_idx, mapped_key) {
                         Ok(_) => {
                             let undefined = new_keyword(arena, Keyword::Undefined);
-                            Ok(new_union_type(arena, &[indexer.t, undefined]))
+                            Ok(new_union_type(arena, &[mapped.value, undefined]))
                         }
                         Err(_) => Err(Errors::InferenceError(format!(
                             "{} is not a valid indexer for {}",
@@ -774,19 +793,20 @@ pub fn get_prop(
                 }
             }
             TypeKind::Literal(Literal::String(name)) => {
-                let mut maybe_index: Option<&TIndex> = None;
+                let mut maybe_mapped: Option<&MappedType> = None;
                 for elem in &object.elems {
                     match elem {
                         // Callable signatures have no name so we ignore them.
                         TObjElem::Constructor(_) => continue,
                         TObjElem::Call(_) => continue,
-                        TObjElem::Index(index) => {
-                            if maybe_index.is_some() {
+                        TObjElem::Mapped(mapped) => {
+                            if maybe_mapped.is_some() {
                                 return Err(Errors::InferenceError(
-                                    "Object types can only have a single indexer".to_string(),
+                                    "Object types can only have a single mapped signature"
+                                        .to_string(),
                                 ));
                             }
-                            maybe_index = Some(index);
+                            maybe_mapped = Some(mapped);
                         }
                         TObjElem::Prop(prop) => {
                             let key = match &prop.name {
@@ -804,11 +824,15 @@ pub fn get_prop(
                     }
                 }
 
-                if let Some(indexer) = maybe_index {
-                    match unify(arena, ctx, key_idx, indexer.key.t) {
+                if let Some(mapped) = maybe_mapped {
+                    let mut mapping: HashMap<String, Index> = HashMap::new();
+                    mapping.insert(mapped.target.to_owned(), mapped.source);
+                    let mapped_key = instantiate_scheme(arena, mapped.key, &mapping);
+
+                    match unify(arena, ctx, key_idx, mapped_key) {
                         Ok(_) => {
                             let undefined = new_keyword(arena, Keyword::Undefined);
-                            Ok(new_union_type(arena, &[indexer.t, undefined]))
+                            Ok(new_union_type(arena, &[mapped.value, undefined]))
                         }
                         Err(_) => Err(Errors::InferenceError(format!(
                             "Couldn't find property {} in object",
@@ -822,25 +846,29 @@ pub fn get_prop(
                 }
             }
             TypeKind::Literal(Literal::Number(name)) => {
-                let mut maybe_index: Option<&TIndex> = None;
+                let mut maybe_mapped: Option<&MappedType> = None;
                 for elem in &object.elems {
-                    if let TObjElem::Index(index) = elem {
-                        if maybe_index.is_some() {
+                    if let TObjElem::Mapped(mapped) = elem {
+                        if maybe_mapped.is_some() {
                             return Err(Errors::InferenceError(
-                                "Object types can only have a single indexer".to_string(),
+                                "Object types can only have a single mapped signature".to_string(),
                             ));
                         }
-                        maybe_index = Some(index);
+                        maybe_mapped = Some(mapped);
                     }
                     // QUESTION: Do we care about allowing numbers as keys for
                     // methods and props?
                 }
 
-                if let Some(indexer) = maybe_index {
-                    match unify(arena, ctx, key_idx, indexer.key.t) {
+                if let Some(mapped) = maybe_mapped {
+                    let mut mapping: HashMap<String, Index> = HashMap::new();
+                    mapping.insert(mapped.target.to_owned(), mapped.source);
+                    let mapped_key = instantiate_scheme(arena, mapped.key, &mapping);
+
+                    match unify(arena, ctx, key_idx, mapped_key) {
                         Ok(_) => {
                             let undefined = new_keyword(arena, Keyword::Undefined);
-                            Ok(new_union_type(arena, &[indexer.t, undefined]))
+                            Ok(new_union_type(arena, &[mapped.value, undefined]))
                         }
                         Err(_) => Err(Errors::InferenceError(format!(
                             "Couldn't find property {} in object",
