@@ -262,6 +262,7 @@ pub fn expand_type(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<I
             expand_alias_by_name(arena, ctx, name, types)?
         }
         TypeKind::Binary(binary) => expand_binary(arena, ctx, binary)?,
+        TypeKind::Object(object) => return expand_object(arena, ctx, object),
         _ => return Ok(t), // Early return to avoid infinite loop
     };
 
@@ -543,6 +544,74 @@ pub fn expand_binary(
     };
 
     Ok(t)
+}
+
+pub fn expand_object(
+    arena: &mut Arena<Type>,
+    ctx: &Context,
+    object: &Object,
+) -> Result<Index, Errors> {
+    let mut new_elems = vec![];
+
+    for elem in &object.elems {
+        match elem {
+            // TODO: Handle `check` and `extends`
+            TObjElem::Mapped(mapped) => match &arena[mapped.source].kind.clone() {
+                TypeKind::Union(Union { types }) => {
+                    let mut non_literal_keys = vec![];
+
+                    for t in types {
+                        let mut mapping: HashMap<String, Index> = HashMap::new();
+                        mapping.insert(mapped.target.to_owned(), *t);
+                        let key = instantiate_scheme(arena, mapped.key, &mapping);
+                        let value = instantiate_scheme(arena, mapped.value, &mapping);
+
+                        let name = match &arena[key].kind {
+                            TypeKind::Literal(Literal::String(name)) => {
+                                TPropKey::StringKey(name.to_owned())
+                            }
+                            TypeKind::Literal(Literal::Number(name)) => {
+                                TPropKey::NumberKey(name.to_owned())
+                            }
+                            _ => {
+                                non_literal_keys.push(key);
+                                continue;
+                            }
+                        };
+
+                        new_elems.push(TObjElem::Prop(TProp {
+                            name,
+                            modifier: None,
+                            optional: false, // TODO
+                            mutable: false,  // TODO
+                            t: expand_type(arena, ctx, value)?,
+                        }));
+
+                        if !non_literal_keys.is_empty() {
+                            let union = new_union_type(arena, &non_literal_keys);
+                            new_elems.push(TObjElem::Mapped(MappedType {
+                                target: mapped.target.to_owned(),
+                                key: union,
+                                value: mapped.value,
+                                source: mapped.source,
+                                check: mapped.check,
+                                extends: mapped.extends,
+                            }));
+                        }
+                    }
+                }
+                _ => {
+                    new_elems.push(TObjElem::Mapped(mapped.to_owned()));
+                }
+            },
+            _ => new_elems.push(elem.to_owned()),
+        }
+    }
+
+    Ok(arena.insert(Type {
+        kind: TypeKind::Object(Object { elems: new_elems }),
+        provenance: None, // TODO
+    }))
 }
 
 pub struct FindInferVisitor<'a> {

@@ -1023,7 +1023,7 @@ fn object_property_subtyping() -> Result<(), Errors> {
 }
 
 #[test]
-fn object_indexer_subtyping() -> Result<(), Errors> {
+fn object_mapped_subtyping() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1061,7 +1061,7 @@ fn object_methods_and_properties_should_unify() -> Result<(), Errors> {
 }
 
 #[test]
-fn object_indexers_should_unify_with_all_named_obj_elems() -> Result<(), Errors> {
+fn object_mappeds_should_unify_with_all_named_obj_elems() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1084,7 +1084,7 @@ fn object_indexers_should_unify_with_all_named_obj_elems() -> Result<(), Errors>
 }
 
 #[test]
-fn object_indexers_and_properties_unify_failure() -> Result<(), Errors> {
+fn object_mappeds_and_properties_unify_failure() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"
@@ -3233,7 +3233,7 @@ fn test_index_access_type() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_index_access_type_using_string_as_indexer() -> Result<(), Errors> {
+fn test_index_access_type_using_string_as_mapped() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"   
@@ -3255,7 +3255,7 @@ fn test_index_access_type_using_string_as_indexer() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_index_access_type_using_number_as_indexer() -> Result<(), Errors> {
+fn test_index_access_type_using_number_as_mapped() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"   
@@ -3300,7 +3300,7 @@ fn test_index_access_type_missing_property() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_index_access_type_missing_indexer() -> Result<(), Errors> {
+fn test_index_access_type_missing_mapped() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"   
@@ -3326,7 +3326,7 @@ fn test_index_access_type_missing_indexer() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_index_access_type_number_indexer() -> Result<(), Errors> {
+fn test_index_access_type_number_mapped() -> Result<(), Errors> {
     let (mut arena, mut my_ctx) = test_env();
 
     let src = r#"   
@@ -3347,6 +3347,26 @@ fn test_index_access_type_number_indexer() -> Result<(), Errors> {
         arena[binding.index].as_string(&arena),
         r#"string | undefined"#
     );
+
+    Ok(())
+}
+
+#[test]
+fn test_mapped_type_pick() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"   
+    type Pick<T, K> = {[P]: T[P] for P in K}
+    type Obj = {a: string, b: number, c: boolean}
+    type Result = Pick<Obj, "a" | "b">
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let scheme = my_ctx.schemes.get("Result").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"{a: string, b: number}"#);
 
     Ok(())
 }
