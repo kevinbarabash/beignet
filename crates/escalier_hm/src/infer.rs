@@ -1,6 +1,6 @@
 use generational_arena::{Arena, Index};
 use itertools::Itertools;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashSet};
 
 use escalier_ast::{self as syntax, *};
 

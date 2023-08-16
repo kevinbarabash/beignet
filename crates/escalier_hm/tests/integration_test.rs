@@ -4450,14 +4450,14 @@ fn return_type_rest_placeholder() -> Result<(), Errors> {
     let src = r#"
         type ReturnType<
             T: fn (...args: _) -> _
-        > = if (T: fn (...args: _) -> infer R) { 
+        > = if (T: fn (...args: _) -> infer R) {
             R
         } else {
             never
         }
-        type RT1 = ReturnType<fn (a: string, b: number) -> boolean> 
+        type RT1 = ReturnType<fn (a: string, b: number) -> boolean>
         type RT2 = ReturnType<fn (a: string) -> number>
-        type RT3 = ReturnType<fn () -> string> 
+        type RT3 = ReturnType<fn () -> string>
     "#;
     let mut program = parse(src).unwrap();
 
@@ -4474,6 +4474,31 @@ fn return_type_rest_placeholder() -> Result<(), Errors> {
     let result = my_ctx.schemes.get("RT3").unwrap();
     let t = expand_type(&mut arena, &my_ctx, result.t)?;
     assert_eq!(arena[t].as_string(&arena), r#"string"#);
+
+    Ok(())
+}
+
+#[test]
+fn return_type_of_union() -> Result<(), Errors> {
+    let (mut arena, mut my_ctx) = test_env();
+
+    let src = r#"
+        type ReturnType<
+            T: fn (...args: _) -> _
+        > = if (T: fn (...args: _) -> infer R) {
+            R
+        } else {
+            never
+        }
+        type Result = ReturnType<(fn () -> number) | (fn () -> string)>
+    "#;
+    let mut program = parse(src).unwrap();
+
+    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+
+    let result = my_ctx.schemes.get("Result").unwrap();
+    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    assert_eq!(arena[t].as_string(&arena), r#"number | string"#);
 
     Ok(())
 }

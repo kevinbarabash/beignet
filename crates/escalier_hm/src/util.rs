@@ -187,14 +187,6 @@ pub fn expand_alias(
                 )));
             }
 
-            let mut mapping: HashMap<String, Index> = HashMap::new();
-            for (param, arg) in type_params.iter().zip(type_args.iter()) {
-                if let Some(constraint) = param.constraint {
-                    unify(arena, ctx, *arg, constraint)?;
-                }
-                mapping.insert(param.name.clone(), arg.to_owned());
-            }
-
             if let TypeKind::Conditional(Conditional { check, .. }) = arena[scheme.t].kind {
                 if let TypeKind::Constructor(tref) = &arena[check].kind.clone() {
                     if let Some((index_of_check_type, _)) = type_params
@@ -221,7 +213,6 @@ pub fn expand_alias(
                                     }
                                 }
 
-                                // TODO: Update `instantiate_scheme` to work with refrences
                                 let t = instantiate_scheme(arena, scheme.t, &mapping);
                                 types.push(expand_type(arena, ctx, t)?);
                             }
@@ -242,6 +233,14 @@ pub fn expand_alias(
                         }
                     }
                 }
+            }
+
+            let mut mapping: HashMap<String, Index> = HashMap::new();
+            for (param, arg) in type_params.iter().zip(type_args.iter()) {
+                if let Some(constraint) = param.constraint {
+                    unify(arena, ctx, *arg, constraint)?;
+                }
+                mapping.insert(param.name.clone(), arg.to_owned());
             }
 
             let t = instantiate_scheme(arena, scheme.t, &mapping);
@@ -308,9 +307,7 @@ pub fn expand_keyof(arena: &mut Arena<Type>, ctx: &Context, t: Index) -> Result<
                     TObjElem::Call(_) => (),
                     TObjElem::Constructor(_) => (),
                     TObjElem::Mapped(mapped) => {
-                        let mut mapping: HashMap<String, Index> = HashMap::new();
-                        mapping.insert(mapped.target.to_owned(), mapped.source);
-                        let mapped_key = instantiate_scheme(arena, mapped.key, &mapping);
+                        let mapped_key = get_mapped_key(arena, mapped);
 
                         match &arena[mapped_key].kind {
                             TypeKind::Primitive(Primitive::String) => {
@@ -852,9 +849,7 @@ pub fn get_prop(
 
                 // TODO: handle combinations of indexers and non-indexer elements
                 if let Some(mapped) = maybe_mapped {
-                    let mut mapping: HashMap<String, Index> = HashMap::new();
-                    mapping.insert(mapped.target.to_owned(), mapped.source);
-                    let mapped_key = instantiate_scheme(arena, mapped.key, &mapping);
+                    let mapped_key = get_mapped_key(arena, mapped);
 
                     match unify(arena, ctx, key_idx, mapped_key) {
                         Ok(_) => {
@@ -910,9 +905,7 @@ pub fn get_prop(
                 }
 
                 if let Some(mapped) = maybe_mapped {
-                    let mut mapping: HashMap<String, Index> = HashMap::new();
-                    mapping.insert(mapped.target.to_owned(), mapped.source);
-                    let mapped_key = instantiate_scheme(arena, mapped.key, &mapping);
+                    let mapped_key = get_mapped_key(arena, mapped);
 
                     match unify(arena, ctx, key_idx, mapped_key) {
                         Ok(_) => {
@@ -946,10 +939,7 @@ pub fn get_prop(
                 }
 
                 if let Some(mapped) = maybe_mapped {
-                    let mut mapping: HashMap<String, Index> = HashMap::new();
-                    mapping.insert(mapped.target.to_owned(), mapped.source);
-                    let mapped_key = instantiate_scheme(arena, mapped.key, &mapping);
-
+                    let mapped_key = get_mapped_key(arena, mapped);
                     match unify(arena, ctx, key_idx, mapped_key) {
                         Ok(_) => {
                             let undefined = new_keyword(arena, Keyword::Undefined);
@@ -987,4 +977,10 @@ pub fn filter_nullables(arena: &Arena<Type>, types: &[Index]) -> Vec<Index> {
         })
         .cloned()
         .collect()
+}
+
+fn get_mapped_key(arena: &mut Arena<Type>, mapped: &MappedType) -> Index {
+    let mut mapping: HashMap<String, Index> = HashMap::new();
+    mapping.insert(mapped.target.to_owned(), mapped.source);
+    instantiate_scheme(arena, mapped.key, &mapping)
 }
