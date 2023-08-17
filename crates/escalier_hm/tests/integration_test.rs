@@ -3,11 +3,10 @@ use generational_arena::{Arena, Index};
 use escalier_ast::{self as syntax, Literal as Lit, *};
 use escalier_parser::parse;
 
+use escalier_hm::checker::Checker;
 use escalier_hm::context::*;
 use escalier_hm::errors::*;
-use escalier_hm::infer::*;
 use escalier_hm::types::{self, *};
-use escalier_hm::util::expand_type;
 
 fn new_num_lit_type(arena: &mut Arena<Type>, value: &str) -> Index {
     arena.insert(Type::from(TypeKind::Literal(Lit::Number(value.to_owned()))))
@@ -17,15 +16,16 @@ fn new_str_lit_type(arena: &mut Arena<Type>, value: &str) -> Index {
     arena.insert(Type::from(TypeKind::Literal(Lit::String(value.to_owned()))))
 }
 
-fn test_env() -> (Arena<Type>, Context) {
-    let mut arena = Arena::new();
+fn test_env() -> (Checker, Context) {
+    let mut checker = Checker {
+        arena: Arena::new(),
+    };
     let mut context = Context::default();
 
-    let number = new_primitive(&mut arena, Primitive::Number);
-    let type_param_t = new_constructor(&mut arena, "T", &[]);
+    let number = checker.new_primitive(Primitive::Number);
+    let type_param_t = checker.new_constructor("T", &[]);
 
-    let push_t = new_func_type(
-        &mut arena,
+    let push_t = checker.new_func_type(
         &[types::FuncParam {
             pattern: TPat::Ident(BindingIdent {
                 name: "item".to_string(),
@@ -42,36 +42,33 @@ fn test_env() -> (Arena<Type>, Context) {
 
     // [P]: T for P in number;
     let mapped = types::TObjElem::Mapped(types::MappedType {
-        key: new_constructor(&mut arena, "P", &[]),
-        value: new_constructor(&mut arena, "T", &[]),
+        key: checker.new_constructor("P", &[]),
+        value: checker.new_constructor("T", &[]),
         target: "P".to_string(),
-        source: new_primitive(&mut arena, Primitive::Number),
+        source: checker.new_primitive(Primitive::Number),
         check: None,
         extends: None,
     });
 
-    let array_interface = new_object_type(
-        &mut arena,
-        &[
-            // .push(item: T) -> number;
-            types::TObjElem::Prop(types::TProp {
-                name: types::TPropKey::StringKey("push".to_string()),
-                modifier: None,
-                t: push_t,
-                optional: false,
-                mutable: false,
-            }),
-            // .length: number;
-            types::TObjElem::Prop(types::TProp {
-                name: types::TPropKey::StringKey("length".to_string()),
-                modifier: None,
-                optional: false,
-                mutable: false,
-                t: number,
-            }),
-            mapped,
-        ],
-    );
+    let array_interface = checker.new_object_type(&[
+        // .push(item: T) -> number;
+        types::TObjElem::Prop(types::TProp {
+            name: types::TPropKey::StringKey("push".to_string()),
+            modifier: None,
+            t: push_t,
+            optional: false,
+            mutable: false,
+        }),
+        // .length: number;
+        types::TObjElem::Prop(types::TProp {
+            name: types::TPropKey::StringKey("length".to_string()),
+            modifier: None,
+            optional: false,
+            mutable: false,
+            t: number,
+        }),
+        mapped,
+    ]);
     let array_scheme = Scheme {
         type_params: Some(vec![types::TypeParam {
             name: "T".to_string(),
@@ -83,7 +80,7 @@ fn test_env() -> (Arena<Type>, Context) {
 
     context.schemes.insert("Array".to_string(), array_scheme);
 
-    (arena, context)
+    (checker, context)
 }
 
 /// Sets up some predefined types using the type constructors TypeVariable,
@@ -93,7 +90,7 @@ fn test_env() -> (Arena<Type>, Context) {
 
 #[test]
 fn test_complex_logic() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let a: number
@@ -103,17 +100,17 @@ fn test_complex_logic() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("result").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"boolean"#);
+    assert_eq!(checker.print_type(&binding.index), r#"boolean"#);
 
     Ok(())
 }
 
 #[test]
 fn test_string_equality() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let a: string
@@ -123,19 +120,19 @@ fn test_string_equality() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("eq").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"boolean"#);
+    assert_eq!(checker.print_type(&binding.index), r#"boolean"#);
     let binding = my_ctx.values.get("neq").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"boolean"#);
+    assert_eq!(checker.print_type(&binding.index), r#"boolean"#);
 
     Ok(())
 }
 
 #[test]
 fn test_if_else() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let cond: boolean
@@ -144,16 +141,16 @@ fn test_if_else() -> Result<(), Errors> {
 
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
 
-    assert_eq!(arena[binding.index].as_string(&arena), r#"5 | 10"#);
+    assert_eq!(checker.print_type(&binding.index), r#"5 | 10"#);
     Ok(())
 }
 
 #[test]
 fn test_chained_if_else() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let cond1: boolean
@@ -163,16 +160,16 @@ fn test_chained_if_else() -> Result<(), Errors> {
 
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
 
-    assert_eq!(arena[binding.index].as_string(&arena), r#"5 | 10 | 15"#);
+    assert_eq!(checker.print_type(&binding.index), r#"5 | 10 | 15"#);
     Ok(())
 }
 
 #[test]
 fn test_factorial() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     // factorial
     let src = r#"
@@ -186,11 +183,11 @@ fn test_factorial() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("fact").unwrap();
 
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"(n: number) -> 1 | number"#
     );
     Ok(())
@@ -198,7 +195,7 @@ fn test_factorial() -> Result<(), Errors> {
 
 #[test]
 fn test_mutual_recursion() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let even = fn (x) => if (x == 0) {
@@ -214,16 +211,16 @@ fn test_mutual_recursion() -> Result<(), Errors> {
     }
     "#;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("even").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"(x: number) -> true | boolean"#
     );
     let binding = my_ctx.values.get("odd").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"(x: number) -> true | boolean"#
     );
 
@@ -232,7 +229,7 @@ fn test_mutual_recursion() -> Result<(), Errors> {
 
 #[test]
 fn test_mutual_recursion_using_destructuring() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let {even, odd} = {
@@ -249,16 +246,16 @@ fn test_mutual_recursion_using_destructuring() -> Result<(), Errors> {
     }
     "#;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("even").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"(x: number) -> true | boolean"#
     );
     let binding = my_ctx.values.get("odd").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"(x: number) -> true | boolean"#
     );
 
@@ -267,14 +264,14 @@ fn test_mutual_recursion_using_destructuring() -> Result<(), Errors> {
 
 #[test]
 fn test_no_top_level_redeclaration() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let id = fn (x) => x
     let id = fn (y) => y
     "#;
     let mut program = parse(src).unwrap();
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -289,28 +286,28 @@ fn test_no_top_level_redeclaration() -> Result<(), Errors> {
 #[should_panic]
 #[test]
 fn test_mismatch() {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"fn (x) => [x(3), x(true)]"#;
 
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx).unwrap();
+    checker.infer_program(&mut program, &mut my_ctx).unwrap();
 }
 
 #[should_panic = "called `Result::unwrap()` on an `Err` value: InferenceError(\"Undefined symbol \\\"f\\\"\")"]
 #[test]
 fn test_pair() {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"[f(3), f(true)]"#;
 
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx).unwrap();
+    checker.infer_program(&mut program, &mut my_ctx).unwrap();
 }
 
 #[test]
 fn test_mul() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
         let f = fn (x) => x
@@ -318,27 +315,27 @@ fn test_mul() -> Result<(), Errors> {
     "#;
 
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("result").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"[4, true]"#);
+    assert_eq!(checker.print_type(&binding.index), r#"[4, true]"#);
     Ok(())
 }
 
 #[should_panic = "recursive unification"]
 #[test]
 fn test_recursive() {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"fn (f) => f(f)"#;
 
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx).unwrap();
+    checker.infer_program(&mut program, &mut my_ctx).unwrap();
 }
 
 #[test]
 fn test_number_literal() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let g = fn (f) => 5
@@ -346,16 +343,16 @@ fn test_number_literal() -> Result<(), Errors> {
     "#;
 
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("result").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"5"#);
+    assert_eq!(checker.print_type(&binding.index), r#"5"#);
     Ok(())
 }
 
 #[test]
 fn test_generic_nongeneric() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let result = fn (g) {
@@ -365,44 +362,41 @@ fn test_generic_nongeneric() -> Result<(), Errors> {
 
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("result").unwrap();
-    assert_eq!(
-        arena[binding.index].as_string(&arena),
-        r#"<A>(g: A) -> [A, A]"#
-    );
+    assert_eq!(checker.print_type(&binding.index), r#"<A>(g: A) -> [A, A]"#);
     Ok(())
 }
 
 #[test]
 fn test_basic_generics() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     // example that demonstrates generic and non-generic variables:
     let src = r#"let result = fn (x) => x"#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"<A>(x: A) -> A"#);
+    assert_eq!(checker.print_type(&binding.index), r#"<A>(x: A) -> A"#);
 
     Ok(())
 }
 
 #[test]
 fn test_composition() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     // Function composition
     // fn f (fn g (fn arg (f g arg)))
     let src = r#"let result = fn (f) => fn (g) => fn (arg) => g(f(arg))"#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"<A, C, B>(f: (arg0: A) -> B) -> (g: (arg0: B) -> C) -> (arg: A) -> C"#
     );
     Ok(())
@@ -410,7 +404,7 @@ fn test_composition() -> Result<(), Errors> {
 
 #[test]
 fn test_skk() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let S = fn (f) => fn (g) => fn (x) => f(x)(g(x))
@@ -419,27 +413,27 @@ fn test_skk() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("S").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"<A, C, B>(f: (arg0: A) -> (arg0: B) -> C) -> (g: (arg0: A) -> B) -> (x: A) -> C"#
     );
     let binding = my_ctx.values.get("K").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"<A, B>(x: A) -> (y: B) -> A"#
     );
     let binding = my_ctx.values.get("I").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"<A>(x: A) -> A"#);
+    assert_eq!(checker.print_type(&binding.index), r#"<A>(x: A) -> A"#);
 
     Ok(())
 }
 
 #[test]
 fn test_composition_with_statements() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     // Function composition
     let src = r#"
@@ -453,10 +447,10 @@ fn test_composition_with_statements() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"<A, B, C>(f: (arg0: A) -> B) -> (g: (arg0: B) -> C) -> (arg: A) -> C"#
     );
     Ok(())
@@ -464,7 +458,7 @@ fn test_composition_with_statements() -> Result<(), Errors> {
 
 #[test]
 fn test_subtype() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let times = fn (x, y) => x * y
@@ -472,15 +466,15 @@ fn test_subtype() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"number"#);
+    assert_eq!(checker.print_type(&binding.index), r#"number"#);
     Ok(())
 }
 
 #[test]
 fn test_callback_subtyping() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     // It's okay for the callback arg to take fewer params since extra params
     // are ignored.  It's also okay for its params to be supertypes of the
@@ -494,15 +488,15 @@ fn test_callback_subtyping() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"boolean"#);
+    assert_eq!(checker.print_type(&binding.index), r#"boolean"#);
     Ok(())
 }
 
 #[test]
 fn test_callback_error_too_many_params() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let foo: fn (cb: fn (x: number) -> boolean) -> boolean
@@ -511,7 +505,7 @@ fn test_callback_error_too_many_params() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
     assert_eq!(
         result,
         Err(Errors::InferenceError("(a: number, b: string) -> boolean is not a subtype of (x: number) -> boolean since it requires more params".to_string())),
@@ -521,14 +515,14 @@ fn test_callback_error_too_many_params() -> Result<(), Errors> {
 
 #[test]
 fn test_union_subtype() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
-    let lit1 = new_num_lit_type(&mut arena, "5");
-    let lit2 = new_num_lit_type(&mut arena, "10");
+    let lit1 = new_num_lit_type(&mut checker.arena, "5");
+    let lit2 = new_num_lit_type(&mut checker.arena, "10");
     my_ctx.values.insert(
         "foo".to_string(),
         Binding {
-            index: new_union_type(&mut arena, &[lit1, lit2]),
+            index: checker.new_union_type(&[lit1, lit2]),
             is_mut: false,
         },
     );
@@ -539,24 +533,24 @@ fn test_union_subtype() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"number"#);
+    assert_eq!(checker.print_type(&binding.index), r#"number"#);
     Ok(())
 }
 
 #[test]
 fn test_calling_a_union() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
-    let bool = new_primitive(&mut arena, Primitive::Boolean);
-    let str = new_primitive(&mut arena, Primitive::String);
-    let fn1 = new_func_type(&mut arena, &[], bool, &None, None);
-    let fn2 = new_func_type(&mut arena, &[], str, &None, None);
+    let bool = checker.new_primitive(Primitive::Boolean);
+    let str = checker.new_primitive(Primitive::String);
+    let fn1 = checker.new_func_type(&[], bool, &None, None);
+    let fn2 = checker.new_func_type(&[], str, &None, None);
     my_ctx.values.insert(
         "foo".to_string(),
         Binding {
-            index: new_union_type(&mut arena, &[fn1, fn2]),
+            index: checker.new_union_type(&[fn1, fn2]),
             is_mut: false,
         },
     );
@@ -564,18 +558,15 @@ fn test_calling_a_union() -> Result<(), Errors> {
     let src = r#"let result = foo()"#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
-    assert_eq!(
-        arena[binding.index].as_string(&arena),
-        r#"boolean | string"#
-    );
+    assert_eq!(checker.print_type(&binding.index), r#"boolean | string"#);
     Ok(())
 }
 
 #[test]
 fn call_with_too_few_args() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let times = fn (x, y) => x * y
@@ -583,7 +574,7 @@ fn call_with_too_few_args() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -597,9 +588,9 @@ fn call_with_too_few_args() -> Result<(), Errors> {
 
 #[test]
 fn literal_isnt_callable() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
-    let lit = new_num_lit_type(&mut arena, "5");
+    let lit = new_num_lit_type(&mut checker.arena, "5");
     my_ctx.values.insert(
         "foo".to_string(),
         Binding {
@@ -611,7 +602,7 @@ fn literal_isnt_callable() -> Result<(), Errors> {
     let src = r#"let result = foo()"#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -625,15 +616,15 @@ fn literal_isnt_callable() -> Result<(), Errors> {
 
 #[test]
 fn infer_basic_tuple() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"let result = [5, "hello"]"#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         "[5, \"hello\"]".to_string(),
     );
 
@@ -642,7 +633,7 @@ fn infer_basic_tuple() -> Result<(), Errors> {
 
 #[test]
 fn tuple_member() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let tuple = [5, "hello"]
@@ -652,16 +643,13 @@ fn tuple_member() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("second").unwrap();
-    assert_eq!(
-        arena[binding.index].as_string(&arena),
-        r#""hello""#.to_string(),
-    );
+    assert_eq!(checker.print_type(&binding.index), r#""hello""#.to_string(),);
     let binding = my_ctx.values.get("any").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"5 | "hello" | undefined"#.to_string(),
     );
 
@@ -670,7 +658,7 @@ fn tuple_member() -> Result<(), Errors> {
 
 #[test]
 fn tuple_member_invalid_index() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let tuple = [5, "hello"]
@@ -678,7 +666,7 @@ fn tuple_member_invalid_index() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -692,7 +680,7 @@ fn tuple_member_invalid_index() -> Result<(), Errors> {
 
 #[test]
 fn array_member() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let array: Array<number>
@@ -702,16 +690,16 @@ fn array_member() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("first").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         "number | undefined".to_string(),
     );
     let binding = my_ctx.values.get("any").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         "number | undefined".to_string(),
     );
 
@@ -720,7 +708,7 @@ fn array_member() -> Result<(), Errors> {
 
 #[test]
 fn tuple_member_error_out_of_bounds() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let tuple = [5, "hello"]
@@ -728,7 +716,7 @@ fn tuple_member_error_out_of_bounds() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -742,7 +730,7 @@ fn tuple_member_error_out_of_bounds() -> Result<(), Errors> {
 
 #[test]
 fn tuple_subtyping() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let foo: fn (x: [number, string]) -> boolean
@@ -750,12 +738,9 @@ fn tuple_subtyping() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
-    assert_eq!(
-        arena[binding.index].as_string(&arena),
-        "boolean".to_string(),
-    );
+    assert_eq!(checker.print_type(&binding.index), "boolean".to_string(),);
 
     Ok(())
 }
@@ -764,7 +749,7 @@ fn tuple_subtyping() -> Result<(), Errors> {
 #[test]
 #[ignore]
 fn more_tuple_subtyping() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let tuple1: [number, ...string[]] = [5]
@@ -773,14 +758,14 @@ fn more_tuple_subtyping() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     Ok(())
 }
 
 #[test]
 fn tuple_subtyping_not_enough_elements() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let foo: fn (x: [number, string]) -> boolean
@@ -788,7 +773,7 @@ fn tuple_subtyping_not_enough_elements() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -802,16 +787,16 @@ fn tuple_subtyping_not_enough_elements() -> Result<(), Errors> {
 
 #[test]
 fn infer_basic_object() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"let result = {a: 5, b: "hello"}"#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
 
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         "{a: 5, b: \"hello\"}".to_string(),
     );
 
@@ -820,7 +805,7 @@ fn infer_basic_object() -> Result<(), Errors> {
 
 #[test]
 fn object_member() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let obj = {a: 5, b: "hello"}
@@ -828,17 +813,17 @@ fn object_member() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
 
-    assert_eq!(arena[binding.index].as_string(&arena), "5".to_string(),);
+    assert_eq!(checker.print_type(&binding.index), "5".to_string(),);
 
     Ok(())
 }
 
 #[test]
 fn object_member_string_key() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let obj = {a: 5, b: "hello"}
@@ -847,11 +832,11 @@ fn object_member_string_key() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
 
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         "5 | \"hello\" | undefined".to_string(),
     );
 
@@ -860,7 +845,7 @@ fn object_member_string_key() -> Result<(), Errors> {
 
 #[test]
 fn object_member_missing_prop() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let obj = {a: 5, b: "hello"}
@@ -868,7 +853,7 @@ fn object_member_missing_prop() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -882,7 +867,7 @@ fn object_member_missing_prop() -> Result<(), Errors> {
 
 #[test]
 fn object_subtyping() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     // Each prop must be a subtype of the expected element type
     // It's okay to pass an object with extra props
@@ -892,20 +877,17 @@ fn object_subtyping() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
 
-    assert_eq!(
-        arena[binding.index].as_string(&arena),
-        "boolean".to_string(),
-    );
+    assert_eq!(checker.print_type(&binding.index), "boolean".to_string(),);
 
     Ok(())
 }
 
 #[test]
 fn object_signatures() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     // Each prop must be a subtype of the expected element type
     // It's okay to pass an object with extra props
@@ -922,11 +904,11 @@ fn object_signatures() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("obj").unwrap();
 
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         "{fn(a: number) -> string, foo: (a: number) -> string, bar: (self: t14, a: number) -> string, get baz: (self: t18) -> string, set baz: (self: t21, value: string) -> undefined, [P]: number for P in string, qux: string}".to_string(),
     );
 
@@ -935,7 +917,7 @@ fn object_signatures() -> Result<(), Errors> {
 
 #[test]
 fn object_callable_subtyping() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let foo: {
@@ -947,7 +929,7 @@ fn object_callable_subtyping() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     Ok(())
 }
@@ -957,7 +939,7 @@ fn object_callable_subtyping() -> Result<(), Errors> {
 #[test]
 #[ignore]
 fn object_callable_subtyping_failure_case() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let foo: {
@@ -969,7 +951,7 @@ fn object_callable_subtyping_failure_case() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -983,7 +965,7 @@ fn object_callable_subtyping_failure_case() -> Result<(), Errors> {
 
 #[test]
 fn object_method_subtyping() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let foo: {
@@ -995,14 +977,14 @@ fn object_method_subtyping() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     Ok(())
 }
 
 #[test]
 fn object_property_subtyping() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let foo: {
@@ -1017,14 +999,14 @@ fn object_property_subtyping() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     Ok(())
 }
 
 #[test]
 fn object_mapped_subtyping() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let foo: {
@@ -1036,14 +1018,14 @@ fn object_mapped_subtyping() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     Ok(())
 }
 
 #[test]
 fn object_methods_and_properties_should_unify() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let foo: {
@@ -1055,14 +1037,14 @@ fn object_methods_and_properties_should_unify() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     Ok(())
 }
 
 #[test]
 fn object_mappeds_should_unify_with_all_named_obj_elems() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let foo: {
@@ -1078,14 +1060,14 @@ fn object_mappeds_should_unify_with_all_named_obj_elems() -> Result<(), Errors> 
 
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     Ok(())
 }
 
 #[test]
 fn object_mappeds_and_properties_unify_failure() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let foo: {
@@ -1098,7 +1080,7 @@ fn object_mappeds_and_properties_unify_failure() -> Result<(), Errors> {
 
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -1112,7 +1094,7 @@ fn object_mappeds_and_properties_unify_failure() -> Result<(), Errors> {
 
 #[test]
 fn object_properties_and_getter_should_unify() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let foo: {
@@ -1124,7 +1106,7 @@ fn object_properties_and_getter_should_unify() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     Ok(())
 }
@@ -1133,7 +1115,7 @@ fn object_properties_and_getter_should_unify() -> Result<(), Errors> {
 #[test]
 #[ignore]
 fn mutable_object_properties_unify_with_getters_setters() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let mut foo: {
@@ -1146,14 +1128,14 @@ fn mutable_object_properties_unify_with_getters_setters() -> Result<(), Errors> 
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     Ok(())
 }
 
 #[test]
 fn object_subtyping_missing_prop() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let foo: fn (x: {a: number, b: string}) -> boolean
@@ -1161,7 +1143,7 @@ fn object_subtyping_missing_prop() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -1175,7 +1157,7 @@ fn object_subtyping_missing_prop() -> Result<(), Errors> {
 
 #[test]
 fn test_subtype_error() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let times = fn (x, y) => x * y
@@ -1183,7 +1165,7 @@ fn test_subtype_error() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -1197,14 +1179,14 @@ fn test_subtype_error() -> Result<(), Errors> {
 
 #[test]
 fn test_union_subtype_error() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
-    let lit1 = new_num_lit_type(&mut arena, "5");
-    let lit2 = new_str_lit_type(&mut arena, "hello");
+    let lit1 = new_num_lit_type(&mut checker.arena, "5");
+    let lit2 = new_str_lit_type(&mut checker.arena, "hello");
     my_ctx.values.insert(
         "foo".to_string(),
         Binding {
-            index: new_union_type(&mut arena, &[lit1, lit2]),
+            index: checker.new_union_type(&[lit1, lit2]),
             is_mut: false,
         },
     );
@@ -1215,7 +1197,7 @@ fn test_union_subtype_error() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -1229,14 +1211,14 @@ fn test_union_subtype_error() -> Result<(), Errors> {
 
 #[test]
 fn test_union_subtype_error_with_type_ann() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let x: number | string = true
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -1250,7 +1232,7 @@ fn test_union_subtype_error_with_type_ann() -> Result<(), Errors> {
 
 #[test]
 fn test_program() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let num = 5
@@ -1259,13 +1241,13 @@ fn test_program() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("num").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"5"#);
+    assert_eq!(checker.print_type(&binding.index), r#"5"#);
 
     let binding = my_ctx.values.get("str").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#""hello""#);
+    assert_eq!(checker.print_type(&binding.index), r#""hello""#);
 
     // TODO: implement std::fmt for Program et al
     // eprintln!("program = {program}");
@@ -1281,7 +1263,7 @@ fn test_program() -> Result<(), Errors> {
 
 #[test]
 fn test_program_with_generic_func() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let id = fn (x) => x
@@ -1290,23 +1272,23 @@ fn test_program_with_generic_func() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("id").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"<A>(x: A) -> A"#);
+    assert_eq!(checker.print_type(&binding.index), r#"<A>(x: A) -> A"#);
 
     let binding = my_ctx.values.get("a").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"5"#);
+    assert_eq!(checker.print_type(&binding.index), r#"5"#);
 
     let binding = my_ctx.values.get("b").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#""hello""#);
+    assert_eq!(checker.print_type(&binding.index), r#""hello""#);
 
     Ok(())
 }
 
 #[test]
 fn test_program_with_generic_func_multiple_type_params() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let fst = fn (x, y) => x
@@ -1314,17 +1296,17 @@ fn test_program_with_generic_func_multiple_type_params() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("fst").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"<A, B>(x: A, y: B) -> A"#
     );
 
     let binding = my_ctx.values.get("snd").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"<A, B>(x: A, y: B) -> B"#
     );
 
@@ -1333,7 +1315,7 @@ fn test_program_with_generic_func_multiple_type_params() -> Result<(), Errors> {
 
 #[test]
 fn test_function_with_multiple_statements() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let result = fn () {
@@ -1344,10 +1326,10 @@ fn test_function_with_multiple_statements() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("result").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"() -> 50"#);
+    assert_eq!(checker.print_type(&binding.index), r#"() -> 50"#);
 
     if let StmtKind::Let {
         expr: Some(init), ..
@@ -1384,12 +1366,12 @@ fn test_function_with_multiple_statements() -> Result<(), Errors> {
 
 #[test]
 fn test_inferred_type_on_ast_nodes() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"let result = fn (x, y) => x * y"#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     if let StmtKind::Let {
         expr: Some(init), ..
@@ -1399,8 +1381,8 @@ fn test_inferred_type_on_ast_nodes() -> Result<(), Errors> {
             let x_t = params[0].pattern.inferred_type.unwrap();
             let y_t = params[1].pattern.inferred_type.unwrap();
 
-            assert_eq!(arena[x_t].as_string(&arena), "number");
-            assert_eq!(arena[y_t].as_string(&arena), "number");
+            assert_eq!(checker.print_type(&x_t), "number");
+            assert_eq!(checker.print_type(&y_t), "number");
         } else {
             panic!("expected a lambda");
         }
@@ -1413,16 +1395,16 @@ fn test_inferred_type_on_ast_nodes() -> Result<(), Errors> {
 
 #[test]
 fn test_unary_op() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"let neg = fn (x) => -x"#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("neg").unwrap();
 
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"(x: number) -> number"#
     );
     Ok(())
@@ -1430,18 +1412,18 @@ fn test_unary_op() -> Result<(), Errors> {
 
 #[test]
 fn test_async_return_type() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let foo = async fn () => 5
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("foo").unwrap();
 
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"() -> Promise<5, never>"#
     );
     Ok(())
@@ -1449,18 +1431,18 @@ fn test_async_return_type() -> Result<(), Errors> {
 
 #[test]
 fn throws_in_async() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let foo = async fn (cond) => if (cond) { throw "error" } else { 5 }
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("foo").unwrap();
 
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"(cond: boolean) -> Promise<5, "error">"#
     );
     Ok(())
@@ -1468,7 +1450,7 @@ fn throws_in_async() -> Result<(), Errors> {
 
 #[test]
 fn await_async_func_with_throw() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let foo = async fn (cond) => if (cond) { throw "error" } else { 5 }
@@ -1476,17 +1458,17 @@ fn await_async_func_with_throw() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"(cond: boolean) -> Promise<5, "error">"#
     );
 
     let binding = my_ctx.values.get("bar").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"() -> Promise<5, "error">"#
     );
 
@@ -1495,7 +1477,7 @@ fn await_async_func_with_throw() -> Result<(), Errors> {
 
 #[test]
 fn catch_await_async_func_that_throws() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let foo = async fn (cond) => if (cond) { throw "error" } else { 5 }
@@ -1509,17 +1491,17 @@ fn catch_await_async_func_that_throws() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"(cond: boolean) -> Promise<5, "error">"#
     );
 
     let binding = my_ctx.values.get("bar").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"() -> Promise<5 | 10, never>"#
     );
 
@@ -1528,7 +1510,7 @@ fn catch_await_async_func_that_throws() -> Result<(), Errors> {
 
 #[test]
 fn test_async_without_return() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let foo = async fn () {
@@ -1537,11 +1519,11 @@ fn test_async_without_return() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("foo").unwrap();
 
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"() -> Promise<undefined, never>"#
     );
     Ok(())
@@ -1549,7 +1531,7 @@ fn test_async_without_return() -> Result<(), Errors> {
 
 #[test]
 fn test_await_in_async() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let foo = async fn () => 5
@@ -1561,17 +1543,17 @@ fn test_await_in_async() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("bar").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"() -> Promise<5, never>"#
     );
 
     let binding = my_ctx.values.get("baz").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"() -> Promise<5, never>"#
     );
 
@@ -1580,7 +1562,7 @@ fn test_await_in_async() -> Result<(), Errors> {
 
 #[test]
 fn test_await_outside_of_async() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let foo = async fn () => 5
@@ -1591,7 +1573,7 @@ fn test_await_outside_of_async() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
     assert_eq!(
         result,
         Err(Errors::InferenceError(
@@ -1604,14 +1586,14 @@ fn test_await_outside_of_async() -> Result<(), Errors> {
 
 #[test]
 fn test_await_non_promise() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let foo = async fn () => await 5
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
     assert_eq!(
         result,
         Err(Errors::InferenceError(
@@ -1627,7 +1609,7 @@ fn test_await_non_promise() -> Result<(), Errors> {
 
 #[test]
 fn test_do_expr() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let sum = do {
@@ -1646,31 +1628,31 @@ fn test_do_expr() -> Result<(), Errors> {
     // TODO: If there's a newline before a postfix operator, we should
     // ignore the postfix operator.
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("sum").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"["hello", 15]"#);
+    assert_eq!(checker.print_type(&binding.index), r#"["hello", 15]"#);
 
     Ok(())
 }
 
 #[test]
 fn test_empty_do_expr() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"let sum = do {}"#;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("sum").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"undefined"#);
+    assert_eq!(checker.print_type(&binding.index), r#"undefined"#);
 
     Ok(())
 }
 
 #[test]
 fn test_let_with_type_ann() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let x: number = 5
@@ -1688,17 +1670,17 @@ fn test_let_with_type_ann() -> Result<(), Errors> {
     // This should be valid, but we don't support it yet
     // let baz: (number) => number = <A>(a: A) => a;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("x").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"number"#);
+    assert_eq!(checker.print_type(&binding.index), r#"number"#);
 
     Ok(())
 }
 
 #[test]
 fn test_function_overloads() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let add: (fn (a: number, b: number) -> number) & (fn (a: string, b: string) -> string)
@@ -1706,27 +1688,27 @@ fn test_function_overloads() -> Result<(), Errors> {
     let msg = add("hello, ", "world")
     "#;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("sum").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"number"#);
+    assert_eq!(checker.print_type(&binding.index), r#"number"#);
 
     let binding = my_ctx.values.get("msg").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"string"#);
+    assert_eq!(checker.print_type(&binding.index), r#"string"#);
 
     Ok(())
 }
 
 #[test]
 fn test_function_no_valid_overload() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let add: (fn (a: number, b: number) -> number) & (fn (a: string, b: string) -> string)
     add(5, "world")
     "#;
     let mut program = parse(src).unwrap();
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -1740,13 +1722,13 @@ fn test_function_no_valid_overload() -> Result<(), Errors> {
 
 #[test]
 fn test_declare_cant_have_initializer() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let add: fn (a: number, b: number) -> number = fn (a, b) => a + b
     "#;
     let mut program = parse(src).unwrap();
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -1760,13 +1742,13 @@ fn test_declare_cant_have_initializer() -> Result<(), Errors> {
 
 #[test]
 fn test_declare_must_have_type_annotations() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let add
     "#;
     let mut program = parse(src).unwrap();
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -1780,13 +1762,13 @@ fn test_declare_must_have_type_annotations() -> Result<(), Errors> {
 
 #[test]
 fn test_normal_decl_must_have_initializer() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let add: fn (a: number, b: number) -> number
     "#;
     let mut program = parse(src).unwrap();
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -1800,7 +1782,7 @@ fn test_normal_decl_must_have_initializer() -> Result<(), Errors> {
 
 #[test]
 fn test_pattern_matching_is_patterns() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     // TODO: allow trailing `,` when doing pattern matching
     let src = r#"
@@ -1811,17 +1793,17 @@ fn test_pattern_matching_is_patterns() -> Result<(), Errors> {
     }
     "#;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("name").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"number | "bar""#);
+    assert_eq!(checker.print_type(&binding.index), r#"number | "bar""#);
 
     Ok(())
 }
 
 #[test]
 fn test_pattern_matching_does_not_refine_expr() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     // TODO: allow trailing `,` when doing pattern matching
     let src = r#"
@@ -1832,7 +1814,7 @@ fn test_pattern_matching_does_not_refine_expr() -> Result<(), Errors> {
     }
     "#;
     let mut program = parse(src).unwrap();
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -1846,7 +1828,7 @@ fn test_pattern_matching_does_not_refine_expr() -> Result<(), Errors> {
 
 #[test]
 fn test_pattern_not_a_subtype_of_expr() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     // TODO: allow trailing `,` when doing pattern matching
     let src = r#"
@@ -1858,7 +1840,7 @@ fn test_pattern_not_a_subtype_of_expr() -> Result<(), Errors> {
     }
     "#;
     let mut program = parse(src).unwrap();
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -1872,7 +1854,7 @@ fn test_pattern_not_a_subtype_of_expr() -> Result<(), Errors> {
 
 #[test]
 fn test_pattern_matching_array() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     // TODO: allow trailing `,` when doing pattern matching
     let src = r#"
@@ -1885,11 +1867,11 @@ fn test_pattern_matching_array() -> Result<(), Errors> {
     }
     "#;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         // TODO: update unions to merge elements whenever possible
         r#"0 | number | number | Array<number>"#
     );
@@ -1899,7 +1881,7 @@ fn test_pattern_matching_array() -> Result<(), Errors> {
 
 #[test]
 fn test_pattern_matching_object() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     // TODO: allow trailing `,` when doing pattern matching
     // TODO: add support for omitting fields in object patterns
@@ -1911,17 +1893,17 @@ fn test_pattern_matching_object() -> Result<(), Errors> {
     }
     "#;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("key").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"string | string"#);
+    assert_eq!(checker.print_type(&binding.index), r#"string | string"#);
 
     Ok(())
 }
 
 #[test]
 fn member_access_on_union() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     // TODO: allow trailing `,` when doing pattern matching
     // TODO: add support for omitting fields in object patterns
@@ -1930,20 +1912,17 @@ fn member_access_on_union() -> Result<(), Errors> {
     let b = obj.b
     "#;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("b").unwrap();
-    assert_eq!(
-        arena[binding.index].as_string(&arena),
-        r#"string | boolean"#
-    );
+    assert_eq!(checker.print_type(&binding.index), r#"string | boolean"#);
 
     Ok(())
 }
 
 #[test]
 fn member_access_optional_property() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let obj: {a?: number, b: string}
@@ -1951,22 +1930,19 @@ fn member_access_optional_property() -> Result<(), Errors> {
     let b = obj.b
     "#;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("a").unwrap();
-    assert_eq!(
-        arena[binding.index].as_string(&arena),
-        r#"number | undefined"#
-    );
+    assert_eq!(checker.print_type(&binding.index), r#"number | undefined"#);
     let binding = my_ctx.values.get("b").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"string"#);
+    assert_eq!(checker.print_type(&binding.index), r#"string"#);
 
     Ok(())
 }
 
 #[test]
 fn member_access_on_unknown_type() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let obj: unknown
@@ -1974,7 +1950,7 @@ fn member_access_on_unknown_type() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -1988,14 +1964,14 @@ fn member_access_on_unknown_type() -> Result<(), Errors> {
 
 #[test]
 fn member_access_on_type_variable() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let get_a = fn (x) => x.a
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -2009,7 +1985,7 @@ fn member_access_on_type_variable() -> Result<(), Errors> {
 
 #[test]
 fn test_object_destructuring_assignment() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     // TODO: add support for omitting fields in object patterns
     let src = r#"
@@ -2017,42 +1993,36 @@ fn test_object_destructuring_assignment() -> Result<(), Errors> {
     let {a, b, c} = obj
     "#;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("a").unwrap();
-    assert_eq!(
-        arena[binding.index].as_string(&arena),
-        r#"number | undefined"#
-    );
+    assert_eq!(checker.print_type(&binding.index), r#"number | undefined"#);
 
     let binding = my_ctx.values.get("b").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"string"#);
+    assert_eq!(checker.print_type(&binding.index), r#"string"#);
 
     let binding = my_ctx.values.get("c").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"boolean"#);
+    assert_eq!(checker.print_type(&binding.index), r#"boolean"#);
 
     Ok(())
 }
 
 #[test]
 fn test_object_destructuring_assignment_with_rest() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let obj: {a?: number, b: string, c: boolean}
     let {a, ...rest} = obj
     "#;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("a").unwrap();
-    assert_eq!(
-        arena[binding.index].as_string(&arena),
-        r#"number | undefined"#
-    );
+    assert_eq!(checker.print_type(&binding.index), r#"number | undefined"#);
     let binding = my_ctx.values.get("rest").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"{b: string, c: boolean}"#
     );
 
@@ -2061,17 +2031,17 @@ fn test_object_destructuring_assignment_with_rest() -> Result<(), Errors> {
 
 #[test]
 fn test_object_nested_destructuring_assignment() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let obj: {a: {b: {c: string}}}
     let {a: {b: {c}}} = obj
     "#;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("c").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"string"#);
+    assert_eq!(checker.print_type(&binding.index), r#"string"#);
 
     assert_eq!(my_ctx.values.get("a"), None);
     assert_eq!(my_ctx.values.get("b"), None);
@@ -2081,88 +2051,82 @@ fn test_object_nested_destructuring_assignment() -> Result<(), Errors> {
 
 #[test]
 fn test_tuple_destrcuturing_assignment() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let tuple: [number, string, boolean]
     let [a, b, c] = tuple
     "#;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("a").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"number"#);
+    assert_eq!(checker.print_type(&binding.index), r#"number"#);
 
     let binding = my_ctx.values.get("b").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"string"#);
+    assert_eq!(checker.print_type(&binding.index), r#"string"#);
 
     Ok(())
 }
 
 #[test]
 fn test_tuple_destructuring_assignment_with_rest() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let tuple: [number, string, boolean]
     let [a, ...tuple_rest] = tuple
     "#;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("a").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"number"#);
+    assert_eq!(checker.print_type(&binding.index), r#"number"#);
     let binding = my_ctx.values.get("tuple_rest").unwrap();
-    assert_eq!(
-        arena[binding.index].as_string(&arena),
-        r#"[string, boolean]"#
-    );
+    assert_eq!(checker.print_type(&binding.index), r#"[string, boolean]"#);
 
     Ok(())
 }
 
 #[test]
 fn test_array_destructuring_assignment_with_rest() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let array: Array<string>
     let [a, ...array_rest] = array
     "#;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("a").unwrap();
-    assert_eq!(
-        arena[binding.index].as_string(&arena),
-        r#"string | undefined"#
-    );
+    assert_eq!(checker.print_type(&binding.index), r#"string | undefined"#);
     let binding = my_ctx.values.get("array_rest").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"Array<string>"#);
+    assert_eq!(checker.print_type(&binding.index), r#"Array<string>"#);
 
     Ok(())
 }
 
 #[test]
 fn test_tuple_nested_destrcuturing_assignment() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let tuple: [number, [string, [boolean]]]
     let [_, [_, [c]]] = tuple
     "#;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("c").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"boolean"#);
+    assert_eq!(checker.print_type(&binding.index), r#"boolean"#);
 
     Ok(())
 }
 
 #[test]
 fn test_explicit_type_params() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let identity = fn (x) => x
@@ -2170,26 +2134,26 @@ fn test_explicit_type_params() -> Result<(), Errors> {
     let y = identity<string>("hello")
     "#;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("x").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"number"#);
+    assert_eq!(checker.print_type(&binding.index), r#"number"#);
     let binding = my_ctx.values.get("y").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"string"#);
+    assert_eq!(checker.print_type(&binding.index), r#"string"#);
 
     Ok(())
 }
 
 #[test]
 fn test_explicit_type_params_type_error() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let identity = fn (x) => x
     identity<number>("hello")
     "#;
     let mut program = parse(src).unwrap();
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -2203,14 +2167,14 @@ fn test_explicit_type_params_type_error() -> Result<(), Errors> {
 
 #[test]
 fn test_explicit_type_params_too_many_type_args() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let identity = fn (x) => x
     identity<number, string>(5)
     "#;
     let mut program = parse(src).unwrap();
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -2224,7 +2188,7 @@ fn test_explicit_type_params_too_many_type_args() -> Result<(), Errors> {
 
 #[test]
 fn test_type_param_with_constraint() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let identity = fn <T: number | string>(x: T) -> T => x
@@ -2232,40 +2196,40 @@ fn test_type_param_with_constraint() -> Result<(), Errors> {
     let y = identity("hello")
     "#;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("identity").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"<T:number | string>(x: T) -> T"#
     );
     let binding = my_ctx.values.get("x").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"5"#);
+    assert_eq!(checker.print_type(&binding.index), r#"5"#);
     let binding = my_ctx.values.get("y").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#""hello""#);
+    assert_eq!(checker.print_type(&binding.index), r#""hello""#);
 
     Ok(())
 }
 
 #[test]
 fn test_mix_explicit_implicit_type_params() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let fst = fn <B>(a, b: B) => a
     let snd = fn <B>(a, b: B) -> B => b
     "#;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("fst").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"<B, A>(a: A, b: B) -> A"#
     );
     let binding = my_ctx.values.get("snd").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"<B, A>(a: A, b: B) -> B"#
     );
 
@@ -2274,13 +2238,13 @@ fn test_mix_explicit_implicit_type_params() -> Result<(), Errors> {
 
 #[test]
 fn test_duplicate_type_param_names_error() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let fst = fn <T, T>(a: T, b: T) -> T => a
     "#;
     let mut program = parse(src).unwrap();
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -2294,14 +2258,14 @@ fn test_duplicate_type_param_names_error() -> Result<(), Errors> {
 
 #[test]
 fn test_type_param_with_violated_constraint() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let identity = fn <T: number | string>(x: T) -> T => x
     identity(true)
     "#;
     let mut program = parse(src).unwrap();
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -2315,36 +2279,36 @@ fn test_type_param_with_violated_constraint() -> Result<(), Errors> {
 
 #[test]
 fn test_type_ann_func_with_type_constraint() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let identity: fn <T: number | string>(x: T) -> T = fn (x) => x
     let x = identity<number>(5)
     "#;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("identity").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"<T:number | string>(x: T) -> T"#
     );
     let binding = my_ctx.values.get("x").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"number"#);
+    assert_eq!(checker.print_type(&binding.index), r#"number"#);
 
     Ok(())
 }
 
 #[test]
 fn test_type_ann_func_with_type_constraint_error() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let id1 = fn <T: number | string>(x: T) -> T => x
     let id2: fn <T: boolean>(x: T) -> T = id1
     "#;
     let mut program = parse(src).unwrap();
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -2358,7 +2322,7 @@ fn test_type_ann_func_with_type_constraint_error() -> Result<(), Errors> {
 
 #[test]
 fn test_callback_with_type_param_subtyping() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let foo: fn (callback: fn <T: number>(x: T) -> T) -> boolean
@@ -2366,17 +2330,17 @@ fn test_callback_with_type_param_subtyping() -> Result<(), Errors> {
     let result = foo(identity)
     "#;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("result").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"boolean"#);
+    assert_eq!(checker.print_type(&binding.index), r#"boolean"#);
 
     Ok(())
 }
 
 #[test]
 fn test_callback_with_type_param_subtyping_error() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let foo: fn (callback: fn <T: number | string>(x: T) -> T) -> boolean
@@ -2384,7 +2348,7 @@ fn test_callback_with_type_param_subtyping_error() -> Result<(), Errors> {
     let result = foo(identity)
     "#;
     let mut program = parse(src).unwrap();
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -2398,32 +2362,32 @@ fn test_callback_with_type_param_subtyping_error() -> Result<(), Errors> {
 
 #[test]
 fn test_return_type_checking() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let foo = fn () -> string => "hello"
     let result = foo()
     "#;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("foo").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"() -> string"#);
+    assert_eq!(checker.print_type(&binding.index), r#"() -> string"#);
     let binding = my_ctx.values.get("result").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"string"#);
+    assert_eq!(checker.print_type(&binding.index), r#"string"#);
 
     Ok(())
 }
 
 #[test]
 fn test_return_value_is_not_subtype_of_return_type() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let foo = fn () -> number => "hello"
     "#;
     let mut program = parse(src).unwrap();
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -2437,7 +2401,7 @@ fn test_return_value_is_not_subtype_of_return_type() -> Result<(), Errors> {
 
 #[test]
 fn test_multiple_returns() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let foo = fn (x) {
@@ -2448,11 +2412,11 @@ fn test_multiple_returns() -> Result<(), Errors> {
     }
     "#;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"(x: number) -> true | "hello""#
     );
 
@@ -2461,7 +2425,7 @@ fn test_multiple_returns() -> Result<(), Errors> {
 
 #[test]
 fn test_no_returns() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let foo = fn (x) {
@@ -2469,11 +2433,11 @@ fn test_no_returns() -> Result<(), Errors> {
     }
     "#;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"(x: number) -> undefined"#
     );
 
@@ -2482,7 +2446,7 @@ fn test_no_returns() -> Result<(), Errors> {
 
 #[test]
 fn test_multiple_returns_with_nested_functions() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let foo = fn (x) {
@@ -2495,11 +2459,11 @@ fn test_multiple_returns_with_nested_functions() -> Result<(), Errors> {
     }
     "#;
     let mut program = parse(src).unwrap();
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"(x: number) -> () -> true | "hello""#
     );
 
@@ -2508,7 +2472,7 @@ fn test_multiple_returns_with_nested_functions() -> Result<(), Errors> {
 
 #[test]
 fn type_alias() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Point = {x: number, y: number}
@@ -2516,10 +2480,10 @@ fn type_alias() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("p").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"{x: number, y: number}"#
     );
 
@@ -2528,7 +2492,7 @@ fn type_alias() -> Result<(), Errors> {
 
 #[test]
 fn type_alias_with_params_with_destructuring() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Node<T> = {value: T}
@@ -2537,19 +2501,19 @@ fn type_alias_with_params_with_destructuring() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("node").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"{value: string}"#);
+    assert_eq!(checker.print_type(&binding.index), r#"{value: string}"#);
     let binding = my_ctx.values.get("value").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"string"#);
+    assert_eq!(checker.print_type(&binding.index), r#"string"#);
 
     Ok(())
 }
 
 #[test]
 fn type_alias_with_params_with_member_access() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Node<T> = {value: T}
@@ -2558,19 +2522,19 @@ fn type_alias_with_params_with_member_access() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("node").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"{value: string}"#);
+    assert_eq!(checker.print_type(&binding.index), r#"{value: string}"#);
     let binding = my_ctx.values.get("value").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"string"#);
+    assert_eq!(checker.print_type(&binding.index), r#"string"#);
 
     Ok(())
 }
 
 #[test]
 fn type_alias_with_params_with_computed_member_access() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Node<T> = {value: T}
@@ -2580,19 +2544,19 @@ fn type_alias_with_params_with_computed_member_access() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("node").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"{value: string}"#);
+    assert_eq!(checker.print_type(&binding.index), r#"{value: string}"#);
     let binding = my_ctx.values.get("value").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"string"#);
+    assert_eq!(checker.print_type(&binding.index), r#"string"#);
 
     Ok(())
 }
 
 #[test]
 fn instantiate_type_alias_with_too_many_type_args() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Node<T> = {value: T}
@@ -2600,7 +2564,7 @@ fn instantiate_type_alias_with_too_many_type_args() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -2614,7 +2578,7 @@ fn instantiate_type_alias_with_too_many_type_args() -> Result<(), Errors> {
 
 #[test]
 fn instantiate_type_alias_with_args_when_it_has_no_type_params() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Point = {x: number, y: number}
@@ -2622,7 +2586,7 @@ fn instantiate_type_alias_with_args_when_it_has_no_type_params() -> Result<(), E
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -2636,7 +2600,7 @@ fn instantiate_type_alias_with_args_when_it_has_no_type_params() -> Result<(), E
 
 #[test]
 fn property_accesses_on_unions() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let tuple_union: [number, number] | [string]
@@ -2648,21 +2612,21 @@ fn property_accesses_on_unions() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("elem").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"number | string"#);
+    assert_eq!(checker.print_type(&binding.index), r#"number | string"#);
     let binding = my_ctx.values.get("x1").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"number | string"#);
+    assert_eq!(checker.print_type(&binding.index), r#"number | string"#);
     let binding = my_ctx.values.get("x2").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"number | string"#);
+    assert_eq!(checker.print_type(&binding.index), r#"number | string"#);
 
     Ok(())
 }
 
 #[test]
 fn maybe_property_accesses_on_unions() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let tuple_union: [number, number] | [string]
@@ -2672,25 +2636,19 @@ fn maybe_property_accesses_on_unions() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("maybe_elem").unwrap();
-    assert_eq!(
-        arena[binding.index].as_string(&arena),
-        r#"number | undefined"#
-    );
+    assert_eq!(checker.print_type(&binding.index), r#"number | undefined"#);
     let binding = my_ctx.values.get("maybe_y").unwrap();
-    assert_eq!(
-        arena[binding.index].as_string(&arena),
-        r#"number | undefined"#
-    );
+    assert_eq!(checker.print_type(&binding.index), r#"number | undefined"#);
 
     Ok(())
 }
 
 #[test]
 fn optional_chaining() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Point = {x: number, y: string}
@@ -2701,26 +2659,20 @@ fn optional_chaining() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("x").unwrap();
-    assert_eq!(
-        arena[binding.index].as_string(&arena),
-        r#"number | undefined"#
-    );
+    assert_eq!(checker.print_type(&binding.index), r#"number | undefined"#);
 
     let binding = my_ctx.values.get("y").unwrap();
-    assert_eq!(
-        arena[binding.index].as_string(&arena),
-        r#"string | undefined"#
-    );
+    assert_eq!(checker.print_type(&binding.index), r#"string | undefined"#);
 
     Ok(())
 }
 
 #[test]
 fn optional_chaining_with_alias() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type OptPoint = {x: number, y: string} | undefined
@@ -2730,26 +2682,20 @@ fn optional_chaining_with_alias() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("x").unwrap();
-    assert_eq!(
-        arena[binding.index].as_string(&arena),
-        r#"number | undefined"#
-    );
+    assert_eq!(checker.print_type(&binding.index), r#"number | undefined"#);
 
     let binding = my_ctx.values.get("y").unwrap();
-    assert_eq!(
-        arena[binding.index].as_string(&arena),
-        r#"string | undefined"#
-    );
+    assert_eq!(checker.print_type(&binding.index), r#"string | undefined"#);
 
     Ok(())
 }
 
 #[test]
 fn optional_chaining_unnecessary_chaining() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Obj = {msg: string}
@@ -2758,17 +2704,17 @@ fn optional_chaining_unnecessary_chaining() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("msg").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"string"#);
+    assert_eq!(checker.print_type(&binding.index), r#"string"#);
 
     Ok(())
 }
 
 #[test]
 fn optional_chaining_multiple_levels() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Obj = {a?: {b?: {c?: number}}}
@@ -2777,20 +2723,17 @@ fn optional_chaining_multiple_levels() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("c").unwrap();
-    assert_eq!(
-        arena[binding.index].as_string(&arena),
-        r#"number | undefined"#
-    );
+    assert_eq!(checker.print_type(&binding.index), r#"number | undefined"#);
 
     Ok(())
 }
 
 #[test]
 fn calling_variable_whose_type_is_aliased_function_type() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Fn = fn () -> number
@@ -2799,17 +2742,17 @@ fn calling_variable_whose_type_is_aliased_function_type() -> Result<(), Errors> 
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("result").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"number"#);
+    assert_eq!(checker.print_type(&binding.index), r#"number"#);
 
     Ok(())
 }
 
 #[test]
 fn optional_chaining_call() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Fn = fn () -> number
@@ -2818,13 +2761,10 @@ fn optional_chaining_call() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("result").unwrap();
-    assert_eq!(
-        arena[binding.index].as_string(&arena),
-        r#"number | undefined"#
-    );
+    assert_eq!(checker.print_type(&binding.index), r#"number | undefined"#);
 
     Ok(())
 }
@@ -2832,7 +2772,7 @@ fn optional_chaining_call() -> Result<(), Errors> {
 #[test]
 #[ignore]
 fn destructuring_unions() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let tuple_union: [number, number] | [string]
@@ -2842,7 +2782,7 @@ fn destructuring_unions() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     // TODO: write assertions for this test once the desired
     // behavior has been implemented.
@@ -2852,7 +2792,7 @@ fn destructuring_unions() -> Result<(), Errors> {
 
 #[test]
 fn missing_property_accesses_on_union_of_tuples() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let tuple_union: [number, number] | [string]
@@ -2860,7 +2800,7 @@ fn missing_property_accesses_on_union_of_tuples() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -2874,7 +2814,7 @@ fn missing_property_accesses_on_union_of_tuples() -> Result<(), Errors> {
 
 #[test]
 fn missing_property_accesses_on_union_of_objects() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let object_union: {x: number, y: number} | {x: string}
@@ -2882,7 +2822,7 @@ fn missing_property_accesses_on_union_of_objects() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -2896,7 +2836,7 @@ fn missing_property_accesses_on_union_of_objects() -> Result<(), Errors> {
 
 #[test]
 fn methods_on_arrays() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let num_array: Array<number> = []
@@ -2908,16 +2848,16 @@ fn methods_on_arrays() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("len").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"number"#);
+    assert_eq!(checker.print_type(&binding.index), r#"number"#);
 
     Ok(())
 }
 
 #[test]
 fn properties_on_tuple() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let tuple: [number, string] = [5, "hello"]
@@ -2925,10 +2865,10 @@ fn properties_on_tuple() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("len").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"number"#);
+    assert_eq!(checker.print_type(&binding.index), r#"number"#);
 
     Ok(())
 }
@@ -2936,7 +2876,7 @@ fn properties_on_tuple() -> Result<(), Errors> {
 #[test]
 #[ignore]
 fn set_array_element() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let array: Array<number>
@@ -2945,7 +2885,7 @@ fn set_array_element() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     Ok(())
 }
@@ -2953,7 +2893,7 @@ fn set_array_element() -> Result<(), Errors> {
 #[test]
 #[ignore]
 fn set_tuple_element() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let tuple: [number, number]
@@ -2962,17 +2902,17 @@ fn set_tuple_element() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("len").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"number"#);
+    assert_eq!(checker.print_type(&binding.index), r#"number"#);
 
     Ok(())
 }
 
 #[test]
 fn methods_on_arrays_incorrect_type() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let num_array: Array<number> = []
@@ -2980,7 +2920,7 @@ fn methods_on_arrays_incorrect_type() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -2994,7 +2934,7 @@ fn methods_on_arrays_incorrect_type() -> Result<(), Errors> {
 
 #[test]
 fn test_unknown() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let a: unknown = 5
@@ -3003,21 +2943,21 @@ fn test_unknown() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("a").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"unknown"#);
+    assert_eq!(checker.print_type(&binding.index), r#"unknown"#);
     let binding = my_ctx.values.get("b").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"unknown"#);
+    assert_eq!(checker.print_type(&binding.index), r#"unknown"#);
     let binding = my_ctx.values.get("c").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"unknown"#);
+    assert_eq!(checker.print_type(&binding.index), r#"unknown"#);
 
     Ok(())
 }
 
 #[test]
 fn test_unknown_assignment_error() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let a: unknown = 5
@@ -3025,7 +2965,7 @@ fn test_unknown_assignment_error() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -3039,7 +2979,7 @@ fn test_unknown_assignment_error() -> Result<(), Errors> {
 
 #[test]
 fn test_type_param_explicit_unknown_constraint() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let add = fn <T: unknown>(a: T, b: T) -> T {
@@ -3048,7 +2988,7 @@ fn test_type_param_explicit_unknown_constraint() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -3062,7 +3002,7 @@ fn test_type_param_explicit_unknown_constraint() -> Result<(), Errors> {
 
 #[test]
 fn test_type_param_implicit_unknown_constraint() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let add = fn <T>(a: T, b: T) -> T {
@@ -3071,7 +3011,7 @@ fn test_type_param_implicit_unknown_constraint() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -3085,7 +3025,7 @@ fn test_type_param_implicit_unknown_constraint() -> Result<(), Errors> {
 
 #[test]
 fn test_optional_function_params() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let foo = fn (a: number, b?: number) -> number {
@@ -3094,11 +3034,11 @@ fn test_optional_function_params() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"(a: number, b?: number) -> number"#
     );
 
@@ -3107,7 +3047,7 @@ fn test_optional_function_params() -> Result<(), Errors> {
 
 #[test]
 fn test_func_param_patterns() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let foo = fn ({ a: x, b }: { a: number, b: string }) {
@@ -3119,16 +3059,16 @@ fn test_func_param_patterns() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"({a, b}: {a: number, b: string}) -> number"#
     );
     let binding = my_ctx.values.get("bar").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"([a, b]: [number, string]) -> string"#
     );
 
@@ -3137,7 +3077,7 @@ fn test_func_param_patterns() -> Result<(), Errors> {
 
 #[test]
 fn test_func_param_object_rest_patterns() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let foo = fn ({ a, ...rest }: { a: number, b: string }) {
@@ -3146,11 +3086,11 @@ fn test_func_param_object_rest_patterns() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"({a, ...rest}: {a: number, b: string}) -> string"#
     );
 
@@ -3159,7 +3099,7 @@ fn test_func_param_object_rest_patterns() -> Result<(), Errors> {
 
 #[test]
 fn test_func_param_object_multiple_rest_patterns() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let foo = fn ({ a, ...rest1, ...rest2 }: { a: number, b: string }) {
@@ -3168,7 +3108,7 @@ fn test_func_param_object_multiple_rest_patterns() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -3182,7 +3122,7 @@ fn test_func_param_object_multiple_rest_patterns() -> Result<(), Errors> {
 
 #[test]
 fn test_func_param_tuple_rest_patterns() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let bar = fn ([a, ...rest]: [number, string, boolean]) {
@@ -3191,11 +3131,11 @@ fn test_func_param_tuple_rest_patterns() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("bar").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"([a, ...rest]: [number, string, boolean]) -> boolean"#
     );
 
@@ -3204,7 +3144,7 @@ fn test_func_param_tuple_rest_patterns() -> Result<(), Errors> {
 
 #[test]
 fn test_index_access_type() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
     type Foo = {a: string, b?: number, [P]: boolean for P in string}
@@ -3214,27 +3154,27 @@ fn test_index_access_type() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("A").unwrap();
-    assert_eq!(arena[scheme.t].as_string(&arena), r#"Foo["a"]"#);
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"string"#);
+    assert_eq!(checker.print_type(&scheme.t), r#"Foo["a"]"#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#"string"#);
 
     let scheme = my_ctx.schemes.get("B").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"number | undefined"#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#"number | undefined"#);
 
     let scheme = my_ctx.schemes.get("C").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"boolean | undefined"#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#"boolean | undefined"#);
 
     Ok(())
 }
 
 #[test]
 fn test_index_access_type_using_string_as_mapped() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
     type Foo = {a: string, b: number, c: boolean}
@@ -3242,12 +3182,12 @@ fn test_index_access_type_using_string_as_mapped() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("T").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
     assert_eq!(
-        arena[t].as_string(&arena),
+        checker.print_type(&t),
         r#"string | number | boolean | undefined"#
     );
 
@@ -3256,7 +3196,7 @@ fn test_index_access_type_using_string_as_mapped() -> Result<(), Errors> {
 
 #[test]
 fn test_index_access_type_using_number_as_mapped() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
     type Foo = {a: string, b: number, [P]: boolean for P in number}
@@ -3264,18 +3204,18 @@ fn test_index_access_type_using_number_as_mapped() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("T").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"boolean | undefined"#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#"boolean | undefined"#);
 
     Ok(())
 }
 
 #[test]
 fn test_index_access_type_missing_property() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
     type Foo = {a: string, b?: number}
@@ -3283,10 +3223,10 @@ fn test_index_access_type_missing_property() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("C").unwrap();
-    let result = expand_type(&mut arena, &my_ctx, scheme.t);
+    let result = checker.expand_type(&my_ctx, scheme.t);
 
     // TODO: check that the index access is valid where it's inferred
     assert_eq!(
@@ -3301,7 +3241,7 @@ fn test_index_access_type_missing_property() -> Result<(), Errors> {
 
 #[test]
 fn test_index_access_type_missing_mapped() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
     type Foo = {[P]: string for P in number}
@@ -3309,10 +3249,10 @@ fn test_index_access_type_missing_mapped() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("C").unwrap();
-    let result = expand_type(&mut arena, &my_ctx, scheme.t);
+    let result = checker.expand_type(&my_ctx, scheme.t);
 
     // TODO: check that the index access is valid where it's inferred
     assert_eq!(
@@ -3327,7 +3267,7 @@ fn test_index_access_type_missing_mapped() -> Result<(), Errors> {
 
 #[test]
 fn test_index_access_type_number_mapped() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
     type Foo = {[P]: string for P in number}
@@ -3336,24 +3276,21 @@ fn test_index_access_type_number_mapped() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("T").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"string | undefined"#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#"string | undefined"#);
 
     let binding = my_ctx.values.get("t").unwrap();
-    assert_eq!(
-        arena[binding.index].as_string(&arena),
-        r#"string | undefined"#
-    );
+    assert_eq!(checker.print_type(&binding.index), r#"string | undefined"#);
 
     Ok(())
 }
 
 #[test]
 fn test_mapped_type_pick() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
     type Pick<T, K> = {[P]: T[P] for P in K}
@@ -3362,18 +3299,18 @@ fn test_mapped_type_pick() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("Result").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"{a: string, b: number}"#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#"{a: string, b: number}"#);
 
     Ok(())
 }
 
 #[test]
 fn test_pick_type() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Pick<T, K> = {[P]: T[P] for P in K}
@@ -3382,18 +3319,18 @@ fn test_pick_type() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("Result").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"{a: string, b: number}"#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#"{a: string, b: number}"#);
 
     Ok(())
 }
 
 #[test]
 fn test_exclude_type() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Exclude<T, U> = if (T : U) { never } else { T }
@@ -3402,18 +3339,18 @@ fn test_exclude_type() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("Result").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#""a" | "b""#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#""a" | "b""#);
 
     Ok(())
 }
 
 #[test]
 fn test_omit_type() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Pick<T, K> = {[P]: T[P] for P in K}
@@ -3424,18 +3361,18 @@ fn test_omit_type() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("Result").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"{a: string, b: number}"#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#"{a: string, b: number}"#);
 
     Ok(())
 }
 
 #[test]
 fn test_index_access_type_on_tuple() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
     type Foo = [number, string, boolean]
@@ -3444,17 +3381,17 @@ fn test_index_access_type_on_tuple() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("t").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"string"#);
+    assert_eq!(checker.print_type(&binding.index), r#"string"#);
 
     Ok(())
 }
 
 #[test]
 fn test_index_access_type_on_tuple_with_number_key() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
     type Foo = [number, string, boolean]
@@ -3463,11 +3400,11 @@ fn test_index_access_type_on_tuple_with_number_key() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("t").unwrap();
     assert_eq!(
-        arena[binding.index].as_string(&arena),
+        checker.print_type(&binding.index),
         r#"number | string | boolean | undefined"#
     );
 
@@ -3476,7 +3413,7 @@ fn test_index_access_type_on_tuple_with_number_key() -> Result<(), Errors> {
 
 #[test]
 fn test_index_access_out_of_bounds_on_tuple() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
     type Foo = [number, string, boolean]
@@ -3485,7 +3422,7 @@ fn test_index_access_out_of_bounds_on_tuple() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -3499,7 +3436,7 @@ fn test_index_access_out_of_bounds_on_tuple() -> Result<(), Errors> {
 
 #[test]
 fn test_index_access_not_usize() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
     type Foo = [number, string, boolean]
@@ -3508,7 +3445,7 @@ fn test_index_access_not_usize() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -3522,7 +3459,7 @@ fn test_index_access_not_usize() -> Result<(), Errors> {
 
 #[test]
 fn test_typeof() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
     let foo = {a: "hello", b: 5, c: true}
@@ -3530,18 +3467,18 @@ fn test_typeof() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("Foo").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"{a: "hello", b: 5, c: true}"#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#"{a: "hello", b: 5, c: true}"#);
 
     Ok(())
 }
 
 #[test]
 fn test_keyof_obj() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
     let a = {x: "hello", y: 5, z: true}
@@ -3555,34 +3492,34 @@ fn test_keyof_obj() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("A").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#""x" | "y" | "z""#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#""x" | "y" | "z""#);
 
     let scheme = my_ctx.schemes.get("B").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#""x""#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#""x""#);
 
     let scheme = my_ctx.schemes.get("C").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"never"#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#"never"#);
 
     let scheme = my_ctx.schemes.get("D").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"string"#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#"string"#);
 
     let scheme = my_ctx.schemes.get("E").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"number | "x""#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#"number | "x""#);
 
     Ok(())
 }
 
 #[test]
 fn test_keyof_array_tuple() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
     type Foo = keyof Array<number>
@@ -3592,30 +3529,30 @@ fn test_keyof_array_tuple() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("Foo").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"number"#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#"number"#);
 
     let scheme = my_ctx.schemes.get("Bar").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"0 | 1 | 2"#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#"0 | 1 | 2"#);
 
     let scheme = my_ctx.schemes.get("Baz").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"0"#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#"0"#);
 
     let scheme = my_ctx.schemes.get("Qux").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"never"#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#"never"#);
 
     Ok(())
 }
 
 #[test]
 fn test_keyof_alias() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Point = {x: number, y: number}
@@ -3623,18 +3560,18 @@ fn test_keyof_alias() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("Foo").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#""x" | "y""#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#""x" | "y""#);
 
     Ok(())
 }
 
 #[test]
 fn test_keyof_literal() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type String = {
@@ -3654,26 +3591,26 @@ fn test_keyof_literal() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("A").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#""length" | "slice""#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#""length" | "slice""#);
 
     let scheme = my_ctx.schemes.get("B").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#""toFixed" | "toString""#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#""toFixed" | "toString""#);
 
     let scheme = my_ctx.schemes.get("C").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#""valueOf""#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#""valueOf""#);
 
     Ok(())
 }
 
 #[test]
 fn test_keyof_primitive() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type String = {
@@ -3693,26 +3630,26 @@ fn test_keyof_primitive() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("A").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#""length" | "slice""#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#""length" | "slice""#);
 
     let scheme = my_ctx.schemes.get("B").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#""toFixed" | "toString""#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#""toFixed" | "toString""#);
 
     let scheme = my_ctx.schemes.get("C").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#""valueOf""#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#""valueOf""#);
 
     Ok(())
 }
 
 #[test]
 fn test_keyof_unknown_undefined_null() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type A = keyof unknown
@@ -3722,30 +3659,30 @@ fn test_keyof_unknown_undefined_null() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("A").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"never"#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#"never"#);
 
     let scheme = my_ctx.schemes.get("B").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"never"#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#"never"#);
 
     let scheme = my_ctx.schemes.get("C").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"never"#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#"never"#);
 
     let scheme = my_ctx.schemes.get("D").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"string | number | symbol"#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#"string | number | symbol"#);
 
     Ok(())
 }
 
 #[test]
 fn test_keyof_intersection() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type A = keyof ({a: number} & {b: string})
@@ -3755,30 +3692,30 @@ fn test_keyof_intersection() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("A").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#""a" | "b""#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#""a" | "b""#);
 
     let scheme = my_ctx.schemes.get("B").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#""a" | "b" | "c""#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#""a" | "b" | "c""#);
 
     let scheme = my_ctx.schemes.get("C").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#""a""#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#""a""#);
 
     let scheme = my_ctx.schemes.get("D").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, scheme.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"string"#);
+    let t = checker.expand_type(&my_ctx, scheme.t)?;
+    assert_eq!(checker.print_type(&t), r#"string"#);
 
     Ok(())
 }
 
 #[test]
 fn test_mutually_recursive_type() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
     let src = r#"
     type A = {
         a: number,
@@ -3793,14 +3730,14 @@ fn test_mutually_recursive_type() -> Result<(), Errors> {
 
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     Ok(())
 }
 
 #[test]
 fn test_mutually_recursive_type_with_index_access_type() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
     let src = r#"
     type Foo = {
         a: number,
@@ -3817,21 +3754,21 @@ fn test_mutually_recursive_type_with_index_access_type() -> Result<(), Errors> {
 
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     Ok(())
 }
 
 #[test]
 fn test_type_alias_with_undefined_def() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
     let src = r#"
     type A = B
     "#;
 
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -3843,7 +3780,7 @@ fn test_type_alias_with_undefined_def() -> Result<(), Errors> {
 
 #[test]
 fn test_mutable_error_arg_passing() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     // TODO: handle `declare let scale: fn(mut p: Point, ...);
     let src = r#"
@@ -3856,7 +3793,7 @@ fn test_mutable_error_arg_passing() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -3870,7 +3807,7 @@ fn test_mutable_error_arg_passing() -> Result<(), Errors> {
 
 #[test]
 fn test_mutable_error_arg_passing_with_subtyping() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     // TODO: handle `declare let scale: fn(mut p: Point, ...);
     let src = r#"
@@ -3880,7 +3817,7 @@ fn test_mutable_error_arg_passing_with_subtyping() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -3894,7 +3831,7 @@ fn test_mutable_error_arg_passing_with_subtyping() -> Result<(), Errors> {
 
 #[test]
 fn test_mutable_ok_arg_passing() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     // TODO: handle `declare let scale: fn(mut p: Point, ...);
     let src = r#"
@@ -3922,14 +3859,14 @@ fn test_mutable_ok_arg_passing() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     Ok(())
 }
 
 #[test]
 fn test_mutable_error_arg_passing_declared_fn() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Point = {x: number, y: number}
@@ -3939,7 +3876,7 @@ fn test_mutable_error_arg_passing_declared_fn() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -3953,7 +3890,7 @@ fn test_mutable_error_arg_passing_declared_fn() -> Result<(), Errors> {
 
 #[test]
 fn test_mutable_ok_arg_passing_declared_fns() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     // TODO: handle `declare let scale: fn(mut p: Point, ...);
     let src = r#"
@@ -3977,14 +3914,14 @@ fn test_mutable_ok_arg_passing_declared_fns() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     Ok(())
 }
 
 #[test]
 fn test_mutable_error_assignment() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Point = {x: number, y: number}
@@ -3993,7 +3930,7 @@ fn test_mutable_error_assignment() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -4007,7 +3944,7 @@ fn test_mutable_error_assignment() -> Result<(), Errors> {
 
 #[test]
 fn test_mutable_ok_assignments() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Point = {x: number, y: number}
@@ -4025,14 +3962,14 @@ fn test_mutable_ok_assignments() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     Ok(())
 }
 
 #[test]
 fn test_mutable_invalid_assignments() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"    
     let mut arr1: Array<number> = [1, 2, 3]
@@ -4040,7 +3977,7 @@ fn test_mutable_invalid_assignments() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -4054,7 +3991,7 @@ fn test_mutable_invalid_assignments() -> Result<(), Errors> {
 
 #[test]
 fn test_sub_objects_are_mutable() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Obj = {a: {b: {c: string}}}
@@ -4065,21 +4002,21 @@ fn test_sub_objects_are_mutable() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("b1").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"{c: string}"#);
+    assert_eq!(checker.print_type(&binding.index), r#"{c: string}"#);
 
     let binding = my_ctx.values.get("b2").unwrap();
     // TODO: create helper function to print bindings, not just types
-    assert_eq!(arena[binding.index].as_string(&arena), r#"{c: string}"#);
+    assert_eq!(checker.print_type(&binding.index), r#"{c: string}"#);
 
     Ok(())
 }
 
 #[test]
 fn test_tuple_type_equality() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let a: [number, string]
@@ -4087,21 +4024,19 @@ fn test_tuple_type_equality() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let a = my_ctx.values.get("a").unwrap();
-    let a_t = arena[a.index].clone();
     let b = my_ctx.values.get("b").unwrap();
-    let b_t = arena[b.index].clone();
 
-    assert!(a_t.equals(&b_t, &arena));
+    assert!(checker.equals(&a.index, &b.index));
 
     Ok(())
 }
 
 #[test]
 fn test_function_type_equality() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let add: fn(a: number, b: number) -> number
@@ -4109,21 +4044,19 @@ fn test_function_type_equality() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let add = my_ctx.values.get("add").unwrap();
-    let add_t = arena[add.index].clone();
     let sub = my_ctx.values.get("sub").unwrap();
-    let sub_t = arena[sub.index].clone();
 
-    assert!(add_t.equals(&sub_t, &arena));
+    assert!(checker.equals(&add.index, &sub.index));
 
     Ok(())
 }
 
 #[test]
 fn test_literal_type_equality() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let a = 5
@@ -4131,21 +4064,19 @@ fn test_literal_type_equality() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let a = my_ctx.values.get("a").unwrap();
-    let a_t = arena[a.index].clone();
     let b = my_ctx.values.get("b").unwrap();
-    let b_t = arena[b.index].clone();
 
-    assert!(a_t.equals(&b_t, &arena));
+    assert!(checker.equals(&a.index, &b.index));
 
     Ok(())
 }
 
 #[test]
 fn test_mutable_object_type_equality() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Point = {x: number, y: number}
@@ -4154,21 +4085,19 @@ fn test_mutable_object_type_equality() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let p = my_ctx.values.get("p").unwrap();
-    let p_t = arena[p.index].clone();
     let q = my_ctx.values.get("q").unwrap();
-    let q_t = arena[q.index].clone();
 
-    assert!(p_t.equals(&q_t, &arena));
+    assert!(checker.equals(&p.index, &q.index));
 
     Ok(())
 }
 
 #[test]
 fn test_mutating_mutable_object() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Point = {x: number, y: number}
@@ -4178,14 +4107,14 @@ fn test_mutating_mutable_object() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     Ok(())
 }
 
 #[test]
 fn test_mutating_immutable_object_errors() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Point = {x: number, y: number}
@@ -4194,7 +4123,7 @@ fn test_mutating_immutable_object_errors() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -4208,7 +4137,7 @@ fn test_mutating_immutable_object_errors() -> Result<(), Errors> {
 
 #[test]
 fn conditional_type_exclude() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Exclude<T, U> = if (T: U) { never } else { T }
@@ -4216,18 +4145,18 @@ fn conditional_type_exclude() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("Result").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#""b" | "c" | "d""#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#""b" | "c" | "d""#);
 
     Ok(())
 }
 
 #[test]
 fn chained_conditional_types() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Foo<T> = if (T: string) { 
@@ -4241,18 +4170,18 @@ fn chained_conditional_types() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("Result").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#""num" | "str""#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#""num" | "str""#);
 
     Ok(())
 }
 
 #[test]
 fn match_type_with_catchall() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Foo<T> = match (T) {
@@ -4264,18 +4193,18 @@ fn match_type_with_catchall() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("Result").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#""num" | "str""#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#""num" | "str""#);
 
     Ok(())
 }
 
 #[test]
 fn match_type_without_catchall() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Foo<T> = match (T) {
@@ -4287,22 +4216,22 @@ fn match_type_without_catchall() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("True").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#""num""#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#""num""#);
 
     let result = my_ctx.schemes.get("Never").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"never"#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#"never"#);
 
     Ok(())
 }
 
 #[test]
 fn match_type_with_tuples() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     // NOTE: The arrays need to be matched in reverse order
     // because they're open.  This means that the first match
@@ -4324,38 +4253,38 @@ fn match_type_with_tuples() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("Tuple0").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#""unit""#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#""unit""#);
 
     let result = my_ctx.schemes.get("Tuple1").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#""1-tuple""#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#""1-tuple""#);
 
     let result = my_ctx.schemes.get("Tuple2").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#""pair""#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#""pair""#);
 
     let result = my_ctx.schemes.get("Tuple3").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#""triplet""#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#""triplet""#);
 
     let result = my_ctx.schemes.get("Tuple4").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#""n-tuple""#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#""n-tuple""#);
 
     let result = my_ctx.schemes.get("Tuple5").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#""n-tuple""#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#""n-tuple""#);
 
     Ok(())
 }
 
 #[test]
 fn conditional_type_with_placeholders() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
         type IsArray<T> = if (T: Array<_>) { true } else { false }
@@ -4364,22 +4293,22 @@ fn conditional_type_with_placeholders() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("T").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"true"#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#"true"#);
 
     let result = my_ctx.schemes.get("F").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"false"#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#"false"#);
 
     Ok(())
 }
 
 #[test]
 fn conditional_type_with_constraint() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
         type IsArrayOfNumbers<T> = if (T: Array<number>) { true } else { false }
@@ -4388,22 +4317,22 @@ fn conditional_type_with_constraint() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("T").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"true"#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#"true"#);
 
     let result = my_ctx.schemes.get("F").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"false"#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#"false"#);
 
     Ok(())
 }
 
 #[test]
 fn unify_tuple_and_array() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
         let tuple = [1, 2, 3]
@@ -4411,7 +4340,7 @@ fn unify_tuple_and_array() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     Ok(())
 }
@@ -4419,7 +4348,7 @@ fn unify_tuple_and_array() -> Result<(), Errors> {
 #[test]
 #[ignore]
 fn conditional_type_with_function_subtyping() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
         type IsFunction<T> = if (T: fn (...args: _) -> _) { true } else { false }
@@ -4428,22 +4357,22 @@ fn conditional_type_with_function_subtyping() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("T").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"true"#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#"true"#);
 
     let result = my_ctx.schemes.get("F").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"false"#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#"false"#);
 
     Ok(())
 }
 
 #[test]
 fn return_type_rest_placeholder() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     // TODO: introduce a placeholder type that will unify with anything
     // we need to make sure we aren't adding `_` to non_generic
@@ -4461,26 +4390,26 @@ fn return_type_rest_placeholder() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("RT1").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"boolean"#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#"boolean"#);
 
     let result = my_ctx.schemes.get("RT2").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"number"#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#"number"#);
 
     let result = my_ctx.schemes.get("RT3").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"string"#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#"string"#);
 
     Ok(())
 }
 
 #[test]
 fn return_type_of_union() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
         type ReturnType<
@@ -4494,18 +4423,18 @@ fn return_type_of_union() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("Result").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"number | string"#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#"number | string"#);
 
     Ok(())
 }
 
 #[test]
 fn parameters_utility_type() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Parameters<T : fn (...args: _) -> _> = if (
@@ -4523,24 +4452,24 @@ fn parameters_utility_type() -> Result<(), Errors> {
 
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("P1").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"[string, number]"#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#"[string, number]"#);
 
     let result = my_ctx.schemes.get("P2").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"[string, ...Array<number>]"#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#"[string, ...Array<number>]"#);
 
     let result = my_ctx.schemes.get("P3").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"[string, number, boolean]"#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#"[string, number, boolean]"#);
 
     let result = my_ctx.schemes.get("P4").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
+    let t = checker.expand_type(&my_ctx, result.t)?;
     assert_eq!(
-        arena[t].as_string(&arena),
+        checker.print_type(&t),
         r#"[string, number, boolean, ...Array<string>]"#
     );
 
@@ -4549,7 +4478,7 @@ fn parameters_utility_type() -> Result<(), Errors> {
 
 #[test]
 fn function_subtyping_with_rest_placeholder() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let none: fn (...args: _) -> boolean = fn () => true
@@ -4563,21 +4492,21 @@ fn function_subtyping_with_rest_placeholder() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     Ok(())
 }
 
 #[test]
 fn function_subtyping_with_rest_array_fails() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let result: fn (...args: Array<_>) -> boolean = fn (a: string, b: number) => true
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -4591,14 +4520,14 @@ fn function_subtyping_with_rest_array_fails() -> Result<(), Errors> {
 
 #[test]
 fn function_multiple_rest_params_in_type_fails() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let result: fn (...args: _, ...moar_args: _) -> boolean = fn (a: string, b: number) => true
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -4612,14 +4541,14 @@ fn function_multiple_rest_params_in_type_fails() -> Result<(), Errors> {
 
 #[test]
 fn function_multiple_rest_params_function_fails() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let result: fn (...args: _) -> boolean = fn (...args: _, ...moar_args: _) => true
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = infer_program(&mut arena, &mut program, &mut my_ctx);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -4635,7 +4564,7 @@ fn function_multiple_rest_params_function_fails() -> Result<(), Errors> {
 #[test]
 #[ignore]
 fn function_call_with_spread_args() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let foo = fn (a: number, b: string) => true
@@ -4644,14 +4573,14 @@ fn function_call_with_spread_args() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     Ok(())
 }
 
 #[test]
 fn arithmetic_op_const_folding() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let a = 3
@@ -4664,29 +4593,29 @@ fn arithmetic_op_const_folding() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("sum").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"5"#);
+    assert_eq!(checker.print_type(&binding.index), r#"5"#);
 
     let binding = my_ctx.values.get("diff").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"1"#);
+    assert_eq!(checker.print_type(&binding.index), r#"1"#);
 
     let binding = my_ctx.values.get("prod").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"6"#);
+    assert_eq!(checker.print_type(&binding.index), r#"6"#);
 
     let binding = my_ctx.values.get("quot").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"1.5"#);
+    assert_eq!(checker.print_type(&binding.index), r#"1.5"#);
 
     let binding = my_ctx.values.get("rem").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"1"#);
+    assert_eq!(checker.print_type(&binding.index), r#"1"#);
 
     Ok(())
 }
 
 #[test]
 fn comparison_op_const_folding() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let a = 3
@@ -4700,32 +4629,32 @@ fn comparison_op_const_folding() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("gt").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"true"#);
+    assert_eq!(checker.print_type(&binding.index), r#"true"#);
 
     let binding = my_ctx.values.get("gte").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"true"#);
+    assert_eq!(checker.print_type(&binding.index), r#"true"#);
 
     let binding = my_ctx.values.get("lt").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"false"#);
+    assert_eq!(checker.print_type(&binding.index), r#"false"#);
 
     let binding = my_ctx.values.get("lte").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"false"#);
+    assert_eq!(checker.print_type(&binding.index), r#"false"#);
 
     let binding = my_ctx.values.get("eq").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"false"#);
+    assert_eq!(checker.print_type(&binding.index), r#"false"#);
 
     let binding = my_ctx.values.get("neq").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"true"#);
+    assert_eq!(checker.print_type(&binding.index), r#"true"#);
 
     Ok(())
 }
 
 #[test]
 fn other_equality_checks() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let a = "foo" == "bar"
@@ -4735,26 +4664,26 @@ fn other_equality_checks() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("a").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"false"#);
+    assert_eq!(checker.print_type(&binding.index), r#"false"#);
 
     let binding = my_ctx.values.get("b").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"true"#);
+    assert_eq!(checker.print_type(&binding.index), r#"true"#);
 
     let binding = my_ctx.values.get("c").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"boolean"#);
+    assert_eq!(checker.print_type(&binding.index), r#"boolean"#);
 
     let binding = my_ctx.values.get("d").unwrap();
-    assert_eq!(arena[binding.index].as_string(&arena), r#"boolean"#);
+    assert_eq!(checker.print_type(&binding.index), r#"boolean"#);
 
     Ok(())
 }
 
 #[test]
 fn type_level_arithmetic() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type A = 10 + 5
@@ -4765,50 +4694,50 @@ fn type_level_arithmetic() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("A").unwrap();
-    assert_eq!(arena[result.t].as_string(&arena), r#"10 + 5"#);
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"15"#);
+    assert_eq!(checker.print_type(&result.t), r#"10 + 5"#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#"15"#);
 
     let result = my_ctx.schemes.get("B").unwrap();
-    assert_eq!(arena[result.t].as_string(&arena), r#"10 - 5"#);
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"5"#);
+    assert_eq!(checker.print_type(&result.t), r#"10 - 5"#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#"5"#);
 
     let result = my_ctx.schemes.get("C").unwrap();
-    assert_eq!(arena[result.t].as_string(&arena), r#"10 * 5"#);
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"50"#);
+    assert_eq!(checker.print_type(&result.t), r#"10 * 5"#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#"50"#);
 
     let result = my_ctx.schemes.get("D").unwrap();
-    assert_eq!(arena[result.t].as_string(&arena), r#"10 / 5"#);
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"2"#);
+    assert_eq!(checker.print_type(&result.t), r#"10 / 5"#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#"2"#);
 
     let result = my_ctx.schemes.get("E").unwrap();
-    assert_eq!(arena[result.t].as_string(&arena), r#"10 % 5"#);
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"0"#);
+    assert_eq!(checker.print_type(&result.t), r#"10 % 5"#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#"0"#);
 
     Ok(())
 }
 
 #[test]
 fn type_level_arithmetic_incorrect_operands() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Sum = "hello" + true
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("Sum").unwrap();
-    assert_eq!(arena[result.t].as_string(&arena), r#""hello" + true"#);
-    let result = expand_type(&mut arena, &my_ctx, result.t);
+    assert_eq!(checker.print_type(&result.t), r#""hello" + true"#);
+    let result = checker.expand_type(&my_ctx, result.t);
 
     assert_eq!(
         result,
@@ -4822,7 +4751,7 @@ fn type_level_arithmetic_incorrect_operands() -> Result<(), Errors> {
 
 #[test]
 fn check_type_constraints() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Add<A: string, B: string> = A + B
@@ -4830,10 +4759,10 @@ fn check_type_constraints() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("A").unwrap();
-    let result = expand_type(&mut arena, &my_ctx, result.t);
+    let result = checker.expand_type(&my_ctx, result.t);
 
     assert_eq!(
         result,
@@ -4847,7 +4776,7 @@ fn check_type_constraints() -> Result<(), Errors> {
 
 #[test]
 fn type_level_arithmetic_with_alias() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     type Add<A: number, B: number> = A + B
@@ -4858,30 +4787,30 @@ fn type_level_arithmetic_with_alias() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("A").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"15"#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#"15"#);
 
     let result = my_ctx.schemes.get("B").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"number"#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#"number"#);
 
     let result = my_ctx.schemes.get("C").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"number"#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#"number"#);
 
     let result = my_ctx.schemes.get("D").unwrap();
-    let t = expand_type(&mut arena, &my_ctx, result.t)?;
-    assert_eq!(arena[t].as_string(&arena), r#"number"#);
+    let t = checker.expand_type(&my_ctx, result.t)?;
+    assert_eq!(checker.print_type(&t), r#"number"#);
 
     Ok(())
 }
 
 #[test]
 fn type_level_arithmetic_with_incorrect_types() -> Result<(), Errors> {
-    let (mut arena, mut my_ctx) = test_env();
+    let (mut checker, mut my_ctx) = test_env();
 
     // TODO: Check type aliases without type parameters eagerly (this likely
     // requires a separate pass) or something similar to how we handle mutual
@@ -4892,10 +4821,10 @@ fn type_level_arithmetic_with_incorrect_types() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    infer_program(&mut arena, &mut program, &mut my_ctx)?;
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("Sum").unwrap();
-    let result = expand_type(&mut arena, &my_ctx, result.t);
+    let result = checker.expand_type(&my_ctx, result.t);
 
     assert_eq!(
         result,

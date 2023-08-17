@@ -2,12 +2,12 @@ use generational_arena::{Arena, Index};
 use im::hashmap::HashMap;
 use im::hashset::HashSet;
 
+use crate::checker::Checker;
 use crate::errors::*;
 use crate::folder::walk_index;
 use crate::folder::{self, Folder};
 use crate::key_value_store::KeyValueStore;
 use crate::types::*;
-use crate::util::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Binding {
@@ -30,47 +30,137 @@ pub struct Context {
     pub is_async: bool,
 }
 
-/// Get the type of identifier name from the type context ctx.
-///
-/// Args:
-///     name: The identifier name
-///     ctx: The current context
-///
-/// Raises:
-///     ParseError: Raised if name is an undefined symbol in the type
-///         environment.
-pub fn get_type(arena: &mut Arena<Type>, name: &str, ctx: &Context) -> Result<Index, Errors> {
-    if let Some(value) = ctx.values.get(name) {
-        Ok(fresh(arena, value.index, ctx))
-    } else {
-        Err(Errors::InferenceError(format!(
-            "Undefined symbol {:?}",
-            name
-        )))
+impl Checker {
+    /// Get the type of identifier name from the type context ctx.
+    ///
+    /// Args:
+    ///     name: The identifier name
+    ///     ctx: The current context
+    ///
+    /// Raises:
+    ///     ParseError: Raised if name is an undefined symbol in the type
+    ///         environment.
+    pub fn get_type(&mut self, name: &str, ctx: &Context) -> Result<Index, Errors> {
+        if let Some(value) = ctx.values.get(name) {
+            let result = self.fresh(&value.index, ctx);
+            Ok(result)
+        } else {
+            Err(Errors::InferenceError(format!(
+                "Undefined symbol {:?}",
+                name
+            )))
+        }
+    }
+
+    /// Makes a copy of a type expression.
+    ///
+    /// The type t is copied. The the generic variables are duplicated and the
+    /// non_generic variables are shared.
+    ///
+    /// Args:
+    ///     t: A type to be copied.
+    ///     non_generic: A set of non-generic TypeVariables
+    fn fresh(&mut self, index: &Index, ctx: &Context) -> Index {
+        let mut fresh = Fresh {
+            checker: self,
+            ctx,
+            mapping: HashMap::default(),
+        };
+
+        fresh.fold_index(index)
+    }
+
+    // TODO: rename this to `replace_type_vars` or something like that
+    pub fn instantiate_scheme(
+        &mut self,
+        t: &Index,
+        mapping: &std::collections::HashMap<String, Index>,
+    ) -> Index {
+        let mut instantiate = Instantiate {
+            checker: self,
+            mapping,
+        };
+        instantiate.fold_index(t)
+    }
+
+    pub fn instantiate_func(
+        &mut self,
+        func: &Function,
+        type_args: Option<&[Index]>,
+    ) -> Result<Function, Errors> {
+        // A mapping of TypeVariables to TypeVariables
+        let mut mapping = std::collections::HashMap::default();
+
+        if let Some(type_params) = &func.type_params {
+            match type_args {
+                Some(type_args) => {
+                    if type_args.len() != type_params.len() {
+                        return Err(Errors::InferenceError(
+                            "wrong number of type args".to_string(),
+                        ));
+                    }
+
+                    for (tp, ta) in type_params.iter().zip(type_args.iter()) {
+                        mapping.insert(tp.name.to_owned(), *ta);
+                    }
+                }
+                None => {
+                    for tp in type_params {
+                        mapping.insert(tp.name.to_owned(), self.new_var_type(tp.constraint));
+                    }
+                }
+            }
+        }
+
+        let mut instantiate = Instantiate {
+            checker: self,
+            mapping: &mut mapping,
+        };
+
+        let params = func
+            .params
+            .iter()
+            .map(|param| FuncParam {
+                t: instantiate.fold_index(&param.t),
+                ..param.to_owned()
+            })
+            .collect::<Vec<_>>();
+
+        let ret = instantiate.fold_index(&func.ret);
+
+        let throws = func.throws.map(|t| instantiate.fold_index(&t));
+
+        Ok(Function {
+            params,
+            ret,
+            type_params: None,
+            throws,
+        })
     }
 }
 
-struct Fresh<'a> {
-    arena: &'a mut Arena<Type>,
-    ctx: &'a Context,
+struct Fresh<'a, 'b> {
+    checker: &'a mut Checker,
+    ctx: &'b Context,
 
     mapping: HashMap<Index, Index>,
 }
 
-impl<'a> KeyValueStore<Index, Type> for Fresh<'a> {
+// TODO: Have `Checker` implement `KeyValueStore` instead of `Fresh`
+impl<'a, 'b> KeyValueStore<Index, Type> for Fresh<'a, 'b> {
     fn get_type(&mut self, index: &Index) -> Type {
-        self.arena[*index].clone()
+        self.checker.arena[*index].clone()
     }
     fn put_type(&mut self, t: Type) -> Index {
-        self.arena.insert(t)
+        self.checker.arena.insert(t)
     }
 }
 
-impl<'a> Folder for Fresh<'a> {
+impl<'a, 'b> Folder for Fresh<'a, 'b> {
     fn fold_index(&mut self, index: &Index) -> Index {
         // QUESTION: Why do we need to `prune` here?  Maybe because we don't
         // copy the `instance` when creating an new type variable.
-        let index = prune(self.arena, *index);
+        let index = self.checker.prune(*index);
         let t = self.get_type(&index);
 
         match &t.kind {
@@ -79,10 +169,10 @@ impl<'a> Folder for Fresh<'a> {
                 instance: _,
                 constraint,
             }) => {
-                if is_generic(self.arena, index, self.ctx) {
+                if is_generic(self.checker, index, self.ctx) {
                     self.mapping
                         .entry(index)
-                        .or_insert_with(|| new_var_type(self.arena, *constraint))
+                        .or_insert_with(|| self.checker.new_var_type(*constraint))
                         .to_owned()
                 } else {
                     index
@@ -93,26 +183,8 @@ impl<'a> Folder for Fresh<'a> {
     }
 }
 
-/// Makes a copy of a type expression.
-///
-/// The type t is copied. The the generic variables are duplicated and the
-/// non_generic variables are shared.
-///
-/// Args:
-///     t: A type to be copied.
-///     non_generic: A set of non-generic TypeVariables
-pub fn fresh(arena: &mut Arena<Type>, index: Index, ctx: &Context) -> Index {
-    let mut fresh = Fresh {
-        arena,
-        ctx,
-        mapping: HashMap::default(),
-    };
-
-    fresh.fold_index(&index)
-}
-
 pub struct Instantiate<'a> {
-    pub arena: &'a mut Arena<Type>,
+    pub checker: &'a mut Checker,
     pub mapping: &'a std::collections::HashMap<String, Index>,
 }
 
@@ -123,10 +195,10 @@ impl<'a> KeyValueStore<Index, Type> for Instantiate<'a> {
     // an Index that corresponds to the returned Type.
     fn get_type(&mut self, idx: &Index) -> Type {
         // let idx = prune(self.arena, *idx);
-        self.arena[*idx].clone()
+        self.checker.arena[*idx].clone()
     }
     fn put_type(&mut self, t: Type) -> Index {
-        self.arena.insert(t)
+        self.checker.arena.insert(t)
     }
 }
 
@@ -147,7 +219,7 @@ impl<'a> Folder for Instantiate<'a> {
                     }
                     None => {
                         if &new_types != types {
-                            new_constructor(self.arena, name, &new_types)
+                            self.checker.new_constructor(name, &new_types)
                         } else {
                             *index
                         }
@@ -157,73 +229,6 @@ impl<'a> Folder for Instantiate<'a> {
             _ => walk_index(self, index),
         }
     }
-}
-
-// TODO: rename this to `replace_type_vars` or something like that
-pub fn instantiate_scheme(
-    arena: &mut Arena<Type>,
-    t: Index,
-    mapping: &std::collections::HashMap<String, Index>,
-) -> Index {
-    let mut instantiate2 = Instantiate { arena, mapping };
-    instantiate2.fold_index(&t)
-    // let mut instantiate = Instantiate { arena, mapping };
-    // instantiate.visit_index(&t)
-}
-
-pub fn instantiate_func(
-    arena: &mut Arena<Type>,
-    func: &Function,
-    type_args: Option<&[Index]>,
-) -> Result<Function, Errors> {
-    // A mapping of TypeVariables to TypeVariables
-    let mut mapping = std::collections::HashMap::default();
-
-    if let Some(type_params) = &func.type_params {
-        match type_args {
-            Some(type_args) => {
-                if type_args.len() != type_params.len() {
-                    return Err(Errors::InferenceError(
-                        "wrong number of type args".to_string(),
-                    ));
-                }
-
-                for (tp, ta) in type_params.iter().zip(type_args.iter()) {
-                    mapping.insert(tp.name.to_owned(), *ta);
-                }
-            }
-            None => {
-                for tp in type_params {
-                    mapping.insert(tp.name.to_owned(), new_var_type(arena, tp.constraint));
-                }
-            }
-        }
-    }
-
-    let mut instantiate = Instantiate {
-        arena,
-        mapping: &mut mapping,
-    };
-
-    let params = func
-        .params
-        .iter()
-        .map(|param| FuncParam {
-            t: instantiate.fold_index(&param.t),
-            ..param.to_owned()
-        })
-        .collect::<Vec<_>>();
-
-    let ret = instantiate.fold_index(&func.ret);
-
-    let throws = func.throws.map(|t| instantiate.fold_index(&t));
-
-    Ok(Function {
-        params,
-        ret,
-        type_params: None,
-        throws,
-    })
 }
 
 /// Checks whether a given variable occurs in a list of non-generic variables
@@ -240,6 +245,6 @@ pub fn instantiate_func(
 ///
 /// Returns:
 ///     True if v is a generic variable, otherwise False
-pub fn is_generic(arena: &mut Arena<Type>, t: Index, ctx: &Context) -> bool {
-    !occurs_in(arena, t, &ctx.non_generic)
+pub fn is_generic(checker: &mut Checker, t: Index, ctx: &Context) -> bool {
+    !checker.occurs_in(t, &ctx.non_generic)
 }
