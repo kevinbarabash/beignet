@@ -7,6 +7,7 @@ use std::fmt;
 // with source locations when doing type-level stuff.
 use escalier_ast::{BindingIdent, Literal as Lit};
 
+use crate::checker::Checker;
 use crate::provenance::Provenance;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -632,6 +633,237 @@ impl Type {
     }
 }
 
+impl Checker {
+    pub fn print_type(&self, index: &Index) -> String {
+        match &self.arena[*index].kind {
+            TypeKind::Variable(Variable {
+                instance: Some(inst),
+                ..
+            }) => self.print_type(inst),
+            TypeKind::Variable(Variable { id, constraint, .. }) => match constraint {
+                Some(constraint) => format!("t{id}:{}", self.print_type(constraint)),
+                None => format!("t{id}"),
+            },
+            TypeKind::Union(Union { types }) => self.print_types(types).join(" | "),
+            TypeKind::Intersection(Intersection { types }) => self.print_types(types).join(" & "),
+            TypeKind::Tuple(Tuple { types }) => {
+                format!("[{}]", self.print_types(types).join(", "))
+            }
+            TypeKind::Constructor(Constructor { name, types }) => {
+                if types.is_empty() {
+                    name.to_string()
+                } else {
+                    format!("{}<{}>", name, self.print_types(types).join(", "))
+                }
+            }
+            TypeKind::Keyword(keyword) => keyword.to_string(),
+            TypeKind::Primitive(primitive) => primitive.to_string(),
+            TypeKind::Literal(lit) => lit.to_string(),
+            TypeKind::Object(object) => {
+                let mut fields = vec![];
+                for prop in &object.elems {
+                    match prop {
+                        TObjElem::Constructor(TCallable {
+                            params,
+                            ret,
+                            type_params,
+                        }) => {
+                            let mut result = "fn".to_string();
+                            match type_params {
+                                Some(type_params) if !type_params.is_empty() => {
+                                    let type_params = type_params
+                                        .iter()
+                                        .map(|tp| match &tp.constraint {
+                                            Some(constraint) => format!(
+                                                "{}:{}",
+                                                tp.name.clone(),
+                                                self.print_type(constraint)
+                                            ),
+                                            None => tp.name.clone(),
+                                        })
+                                        .collect::<Vec<_>>();
+                                    result.push_str(&format!("<{}>", type_params.join(", ")))
+                                }
+                                _ => (),
+                            };
+                            result.push_str(&format!(
+                                "({}) -> {}",
+                                self.print_params(params).join(", "),
+                                self.print_type(ret)
+                            ));
+                            fields.push(result);
+                        }
+                        TObjElem::Call(TCallable {
+                            params,
+                            ret,
+                            type_params,
+                        }) => {
+                            let mut result = "fn".to_string();
+                            match type_params {
+                                Some(type_params) if !type_params.is_empty() => {
+                                    let type_params = type_params
+                                        .iter()
+                                        .map(|tp| match &tp.constraint {
+                                            Some(constraint) => format!(
+                                                "{}:{}",
+                                                tp.name.clone(),
+                                                self.print_type(constraint)
+                                            ),
+                                            None => tp.name.clone(),
+                                        })
+                                        .collect::<Vec<_>>();
+                                    result.push_str(&format!("<{}>", type_params.join(", ")))
+                                }
+                                _ => (),
+                            };
+                            result.push_str(&format!(
+                                "({}) -> {}",
+                                self.print_params(params).join(", "),
+                                self.print_type(ret)
+                            ));
+                            fields.push(result);
+                        }
+                        TObjElem::Mapped(MappedType {
+                            key,
+                            value,
+                            target,
+                            source,
+                            // TODO: handle `if`-clause
+                            check: _,
+                            extends: _,
+                        }) => {
+                            let key = self.print_type(key);
+                            let value = self.print_type(value);
+                            let source = self.print_type(source);
+
+                            let result = format!("[{key}]: {value} for {target} in {source}",);
+                            fields.push(result);
+                        }
+                        TObjElem::Prop(TProp {
+                            name,
+                            modifier, // TODO
+                            optional,
+                            mutable: _,
+                            t,
+                        }) => {
+                            let name = match name {
+                                TPropKey::StringKey(s) => s,
+                                TPropKey::NumberKey(n) => n,
+                            };
+                            let t = self.print_type(t);
+                            let mut str = "".to_string();
+
+                            if let Some(modifier) = modifier {
+                                match modifier {
+                                    TPropModifier::Getter => str += "get ",
+                                    TPropModifier::Setter => str += "set ",
+                                }
+                            }
+
+                            str += name;
+                            if *optional {
+                                str += "?";
+                            }
+                            str += &format!(": {t}");
+
+                            fields.push(str);
+                        }
+                    }
+                }
+                format!("{{{}}}", fields.join(", "))
+            }
+            TypeKind::Rest(rest) => {
+                format!("...{}", self.print_type(&rest.arg))
+            }
+            TypeKind::Function(func) => {
+                let type_params = match &func.type_params {
+                    Some(type_params) if !type_params.is_empty() => {
+                        let type_params = type_params
+                            .iter()
+                            .map(|tp| match &tp.constraint {
+                                Some(constraint) => {
+                                    format!("{}:{}", tp.name.clone(), self.print_type(constraint))
+                                }
+                                None => tp.name.clone(),
+                            })
+                            .collect::<Vec<_>>();
+                        format!("<{}>", type_params.join(", "))
+                    }
+                    _ => "".to_string(),
+                };
+                let throws = match func.throws {
+                    Some(throws) => format!(" throws {}", self.print_type(&throws)),
+                    None => "".to_string(),
+                };
+                format!(
+                    "{type_params}({}) -> {}{throws}",
+                    self.print_params(&func.params).join(", "),
+                    self.print_type(&func.ret),
+                )
+            }
+            TypeKind::KeyOf(KeyOf { t }) => format!("keyof {}", self.print_type(t)),
+            TypeKind::IndexedAccess(IndexedAccess { obj, index }) => {
+                format!("{}[{}]", self.print_type(obj), self.print_type(index))
+            }
+            TypeKind::Conditional(Conditional {
+                check,
+                extends,
+                true_type,
+                false_type,
+            }) => {
+                format!(
+                    "{} extends {} ? {} : {}",
+                    self.print_type(check),
+                    self.print_type(extends),
+                    self.print_type(true_type),
+                    self.print_type(false_type),
+                )
+            }
+            TypeKind::Infer(Infer { name }) => format!("infer {}", name),
+            TypeKind::Wildcard => "_".to_string(),
+            TypeKind::Binary(BinaryT { op, left, right }) => {
+                let op = match op {
+                    TBinaryOp::Add => "+",
+                    TBinaryOp::Sub => "-",
+                    TBinaryOp::Mul => "*",
+                    TBinaryOp::Div => "/",
+                    TBinaryOp::Mod => "%",
+                };
+                format!(
+                    "{} {} {}",
+                    self.print_type(left),
+                    op,
+                    self.print_type(right),
+                )
+            }
+        }
+    }
+
+    fn print_types(&self, indexes: &[Index]) -> Vec<String> {
+        let mut result = vec![];
+        for index in indexes {
+            result.push(self.print_type(index));
+        }
+        result
+    }
+
+    fn print_param(&self, param: &FuncParam) -> String {
+        let name = tpat_to_string(&self.arena, &param.pattern);
+        match param.optional {
+            true => format!("{name}?: {}", self.print_type(&param.t)),
+            false => format!("{name}: {}", self.print_type(&param.t)),
+        }
+    }
+
+    fn print_params(&self, params: &[FuncParam]) -> Vec<String> {
+        let mut strings = vec![];
+        for param in params {
+            strings.push(self.print_param(param))
+        }
+        strings
+    }
+}
+
 fn types_to_strings(a: &Arena<Type>, types: &[Index]) -> Vec<String> {
     let mut strings = vec![];
     for v in types {
@@ -702,20 +934,22 @@ fn tpat_to_string(_arena: &Arena<Type>, pattern: &TPat) -> String {
     }
 }
 
-/// A binary type constructor which builds function types
-pub fn new_func_type(
-    arena: &mut Arena<Type>,
-    params: &[FuncParam],
-    ret: Index,
-    type_params: &Option<Vec<TypeParam>>,
-    throws: Option<Index>,
-) -> Index {
-    arena.insert(Type::from(TypeKind::Function(Function {
-        params: params.to_vec(),
-        ret: ret.to_owned(),
-        type_params: type_params.to_owned(),
-        throws,
-    })))
+impl Checker {
+    /// A binary type constructor which builds function types
+    pub fn new_func_type(
+        &mut self,
+        params: &[FuncParam],
+        ret: Index,
+        type_params: &Option<Vec<TypeParam>>,
+        throws: Option<Index>,
+    ) -> Index {
+        self.arena.insert(Type::from(TypeKind::Function(Function {
+            params: params.to_vec(),
+            ret: ret.to_owned(),
+            type_params: type_params.to_owned(),
+            throws,
+        })))
+    }
 }
 
 // TODO: flatten union types

@@ -2,12 +2,12 @@ use generational_arena::{Arena, Index};
 use im::hashmap::HashMap;
 use im::hashset::HashSet;
 
+use crate::checker::Checker;
 use crate::errors::*;
 use crate::folder::walk_index;
 use crate::folder::{self, Folder};
 use crate::key_value_store::KeyValueStore;
 use crate::types::*;
-use crate::util::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Binding {
@@ -30,47 +30,51 @@ pub struct Context {
     pub is_async: bool,
 }
 
-/// Get the type of identifier name from the type context ctx.
-///
-/// Args:
-///     name: The identifier name
-///     ctx: The current context
-///
-/// Raises:
-///     ParseError: Raised if name is an undefined symbol in the type
-///         environment.
-pub fn get_type(arena: &mut Arena<Type>, name: &str, ctx: &Context) -> Result<Index, Errors> {
-    if let Some(value) = ctx.values.get(name) {
-        Ok(fresh(arena, value.index, ctx))
-    } else {
-        Err(Errors::InferenceError(format!(
-            "Undefined symbol {:?}",
-            name
-        )))
+impl Checker {
+    /// Get the type of identifier name from the type context ctx.
+    ///
+    /// Args:
+    ///     name: The identifier name
+    ///     ctx: The current context
+    ///
+    /// Raises:
+    ///     ParseError: Raised if name is an undefined symbol in the type
+    ///         environment.
+    pub fn get_type(&mut self, name: &str, ctx: &Context) -> Result<Index, Errors> {
+        if let Some(value) = ctx.values.get(name) {
+            let result = fresh(self, value.index, ctx);
+            Ok(result)
+        } else {
+            Err(Errors::InferenceError(format!(
+                "Undefined symbol {:?}",
+                name
+            )))
+        }
     }
 }
 
-struct Fresh<'a> {
-    arena: &'a mut Arena<Type>,
-    ctx: &'a Context,
+struct Fresh<'a, 'b> {
+    checker: &'a mut Checker,
+    ctx: &'b Context,
 
     mapping: HashMap<Index, Index>,
 }
 
-impl<'a> KeyValueStore<Index, Type> for Fresh<'a> {
+// TODO: Have `Checker` implement `KeyValueStore` instead of `Fresh`
+impl<'a, 'b> KeyValueStore<Index, Type> for Fresh<'a, 'b> {
     fn get_type(&mut self, index: &Index) -> Type {
-        self.arena[*index].clone()
+        self.checker.arena[*index].clone()
     }
     fn put_type(&mut self, t: Type) -> Index {
-        self.arena.insert(t)
+        self.checker.arena.insert(t)
     }
 }
 
-impl<'a> Folder for Fresh<'a> {
+impl<'a, 'b> Folder for Fresh<'a, 'b> {
     fn fold_index(&mut self, index: &Index) -> Index {
         // QUESTION: Why do we need to `prune` here?  Maybe because we don't
         // copy the `instance` when creating an new type variable.
-        let index = prune(self.arena, *index);
+        let index = self.checker.prune(*index);
         let t = self.get_type(&index);
 
         match &t.kind {
@@ -79,10 +83,10 @@ impl<'a> Folder for Fresh<'a> {
                 instance: _,
                 constraint,
             }) => {
-                if is_generic(self.arena, index, self.ctx) {
+                if is_generic(self.checker, index, self.ctx) {
                     self.mapping
                         .entry(index)
-                        .or_insert_with(|| new_var_type(self.arena, *constraint))
+                        .or_insert_with(|| new_var_type(&mut self.checker.arena, *constraint))
                         .to_owned()
                 } else {
                     index
@@ -101,9 +105,9 @@ impl<'a> Folder for Fresh<'a> {
 /// Args:
 ///     t: A type to be copied.
 ///     non_generic: A set of non-generic TypeVariables
-pub fn fresh(arena: &mut Arena<Type>, index: Index, ctx: &Context) -> Index {
+pub fn fresh(checker: &mut Checker, index: Index, ctx: &Context) -> Index {
     let mut fresh = Fresh {
-        arena,
+        checker,
         ctx,
         mapping: HashMap::default(),
     };
@@ -240,6 +244,6 @@ pub fn instantiate_func(
 ///
 /// Returns:
 ///     True if v is a generic variable, otherwise False
-pub fn is_generic(arena: &mut Arena<Type>, t: Index, ctx: &Context) -> bool {
-    !occurs_in(arena, t, &ctx.non_generic)
+pub fn is_generic(checker: &mut Checker, t: Index, ctx: &Context) -> bool {
+    !checker.occurs_in(t, &ctx.non_generic)
 }

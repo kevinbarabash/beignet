@@ -9,7 +9,6 @@ use crate::type_param::TypeParam;
 pub enum ObjectProp {
     Call(ObjCallable),
     Constructor(ObjCallable),
-    // Indexer(Indexer),
     Prop(Prop),
     Mapped(Mapped),
 }
@@ -39,20 +38,6 @@ pub struct Prop {
     pub mutable: bool,
     pub type_ann: Box<TypeAnn>,
 }
-
-// #[derive(Debug, PartialEq, Eq, Clone)]
-// pub struct IndexerKey {
-//     pub name: String, // TODO: change to Ident
-//     pub type_ann: Box<TypeAnn>,
-// }
-
-// #[derive(Debug, PartialEq, Eq, Clone)]
-// pub struct Indexer {
-//     pub span: Span,
-//     pub key: IndexerKey,
-//     pub mutable: bool,
-//     pub type_ann: Box<TypeAnn>,
-// }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Mapped {

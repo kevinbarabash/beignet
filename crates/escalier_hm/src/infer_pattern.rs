@@ -1,9 +1,10 @@
-use generational_arena::{Arena, Index};
+use generational_arena::Index;
 use std::collections::HashMap;
 
 use escalier_ast::{self as ast, *};
 
-use crate::context::{get_type, Binding, Context};
+use crate::checker::Checker;
+use crate::context::{Binding, Context};
 use crate::errors::*;
 use crate::types::{self, *};
 
@@ -15,162 +16,168 @@ use crate::types::{self, *};
 
 type Assump = HashMap<String, Binding>;
 
-pub fn infer_pattern(
-    arena: &mut Arena<Type>,
-    pattern: &mut Pattern,
-    ctx: &Context,
-) -> Result<(Assump, Index), Errors> {
-    fn infer_pattern_rec(
-        arena: &mut Arena<Type>,
+impl Checker {
+    // TODO: Use a Folder for this.
+    pub fn infer_pattern(
+        &mut self,
         pattern: &mut Pattern,
-        assump: &mut Assump,
         ctx: &Context,
-    ) -> Result<Index, Errors> {
-        let t = match &mut pattern.kind {
-            PatternKind::Ident(BindingIdent { name, mutable, .. }) => {
-                let t = new_var_type(arena, None);
-                if assump
-                    .insert(
-                        name.to_owned(),
-                        Binding {
-                            index: t,
-                            is_mut: *mutable,
-                        },
-                    )
-                    .is_some()
-                {
-                    return Err(Errors::InferenceError(
-                        "Duplicate identifier in pattern".to_string(),
-                    ));
+    ) -> Result<(Assump, Index), Errors> {
+        fn infer_pattern_rec(
+            checker: &mut Checker,
+            pattern: &mut Pattern,
+            assump: &mut Assump,
+            ctx: &Context,
+        ) -> Result<Index, Errors> {
+            let t = match &mut pattern.kind {
+                PatternKind::Ident(BindingIdent { name, mutable, .. }) => {
+                    let t = new_var_type(&mut checker.arena, None);
+                    if assump
+                        .insert(
+                            name.to_owned(),
+                            Binding {
+                                index: t,
+                                is_mut: *mutable,
+                            },
+                        )
+                        .is_some()
+                    {
+                        return Err(Errors::InferenceError(
+                            "Duplicate identifier in pattern".to_string(),
+                        ));
+                    }
+                    t
                 }
-                t
-            }
-            PatternKind::Rest(ast::RestPat { arg }) => {
-                let arg_type = infer_pattern_rec(arena, arg.as_mut(), assump, ctx)?;
-                new_rest_type(arena, arg_type)
-            }
-            PatternKind::Object(ObjectPat { props, .. }) => {
-                let mut rest_opt_ty: Option<Index> = None;
-                let mut elems: Vec<types::TObjElem> = vec![];
+                PatternKind::Rest(ast::RestPat { arg }) => {
+                    let arg_type = infer_pattern_rec(checker, arg.as_mut(), assump, ctx)?;
+                    new_rest_type(&mut checker.arena, arg_type)
+                }
+                PatternKind::Object(ObjectPat { props, .. }) => {
+                    let mut rest_opt_ty: Option<Index> = None;
+                    let mut elems: Vec<types::TObjElem> = vec![];
 
-                for prop in props.iter_mut() {
-                    match prop {
-                        // re-assignment, e.g. {x: new_x, y: new_y} = point
-                        ObjectPatProp::KeyValue(KeyValuePatProp { key, value, .. }) => {
-                            // We ignore `init` for now, we can come back later to handle
-                            // default values.
-                            // TODO: handle default values
+                    for prop in props.iter_mut() {
+                        match prop {
+                            // re-assignment, e.g. {x: new_x, y: new_y} = point
+                            ObjectPatProp::KeyValue(KeyValuePatProp { key, value, .. }) => {
+                                // We ignore `init` for now, we can come back later to handle
+                                // default values.
+                                // TODO: handle default values
 
-                            // TODO: bubble the error up from infer_patter_rec() if there is one.
-                            let value_type = infer_pattern_rec(arena, value.as_mut(), assump, ctx)?;
+                                // TODO: bubble the error up from infer_patter_rec() if there is one.
+                                let value_type =
+                                    infer_pattern_rec(checker, value.as_mut(), assump, ctx)?;
 
-                            elems.push(types::TObjElem::Prop(types::TProp {
-                                name: TPropKey::StringKey(key.name.to_owned()),
-                                modifier: None,
-                                optional: false,
-                                mutable: false,
-                                t: value_type,
-                            }))
-                        }
-                        ObjectPatProp::Shorthand(ShorthandPatProp { ident, .. }) => {
-                            // We ignore `init` for now, we can come back later to handle
-                            // default values.
-                            // TODO: handle default values
-
-                            let t = new_var_type(arena, None);
-                            if assump
-                                .insert(
-                                    ident.name.to_owned(),
-                                    Binding {
-                                        index: t,
-                                        is_mut: false,
-                                    },
-                                )
-                                .is_some()
-                            {
-                                todo!("return an error");
+                                elems.push(types::TObjElem::Prop(types::TProp {
+                                    name: TPropKey::StringKey(key.name.to_owned()),
+                                    modifier: None,
+                                    optional: false,
+                                    mutable: false,
+                                    t: value_type,
+                                }))
                             }
+                            ObjectPatProp::Shorthand(ShorthandPatProp { ident, .. }) => {
+                                // We ignore `init` for now, we can come back later to handle
+                                // default values.
+                                // TODO: handle default values
 
-                            elems.push(types::TObjElem::Prop(types::TProp {
-                                name: TPropKey::StringKey(ident.name.to_owned()),
-                                modifier: None,
-                                optional: false,
-                                mutable: false,
-                                t,
-                            }))
-                        }
-                        ObjectPatProp::Rest(rest) => {
-                            if rest_opt_ty.is_some() {
-                                return Err(Errors::InferenceError(
-                                    "Maximum one rest pattern allowed in object patterns"
-                                        .to_string(),
-                                ));
+                                let t = new_var_type(&mut checker.arena, None);
+                                if assump
+                                    .insert(
+                                        ident.name.to_owned(),
+                                        Binding {
+                                            index: t,
+                                            is_mut: false,
+                                        },
+                                    )
+                                    .is_some()
+                                {
+                                    todo!("return an error");
+                                }
+
+                                elems.push(types::TObjElem::Prop(types::TProp {
+                                    name: TPropKey::StringKey(ident.name.to_owned()),
+                                    modifier: None,
+                                    optional: false,
+                                    mutable: false,
+                                    t,
+                                }))
                             }
-                            // TypeScript doesn't support spreading/rest in types so instead we
-                            // do the following conversion:
-                            // {x, y, ...rest} -> {x: A, y: B} & C
-                            // TODO: bubble the error up from infer_patter_rec() if there is one.
-                            rest_opt_ty =
-                                Some(infer_pattern_rec(arena, &mut rest.arg, assump, ctx)?);
+                            ObjectPatProp::Rest(rest) => {
+                                if rest_opt_ty.is_some() {
+                                    return Err(Errors::InferenceError(
+                                        "Maximum one rest pattern allowed in object patterns"
+                                            .to_string(),
+                                    ));
+                                }
+                                // TypeScript doesn't support spreading/rest in types so instead we
+                                // do the following conversion:
+                                // {x, y, ...rest} -> {x: A, y: B} & C
+                                // TODO: bubble the error up from infer_patter_rec() if there is one.
+                                rest_opt_ty =
+                                    Some(infer_pattern_rec(checker, &mut rest.arg, assump, ctx)?);
+                            }
                         }
                     }
-                }
 
-                let obj_type = new_object_type(arena, &elems);
+                    let obj_type = new_object_type(&mut checker.arena, &elems);
 
-                match rest_opt_ty {
-                    // TODO: Replace this with a proper Rest/Spread type
-                    // See https://github.com/microsoft/TypeScript/issues/10727
-                    Some(rest_ty) => new_intersection_type(arena, &[obj_type, rest_ty]),
-                    None => obj_type,
-                }
-            }
-            PatternKind::Tuple(ast::TuplePat { elems, optional: _ }) => {
-                let mut elem_types = vec![];
-                for elem in elems.iter_mut() {
-                    let t = match elem {
-                        Some(elem) => {
-                            // TODO:
-                            // - handle elem.init
-                            // - check for multiple rest patterns
-                            infer_pattern_rec(arena, &mut elem.pattern, assump, ctx)?
+                    match rest_opt_ty {
+                        // TODO: Replace this with a proper Rest/Spread type
+                        // See https://github.com/microsoft/TypeScript/issues/10727
+                        Some(rest_ty) => {
+                            new_intersection_type(&mut checker.arena, &[obj_type, rest_ty])
                         }
-                        None => new_keyword(arena, Keyword::Undefined),
-                    };
-                    elem_types.push(t);
+                        None => obj_type,
+                    }
                 }
+                PatternKind::Tuple(ast::TuplePat { elems, optional: _ }) => {
+                    let mut elem_types = vec![];
+                    for elem in elems.iter_mut() {
+                        let t = match elem {
+                            Some(elem) => {
+                                // TODO:
+                                // - handle elem.init
+                                // - check for multiple rest patterns
+                                infer_pattern_rec(checker, &mut elem.pattern, assump, ctx)?
+                            }
+                            None => new_keyword(&mut checker.arena, Keyword::Undefined),
+                        };
+                        elem_types.push(t);
+                    }
 
-                new_tuple_type(arena, &elem_types)
-            }
-            PatternKind::Lit(LitPat { lit }) => new_lit_type(arena, lit),
-            PatternKind::Is(IsPat { ident, is_id }) => {
-                let t = match is_id.name.as_str() {
-                    "number" => new_primitive(arena, Primitive::Number),
-                    "string" => new_primitive(arena, Primitive::String),
-                    "boolean" => new_primitive(arena, Primitive::Boolean),
-                    name => get_type(arena, name, ctx)?,
-                };
+                    new_tuple_type(&mut checker.arena, &elem_types)
+                }
+                PatternKind::Lit(LitPat { lit }) => new_lit_type(&mut checker.arena, lit),
+                PatternKind::Is(IsPat { ident, is_id }) => {
+                    let t = match is_id.name.as_str() {
+                        "number" => new_primitive(&mut checker.arena, Primitive::Number),
+                        "string" => new_primitive(&mut checker.arena, Primitive::String),
+                        "boolean" => new_primitive(&mut checker.arena, Primitive::Boolean),
+                        name => checker.get_type(name, ctx)?,
+                    };
 
-                assump.insert(
-                    ident.name.to_owned(),
-                    Binding {
-                        index: t,
-                        is_mut: false,
-                    },
-                );
+                    assump.insert(
+                        ident.name.to_owned(),
+                        Binding {
+                            index: t,
+                            is_mut: false,
+                        },
+                    );
 
-                t
-            }
-            PatternKind::Wildcard => new_var_type(arena, None),
-        };
+                    t
+                }
+                PatternKind::Wildcard => new_var_type(&mut checker.arena, None),
+            };
 
-        Ok(t)
+            Ok(t)
+        }
+
+        let mut assump = Assump::default();
+        let pat_type = infer_pattern_rec(self, pattern, &mut assump, ctx)?;
+
+        Ok((assump, pat_type))
     }
-
-    let mut assump = Assump::default();
-    let pat_type = infer_pattern_rec(arena, pattern, &mut assump, ctx)?;
-
-    Ok((assump, pat_type))
 }
 
 pub fn pattern_to_tpat(pattern: &Pattern, is_func_param: bool) -> TPat {
