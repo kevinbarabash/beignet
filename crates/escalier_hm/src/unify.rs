@@ -50,8 +50,8 @@ impl Checker {
                 } else {
                     Err(Errors::InferenceError(format!(
                         "type mismatch: {} != {}",
-                        a_t.as_string(&self.arena),
-                        b_t.as_string(&self.arena)
+                        self.print_type(&a),
+                        self.print_type(&b),
                     )))
                 }
             }
@@ -79,8 +79,8 @@ impl Checker {
 
                 Err(Errors::InferenceError(format!(
                     "type mismatch: unify({}, {}) failed",
-                    a_t.as_string(&self.arena),
-                    b_t.as_string(&self.arena)
+                    self.print_type(&a),
+                    self.print_type(&b),
                 )))
             }
             (TypeKind::Tuple(tuple1), TypeKind::Tuple(tuple2)) => {
@@ -162,8 +162,8 @@ impl Checker {
                 if con_a.name != con_b.name || con_a.types.len() != con_b.types.len() {
                     return Err(Errors::InferenceError(format!(
                         "type mismatch: {} != {}",
-                        a_t.as_string(&self.arena),
-                        b_t.as_string(&self.arena),
+                        self.print_type(&a),
+                        self.print_type(&b),
                     )));
                 }
                 for (p, q) in con_a.types.iter().zip(con_b.types.iter()) {
@@ -274,8 +274,8 @@ impl Checker {
 
                     return Err(Errors::InferenceError(format!(
                         "{} is not a subtype of {} since it requires more params",
-                        a_t.as_string(&self.arena),
-                        b_t.as_string(&self.arena),
+                        self.print_type(&a),
+                        self.print_type(&b),
                     )));
                 }
 
@@ -324,8 +324,8 @@ impl Checker {
                 if !equal {
                     return Err(Errors::InferenceError(format!(
                         "type mismatch: {} != {}",
-                        a_t.as_string(&self.arena),
-                        b_t.as_string(&self.arena),
+                        self.print_type(&a),
+                        self.print_type(&b),
                     )));
                 }
                 Ok(())
@@ -340,8 +340,8 @@ impl Checker {
                 (Primitive::Symbol, Primitive::Symbol) => Ok(()),
                 _ => Err(Errors::InferenceError(format!(
                     "type mismatch: {} != {}",
-                    a_t.as_string(&self.arena),
-                    b_t.as_string(&self.arena),
+                    self.print_type(&a),
+                    self.print_type(&b),
                 ))),
             },
             (TypeKind::Object(object1), TypeKind::Object(object2)) => {
@@ -413,7 +413,7 @@ impl Checker {
                             return Err(Errors::InferenceError(format!(
                                 "'{}' is missing in {}",
                                 name,
-                                a_t.as_string(&self.arena),
+                                self.print_type(&a),
                             )));
                         }
                     }
@@ -477,7 +477,7 @@ impl Checker {
                             _ => {
                                 return Err(Errors::InferenceError(format!(
                                     "{} has multiple indexers",
-                                    a_t.as_string(&self.arena)
+                                    self.print_type(&a),
                                 )))
                             }
                         }
@@ -485,7 +485,7 @@ impl Checker {
                     _ => {
                         return Err(Errors::InferenceError(format!(
                             "{} has multiple indexers",
-                            b_t.as_string(&self.arena)
+                            self.print_type(&b),
                         )))
                     }
                 }
@@ -593,8 +593,8 @@ impl Checker {
             }
             _ => Err(Errors::InferenceError(format!(
                 "type mismatch: unify({}, {}) failed",
-                a_t.as_string(&self.arena),
-                b_t.as_string(&self.arena)
+                self.print_type(&a),
+                self.print_type(&b),
             ))),
         }
     }
@@ -607,10 +607,7 @@ impl Checker {
         let t1 = self.expand(ctx, t1)?;
         let t2 = self.expand(ctx, t2)?;
 
-        let t1_t = self.arena.get(t1).unwrap();
-        let t2_t = self.arena.get(t2).unwrap();
-
-        if t1_t.equals(t2_t, &self.arena) {
+        if self.equals(&t1, &t2) {
             Ok(())
         } else {
             Err(Errors::InferenceError(format!(

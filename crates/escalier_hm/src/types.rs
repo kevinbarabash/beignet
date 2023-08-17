@@ -410,229 +410,6 @@ pub struct Scheme {
 /// All type variables have a unique id, but names are
 /// only assigned lazily, when required.
 
-impl Type {
-    pub fn as_string(&self, arena: &Arena<Type>) -> String {
-        match &self.kind {
-            TypeKind::Variable(Variable {
-                instance: Some(inst),
-                ..
-            }) => arena[*inst].as_string(arena),
-            TypeKind::Variable(Variable { id, constraint, .. }) => match constraint {
-                Some(constraint) => format!("t{id}:{}", arena[*constraint].as_string(arena)),
-                None => format!("t{id}"),
-            },
-            TypeKind::Union(Union { types }) => types_to_strings(arena, types).join(" | "),
-            TypeKind::Intersection(Intersection { types }) => {
-                types_to_strings(arena, types).join(" & ")
-            }
-            TypeKind::Tuple(Tuple { types }) => {
-                format!("[{}]", types_to_strings(arena, types).join(", "))
-            }
-            TypeKind::Constructor(Constructor { name, types }) => {
-                if types.is_empty() {
-                    name.to_string()
-                } else {
-                    format!("{}<{}>", name, types_to_strings(arena, types).join(", "))
-                }
-            }
-            TypeKind::Keyword(keyword) => keyword.to_string(),
-            TypeKind::Primitive(primitive) => primitive.to_string(),
-            TypeKind::Literal(lit) => lit.to_string(),
-            TypeKind::Object(object) => {
-                let mut fields = vec![];
-                for prop in &object.elems {
-                    match prop {
-                        TObjElem::Constructor(TCallable {
-                            params,
-                            ret,
-                            type_params,
-                        }) => {
-                            let mut result = "fn".to_string();
-                            match type_params {
-                                Some(type_params) if !type_params.is_empty() => {
-                                    let type_params = type_params
-                                        .iter()
-                                        .map(|tp| match &tp.constraint {
-                                            Some(constraint) => format!(
-                                                "{}:{}",
-                                                tp.name.clone(),
-                                                arena[*constraint].as_string(arena)
-                                            ),
-                                            None => tp.name.clone(),
-                                        })
-                                        .collect::<Vec<_>>();
-                                    result.push_str(&format!("<{}>", type_params.join(", ")))
-                                }
-                                _ => (),
-                            };
-                            result.push_str(&format!(
-                                "({}) -> {}",
-                                params_to_strings(arena, params).join(", "),
-                                arena[*ret].as_string(arena)
-                            ));
-                            fields.push(result);
-                        }
-                        TObjElem::Call(TCallable {
-                            params,
-                            ret,
-                            type_params,
-                        }) => {
-                            let mut result = "fn".to_string();
-                            match type_params {
-                                Some(type_params) if !type_params.is_empty() => {
-                                    let type_params = type_params
-                                        .iter()
-                                        .map(|tp| match &tp.constraint {
-                                            Some(constraint) => format!(
-                                                "{}:{}",
-                                                tp.name.clone(),
-                                                arena[*constraint].as_string(arena)
-                                            ),
-                                            None => tp.name.clone(),
-                                        })
-                                        .collect::<Vec<_>>();
-                                    result.push_str(&format!("<{}>", type_params.join(", ")))
-                                }
-                                _ => (),
-                            };
-                            result.push_str(&format!(
-                                "({}) -> {}",
-                                params_to_strings(arena, params).join(", "),
-                                arena[*ret].as_string(arena)
-                            ));
-                            fields.push(result);
-                        }
-                        TObjElem::Mapped(MappedType {
-                            key,
-                            value,
-                            target,
-                            source,
-                            // TODO: handle `if`-clause
-                            check: _,
-                            extends: _,
-                        }) => {
-                            let key = arena[*key].as_string(arena);
-                            let value = arena[*value].as_string(arena);
-                            let source = arena[*source].as_string(arena);
-
-                            let result = format!("[{key}]: {value} for {target} in {source}",);
-                            fields.push(result);
-                        }
-                        // TObjElem::Index(TIndex { key, mutable, t }) => {
-                        //     let t = arena[*t].as_string(arena);
-                        //     let key_t = arena[key.t].as_string(arena);
-                        //     let name = &key.name;
-                        //     if *mutable {
-                        //         fields.push(format!("[{name}: {key_t}]: mut {t}"));
-                        //     } else {
-                        //         fields.push(format!("[{name}: {key_t}]: {t}"));
-                        //     }
-                        // }
-                        TObjElem::Prop(TProp {
-                            name,
-                            modifier, // TODO
-                            optional,
-                            mutable: _,
-                            t,
-                        }) => {
-                            let name = match name {
-                                TPropKey::StringKey(s) => s,
-                                TPropKey::NumberKey(n) => n,
-                            };
-                            let t = arena[*t].as_string(arena);
-                            let mut str = "".to_string();
-
-                            if let Some(modifier) = modifier {
-                                match modifier {
-                                    TPropModifier::Getter => str += "get ",
-                                    TPropModifier::Setter => str += "set ",
-                                }
-                            }
-
-                            str += name;
-                            if *optional {
-                                str += "?";
-                            }
-                            str += &format!(": {t}");
-
-                            fields.push(str);
-                        }
-                    }
-                }
-                format!("{{{}}}", fields.join(", "))
-            }
-            TypeKind::Rest(rest) => {
-                format!("...{}", arena[rest.arg].as_string(arena))
-            }
-            TypeKind::Function(func) => {
-                let type_params = match &func.type_params {
-                    Some(type_params) if !type_params.is_empty() => {
-                        let type_params = type_params
-                            .iter()
-                            .map(|tp| match &tp.constraint {
-                                Some(constraint) => format!(
-                                    "{}:{}",
-                                    tp.name.clone(),
-                                    arena[*constraint].as_string(arena)
-                                ),
-                                None => tp.name.clone(),
-                            })
-                            .collect::<Vec<_>>();
-                        format!("<{}>", type_params.join(", "))
-                    }
-                    _ => "".to_string(),
-                };
-                let throws = match func.throws {
-                    Some(throws) => format!(" throws {}", arena[throws].as_string(arena)),
-                    None => "".to_string(),
-                };
-                format!(
-                    "{type_params}({}) -> {}{throws}",
-                    params_to_strings(arena, &func.params).join(", "),
-                    arena[func.ret].as_string(arena),
-                )
-            }
-            TypeKind::KeyOf(KeyOf { t }) => format!("keyof {}", arena[*t].as_string(arena)),
-            TypeKind::IndexedAccess(IndexedAccess { obj, index }) => format!(
-                "{}[{}]",
-                arena[*obj].as_string(arena),
-                arena[*index].as_string(arena)
-            ),
-            TypeKind::Conditional(Conditional {
-                check,
-                extends,
-                true_type,
-                false_type,
-            }) => {
-                format!(
-                    "{} extends {} ? {} : {}",
-                    arena[*check].as_string(arena),
-                    arena[*extends].as_string(arena),
-                    arena[*true_type].as_string(arena),
-                    arena[*false_type].as_string(arena),
-                )
-            }
-            TypeKind::Infer(Infer { name }) => format!("infer {}", name),
-            TypeKind::Wildcard => "_".to_string(),
-            TypeKind::Binary(BinaryT { op, left, right }) => {
-                let op = match op {
-                    TBinaryOp::Add => "+",
-                    TBinaryOp::Sub => "-",
-                    TBinaryOp::Mul => "*",
-                    TBinaryOp::Div => "/",
-                    TBinaryOp::Mod => "%",
-                };
-                format!(
-                    "{} {} {}",
-                    arena[*left].as_string(arena),
-                    op,
-                    arena[*right].as_string(arena),
-                )
-            }
-        }
-    }
-}
-
 impl Checker {
     pub fn print_type(&self, index: &Index) -> String {
         match &self.arena[*index].kind {
@@ -862,30 +639,72 @@ impl Checker {
         }
         strings
     }
-}
 
-fn types_to_strings(a: &Arena<Type>, types: &[Index]) -> Vec<String> {
-    let mut strings = vec![];
-    for v in types {
-        strings.push(a[*v].as_string(a));
+    pub fn equals(&self, a: &Index, b: &Index) -> bool {
+        match (&self.arena[*a].kind, &self.arena[*b].kind) {
+            (TypeKind::Variable(v1), TypeKind::Variable(v2)) => match (v1.instance, v2.instance) {
+                (Some(a_inst), Some(b_inst)) => self.equals(&a_inst, &b_inst),
+                (Some(a_inst), None) => self.equals(&a_inst, b),
+                (None, Some(b_inst)) => self.equals(a, &b_inst),
+                (None, None) => v1.id == v2.id,
+            },
+            (TypeKind::Constructor(c1), TypeKind::Constructor(c2)) => {
+                c1.name == c2.name && self.types_equal(&c1.types, &c2.types)
+            }
+            (TypeKind::Union(union1), TypeKind::Union(union2)) => {
+                self.types_equal(&union1.types, &union2.types)
+            }
+            (TypeKind::Intersection(int1), TypeKind::Intersection(int2)) => {
+                self.types_equal(&int1.types, &int2.types)
+            }
+            (TypeKind::Tuple(tuple1), TypeKind::Tuple(tuple2)) => {
+                self.types_equal(&tuple1.types, &tuple2.types)
+            }
+            (TypeKind::Keyword(kw1), TypeKind::Keyword(kw2)) => kw1 == kw2,
+            (TypeKind::Primitive(prim1), TypeKind::Primitive(prim2)) => prim1 == prim2,
+            (TypeKind::Literal(l1), TypeKind::Literal(l2)) => l1 == l2,
+            (TypeKind::Function(f1), TypeKind::Function(f2)) => {
+                eprintln!("checking function types");
+                f1.params.len() == f2.params.len()
+                    && f1
+                        .params
+                        .iter()
+                        .zip(f2.params.iter())
+                        .all(|(a, b)| self.equals(&a.t, &b.t))
+                    && self.equals(&f1.ret, &f2.ret)
+            }
+            (TypeKind::Object(o1), TypeKind::Object(o2)) => {
+                o1.elems.len() == o2.elems.len()
+                    && o1
+                        .elems
+                        .iter()
+                        .all(|p1| o2.elems.iter().any(|p2| self.obj_elem_equals(p1, p2)))
+            }
+            (TypeKind::Rest(r1), TypeKind::Rest(r2)) => self.equals(&r1.arg, &r2.arg),
+            // TODO:
+            // - unification of object and intersection
+            _ => false,
+        }
     }
-    strings
-}
 
-fn param_to_string(arena: &Arena<Type>, param: &FuncParam) -> String {
-    let name = tpat_to_string(arena, &param.pattern);
-    match param.optional {
-        true => format!("{name}?: {}", arena[param.t].as_string(arena)),
-        false => format!("{name}: {}", arena[param.t].as_string(arena)),
+    fn types_equal(&self, types1: &[Index], types2: &[Index]) -> bool {
+        types1.len() == types2.len()
+            && types1
+                .iter()
+                .zip(types2.iter())
+                .all(|(a, b)| self.equals(a, b))
     }
-}
 
-fn params_to_strings(arena: &Arena<Type>, params: &[FuncParam]) -> Vec<String> {
-    let mut strings = vec![];
-    for param in params {
-        strings.push(param_to_string(arena, param))
+    fn obj_elem_equals(&self, elem1: &TObjElem, elem2: &TObjElem) -> bool {
+        match (elem1, elem2) {
+            (TObjElem::Mapped(map1), TObjElem::Mapped(map2)) => {
+                // TODO: compare key types as well
+                self.equals(&map1.value, &map2.value)
+            }
+            (TObjElem::Prop(p1), TObjElem::Prop(p2)) => self.equals(&p1.t, &p2.t),
+            _ => false,
+        }
     }
-    strings
 }
 
 fn tpat_to_string(_arena: &Arena<Type>, pattern: &TPat) -> String {
@@ -1054,95 +873,3 @@ pub fn new_infer_type(arena: &mut Arena<Type>, name: &str) -> Index {
 pub fn new_wildcard_type(arena: &mut Arena<Type>) -> Index {
     arena.insert(Type::from(TypeKind::Wildcard))
 }
-
-impl Type {
-    pub fn equals(&self, other: &Type, arena: &Arena<Type>) -> bool {
-        match (&self.kind, &other.kind) {
-            (TypeKind::Variable(v1), TypeKind::Variable(v2)) => {
-                let (a, b) = match (v1.instance, v2.instance) {
-                    (Some(a), Some(b)) => (&arena[a], &arena[b]),
-                    (Some(a), None) => (&arena[a], other),
-                    (None, Some(b)) => (self, &arena[b]),
-                    (None, None) => return v1.id == v2.id,
-                };
-                a.equals(b, arena)
-            }
-            (TypeKind::Constructor(c1), TypeKind::Constructor(c2)) => {
-                c1.name == c2.name && types_equal(arena, &c1.types, &c2.types)
-            }
-            (TypeKind::Union(union1), TypeKind::Union(union2)) => {
-                types_equal(arena, &union1.types, &union2.types)
-            }
-            (TypeKind::Intersection(int1), TypeKind::Intersection(int2)) => {
-                types_equal(arena, &int1.types, &int2.types)
-            }
-            (TypeKind::Tuple(tuple1), TypeKind::Tuple(tuple2)) => {
-                types_equal(arena, &tuple1.types, &tuple2.types)
-            }
-            (TypeKind::Keyword(kw1), TypeKind::Keyword(kw2)) => kw1 == kw2,
-            (TypeKind::Primitive(prim1), TypeKind::Primitive(prim2)) => prim1 == prim2,
-            (TypeKind::Literal(l1), TypeKind::Literal(l2)) => l1 == l2,
-            (TypeKind::Function(f1), TypeKind::Function(f2)) => {
-                eprintln!("checking function types");
-                let ret1 = &arena[f1.ret];
-                let ret2 = &arena[f2.ret];
-                f1.params.len() == f2.params.len()
-                    && f1.params.iter().zip(f2.params.iter()).all(|(a, b)| {
-                        let a = &arena[a.t];
-                        let b = &arena[b.t];
-                        a.equals(b, arena)
-                    })
-                    && ret1.equals(ret2, arena)
-            }
-            (TypeKind::Object(o1), TypeKind::Object(o2)) => {
-                o1.elems.len() == o2.elems.len()
-                    && o1
-                        .elems
-                        .iter()
-                        .all(|p1| o2.elems.iter().any(|p2| obj_elem_equals(arena, p1, p2)))
-            }
-            (TypeKind::Rest(r1), TypeKind::Rest(r2)) => {
-                let t1 = &arena[r1.arg];
-                let t2 = &arena[r2.arg];
-                t1.equals(t2, arena)
-            }
-            // TODO:
-            // - unification of object and intersection
-            _ => false,
-        }
-    }
-}
-
-fn types_equal(arena: &Arena<Type>, types1: &[Index], types2: &[Index]) -> bool {
-    types1.len() == types2.len()
-        && types1.iter().zip(types2.iter()).all(|(a, b)| {
-            let a = &arena[*a];
-            let b = &arena[*b];
-            a.equals(b, arena)
-        })
-}
-
-fn obj_elem_equals(arena: &Arena<Type>, elem1: &TObjElem, elem2: &TObjElem) -> bool {
-    match (elem1, elem2) {
-        (TObjElem::Mapped(map1), TObjElem::Mapped(map2)) => {
-            // TODO: compare key types as well
-            let t1 = &arena[map1.value];
-            let t2 = &arena[map2.value];
-            t1.equals(t2, arena)
-        }
-        (TObjElem::Prop(p1), TObjElem::Prop(p2)) => {
-            let t1 = &arena[p1.t];
-            let t2 = &arena[p2.t];
-            t1.equals(t2, arena)
-        }
-        _ => false,
-    }
-}
-
-/*
-
-type Record<K, V> = {[P]: V for P in K}
-
-type Foo = {[x]: number for x in number}
-
-*/

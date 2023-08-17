@@ -1234,9 +1234,7 @@ impl Checker {
         key_idx: Index,
     ) -> Result<Index, Errors> {
         // NOTE: cloning is fine here because we aren't mutating `obj_type`
-        let obj_type = self.arena[obj_idx].clone();
-
-        match &obj_type.kind {
+        match &self.arena[obj_idx].kind.clone() {
             TypeKind::Object(_) => self.get_prop(ctx, obj_idx, key_idx),
             // declare let obj: {x: number} | {x: string}
             // obj.x; // number | string
@@ -1291,7 +1289,7 @@ impl Checker {
             },
             _ => Err(Errors::InferenceError(format!(
                 "Can't access properties on {}",
-                obj_type.as_string(&self.arena)
+                self.print_type(&obj_idx)
             ))),
         }
     }

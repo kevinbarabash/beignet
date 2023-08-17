@@ -4030,11 +4030,9 @@ fn test_tuple_type_equality() -> Result<(), Errors> {
     checker.infer_program(&mut program, &mut my_ctx)?;
 
     let a = my_ctx.values.get("a").unwrap();
-    let a_t = checker.arena[a.index].clone();
     let b = my_ctx.values.get("b").unwrap();
-    let b_t = checker.arena[b.index].clone();
 
-    assert!(a_t.equals(&b_t, &checker.arena));
+    assert!(checker.equals(&a.index, &b.index));
 
     Ok(())
 }
@@ -4052,11 +4050,9 @@ fn test_function_type_equality() -> Result<(), Errors> {
     checker.infer_program(&mut program, &mut my_ctx)?;
 
     let add = my_ctx.values.get("add").unwrap();
-    let add_t = checker.arena[add.index].clone();
     let sub = my_ctx.values.get("sub").unwrap();
-    let sub_t = checker.arena[sub.index].clone();
 
-    assert!(add_t.equals(&sub_t, &checker.arena));
+    assert!(checker.equals(&add.index, &sub.index));
 
     Ok(())
 }
@@ -4074,11 +4070,9 @@ fn test_literal_type_equality() -> Result<(), Errors> {
     checker.infer_program(&mut program, &mut my_ctx)?;
 
     let a = my_ctx.values.get("a").unwrap();
-    let a_t = checker.arena[a.index].clone();
     let b = my_ctx.values.get("b").unwrap();
-    let b_t = checker.arena[b.index].clone();
 
-    assert!(a_t.equals(&b_t, &checker.arena));
+    assert!(checker.equals(&a.index, &b.index));
 
     Ok(())
 }
@@ -4097,11 +4091,9 @@ fn test_mutable_object_type_equality() -> Result<(), Errors> {
     checker.infer_program(&mut program, &mut my_ctx)?;
 
     let p = my_ctx.values.get("p").unwrap();
-    let p_t = checker.arena[p.index].clone();
     let q = my_ctx.values.get("q").unwrap();
-    let q_t = checker.arena[q.index].clone();
 
-    assert!(p_t.equals(&q_t, &checker.arena));
+    assert!(checker.equals(&p.index, &q.index));
 
     Ok(())
 }
@@ -4747,10 +4739,7 @@ fn type_level_arithmetic_incorrect_operands() -> Result<(), Errors> {
     checker.infer_program(&mut program, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("Sum").unwrap();
-    assert_eq!(
-        checker.arena[result.t].as_string(&checker.arena),
-        r#""hello" + true"#
-    );
+    assert_eq!(checker.print_type(&result.t), r#""hello" + true"#);
     let result = checker.expand_type(&my_ctx, result.t);
 
     assert_eq!(

@@ -787,8 +787,8 @@ impl Checker {
                             }
                             Err(_) => Err(Errors::InferenceError(format!(
                                 "{} is not a valid indexer for {}",
-                                key_type.as_string(&self.arena),
-                                obj_type.as_string(&self.arena)
+                                self.print_type(&key_idx),
+                                self.print_type(&obj_idx),
                             ))),
                         }
                     } else if !values.is_empty() {
@@ -797,7 +797,7 @@ impl Checker {
                     } else {
                         Err(Errors::InferenceError(format!(
                             "{} has no indexer",
-                            obj_type.as_string(&self.arena)
+                            self.print_type(&obj_idx),
                         )))
                     }
                 }
