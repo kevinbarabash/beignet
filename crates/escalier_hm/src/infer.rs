@@ -80,7 +80,7 @@ impl Checker {
                     };
                     element_types.push(t);
                 }
-                new_tuple_type(&mut self.arena, &element_types)
+                self.new_tuple_type(&element_types)
             }
             ExprKind::Object(syntax::Object {
                 properties: props, ..
@@ -129,7 +129,7 @@ impl Checker {
                         },
                     }
                 }
-                new_object_type(&mut self.arena, &prop_types)
+                self.new_object_type(&prop_types)
             }
             ExprKind::Call(syntax::Call {
                 callee: func,
@@ -144,7 +144,7 @@ impl Checker {
                     if let TypeKind::Union(union) = &self.arena[func_idx].kind {
                         let types = filter_nullables(&self.arena, &union.types);
                         has_undefined = types.len() != union.types.len();
-                        func_idx = new_union_type(&mut self.arena, &types);
+                        func_idx = self.new_union_type(&types);
                     }
                 }
 
@@ -166,7 +166,7 @@ impl Checker {
 
                 match *opt_chain && has_undefined {
                     true => {
-                        let undefined = new_keyword(&mut self.arena, Keyword::Undefined);
+                        let undefined = self.new_keyword(Keyword::Undefined);
 
                         if let TypeKind::Union(union) = &self.arena[result].kind.clone() {
                             let mut types = filter_nullables(&self.arena, &union.types);
@@ -178,10 +178,10 @@ impl Checker {
                                 result
                             } else {
                                 types.push(undefined);
-                                new_union_type(&mut self.arena, &types)
+                                self.new_union_type(&types)
                             }
                         } else {
-                            new_union_type(&mut self.arena, &[result, undefined])
+                            self.new_union_type(&[result, undefined])
                         }
                     }
                     false => result,
@@ -209,7 +209,7 @@ impl Checker {
                 {
                     let type_ann_t = match type_ann {
                         Some(type_ann) => self.infer_type_ann(type_ann, &mut sig_ctx)?,
-                        None => new_var_type(&mut self.arena, None),
+                        None => self.new_var_type(None),
                     };
                     pattern.inferred_type = Some(type_ann_t);
 
@@ -244,13 +244,13 @@ impl Checker {
                                         .collect();
 
                                     // TODO: warn about unreachable code.
-                                    break 'outer new_union_type(&mut self.arena, &ret_types);
+                                    break 'outer self.new_union_type(&ret_types);
                                 }
                             }
 
                             // If we don't encounter a return statement, we assume
                             // the return type is `undefined`.
-                            new_keyword(&mut self.arena, Keyword::Undefined)
+                            self.new_keyword(Keyword::Undefined)
                         }
                         BlockOrExpr::Expr(expr) => {
                             // TODO: use `find_returns` here as well
@@ -266,8 +266,7 @@ impl Checker {
                 let body_throws = if body_throws.is_empty() {
                     None
                 } else {
-                    Some(new_union_type(
-                        &mut self.arena,
+                    Some(self.new_union_type(
                         // TODO: compare string reps of the types for deduplication
                         &body_throws.into_iter().unique().collect_vec(),
                     ))
@@ -294,9 +293,9 @@ impl Checker {
                 // is async.  Async functions cannot throw.  They can only return a
                 // rejected promise.
                 if *is_async && !is_promise(&self.arena[body_t]) {
-                    let never = new_keyword(&mut self.arena, Keyword::Never);
+                    let never = self.new_keyword(Keyword::Never);
                     let throws_t = throws.unwrap_or(never);
-                    body_t = new_constructor(&mut self.arena, "Promise", &[body_t, throws_t]);
+                    body_t = self.new_constructor("Promise", &[body_t, throws_t]);
 
                     match return_type {
                         Some(return_type) => {
@@ -329,7 +328,7 @@ impl Checker {
                 alternate,
             }) => {
                 let cond_type = self.infer_expression(cond, ctx)?;
-                let bool_type = new_primitive(&mut self.arena, Primitive::Boolean);
+                let bool_type = self.new_primitive(Primitive::Boolean);
                 self.unify(ctx, cond_type, bool_type)?;
                 let consequent_type = self.infer_block(consequent, ctx)?;
                 let alternate_type = match alternate {
@@ -337,9 +336,9 @@ impl Checker {
                         BlockOrExpr::Block(block) => self.infer_block(block, ctx)?,
                         BlockOrExpr::Expr(expr) => self.infer_expression(expr, ctx)?,
                     },
-                    None => new_keyword(&mut self.arena, Keyword::Undefined),
+                    None => self.new_keyword(Keyword::Undefined),
                 };
-                new_union_type(&mut self.arena, &[consequent_type, alternate_type])
+                self.new_union_type(&[consequent_type, alternate_type])
             }
             ExprKind::Member(Member {
                 object: obj,
@@ -352,14 +351,13 @@ impl Checker {
                     if let TypeKind::Union(union) = &self.arena[obj_idx].kind {
                         let types = filter_nullables(&self.arena, &union.types);
                         has_undefined = types.len() != union.types.len();
-                        obj_idx = new_union_type(&mut self.arena, &types);
+                        obj_idx = self.new_union_type(&types);
                     }
                 }
 
                 let result = match prop {
                     MemberProp::Ident(Ident { name, .. }) => {
-                        let key_idx =
-                            new_lit_type(&mut self.arena, &Literal::String(name.to_owned()));
+                        let key_idx = self.new_lit_type(&Literal::String(name.to_owned()));
                         self.get_ident_member(ctx, obj_idx, key_idx)?
                     }
                     MemberProp::Computed(ComputedPropName { expr, .. }) => {
@@ -370,7 +368,7 @@ impl Checker {
 
                 match *opt_chain && has_undefined {
                     true => {
-                        let undefined = new_keyword(&mut self.arena, Keyword::Undefined);
+                        let undefined = self.new_keyword(Keyword::Undefined);
 
                         if let TypeKind::Union(union) = &self.arena[result].kind {
                             let mut types = filter_nullables(&self.arena, &union.types);
@@ -382,10 +380,10 @@ impl Checker {
                                 result
                             } else {
                                 types.push(undefined);
-                                new_union_type(&mut self.arena, &types)
+                                self.new_union_type(&types)
                             }
                         } else {
-                            new_union_type(&mut self.arena, &[result, undefined])
+                            self.new_union_type(&[result, undefined])
                         }
                     }
                     false => result,
@@ -406,8 +404,8 @@ impl Checker {
                 r_t
             }
             ExprKind::Binary(Binary { op, left, right }) => {
-                let number = new_primitive(&mut self.arena, Primitive::Number);
-                let boolean = new_primitive(&mut self.arena, Primitive::Boolean);
+                let number = self.new_primitive(Primitive::Number);
+                let boolean = self.new_primitive(Primitive::Boolean);
                 let left_type = self.infer_expression(left, ctx)?;
                 let right_type = self.infer_expression(right, ctx)?;
 
@@ -434,7 +432,7 @@ impl Checker {
                                     _ => unreachable!(),
                                 };
 
-                                new_lit_type(&mut self.arena, &Literal::Number(result.to_string()))
+                                self.new_lit_type(&Literal::Number(result.to_string()))
                             }
                             (_, _) => {
                                 self.unify(ctx, left_type, number)?;
@@ -463,7 +461,7 @@ impl Checker {
                                     _ => unreachable!(),
                                 };
 
-                                new_lit_type(&mut self.arena, &Literal::Boolean(result))
+                                self.new_lit_type(&Literal::Boolean(result))
                             }
                             (_, _) => {
                                 self.unify(ctx, left_type, number)?;
@@ -489,7 +487,7 @@ impl Checker {
                                     _ => unreachable!(),
                                 };
 
-                                new_lit_type(&mut self.arena, &Literal::Boolean(result))
+                                self.new_lit_type(&Literal::Boolean(result))
                             }
                             (
                                 TypeKind::Literal(Literal::String(left)),
@@ -501,11 +499,11 @@ impl Checker {
                                     _ => unreachable!(),
                                 };
 
-                                new_lit_type(&mut self.arena, &Literal::Boolean(result))
+                                self.new_lit_type(&Literal::Boolean(result))
                             }
                             (_, _) => {
-                                let var_a = new_var_type(&mut self.arena, None);
-                                let var_b = new_var_type(&mut self.arena, None);
+                                let var_a = self.new_var_type(None);
+                                let var_b = self.new_var_type(None);
                                 self.unify(ctx, left_type, var_a)?;
                                 self.unify(ctx, right_type, var_b)?;
                                 boolean
@@ -518,8 +516,8 @@ impl Checker {
                 op,
                 right: arg, // TODO: rename `right` to `arg`
             }) => {
-                let number = new_primitive(&mut self.arena, Primitive::Number);
-                let boolean = new_primitive(&mut self.arena, Primitive::Boolean);
+                let number = self.new_primitive(Primitive::Number);
+                let boolean = self.new_primitive(Primitive::Boolean);
                 let arg_type = self.infer_expression(arg, ctx)?;
 
                 match op {
@@ -545,12 +543,12 @@ impl Checker {
                 }
 
                 let expr_t = self.infer_expression(expr, ctx)?;
-                let inner_t = new_var_type(&mut self.arena, None);
-                let throws_t = new_var_type(&mut self.arena, None);
+                let inner_t = self.new_var_type(None);
+                let throws_t = self.new_var_type(None);
                 // TODO: Merge Constructor and TypeRef
                 // NOTE: This isn't quite right because we can await non-promise values.
                 // That being said, we should avoid doing so.
-                let promise_t = new_constructor(&mut self.arena, "Promise", &[inner_t, throws_t]);
+                let promise_t = self.new_constructor("Promise", &[inner_t, throws_t]);
                 self.unify(ctx, expr_t, promise_t)?;
                 *throws = Some(throws_t);
 
@@ -593,7 +591,7 @@ impl Checker {
                 let t1 = self.prune(body_types[1]);
                 eprintln!("t1 = {}", self.print_type(&t1));
 
-                new_union_type(&mut self.arena, &body_types)
+                self.new_union_type(&body_types)
             }
             ExprKind::Class(_) => todo!(),
             ExprKind::Do(Do { body }) => self.infer_block(body, ctx)?,
@@ -608,7 +606,7 @@ impl Checker {
                     Some(catch) => {
                         let throws = find_throws_in_block(body);
 
-                        let init_idx = new_union_type(&mut self.arena, &throws);
+                        let init_idx = self.new_union_type(&throws);
 
                         if let Some(pattern) = &mut catch.param {
                             let (pat_bindings, pat_type) = self.infer_pattern(pattern, ctx)?;
@@ -623,7 +621,7 @@ impl Checker {
                         }
 
                         let catch_t = self.infer_block(&mut catch.body, ctx)?;
-                        new_union_type(&mut self.arena, &[body_t, catch_t])
+                        self.new_union_type(&[body_t, catch_t])
                     }
                     None => body_t,
                 }
@@ -631,7 +629,7 @@ impl Checker {
             ExprKind::Yield(_) => todo!(),
             ExprKind::Throw(Throw { arg, throws }) => {
                 throws.replace(self.infer_expression(arg, ctx)?);
-                new_keyword(&mut self.arena, Keyword::Never)
+                self.new_keyword(Keyword::Never)
             }
             ExprKind::JSXFragment(_) => todo!(),
         };
@@ -646,7 +644,7 @@ impl Checker {
 
     pub fn infer_block(&mut self, block: &mut Block, ctx: &mut Context) -> Result<Index, Errors> {
         let mut new_ctx = ctx.clone();
-        let mut result_t = new_keyword(&mut self.arena, Keyword::Undefined);
+        let mut result_t = self.new_keyword(Keyword::Undefined);
 
         for stmt in &mut block.stmts.iter_mut() {
             result_t = self.infer_statement(stmt, &mut new_ctx, false)?;
@@ -677,7 +675,7 @@ impl Checker {
                     .map(|param| {
                         let t = match &mut param.type_ann {
                             Some(type_ann) => self.infer_type_ann(type_ann, &mut sig_ctx)?,
-                            None => new_var_type(&mut self.arena, None),
+                            None => self.new_var_type(None),
                         };
 
                         Ok(types::FuncParam {
@@ -717,21 +715,21 @@ impl Checker {
                     ))))
             }
 
-            TypeAnnKind::Number => new_primitive(&mut self.arena, Primitive::Number),
-            TypeAnnKind::Boolean => new_primitive(&mut self.arena, Primitive::Boolean),
-            TypeAnnKind::String => new_primitive(&mut self.arena, Primitive::String),
-            TypeAnnKind::Symbol => new_primitive(&mut self.arena, Primitive::Symbol),
+            TypeAnnKind::Number => self.new_primitive(Primitive::Number),
+            TypeAnnKind::Boolean => self.new_primitive(Primitive::Boolean),
+            TypeAnnKind::String => self.new_primitive(Primitive::String),
+            TypeAnnKind::Symbol => self.new_primitive(Primitive::Symbol),
 
-            TypeAnnKind::Null => new_keyword(&mut self.arena, Keyword::Null),
-            TypeAnnKind::Undefined => new_keyword(&mut self.arena, Keyword::Undefined),
-            TypeAnnKind::Unknown => new_keyword(&mut self.arena, Keyword::Unknown),
-            TypeAnnKind::Never => new_keyword(&mut self.arena, Keyword::Never),
+            TypeAnnKind::Null => self.new_keyword(Keyword::Null),
+            TypeAnnKind::Undefined => self.new_keyword(Keyword::Undefined),
+            TypeAnnKind::Unknown => self.new_keyword(Keyword::Unknown),
+            TypeAnnKind::Never => self.new_keyword(Keyword::Never),
 
             // TODO: How we make sure that create a fresh type variable for this
             // whenever it's used?  Maybe we can have an actual TypeKind::Wildcard
             // instead of creating a type variable here.
-            TypeAnnKind::Wildcard => new_wildcard_type(&mut self.arena),
-            TypeAnnKind::Infer(name) => new_infer_type(&mut self.arena, name),
+            TypeAnnKind::Wildcard => self.new_wildcard_type(),
+            TypeAnnKind::Infer(name) => self.new_infer_type(name),
 
             TypeAnnKind::Object(obj) => {
                 let mut props: Vec<types::TObjElem> = Vec::new();
@@ -811,7 +809,7 @@ impl Checker {
                                         Some(type_ann) => {
                                             self.infer_type_ann(type_ann, &mut sig_ctx)?
                                         }
-                                        None => new_var_type(&mut self.arena, None),
+                                        None => self.new_var_type(None),
                                     };
 
                                     Ok(types::FuncParam {
@@ -854,7 +852,7 @@ impl Checker {
                                         Some(type_ann) => {
                                             self.infer_type_ann(type_ann, &mut sig_ctx)?
                                         }
-                                        None => new_var_type(&mut self.arena, None),
+                                        None => self.new_var_type(None),
                                     };
 
                                     Ok(types::FuncParam {
@@ -879,7 +877,7 @@ impl Checker {
                         }
                     }
                 }
-                new_object_type(&mut self.arena, &props)
+                self.new_object_type(&props)
             }
             TypeAnnKind::TypeRef(name, type_args) => {
                 if ctx.schemes.get(name).is_none() {
@@ -894,9 +892,9 @@ impl Checker {
                         }
                         // TODO: check that the type args conform to any constraints
                         // present in the type params.
-                        new_constructor(&mut self.arena, name, &type_args_idxs)
+                        self.new_constructor(name, &type_args_idxs)
                     }
-                    None => new_constructor(&mut self.arena, name, &[]),
+                    None => self.new_constructor(name, &[]),
                 }
             }
             TypeAnnKind::Union(types) => {
@@ -904,41 +902,41 @@ impl Checker {
                 for type_ann in types.iter_mut() {
                     idxs.push(self.infer_type_ann(type_ann, ctx)?);
                 }
-                new_union_type(&mut self.arena, &idxs)
+                self.new_union_type(&idxs)
             }
             TypeAnnKind::Intersection(types) => {
                 let mut idxs = Vec::new();
                 for type_ann in types.iter_mut() {
                     idxs.push(self.infer_type_ann(type_ann, ctx)?);
                 }
-                new_intersection_type(&mut self.arena, &idxs)
+                self.new_intersection_type(&idxs)
             }
             TypeAnnKind::Tuple(types) => {
                 let mut idxs = Vec::new();
                 for type_ann in types.iter_mut() {
                     idxs.push(self.infer_type_ann(type_ann, ctx)?);
                 }
-                new_tuple_type(&mut self.arena, &idxs)
+                self.new_tuple_type(&idxs)
             }
             TypeAnnKind::Rest(rest) => {
                 let idx = self.infer_type_ann(rest, ctx)?;
-                new_rest_type(&mut self.arena, idx)
+                self.new_rest_type(idx)
             }
             TypeAnnKind::Array(elem_type) => {
                 let idx = self.infer_type_ann(elem_type, ctx)?;
-                new_constructor(&mut self.arena, "Array", &[idx])
+                self.new_constructor("Array", &[idx])
             }
             TypeAnnKind::IndexedAccess(obj_type, index_type) => {
                 let obj_idx = self.infer_type_ann(obj_type, ctx)?;
                 let index_idx = self.infer_type_ann(index_type, ctx)?;
-                new_indexed_access_type(&mut self.arena, obj_idx, index_idx)
+                self.new_indexed_access_type(obj_idx, index_idx)
             }
             TypeAnnKind::TypeOf(expr) => self.infer_expression(expr, ctx)?,
 
             // TODO: Create types for all of these
             TypeAnnKind::KeyOf(type_ann) => {
                 let t = self.infer_type_ann(type_ann, ctx)?;
-                new_keyof_type(&mut self.arena, t)
+                self.new_keyof_type(t)
                 // expand_type(self.arena, ctx, t)?
             }
             // TypeAnnKind::Mapped(_) => todo!(),
@@ -958,7 +956,7 @@ impl Checker {
 
                 let infer_types = find_infer_types(&mut self.arena, &extends_idx);
                 for infer in infer_types {
-                    let tp = new_var_type(&mut self.arena, None);
+                    let tp = self.new_var_type(None);
                     let scheme = Scheme {
                         type_params: None,
                         t: tp,
@@ -970,7 +968,7 @@ impl Checker {
 
                 let true_idx = self.infer_type_ann(true_type, &mut cond_ctx)?;
                 let false_idx = self.infer_type_ann(false_type, &mut cond_ctx)?;
-                new_conditional_type(&mut self.arena, check_idx, extends_idx, true_idx, false_idx)
+                self.new_conditional_type(check_idx, extends_idx, true_idx, false_idx)
             }
             TypeAnnKind::Match(MatchType { matchable, cases }) => {
                 let check_idx = self.infer_type_ann(matchable, ctx)?;
@@ -979,28 +977,18 @@ impl Checker {
 
                 let extends_idx = self.infer_type_ann(&mut case.extends, ctx)?;
                 let true_idx = self.infer_type_ann(&mut case.true_type, ctx)?;
-                let false_idx = new_keyword(&mut self.arena, Keyword::Never);
+                let false_idx = self.new_keyword(Keyword::Never);
 
-                let mut cond_type = new_conditional_type(
-                    &mut self.arena,
-                    check_idx,
-                    extends_idx,
-                    true_idx,
-                    false_idx,
-                );
+                let mut cond_type =
+                    self.new_conditional_type(check_idx, extends_idx, true_idx, false_idx);
 
                 for case in cases.iter_mut().rev().skip(1) {
                     let extends_idx = self.infer_type_ann(&mut case.extends, ctx)?;
                     let true_idx = self.infer_type_ann(&mut case.true_type, ctx)?;
                     let false_idx = cond_type;
 
-                    cond_type = new_conditional_type(
-                        &mut self.arena,
-                        check_idx,
-                        extends_idx,
-                        true_idx,
-                        false_idx,
-                    );
+                    cond_type =
+                        self.new_conditional_type(check_idx, extends_idx, true_idx, false_idx);
                 }
 
                 cond_type
@@ -1186,7 +1174,7 @@ impl Checker {
         for stmt in &node.stmts {
             if let StmtKind::TypeDecl { name, .. } = &stmt.kind {
                 let placeholder_scheme = Scheme {
-                    t: new_keyword(&mut self.arena, Keyword::Unknown),
+                    t: self.new_keyword(Keyword::Unknown),
                     type_params: None,
                 };
                 let name = name.to_owned();
@@ -1248,7 +1236,7 @@ impl Checker {
                             // TODO: check what the error is, we may want to propagate
                             // certain errors
                             if undefined_count == 0 {
-                                let undefined = new_keyword(&mut self.arena, Keyword::Undefined);
+                                let undefined = self.new_keyword(Keyword::Undefined);
                                 result_types.push(undefined);
                             }
                             undefined_count += 1;
@@ -1261,7 +1249,7 @@ impl Checker {
                         self.print_type(&key_idx),
                     )))
                 } else {
-                    Ok(new_union_type(&mut self.arena, &result_types))
+                    Ok(self.new_union_type(&result_types))
                 }
             }
             TypeKind::Constructor(types::Constructor {
@@ -1279,7 +1267,7 @@ impl Checker {
             },
             TypeKind::Tuple(types::Tuple { types }) => match ctx.schemes.get("Array") {
                 Some(scheme) => {
-                    let t = new_union_type(&mut self.arena, types);
+                    let t = self.new_union_type(types);
                     let obj_idx = self.expand_alias(ctx, "Array", scheme, &[t])?;
                     self.get_ident_member(ctx, obj_idx, key_idx)
                 }
@@ -1311,7 +1299,7 @@ impl Checker {
                 let scheme = Scheme {
                     t: match constraint {
                         Some(constraint) => constraint,
-                        None => new_keyword(&mut self.arena, Keyword::Unknown),
+                        None => self.new_keyword(Keyword::Unknown),
                     },
                     type_params: None,
                 };
@@ -1460,7 +1448,7 @@ impl<'a, 'b> Folder for Generalize<'a, 'b> {
                         name
                     }
                 };
-                new_constructor(&mut self.checker.arena, &name, &[])
+                self.checker.new_constructor(&name, &[])
             }
             _ => folder::walk_index(self, &index),
         }

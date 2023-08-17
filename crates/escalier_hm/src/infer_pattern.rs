@@ -31,7 +31,7 @@ impl Checker {
         ) -> Result<Index, Errors> {
             let t = match &mut pattern.kind {
                 PatternKind::Ident(BindingIdent { name, mutable, .. }) => {
-                    let t = new_var_type(&mut checker.arena, None);
+                    let t = checker.new_var_type(None);
                     if assump
                         .insert(
                             name.to_owned(),
@@ -50,7 +50,7 @@ impl Checker {
                 }
                 PatternKind::Rest(ast::RestPat { arg }) => {
                     let arg_type = infer_pattern_rec(checker, arg.as_mut(), assump, ctx)?;
-                    new_rest_type(&mut checker.arena, arg_type)
+                    checker.new_rest_type(arg_type)
                 }
                 PatternKind::Object(ObjectPat { props, .. }) => {
                     let mut rest_opt_ty: Option<Index> = None;
@@ -81,7 +81,7 @@ impl Checker {
                                 // default values.
                                 // TODO: handle default values
 
-                                let t = new_var_type(&mut checker.arena, None);
+                                let t = checker.new_var_type(None);
                                 if assump
                                     .insert(
                                         ident.name.to_owned(),
@@ -120,14 +120,12 @@ impl Checker {
                         }
                     }
 
-                    let obj_type = new_object_type(&mut checker.arena, &elems);
+                    let obj_type = checker.new_object_type(&elems);
 
                     match rest_opt_ty {
                         // TODO: Replace this with a proper Rest/Spread type
                         // See https://github.com/microsoft/TypeScript/issues/10727
-                        Some(rest_ty) => {
-                            new_intersection_type(&mut checker.arena, &[obj_type, rest_ty])
-                        }
+                        Some(rest_ty) => checker.new_intersection_type(&[obj_type, rest_ty]),
                         None => obj_type,
                     }
                 }
@@ -141,19 +139,19 @@ impl Checker {
                                 // - check for multiple rest patterns
                                 infer_pattern_rec(checker, &mut elem.pattern, assump, ctx)?
                             }
-                            None => new_keyword(&mut checker.arena, Keyword::Undefined),
+                            None => checker.new_keyword(Keyword::Undefined),
                         };
                         elem_types.push(t);
                     }
 
-                    new_tuple_type(&mut checker.arena, &elem_types)
+                    checker.new_tuple_type(&elem_types)
                 }
-                PatternKind::Lit(LitPat { lit }) => new_lit_type(&mut checker.arena, lit),
+                PatternKind::Lit(LitPat { lit }) => checker.new_lit_type(lit),
                 PatternKind::Is(IsPat { ident, is_id }) => {
                     let t = match is_id.name.as_str() {
-                        "number" => new_primitive(&mut checker.arena, Primitive::Number),
-                        "string" => new_primitive(&mut checker.arena, Primitive::String),
-                        "boolean" => new_primitive(&mut checker.arena, Primitive::Boolean),
+                        "number" => checker.new_primitive(Primitive::Number),
+                        "string" => checker.new_primitive(Primitive::String),
+                        "boolean" => checker.new_primitive(Primitive::Boolean),
                         name => checker.get_type(name, ctx)?,
                     };
 
@@ -167,7 +165,7 @@ impl Checker {
 
                     t
                 }
-                PatternKind::Wildcard => new_var_type(&mut checker.arena, None),
+                PatternKind::Wildcard => checker.new_var_type(None),
             };
 
             Ok(t)

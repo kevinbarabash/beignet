@@ -14,8 +14,8 @@ fn test_env() -> (Checker, Context) {
     };
     let mut context = Context::default();
 
-    let number = new_primitive(&mut checker.arena, Primitive::Number);
-    let type_param_t = new_constructor(&mut checker.arena, "T", &[]);
+    let number = checker.new_primitive(Primitive::Number);
+    let type_param_t = checker.new_constructor("T", &[]);
 
     let push_t = checker.new_func_type(
         &[types::FuncParam {
@@ -34,36 +34,33 @@ fn test_env() -> (Checker, Context) {
 
     // [P]: T for P in number;
     let mapped = types::TObjElem::Mapped(types::MappedType {
-        key: new_constructor(&mut checker.arena, "P", &[]),
-        value: new_constructor(&mut checker.arena, "T", &[]),
+        key: checker.new_constructor("P", &[]),
+        value: checker.new_constructor("T", &[]),
         target: "P".to_string(),
-        source: new_primitive(&mut checker.arena, Primitive::Number),
+        source: checker.new_primitive(Primitive::Number),
         check: None,
         extends: None,
     });
 
-    let array_interface = new_object_type(
-        &mut checker.arena,
-        &[
-            // .push(item: T) -> number;
-            types::TObjElem::Prop(types::TProp {
-                name: types::TPropKey::StringKey("push".to_string()),
-                modifier: None,
-                t: push_t,
-                optional: false,
-                mutable: false,
-            }),
-            // .length: number;
-            types::TObjElem::Prop(types::TProp {
-                name: types::TPropKey::StringKey("length".to_string()),
-                modifier: None,
-                optional: false,
-                mutable: false,
-                t: number,
-            }),
-            mapped,
-        ],
-    );
+    let array_interface = checker.new_object_type(&[
+        // .push(item: T) -> number;
+        types::TObjElem::Prop(types::TProp {
+            name: types::TPropKey::StringKey("push".to_string()),
+            modifier: None,
+            t: push_t,
+            optional: false,
+            mutable: false,
+        }),
+        // .length: number;
+        types::TObjElem::Prop(types::TProp {
+            name: types::TPropKey::StringKey("length".to_string()),
+            modifier: None,
+            optional: false,
+            mutable: false,
+            t: number,
+        }),
+        mapped,
+    ]);
     let array_scheme = Scheme {
         type_params: Some(vec![types::TypeParam {
             name: "T".to_string(),

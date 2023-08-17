@@ -1,5 +1,5 @@
 use defaultmap::*;
-use generational_arena::{Arena, Index};
+use generational_arena::Index;
 use itertools::Itertools;
 use std::collections::{BTreeSet, HashMap};
 
@@ -111,11 +111,11 @@ impl Checker {
                             ))
                         }
                         (TypeKind::Rest(_), _) => {
-                            let rest_q = new_tuple_type(&mut self.arena, &tuple2.types[i..]);
+                            let rest_q = self.new_tuple_type(&tuple2.types[i..]);
                             self.unify(ctx, *p, rest_q)?;
                         }
                         (_, TypeKind::Rest(_)) => {
-                            let rest_p = new_tuple_type(&mut self.arena, &tuple1.types[i..]);
+                            let rest_p = self.new_tuple_type(&tuple1.types[i..]);
                             self.unify(ctx, rest_p, *q)?;
                         }
                         (_, _) => self.unify(ctx, *p, *q)?,
@@ -139,8 +139,8 @@ impl Checker {
             (TypeKind::Constructor(array), TypeKind::Tuple(tuple)) if array.name == "Array" => {
                 let p = array.types[0];
                 for q in &tuple.types {
-                    let undefined = new_keyword(&mut self.arena, Keyword::Undefined);
-                    let p_or_undefined = new_union_type(&mut self.arena, &[p, undefined]);
+                    let undefined = self.new_keyword(Keyword::Undefined);
+                    let p_or_undefined = self.new_union_type(&[p, undefined]);
 
                     match &self.arena[*q].kind {
                         TypeKind::Rest(_) => self.unify(ctx, a, *q)?,
@@ -173,8 +173,8 @@ impl Checker {
             }
             (TypeKind::Function(func_a), TypeKind::Function(func_b)) => {
                 // Is this the right place to instantiate the function types?
-                let func_a = instantiate_func(&mut self.arena, func_a, None)?;
-                let func_b = instantiate_func(&mut self.arena, func_b, None)?;
+                let func_a = self.instantiate_func(func_a, None)?;
+                let func_b = self.instantiate_func(func_b, None)?;
 
                 let mut params_a = func_a.params;
                 let mut params_b = func_b.params;
@@ -244,7 +244,7 @@ impl Checker {
                                         continue;
                                     }
                                     TypeKind::Constructor(array) if array.name == "Array" => {
-                                        new_rest_type(&mut self.arena, p.t)
+                                        self.new_rest_type(p.t)
                                     }
                                     TypeKind::Constructor(_) => todo!(),
                                     _ => {
@@ -260,7 +260,7 @@ impl Checker {
                             remaining_args_a.push(arg);
                         }
 
-                        let remaining_args_a = new_tuple_type(&mut self.arena, &remaining_args_a);
+                        let remaining_args_a = self.new_tuple_type(&remaining_args_a);
 
                         // NOTE: We reverse the order of the params here because func_a
                         // should be able to accept any params that func_b can accept,
@@ -306,7 +306,7 @@ impl Checker {
 
                 self.unify(ctx, func_a.ret, func_b.ret)?;
 
-                let never = new_keyword(&mut self.arena, Keyword::Never);
+                let never = self.new_keyword(Keyword::Never);
                 let throws_a = func_a.throws.unwrap_or(never);
                 let throws_b = func_b.throws.unwrap_or(never);
 
@@ -405,8 +405,8 @@ impl Checker {
                 for (name, prop_2) in &named_props_2 {
                     match named_props_1.get(name) {
                         Some(prop_1) => {
-                            let t1 = prop_1.get_type(&mut self.arena);
-                            let t2 = prop_2.get_type(&mut self.arena);
+                            let t1 = prop_1.get_type(self);
+                            let t2 = prop_2.get_type(self);
                             self.unify(ctx, t1, t2)?;
                         }
                         None => {
@@ -443,13 +443,9 @@ impl Checker {
                         match mapped_1.len() {
                             0 => {
                                 for (_, prop_1) in named_props_1 {
-                                    let undefined =
-                                        new_keyword(&mut self.arena, Keyword::Undefined);
-                                    let t1 = prop_1.get_type(&mut self.arena);
-                                    let t2 = new_union_type(
-                                        &mut self.arena,
-                                        &[mapped_2[0].value, undefined],
-                                    );
+                                    let undefined = self.new_keyword(Keyword::Undefined);
+                                    let t1 = prop_1.get_type(self);
+                                    let t2 = self.new_union_type(&[mapped_2[0].value, undefined]);
                                     self.unify(ctx, t1, t2)?;
                                 }
                             }
@@ -465,12 +461,12 @@ impl Checker {
                                 let mut mapping: HashMap<String, Index> = HashMap::new();
                                 mapping.insert(mapped_1[0].target.to_owned(), mapped_1[0].source);
                                 let mapped_1_key =
-                                    instantiate_scheme(&mut self.arena, mapped_1[0].key, &mapping);
+                                    self.instantiate_scheme(&mapped_1[0].key, &mapping);
 
                                 let mut mapping: HashMap<String, Index> = HashMap::new();
                                 mapping.insert(mapped_2[0].target.to_owned(), mapped_2[0].source);
                                 let mapped_2_key =
-                                    instantiate_scheme(&mut self.arena, mapped_2[0].key, &mapping);
+                                    self.instantiate_scheme(&mapped_2[0].key, &mapping);
 
                                 self.unify(ctx, mapped_2_key, mapped_1_key)?;
                             }
@@ -511,7 +507,7 @@ impl Checker {
                     .collect();
                 // TODO: check for other variants, if there are we should error
 
-                let obj_type = simplify_intersection(&mut self.arena, &obj_types);
+                let obj_type = simplify_intersection(self, &obj_types);
 
                 match rest_types.len() {
                     0 => self.unify(ctx, t1, obj_type),
@@ -531,10 +527,10 @@ impl Checker {
                                 })
                             });
 
-                        let new_obj_type = new_object_type(&mut self.arena, &obj_elems);
+                        let new_obj_type = self.new_object_type(&obj_elems);
                         self.unify(ctx, new_obj_type, obj_type)?;
 
-                        let new_rest_type = new_object_type(&mut self.arena, &rest_elems);
+                        let new_rest_type = self.new_object_type(&rest_elems);
                         self.unify(ctx, new_rest_type, rest_types[0])?;
 
                         Ok(())
@@ -558,7 +554,7 @@ impl Checker {
                     .cloned()
                     .collect();
 
-                let obj_type = simplify_intersection(&mut self.arena, &obj_types);
+                let obj_type = simplify_intersection(self, &obj_types);
 
                 match rest_types.len() {
                     0 => self.unify(ctx, t1, obj_type),
@@ -578,10 +574,10 @@ impl Checker {
                                 })
                             });
 
-                        let new_obj_type = new_object_type(&mut self.arena, &obj_elems);
+                        let new_obj_type = self.new_object_type(&obj_elems);
                         self.unify(ctx, obj_type, new_obj_type)?;
 
-                        let new_rest_type = new_object_type(&mut self.arena, &rest_elems);
+                        let new_rest_type = self.new_object_type(&rest_elems);
                         self.unify(ctx, rest_types[0], new_rest_type)?;
 
                         Ok(())
@@ -626,7 +622,7 @@ impl Checker {
         type_args: Option<&[Index]>,
         t2: Index,
     ) -> Result<(Index, Option<Index>), Errors> {
-        let ret_type = new_var_type(&mut self.arena, None);
+        let ret_type = self.new_var_type(None);
         let mut maybe_throws_type: Option<Index> = None;
         // let throws_type = new_var_type(arena, None);
 
@@ -668,14 +664,8 @@ impl Checker {
                     }
                 }
 
-                let ret = new_union_type(
-                    &mut self.arena,
-                    &ret_types.into_iter().unique().collect_vec(),
-                );
-                let throws = new_union_type(
-                    &mut self.arena,
-                    &throws_types.into_iter().unique().collect_vec(),
-                );
+                let ret = self.new_union_type(&ret_types.into_iter().unique().collect_vec());
+                let throws = self.new_union_type(&throws_types.into_iter().unique().collect_vec());
 
                 let throws = match &self.arena[throws].kind {
                     TypeKind::Keyword(Keyword::Never) => None,
@@ -713,7 +703,7 @@ impl Checker {
                         }
                     }
 
-                    let t = instantiate_scheme(&mut self.arena, scheme.t, &mapping);
+                    let t = self.instantiate_scheme(&scheme.t, &mapping);
                     let type_args = if type_args.is_empty() {
                         None
                     } else {
@@ -748,7 +738,7 @@ impl Checker {
             }
             TypeKind::Function(func) => {
                 let func = if func.type_params.is_some() {
-                    instantiate_func(&mut self.arena, &func, type_args)?
+                    self.instantiate_func(&func, type_args)?
                 } else {
                     func
                 };
@@ -780,7 +770,7 @@ impl Checker {
                 self.unify(ctx, ret_type, func.ret)?;
 
                 if let Some(throws) = func.throws {
-                    let throws_type = new_var_type(&mut self.arena, None);
+                    let throws_type = self.new_var_type(None);
                     self.unify(ctx, throws_type, throws)?;
 
                     let throws_type = self.prune(throws_type);
@@ -881,10 +871,10 @@ impl Checker {
 // TODO: handle optional properties correctly
 // Maybe we can have a function that will canonicalize objects by converting
 // `x: T | undefined` to `x?: T`
-pub fn simplify_intersection(arena: &mut Arena<Type>, in_types: &[Index]) -> Index {
+pub fn simplify_intersection(checker: &mut Checker, in_types: &[Index]) -> Index {
     let obj_types: Vec<_> = in_types
         .iter()
-        .filter_map(|t| match &arena[*t].kind {
+        .filter_map(|t| match &checker.arena[*t].kind {
             TypeKind::Object(elems) => Some(elems),
             _ => None,
         })
@@ -918,7 +908,7 @@ pub fn simplify_intersection(arena: &mut Arena<Type>, in_types: &[Index]) -> Ind
                 types[0]
             } else {
                 // TODO: handle getter/setters correctly
-                new_intersection_type(arena, &types)
+                checker.new_intersection_type(&types)
                 // checker.from_type_kind(TypeKind::Intersection(types))
             };
             TObjElem::Prop(TProp {
@@ -943,14 +933,14 @@ pub fn simplify_intersection(arena: &mut Arena<Type>, in_types: &[Index]) -> Ind
 
     let mut not_obj_types: Vec<_> = in_types
         .iter()
-        .filter(|t| !matches!(&arena[**t].kind, TypeKind::Object(_)))
+        .filter(|t| !matches!(&checker.arena[**t].kind, TypeKind::Object(_)))
         .cloned()
         .collect();
 
     let mut out_types = vec![];
     out_types.append(&mut not_obj_types);
     if !elems.is_empty() {
-        out_types.push(new_object_type(arena, &elems));
+        out_types.push(checker.new_object_type(&elems));
     }
     // TODO: figure out a consistent way to sort types
     // out_types.sort_by_key(|t| t.id); // ensure a stable order
@@ -958,6 +948,6 @@ pub fn simplify_intersection(arena: &mut Arena<Type>, in_types: &[Index]) -> Ind
     if out_types.len() == 1 {
         out_types[0]
     } else {
-        new_intersection_type(arena, &out_types)
+        checker.new_intersection_type(&out_types)
     }
 }

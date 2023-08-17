@@ -216,7 +216,7 @@ impl Checker {
                                         }
                                     }
 
-                                    let t = instantiate_scheme(&mut self.arena, scheme.t, &mapping);
+                                    let t = self.instantiate_scheme(&scheme.t, &mapping);
                                     types.push(self.expand_type(ctx, t)?);
                                 }
 
@@ -231,7 +231,7 @@ impl Checker {
                                     })
                                     .collect::<Vec<_>>();
 
-                                let t = new_union_type(&mut self.arena, &filtered_types);
+                                let t = self.new_union_type(&filtered_types);
                                 return self.expand_type(ctx, t);
                             }
                         }
@@ -246,7 +246,7 @@ impl Checker {
                     mapping.insert(param.name.clone(), arg.to_owned());
                 }
 
-                let t = instantiate_scheme(&mut self.arena, scheme.t, &mapping);
+                let t = self.instantiate_scheme(&scheme.t, &mapping);
                 self.expand_type(ctx, t)
             }
             None => {
@@ -310,7 +310,7 @@ impl Checker {
                         TObjElem::Call(_) => (),
                         TObjElem::Constructor(_) => (),
                         TObjElem::Mapped(mapped) => {
-                            let mapped_key = get_mapped_key(&mut self.arena, mapped);
+                            let mapped_key = get_mapped_key(self, mapped);
 
                             match &self.arena[mapped_key].kind {
                                 TypeKind::Primitive(Primitive::String) => {
@@ -327,16 +327,12 @@ impl Checker {
                         }
                         TObjElem::Prop(TProp { name, .. }) => match name {
                             TPropKey::StringKey(name) => {
-                                string_keys.push(new_lit_type(
-                                    &mut self.arena,
-                                    &Literal::String(name.to_owned()),
-                                ));
+                                string_keys
+                                    .push(self.new_lit_type(&Literal::String(name.to_owned())));
                             }
                             TPropKey::NumberKey(name) => {
-                                number_keys.push(new_lit_type(
-                                    &mut self.arena,
-                                    &Literal::Number(name.to_owned()),
-                                ));
+                                number_keys
+                                    .push(self.new_lit_type(&Literal::Number(name.to_owned())));
                             }
                         },
                     }
@@ -358,7 +354,7 @@ impl Checker {
                     all_keys.push(symbol);
                 }
 
-                Ok(new_union_type(&mut self.arena, &all_keys))
+                Ok(self.new_union_type(&all_keys))
             }
             // NOTE: The behavior of `keyof` with arrays and tuples differs from
             // TypeScript.  TypeScript includes the names of all the properties from
@@ -366,16 +362,16 @@ impl Checker {
             // TODO(#637): Have interop layer translate between Escalier's and
             // TypeScript's `keyof` utility type.
             TypeKind::Constructor(array) if array.name == "Array" => {
-                Ok(new_primitive(&mut self.arena, Primitive::Number))
+                Ok(self.new_primitive(Primitive::Number))
             }
             TypeKind::Tuple(tuple) => {
                 let keys: Vec<Index> = tuple
                     .types
                     .iter()
                     .enumerate()
-                    .map(|(k, _)| new_lit_type(&mut self.arena, &Literal::Number(k.to_string())))
+                    .map(|(k, _)| self.new_lit_type(&Literal::Number(k.to_string())))
                     .collect();
-                Ok(new_union_type(&mut self.arena, &keys))
+                Ok(self.new_union_type(&keys))
             }
             TypeKind::Constructor(constructor) => {
                 let idx = self.expand_alias_by_name(ctx, &constructor.name, &constructor.types)?;
@@ -453,19 +449,19 @@ impl Checker {
                     all_keys.push(symbol);
                 }
 
-                Ok(new_union_type(&mut self.arena, &all_keys))
+                Ok(self.new_union_type(&all_keys))
             }
-            TypeKind::Union(_) => Ok(new_keyword(&mut self.arena, Keyword::Never)),
+            TypeKind::Union(_) => Ok(self.new_keyword(Keyword::Never)),
             TypeKind::Keyword(keyword) => match keyword {
                 // TODO: update get_property to handle these cases as well
-                Keyword::Null => Ok(new_keyword(&mut self.arena, Keyword::Never)),
-                Keyword::Undefined => Ok(new_keyword(&mut self.arena, Keyword::Never)),
-                Keyword::Unknown => Ok(new_keyword(&mut self.arena, Keyword::Never)),
+                Keyword::Null => Ok(self.new_keyword(Keyword::Never)),
+                Keyword::Undefined => Ok(self.new_keyword(Keyword::Never)),
+                Keyword::Unknown => Ok(self.new_keyword(Keyword::Never)),
                 Keyword::Never => {
-                    let string = new_primitive(&mut self.arena, Primitive::String);
-                    let number = new_primitive(&mut self.arena, Primitive::Number);
-                    let symbol = new_primitive(&mut self.arena, Primitive::Symbol);
-                    Ok(new_union_type(&mut self.arena, &[string, number, symbol]))
+                    let string = self.new_primitive(Primitive::String);
+                    let number = self.new_primitive(Primitive::Number);
+                    let symbol = self.new_primitive(Primitive::Symbol);
+                    Ok(self.new_union_type(&[string, number, symbol]))
                 }
             },
             TypeKind::Primitive(primitive) => {
@@ -485,7 +481,7 @@ impl Checker {
                 if expanded_t != t {
                     self.expand_keyof(ctx, expanded_t)
                 } else {
-                    Ok(new_keyword(&mut self.arena, Keyword::Never))
+                    Ok(self.new_keyword(Keyword::Never))
                 }
             }
         }
@@ -511,14 +507,14 @@ impl Checker {
 
         let mut type_param_map: HashMap<String, Index> = HashMap::new();
         for infer_t in infer_types {
-            type_param_map.insert(infer_t.name.to_owned(), new_var_type(&mut self.arena, None));
+            type_param_map.insert(infer_t.name.to_owned(), self.new_var_type(None));
         }
 
         let extends = replace_infer_types(&mut self.arena, extends, &type_param_map);
 
         match self.unify(ctx, *check, extends) {
             Ok(_) => {
-                let true_type = instantiate_scheme(&mut self.arena, *true_type, &type_param_map);
+                let true_type = self.instantiate_scheme(true_type, &type_param_map);
                 Ok(true_type)
             }
             Err(_) => Ok(*false_type),
@@ -545,16 +541,16 @@ impl Checker {
                     TBinaryOp::Mod => left % right,
                 };
 
-                new_lit_type(&mut self.arena, &Literal::Number(result.to_string()))
+                self.new_lit_type(&Literal::Number(result.to_string()))
             }
             (TypeKind::Literal(Literal::Number(_)), TypeKind::Primitive(Primitive::Number)) => {
-                new_primitive(&mut self.arena, Primitive::Number)
+                self.new_primitive(Primitive::Number)
             }
             (TypeKind::Primitive(Primitive::Number), TypeKind::Literal(Literal::Number(_))) => {
-                new_primitive(&mut self.arena, Primitive::Number)
+                self.new_primitive(Primitive::Number)
             }
             (TypeKind::Primitive(Primitive::Number), TypeKind::Primitive(Primitive::Number)) => {
-                new_primitive(&mut self.arena, Primitive::Number)
+                self.new_primitive(Primitive::Number)
             }
             (_, _) => {
                 return Err(Errors::InferenceError(format!(
@@ -584,9 +580,8 @@ impl Checker {
                             for t in types {
                                 let mut mapping: HashMap<String, Index> = HashMap::new();
                                 mapping.insert(mapped.target.to_owned(), *t);
-                                let key = instantiate_scheme(&mut self.arena, mapped.key, &mapping);
-                                let value =
-                                    instantiate_scheme(&mut self.arena, mapped.value, &mapping);
+                                let key = self.instantiate_scheme(&mapped.key, &mapping);
+                                let value = self.instantiate_scheme(&mapped.value, &mapping);
 
                                 let name = match &self.arena[key].kind {
                                     TypeKind::Literal(Literal::String(name)) => {
@@ -610,7 +605,7 @@ impl Checker {
                                 }));
 
                                 if !non_literal_keys.is_empty() {
-                                    let union = new_union_type(&mut self.arena, &non_literal_keys);
+                                    let union = self.new_union_type(&non_literal_keys);
                                     new_elems.push(TObjElem::Mapped(MappedType {
                                         target: mapped.target.to_owned(),
                                         key: union,
@@ -675,8 +670,8 @@ impl Checker {
                     }
                     TypeKind::Primitive(Primitive::Number) => {
                         let mut types = tuple.types.clone();
-                        types.push(new_keyword(&mut self.arena, Keyword::Undefined));
-                        Ok(new_union_type(&mut self.arena, &types))
+                        types.push(self.new_keyword(Keyword::Undefined));
+                        Ok(self.new_union_type(&types))
                     }
                     _ => Err(Errors::InferenceError(
                         "Can only access tuple properties with a number".to_string(),
@@ -695,7 +690,7 @@ impl Checker {
                             // TODO: check what the error is, we may want to propagate
                             // certain errors
                             if undefined_count == 0 {
-                                let undefined = new_keyword(&mut self.arena, Keyword::Undefined);
+                                let undefined = self.new_keyword(Keyword::Undefined);
                                 result_types.push(undefined);
                             }
                             undefined_count += 1;
@@ -708,7 +703,7 @@ impl Checker {
                         "Couldn't find property on object".to_string(),
                     ))
                 } else {
-                    Ok(new_union_type(&mut self.arena, &result_types))
+                    Ok(self.new_union_type(&result_types))
                 }
             }
             TypeKind::Constructor(Constructor { name, types, .. }) => {
@@ -731,7 +726,7 @@ impl Checker {
         obj_idx: Index,
         key_idx: Index,
     ) -> Result<Index, Errors> {
-        let undefined = new_keyword(&mut self.arena, Keyword::Undefined);
+        let undefined = self.new_keyword(Keyword::Undefined);
         // It's fine to clone here because we aren't mutating
         let obj_type = self.arena[obj_idx].clone();
         let key_type = self.arena[key_idx].clone();
@@ -768,7 +763,7 @@ impl Checker {
                                 };
 
                                 let prop_t = match prop.optional {
-                                    true => new_union_type(&mut self.arena, &[prop.t, undefined]),
+                                    true => self.new_union_type(&[prop.t, undefined]),
                                     false => prop.t,
                                 };
                                 values.push(prop_t);
@@ -778,12 +773,12 @@ impl Checker {
 
                     // TODO: handle combinations of indexers and non-indexer elements
                     if let Some(mapped) = maybe_mapped {
-                        let mapped_key = get_mapped_key(&mut self.arena, mapped);
+                        let mapped_key = get_mapped_key(self, mapped);
 
                         match self.unify(ctx, key_idx, mapped_key) {
                             Ok(_) => {
-                                let undefined = new_keyword(&mut self.arena, Keyword::Undefined);
-                                Ok(new_union_type(&mut self.arena, &[mapped.value, undefined]))
+                                let undefined = self.new_keyword(Keyword::Undefined);
+                                Ok(self.new_union_type(&[mapped.value, undefined]))
                             }
                             Err(_) => Err(Errors::InferenceError(format!(
                                 "{} is not a valid indexer for {}",
@@ -793,7 +788,7 @@ impl Checker {
                         }
                     } else if !values.is_empty() {
                         values.push(undefined);
-                        Ok(new_union_type(&mut self.arena, &values))
+                        Ok(self.new_union_type(&values))
                     } else {
                         Err(Errors::InferenceError(format!(
                             "{} has no indexer",
@@ -824,9 +819,7 @@ impl Checker {
                                 };
                                 if key == name {
                                     let prop_t = match prop.optional {
-                                        true => {
-                                            new_union_type(&mut self.arena, &[prop.t, undefined])
-                                        }
+                                        true => self.new_union_type(&[prop.t, undefined]),
                                         false => prop.t,
                                     };
                                     return Ok(prop_t);
@@ -836,12 +829,12 @@ impl Checker {
                     }
 
                     if let Some(mapped) = maybe_mapped {
-                        let mapped_key = get_mapped_key(&mut self.arena, mapped);
+                        let mapped_key = get_mapped_key(self, mapped);
 
                         match self.unify(ctx, key_idx, mapped_key) {
                             Ok(_) => {
-                                let undefined = new_keyword(&mut self.arena, Keyword::Undefined);
-                                Ok(new_union_type(&mut self.arena, &[mapped.value, undefined]))
+                                let undefined = self.new_keyword(Keyword::Undefined);
+                                Ok(self.new_union_type(&[mapped.value, undefined]))
                             }
                             Err(_) => Err(Errors::InferenceError(format!(
                                 "Couldn't find property {} in object",
@@ -871,11 +864,11 @@ impl Checker {
                     }
 
                     if let Some(mapped) = maybe_mapped {
-                        let mapped_key = get_mapped_key(&mut self.arena, mapped);
+                        let mapped_key = get_mapped_key(self, mapped);
                         match self.unify(ctx, key_idx, mapped_key) {
                             Ok(_) => {
-                                let undefined = new_keyword(&mut self.arena, Keyword::Undefined);
-                                Ok(new_union_type(&mut self.arena, &[mapped.value, undefined]))
+                                let undefined = self.new_keyword(Keyword::Undefined);
+                                Ok(self.new_union_type(&[mapped.value, undefined]))
                             }
                             Err(_) => Err(Errors::InferenceError(format!(
                                 "Couldn't find property {} in object",
@@ -912,10 +905,10 @@ pub fn filter_nullables(arena: &Arena<Type>, types: &[Index]) -> Vec<Index> {
         .collect()
 }
 
-fn get_mapped_key(arena: &mut Arena<Type>, mapped: &MappedType) -> Index {
+fn get_mapped_key(checker: &mut Checker, mapped: &MappedType) -> Index {
     let mut mapping: HashMap<String, Index> = HashMap::new();
     mapping.insert(mapped.target.to_owned(), mapped.source);
-    instantiate_scheme(arena, mapped.key, &mapping)
+    checker.instantiate_scheme(&mapped.key, &mapping)
 }
 
 pub struct FindInferVisitor<'a> {

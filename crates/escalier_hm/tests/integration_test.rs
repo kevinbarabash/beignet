@@ -22,8 +22,8 @@ fn test_env() -> (Checker, Context) {
     };
     let mut context = Context::default();
 
-    let number = new_primitive(&mut checker.arena, Primitive::Number);
-    let type_param_t = new_constructor(&mut checker.arena, "T", &[]);
+    let number = checker.new_primitive(Primitive::Number);
+    let type_param_t = checker.new_constructor("T", &[]);
 
     let push_t = checker.new_func_type(
         &[types::FuncParam {
@@ -42,36 +42,33 @@ fn test_env() -> (Checker, Context) {
 
     // [P]: T for P in number;
     let mapped = types::TObjElem::Mapped(types::MappedType {
-        key: new_constructor(&mut checker.arena, "P", &[]),
-        value: new_constructor(&mut checker.arena, "T", &[]),
+        key: checker.new_constructor("P", &[]),
+        value: checker.new_constructor("T", &[]),
         target: "P".to_string(),
-        source: new_primitive(&mut checker.arena, Primitive::Number),
+        source: checker.new_primitive(Primitive::Number),
         check: None,
         extends: None,
     });
 
-    let array_interface = new_object_type(
-        &mut checker.arena,
-        &[
-            // .push(item: T) -> number;
-            types::TObjElem::Prop(types::TProp {
-                name: types::TPropKey::StringKey("push".to_string()),
-                modifier: None,
-                t: push_t,
-                optional: false,
-                mutable: false,
-            }),
-            // .length: number;
-            types::TObjElem::Prop(types::TProp {
-                name: types::TPropKey::StringKey("length".to_string()),
-                modifier: None,
-                optional: false,
-                mutable: false,
-                t: number,
-            }),
-            mapped,
-        ],
-    );
+    let array_interface = checker.new_object_type(&[
+        // .push(item: T) -> number;
+        types::TObjElem::Prop(types::TProp {
+            name: types::TPropKey::StringKey("push".to_string()),
+            modifier: None,
+            t: push_t,
+            optional: false,
+            mutable: false,
+        }),
+        // .length: number;
+        types::TObjElem::Prop(types::TProp {
+            name: types::TPropKey::StringKey("length".to_string()),
+            modifier: None,
+            optional: false,
+            mutable: false,
+            t: number,
+        }),
+        mapped,
+    ]);
     let array_scheme = Scheme {
         type_params: Some(vec![types::TypeParam {
             name: "T".to_string(),
@@ -525,7 +522,7 @@ fn test_union_subtype() -> Result<(), Errors> {
     my_ctx.values.insert(
         "foo".to_string(),
         Binding {
-            index: new_union_type(&mut checker.arena, &[lit1, lit2]),
+            index: checker.new_union_type(&[lit1, lit2]),
             is_mut: false,
         },
     );
@@ -546,14 +543,14 @@ fn test_union_subtype() -> Result<(), Errors> {
 fn test_calling_a_union() -> Result<(), Errors> {
     let (mut checker, mut my_ctx) = test_env();
 
-    let bool = new_primitive(&mut checker.arena, Primitive::Boolean);
-    let str = new_primitive(&mut checker.arena, Primitive::String);
+    let bool = checker.new_primitive(Primitive::Boolean);
+    let str = checker.new_primitive(Primitive::String);
     let fn1 = checker.new_func_type(&[], bool, &None, None);
     let fn2 = checker.new_func_type(&[], str, &None, None);
     my_ctx.values.insert(
         "foo".to_string(),
         Binding {
-            index: new_union_type(&mut checker.arena, &[fn1, fn2]),
+            index: checker.new_union_type(&[fn1, fn2]),
             is_mut: false,
         },
     );
@@ -1189,7 +1186,7 @@ fn test_union_subtype_error() -> Result<(), Errors> {
     my_ctx.values.insert(
         "foo".to_string(),
         Binding {
-            index: new_union_type(&mut checker.arena, &[lit1, lit2]),
+            index: checker.new_union_type(&[lit1, lit2]),
             is_mut: false,
         },
     );

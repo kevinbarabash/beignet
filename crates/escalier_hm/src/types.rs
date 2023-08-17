@@ -1,5 +1,5 @@
 // Types and type constructors
-use generational_arena::{Arena, Index};
+use generational_arena::Index;
 use std::convert::From;
 use std::fmt;
 
@@ -217,10 +217,10 @@ pub struct TProp {
 }
 
 impl TProp {
-    pub fn get_type(&self, arena: &mut Arena<Type>) -> Index {
+    pub fn get_type(&self, checker: &mut Checker) -> Index {
         let t = match self.modifier {
             Some(TPropModifier::Getter) => {
-                if let TypeKind::Function(func) = &arena[self.t].kind {
+                if let TypeKind::Function(func) = &checker.arena[self.t].kind {
                     func.ret
                 } else {
                     todo!()
@@ -232,8 +232,8 @@ impl TProp {
 
         match self.optional {
             true => {
-                let undefined = new_keyword(arena, Keyword::Undefined);
-                new_union_type(arena, &[t, undefined])
+                let undefined = checker.new_keyword(Keyword::Undefined);
+                checker.new_union_type(&[t, undefined])
             }
             false => t,
         }
@@ -624,20 +624,66 @@ impl Checker {
         result
     }
 
-    fn print_param(&self, param: &FuncParam) -> String {
-        let name = tpat_to_string(&self.arena, &param.pattern);
-        match param.optional {
-            true => format!("{name}?: {}", self.print_type(&param.t)),
-            false => format!("{name}: {}", self.print_type(&param.t)),
-        }
-    }
-
     fn print_params(&self, params: &[FuncParam]) -> Vec<String> {
         let mut strings = vec![];
         for param in params {
             strings.push(self.print_param(param))
         }
         strings
+    }
+
+    fn print_param(&self, param: &FuncParam) -> String {
+        let name = Self::tpat_to_string(&param.pattern);
+        match param.optional {
+            true => format!("{name}?: {}", self.print_type(&param.t)),
+            false => format!("{name}: {}", self.print_type(&param.t)),
+        }
+    }
+
+    fn tpat_to_string(pattern: &TPat) -> String {
+        match pattern {
+            TPat::Ident(BindingIdent {
+                name, mutable: _, ..
+            }) => name.to_owned(),
+            TPat::Rest(RestPat { arg }) => format!("...{}", Self::tpat_to_string(arg.as_ref())),
+            TPat::Tuple(TuplePat { elems }) => format!(
+                "[{}]",
+                elems
+                    .iter()
+                    .map(|elem| match elem {
+                        Some(elem) => Self::tpat_to_string(elem),
+                        None => " ".to_string(),
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ),
+            TPat::Object(TObjectPat { props }) => {
+                let props: Vec<String> = props
+                    .iter()
+                    .map(|prop| match prop {
+                        TObjectPatProp::KeyValue(TObjectKeyValuePatProp { key, value }) => {
+                            match value {
+                                TPat::Ident(_) => key.to_string(),
+                                _ => format!("{}: {}", key, Self::tpat_to_string(value)),
+                            }
+                        }
+                        // TODO: handle assignments in object patterns
+                        TObjectPatProp::Assign(TObjectAssignPatProp { key, value: _ }) => {
+                            key.to_string()
+                        }
+                        TObjectPatProp::Rest(RestPat { arg }) => {
+                            format!("...{}", Self::tpat_to_string(arg.as_ref()))
+                        }
+                    })
+                    .collect();
+                format!("{{{}}}", props.join(", "))
+            }
+            TPat::Lit(TLitPat { lit }) => lit.to_string(),
+            TPat::Is(TIsPat { ident, is_id }) => {
+                format!("{ident} is {is_id}")
+            }
+            TPat::Wildcard => "_".to_string(),
+        }
     }
 
     pub fn equals(&self, a: &Index, b: &Index) -> bool {
@@ -705,55 +751,7 @@ impl Checker {
             _ => false,
         }
     }
-}
 
-fn tpat_to_string(_arena: &Arena<Type>, pattern: &TPat) -> String {
-    match pattern {
-        TPat::Ident(BindingIdent {
-            name, mutable: _, ..
-        }) => name.to_owned(),
-        TPat::Rest(RestPat { arg }) => format!("...{}", tpat_to_string(_arena, arg.as_ref())),
-        TPat::Tuple(TuplePat { elems }) => format!(
-            "[{}]",
-            elems
-                .iter()
-                .map(|elem| match elem {
-                    Some(elem) => tpat_to_string(_arena, elem),
-                    None => " ".to_string(),
-                })
-                .collect::<Vec<_>>()
-                .join(", ")
-        ),
-        TPat::Object(TObjectPat { props }) => {
-            let props: Vec<String> = props
-                .iter()
-                .map(|prop| match prop {
-                    TObjectPatProp::KeyValue(TObjectKeyValuePatProp { key, value }) => {
-                        match value {
-                            TPat::Ident(_) => key.to_string(),
-                            _ => format!("{}: {}", key, tpat_to_string(_arena, value)),
-                        }
-                    }
-                    // TODO: handle assignments in object patterns
-                    TObjectPatProp::Assign(TObjectAssignPatProp { key, value: _ }) => {
-                        key.to_string()
-                    }
-                    TObjectPatProp::Rest(RestPat { arg }) => {
-                        format!("...{}", tpat_to_string(_arena, arg.as_ref()))
-                    }
-                })
-                .collect();
-            format!("{{{}}}", props.join(", "))
-        }
-        TPat::Lit(TLitPat { lit }) => lit.to_string(),
-        TPat::Is(TIsPat { ident, is_id }) => {
-            format!("{ident} is {is_id}")
-        }
-        TPat::Wildcard => "_".to_string(),
-    }
-}
-
-impl Checker {
     /// A binary type constructor which builds function types
     pub fn new_func_type(
         &mut self,
@@ -769,107 +767,114 @@ impl Checker {
             throws,
         })))
     }
-}
 
-// TODO: flatten union types
-pub fn new_union_type(arena: &mut Arena<Type>, types: &[Index]) -> Index {
-    match types.len() {
-        0 => new_keyword(arena, Keyword::Never),
-        1 => types[0],
-        _ => arena.insert(Type::from(TypeKind::Union(Union {
-            types: types
-                .to_owned()
-                .iter()
-                .filter(|t| !matches!(arena[**t].kind, TypeKind::Keyword(Keyword::Never)))
-                .cloned()
-                .collect(),
-        }))),
+    // TODO: flatten union types
+    pub fn new_union_type(&mut self, types: &[Index]) -> Index {
+        match types.len() {
+            0 => self.new_keyword(Keyword::Never),
+            1 => types[0],
+            _ => self.arena.insert(Type::from(TypeKind::Union(Union {
+                types: types
+                    .to_owned()
+                    .iter()
+                    .filter(|t| !matches!(self.arena[**t].kind, TypeKind::Keyword(Keyword::Never)))
+                    .cloned()
+                    .collect(),
+            }))),
+        }
     }
-}
 
-pub fn new_intersection_type(arena: &mut Arena<Type>, types: &[Index]) -> Index {
-    arena.insert(Type::from(TypeKind::Intersection(Intersection {
-        types: types.to_owned(),
-    })))
-}
+    pub fn new_intersection_type(&mut self, types: &[Index]) -> Index {
+        self.arena
+            .insert(Type::from(TypeKind::Intersection(Intersection {
+                types: types.to_owned(),
+            })))
+    }
 
-pub fn new_tuple_type(arena: &mut Arena<Type>, types: &[Index]) -> Index {
-    arena.insert(Type::from(TypeKind::Tuple(Tuple {
-        types: types.to_owned(),
-    })))
-}
+    pub fn new_tuple_type(&mut self, types: &[Index]) -> Index {
+        self.arena.insert(Type::from(TypeKind::Tuple(Tuple {
+            types: types.to_owned(),
+        })))
+    }
 
-pub fn new_object_type(arena: &mut Arena<Type>, elems: &[TObjElem]) -> Index {
-    arena.insert(Type::from(TypeKind::Object(Object {
-        elems: elems.to_vec(),
-    })))
-}
+    pub fn new_object_type(&mut self, elems: &[TObjElem]) -> Index {
+        self.arena.insert(Type::from(TypeKind::Object(Object {
+            elems: elems.to_vec(),
+        })))
+    }
 
-/// A binary type constructor which builds function types
-pub fn new_var_type(arena: &mut Arena<Type>, constraint: Option<Index>) -> Index {
-    arena.insert(Type::from(TypeKind::Variable(Variable {
-        id: arena.len(), // use for debugging purposes only
-        instance: None,
-        constraint,
-    })))
-}
+    /// A binary type constructor which builds function types
+    pub fn new_var_type(&mut self, constraint: Option<Index>) -> Index {
+        self.arena.insert(Type::from(TypeKind::Variable(Variable {
+            id: self.arena.len(), // use for debugging purposes only
+            instance: None,
+            constraint,
+        })))
+    }
 
-/// A binary type constructor which builds function types
-pub fn new_constructor(arena: &mut Arena<Type>, name: &str, types: &[Index]) -> Index {
-    arena.insert(Type::from(TypeKind::Constructor(Constructor {
-        name: name.to_string(),
-        types: types.to_vec(),
-    })))
-}
+    /// A binary type constructor which builds function types
+    pub fn new_constructor(&mut self, name: &str, types: &[Index]) -> Index {
+        self.arena
+            .insert(Type::from(TypeKind::Constructor(Constructor {
+                name: name.to_string(),
+                types: types.to_vec(),
+            })))
+    }
 
-pub fn new_keyword(arena: &mut Arena<Type>, keyword: Keyword) -> Index {
-    arena.insert(Type::from(TypeKind::Keyword(keyword)))
-}
+    pub fn new_keyword(&mut self, keyword: Keyword) -> Index {
+        self.arena.insert(Type::from(TypeKind::Keyword(keyword)))
+    }
 
-pub fn new_primitive(arena: &mut Arena<Type>, primitive: Primitive) -> Index {
-    arena.insert(Type::from(TypeKind::Primitive(primitive)))
-}
+    pub fn new_primitive(&mut self, primitive: Primitive) -> Index {
+        self.arena
+            .insert(Type::from(TypeKind::Primitive(primitive)))
+    }
 
-pub fn new_rest_type(arena: &mut Arena<Type>, t: Index) -> Index {
-    arena.insert(Type::from(TypeKind::Rest(Rest { arg: t })))
-}
+    pub fn new_rest_type(&mut self, t: Index) -> Index {
+        self.arena
+            .insert(Type::from(TypeKind::Rest(Rest { arg: t })))
+    }
 
-pub fn new_lit_type(arena: &mut Arena<Type>, lit: &Lit) -> Index {
-    arena.insert(Type::from(TypeKind::Literal(lit.clone())))
-}
+    pub fn new_lit_type(&mut self, lit: &Lit) -> Index {
+        self.arena
+            .insert(Type::from(TypeKind::Literal(lit.clone())))
+    }
 
-pub fn new_keyof_type(arena: &mut Arena<Type>, t: Index) -> Index {
-    arena.insert(Type::from(TypeKind::KeyOf(KeyOf { t })))
-}
+    pub fn new_keyof_type(&mut self, t: Index) -> Index {
+        self.arena.insert(Type::from(TypeKind::KeyOf(KeyOf { t })))
+    }
 
-pub fn new_indexed_access_type(arena: &mut Arena<Type>, obj: Index, index: Index) -> Index {
-    arena.insert(Type::from(TypeKind::IndexedAccess(IndexedAccess {
-        obj,
-        index,
-    })))
-}
+    pub fn new_indexed_access_type(&mut self, obj: Index, index: Index) -> Index {
+        self.arena
+            .insert(Type::from(TypeKind::IndexedAccess(IndexedAccess {
+                obj,
+                index,
+            })))
+    }
 
-pub fn new_conditional_type(
-    arena: &mut Arena<Type>,
-    check: Index,
-    extends: Index,
-    true_type: Index,
-    false_type: Index,
-) -> Index {
-    arena.insert(Type::from(TypeKind::Conditional(Conditional {
-        check,
-        extends,
-        true_type,
-        false_type,
-    })))
-}
+    pub fn new_conditional_type(
+        &mut self,
+        check: Index,
+        extends: Index,
+        true_type: Index,
+        false_type: Index,
+    ) -> Index {
+        self.arena
+            .insert(Type::from(TypeKind::Conditional(Conditional {
+                check,
+                extends,
+                true_type,
+                false_type,
+            })))
+    }
 
-pub fn new_infer_type(arena: &mut Arena<Type>, name: &str) -> Index {
-    arena.insert(Type::from(TypeKind::Infer(Infer {
-        name: name.to_string(),
-    })))
-}
+    pub fn new_infer_type(&mut self, name: &str) -> Index {
+        self.arena.insert(Type::from(TypeKind::Infer(Infer {
+            name: name.to_string(),
+        })))
+    }
 
-pub fn new_wildcard_type(arena: &mut Arena<Type>) -> Index {
-    arena.insert(Type::from(TypeKind::Wildcard))
+    pub fn new_wildcard_type(&mut self) -> Index {
+        self.arena.insert(Type::from(TypeKind::Wildcard))
+    }
 }
