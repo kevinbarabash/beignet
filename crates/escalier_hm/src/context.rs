@@ -1,4 +1,4 @@
-use generational_arena::{Arena, Index};
+use generational_arena::Index;
 use im::hashmap::HashMap;
 use im::hashset::HashSet;
 
@@ -28,6 +28,15 @@ pub struct Context {
     pub non_generic: HashSet<Index>,
     // Whether we're in an async function body or not.
     pub is_async: bool,
+}
+
+impl Context {
+    pub fn get_scheme(&self, name: &str) -> Result<Scheme, Errors> {
+        match self.schemes.get(name) {
+            Some(scheme) => Ok(scheme.to_owned()),
+            None => Err(Errors::InferenceError(format!("{} is not in scope", name))),
+        }
+    }
 }
 
 impl Checker {
@@ -70,8 +79,7 @@ impl Checker {
         fresh.fold_index(index)
     }
 
-    // TODO: rename this to `replace_type_vars` or something like that
-    pub fn instantiate_scheme(
+    pub fn instantiate_type(
         &mut self,
         t: &Index,
         mapping: &std::collections::HashMap<String, Index>,
@@ -158,8 +166,6 @@ impl<'a, 'b> KeyValueStore<Index, Type> for Fresh<'a, 'b> {
 
 impl<'a, 'b> Folder for Fresh<'a, 'b> {
     fn fold_index(&mut self, index: &Index) -> Index {
-        // QUESTION: Why do we need to `prune` here?  Maybe because we don't
-        // copy the `instance` when creating an new type variable.
         let index = self.checker.prune(*index);
         let t = self.get_type(&index);
 
@@ -169,7 +175,8 @@ impl<'a, 'b> Folder for Fresh<'a, 'b> {
                 instance: _,
                 constraint,
             }) => {
-                if is_generic(self.checker, index, self.ctx) {
+                // NOTE: This check requires that `index` be pruned.
+                if !self.checker.occurs_in(index, &self.ctx.non_generic) {
                     self.mapping
                         .entry(index)
                         .or_insert_with(|| self.checker.new_var_type(*constraint))
@@ -229,22 +236,4 @@ impl<'a> Folder for Instantiate<'a> {
             _ => walk_index(self, index),
         }
     }
-}
-
-/// Checks whether a given variable occurs in a list of non-generic variables
-///
-/// Note that a variables in such a list may be instantiated to a type term,
-/// in which case the variables contained in the type term are considered
-/// non-generic.
-///
-/// Note: Must be called with v pre-pruned
-///
-/// Args:
-///     t: The TypeVariable to be tested for genericity
-///     non_generic: A set of non-generic TypeVariables
-///
-/// Returns:
-///     True if v is a generic variable, otherwise False
-pub fn is_generic(checker: &mut Checker, t: Index, ctx: &Context) -> bool {
-    !checker.occurs_in(t, &ctx.non_generic)
 }
