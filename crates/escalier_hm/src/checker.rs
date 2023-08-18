@@ -41,4 +41,11 @@ impl Checker {
             .diagnostics
             .append(&mut report.diagnostics);
     }
+
+    pub fn with_report<T>(&mut self, f: impl FnOnce(&mut Self) -> T) -> T {
+        self.push_report();
+        let result = f(self);
+        self.pop_report();
+        result
+    }
 }
