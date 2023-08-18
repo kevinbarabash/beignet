@@ -753,11 +753,8 @@ impl Checker {
                             type_ctx.schemes.insert(target.to_owned(), scheme);
 
                             let key = self.infer_type_ann(key, &mut type_ctx)?;
-                            // let mut mapping: HashMap<String, Index> = HashMap::new();
-                            // mapping.insert(target.to_owned(), source);
-                            // let key = instantiate_scheme(self.arena, key, &mapping);
-
                             let value = self.infer_type_ann(value, &mut type_ctx)?;
+
                             let check = match check {
                                 Some(check) => Some(self.infer_type_ann(check, &mut type_ctx)?),
                                 None => None,
@@ -880,22 +877,39 @@ impl Checker {
                 self.new_object_type(&props)
             }
             TypeAnnKind::TypeRef(name, type_args) => {
-                if ctx.schemes.get(name).is_none() {
-                    return Err(Errors::InferenceError(format!("{} is not in scope", name)));
-                }
-
-                match type_args {
+                let type_args = match type_args {
                     Some(type_args) => {
                         let mut type_args_idxs = Vec::new();
                         for type_arg in type_args.iter_mut() {
                             type_args_idxs.push(self.infer_type_ann(type_arg, ctx)?);
                         }
-                        // TODO: check that the type args conform to any constraints
-                        // present in the type params.
-                        self.new_constructor(name, &type_args_idxs)
+                        type_args_idxs
                     }
-                    None => self.new_constructor(name, &[]),
+                    None => vec![],
+                };
+
+                let Scheme { type_params, .. } = ctx.get_scheme(name)?;
+
+                let type_params = match type_params {
+                    Some(type_params) => type_params,
+                    None => vec![],
+                };
+
+                if type_params.len() != type_args.len() {
+                    return Err(Errors::InferenceError(format!(
+                        "{name} expects {} type args, but was passed {}",
+                        type_params.len(),
+                        type_args.len()
+                    )));
                 }
+
+                for (param, arg) in type_params.iter().zip(type_args.iter()) {
+                    if let Some(constraint) = param.constraint {
+                        self.unify(ctx, *arg, constraint)?;
+                    }
+                }
+
+                self.new_constructor(name, &type_args)
             }
             TypeAnnKind::Union(types) => {
                 let mut idxs = Vec::new();
@@ -993,10 +1007,13 @@ impl Checker {
 
                 cond_type
             }
-            // TODO: move this logic to `expand_type`.
             TypeAnnKind::Binary(BinaryTypeAnn { left, op, right }) => {
                 let left = self.infer_type_ann(left, ctx)?;
                 let right = self.infer_type_ann(right, ctx)?;
+
+                let number = self.new_primitive(Primitive::Number);
+                self.unify(ctx, left, number)?;
+                self.unify(ctx, right, number)?;
 
                 let op = match op {
                     BinaryOp::Plus => TBinaryOp::Add,
@@ -1252,29 +1269,15 @@ impl Checker {
                     Ok(self.new_union_type(&result_types))
                 }
             }
-            TypeKind::Constructor(types::Constructor {
-                name: alias_name,
-                types,
-                ..
-            }) => match ctx.schemes.get(alias_name) {
-                Some(scheme) => {
-                    let obj_idx = self.expand_alias(ctx, alias_name, scheme, types)?;
-                    self.get_ident_member(ctx, obj_idx, key_idx)
-                }
-                None => Err(Errors::InferenceError(format!(
-                    "Can't find type alias for {alias_name}"
-                ))),
-            },
-            TypeKind::Tuple(types::Tuple { types }) => match ctx.schemes.get("Array") {
-                Some(scheme) => {
-                    let t = self.new_union_type(types);
-                    let obj_idx = self.expand_alias(ctx, "Array", scheme, &[t])?;
-                    self.get_ident_member(ctx, obj_idx, key_idx)
-                }
-                None => Err(Errors::InferenceError(
-                    "Can't find type alias for Array".to_string(),
-                )),
-            },
+            TypeKind::Constructor(types::Constructor { name, types, .. }) => {
+                let obj_idx = self.expand_alias(ctx, name, types)?;
+                self.get_ident_member(ctx, obj_idx, key_idx)
+            }
+            TypeKind::Tuple(types::Tuple { types }) => {
+                let t = self.new_union_type(types);
+                let obj_idx = self.expand_alias(ctx, "Array", &[t])?;
+                self.get_ident_member(ctx, obj_idx, key_idx)
+            }
             _ => Err(Errors::InferenceError(format!(
                 "Can't access properties on {}",
                 self.print_type(&obj_idx)

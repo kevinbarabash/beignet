@@ -157,28 +157,14 @@ impl Checker {
         value
     }
 
-    pub fn expand_alias_by_name(
-        &mut self,
-        ctx: &Context,
-        name: &str,
-        type_args: &[Index],
-    ) -> Result<Index, Errors> {
-        match ctx.schemes.get(name) {
-            Some(scheme) => self.expand_alias(ctx, name, scheme, type_args),
-            None => {
-                panic!("{} isn't defined", name);
-                // Err(Errors::InferenceError(format!("{} isn't defined", name)))
-            }
-        }
-    }
-
     pub fn expand_alias(
         &mut self,
         ctx: &Context,
         name: &str,
-        scheme: &Scheme,
         type_args: &[Index],
     ) -> Result<Index, Errors> {
+        let scheme = ctx.get_scheme(name)?;
+
         match &scheme.type_params {
             Some(type_params) => {
                 if type_params.len() != type_args.len() {
@@ -216,7 +202,7 @@ impl Checker {
                                         }
                                     }
 
-                                    let t = self.instantiate_scheme(&scheme.t, &mapping);
+                                    let t = self.instantiate_type(&scheme.t, &mapping);
                                     types.push(self.expand_type(ctx, t)?);
                                 }
 
@@ -246,7 +232,7 @@ impl Checker {
                     mapping.insert(param.name.clone(), arg.to_owned());
                 }
 
-                let t = self.instantiate_scheme(&scheme.t, &mapping);
+                let t = self.instantiate_type(&scheme.t, &mapping);
                 self.expand_type(ctx, t)
             }
             None => {
@@ -273,7 +259,7 @@ impl Checker {
             }
             TypeKind::Conditional(conditional) => self.expand_conditional(ctx, conditional)?,
             TypeKind::Constructor(Constructor { name, types, .. }) => {
-                self.expand_alias_by_name(ctx, name, types)?
+                self.expand_alias(ctx, name, types)?
             }
             TypeKind::Binary(binary) => self.expand_binary(ctx, binary)?,
             TypeKind::Object(object) => return self.expand_object(ctx, object),
@@ -374,7 +360,7 @@ impl Checker {
                 Ok(self.new_union_type(&keys))
             }
             TypeKind::Constructor(constructor) => {
-                let idx = self.expand_alias_by_name(ctx, &constructor.name, &constructor.types)?;
+                let idx = self.expand_alias(ctx, &constructor.name, &constructor.types)?;
                 self.expand_keyof(ctx, idx)
             }
             TypeKind::Intersection(Intersection { types }) => {
@@ -465,13 +451,13 @@ impl Checker {
                 }
             },
             TypeKind::Primitive(primitive) => {
-                let scheme_name = primitive.get_scheme_name();
-                let idx = self.expand_alias_by_name(ctx, scheme_name, &[])?;
+                let name = primitive.get_scheme_name();
+                let idx = self.expand_alias(ctx, name, &[])?;
                 self.expand_keyof(ctx, idx)
             }
             TypeKind::Literal(literal) => match literal.get_scheme_name() {
                 Some(name) => {
-                    let idx = self.expand_alias_by_name(ctx, name, &[])?;
+                    let idx = self.expand_alias(ctx, name, &[])?;
                     self.expand_keyof(ctx, idx)
                 }
                 None => todo!(),
@@ -514,7 +500,7 @@ impl Checker {
 
         match self.unify(ctx, *check, extends) {
             Ok(_) => {
-                let true_type = self.instantiate_scheme(true_type, &type_param_map);
+                let true_type = self.instantiate_type(true_type, &type_param_map);
                 Ok(true_type)
             }
             Err(_) => Ok(*false_type),
@@ -580,8 +566,8 @@ impl Checker {
                             for t in types {
                                 let mut mapping: HashMap<String, Index> = HashMap::new();
                                 mapping.insert(mapped.target.to_owned(), *t);
-                                let key = self.instantiate_scheme(&mapped.key, &mapping);
-                                let value = self.instantiate_scheme(&mapped.value, &mapping);
+                                let key = self.instantiate_type(&mapped.key, &mapping);
+                                let value = self.instantiate_type(&mapped.value, &mapping);
 
                                 let name = match &self.arena[key].kind {
                                     TypeKind::Literal(Literal::String(name)) => {
@@ -707,7 +693,7 @@ impl Checker {
                 }
             }
             TypeKind::Constructor(Constructor { name, types, .. }) => {
-                let idx = self.expand_alias_by_name(ctx, name, types)?;
+                let idx = self.expand_alias(ctx, name, types)?;
                 self.get_computed_member(ctx, idx, key_idx)
             }
             _ => {
@@ -908,7 +894,7 @@ pub fn filter_nullables(arena: &Arena<Type>, types: &[Index]) -> Vec<Index> {
 fn get_mapped_key(checker: &mut Checker, mapped: &MappedType) -> Index {
     let mut mapping: HashMap<String, Index> = HashMap::new();
     mapping.insert(mapped.target.to_owned(), mapped.source);
-    checker.instantiate_scheme(&mapped.key, &mapping)
+    checker.instantiate_type(&mapped.key, &mapping)
 }
 
 pub struct FindInferVisitor<'a> {

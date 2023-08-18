@@ -461,12 +461,12 @@ impl Checker {
                                 let mut mapping: HashMap<String, Index> = HashMap::new();
                                 mapping.insert(mapped_1[0].target.to_owned(), mapped_1[0].source);
                                 let mapped_1_key =
-                                    self.instantiate_scheme(&mapped_1[0].key, &mapping);
+                                    self.instantiate_type(&mapped_1[0].key, &mapping);
 
                                 let mut mapping: HashMap<String, Index> = HashMap::new();
                                 mapping.insert(mapped_2[0].target.to_owned(), mapped_2[0].source);
                                 let mapped_2_key =
-                                    self.instantiate_scheme(&mapped_2[0].key, &mapping);
+                                    self.instantiate_type(&mapped_2[0].key, &mapping);
 
                                 self.unify(ctx, mapped_2_key, mapped_1_key)?;
                             }
@@ -694,28 +694,26 @@ impl Checker {
             TypeKind::Constructor(Constructor {
                 name,
                 types: type_args,
-            }) => match ctx.schemes.get(&name) {
-                Some(scheme) => {
-                    let mut mapping: HashMap<String, Index> = HashMap::new();
-                    if let Some(type_params) = &scheme.type_params {
-                        for (param, arg) in type_params.iter().zip(type_args.iter()) {
-                            mapping.insert(param.name.clone(), arg.to_owned());
-                        }
+            }) => {
+                let scheme = ctx.get_scheme(&name)?;
+                let mut mapping: HashMap<String, Index> = HashMap::new();
+                if let Some(type_params) = &scheme.type_params {
+                    for (param, arg) in type_params.iter().zip(type_args.iter()) {
+                        mapping.insert(param.name.clone(), arg.to_owned());
                     }
-
-                    let t = self.instantiate_scheme(&scheme.t, &mapping);
-                    let type_args = if type_args.is_empty() {
-                        None
-                    } else {
-                        Some(type_args.as_slice())
-                    };
-
-                    return self.unify_call(ctx, args, type_args, t);
                 }
-                None => {
-                    panic!("Couldn't find scheme for {name:#?}");
-                }
-            },
+
+                let t = self.instantiate_type(&scheme.t, &mapping);
+                // let t = self.expand_alias(ctx, &name, &type_args)?;
+
+                let type_args = if type_args.is_empty() {
+                    None
+                } else {
+                    Some(type_args.as_slice())
+                };
+
+                return self.unify_call(ctx, args, type_args, t);
+            }
             TypeKind::Literal(lit) => {
                 return Err(Errors::InferenceError(format!(
                     "literal {lit:#?} is not callable"

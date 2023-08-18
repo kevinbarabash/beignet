@@ -2591,7 +2591,7 @@ fn instantiate_type_alias_with_args_when_it_has_no_type_params() -> Result<(), E
     assert_eq!(
         result,
         Err(Errors::InferenceError(
-            "Point doesn't require any type args".to_string()
+            "Point expects 0 type args, but was passed 1".to_string()
         ))
     );
 
@@ -4733,16 +4733,12 @@ fn type_level_arithmetic_incorrect_operands() -> Result<(), Errors> {
     "#;
     let mut program = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
-
-    let result = my_ctx.schemes.get("Sum").unwrap();
-    assert_eq!(checker.print_type(&result.t), r#""hello" + true"#);
-    let result = checker.expand_type(&my_ctx, result.t);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
         Err(Errors::InferenceError(
-            "Cannot perform binary operation on types: \"\\\"hello\\\"\" and \"true\"".to_string()
+            "type mismatch: unify(\"hello\", number) failed".to_string()
         ))
     );
 
@@ -4754,20 +4750,17 @@ fn check_type_constraints() -> Result<(), Errors> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
-    type Add<A: string, B: string> = A + B
-    type A = Add<5, 10>
+    type Add<A: number, B: number> = A + B
+    type A = Add<"hello", "world">
     "#;
     let mut program = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
-
-    let result = my_ctx.schemes.get("A").unwrap();
-    let result = checker.expand_type(&my_ctx, result.t);
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
         Err(Errors::InferenceError(
-            "type mismatch: unify(5, string) failed".to_string()
+            "type mismatch: unify(\"hello\", number) failed".to_string()
         ))
     );
 
@@ -4812,19 +4805,35 @@ fn type_level_arithmetic_with_alias() -> Result<(), Errors> {
 fn type_level_arithmetic_with_incorrect_types() -> Result<(), Errors> {
     let (mut checker, mut my_ctx) = test_env();
 
-    // TODO: Check type aliases without type parameters eagerly (this likely
-    // requires a separate pass) or something similar to how we handle mutual
-    // recursion with functions.
+    // TODO: Eagerly check arithmetic in type aliases
     let src = r#"
-    type Add<A: number, B: number> = A + B
-    type Sum = Add<string, boolean>
+    type Sum = string + number
     "#;
     let mut program = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
-    let result = my_ctx.schemes.get("Sum").unwrap();
-    let result = checker.expand_type(&my_ctx, result.t);
+    assert_eq!(
+        result,
+        Err(Errors::InferenceError(
+            "type mismatch: string != number".to_string()
+        ))
+    );
+
+    Ok(())
+}
+
+#[test]
+fn type_args_are_eagerly_checked() -> Result<(), Errors> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Foo<A: number> = A
+    type Bar = Foo<string>
+    "#;
+    let mut program = parse(src).unwrap();
+
+    let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
         result,
