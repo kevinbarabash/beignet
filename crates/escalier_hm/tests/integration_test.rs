@@ -17,9 +17,7 @@ fn new_str_lit_type(arena: &mut Arena<Type>, value: &str) -> Index {
 }
 
 fn test_env() -> (Checker, Context) {
-    let mut checker = Checker {
-        arena: Arena::new(),
-    };
+    let mut checker = Checker::default();
     let mut context = Context::default();
 
     let number = checker.new_primitive(Primitive::Number);
@@ -283,15 +281,45 @@ fn test_no_top_level_redeclaration() -> Result<(), TypeError> {
     Ok(())
 }
 
-#[should_panic]
 #[test]
-fn test_mismatch() {
+fn test_mismatch() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"fn (x) => [x(3), x(true)]"#;
 
     let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx).unwrap();
+
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    insta::assert_display_snapshot!(checker.current_report, @r###"
+    ESC_1000 - Function arguments are incorrect:
+    └ TypeError: type mismatch: true != 3
+    "###);
+
+    Ok(())
+}
+
+#[test]
+fn test_multiple_incorrect_args() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    let foo = fn (x: number, y: string) => x
+    foo(true, false)
+    "#;
+
+    let mut program = parse(src).unwrap();
+
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    insta::assert_display_snapshot!(checker.current_report, @r###"
+    ESC_1000 - Function arguments are incorrect:
+    ├ TypeError: type mismatch: unify(true, number) failed
+    └ TypeError: type mismatch: unify(false, string) failed
+
+    "###);
+
+    Ok(())
 }
 
 #[test]
@@ -513,11 +541,13 @@ fn test_callback_error_too_many_params() -> Result<(), TypeError> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
-    assert_eq!(
-        result,
-        Err(TypeError { message: "(a: number, b: string) -> boolean is not a subtype of (x: number) -> boolean since it requires more params".to_string()}),
-    );
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    insta::assert_display_snapshot!(checker.current_report, @r###"
+    ESC_1000 - Function arguments are incorrect:
+    └ TypeError: (a: number, b: string) -> boolean is not a subtype of (x: number) -> boolean since it requires more params
+    "###);
+
     Ok(())
 }
 
@@ -781,14 +811,12 @@ fn tuple_subtyping_not_enough_elements() -> Result<(), TypeError> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
-    assert_eq!(
-        result,
-        Err(TypeError {
-            message: "Expected tuple of length 2, got tuple of length 1".to_string()
-        })
-    );
+    insta::assert_display_snapshot!(checker.current_report, @r###"
+    ESC_1000 - Function arguments are incorrect:
+    └ TypeError: Expected tuple of length 2, got tuple of length 1
+    "###);
 
     Ok(())
 }
@@ -1151,14 +1179,12 @@ fn object_subtyping_missing_prop() -> Result<(), TypeError> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
-    assert_eq!(
-        result,
-        Err(TypeError {
-            message: "'a' is missing in {b: \"hello\"}".to_string()
-        })
-    );
+    insta::assert_display_snapshot!(checker.current_report, @r###"
+    ESC_1000 - Function arguments are incorrect:
+    └ TypeError: 'a' is missing in {b: "hello"}
+    "###);
 
     Ok(())
 }
@@ -1173,14 +1199,12 @@ fn test_subtype_error() -> Result<(), TypeError> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
-    assert_eq!(
-        result,
-        Err(TypeError {
-            message: "type mismatch: unify(\"hello\", number) failed".to_string()
-        })
-    );
+    insta::assert_display_snapshot!(checker.current_report, @r###"
+    ESC_1000 - Function arguments are incorrect:
+    └ TypeError: type mismatch: unify("hello", number) failed
+    "###);
 
     Ok(())
 }
@@ -1205,14 +1229,14 @@ fn test_union_subtype_error() -> Result<(), TypeError> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
-    assert_eq!(
-        result,
-        Err(TypeError {
-            message: "type mismatch: unify(\"hello\", number) failed".to_string()
-        })
-    );
+    insta::assert_display_snapshot!(checker.current_report, @r###"
+    ESC_1000 - Function arguments are incorrect:
+    ├ TypeError: type mismatch: unify("hello", number) failed
+    └ TypeError: type mismatch: unify("world", number) failed
+
+    "###);
 
     Ok(())
 }
@@ -1716,6 +1740,7 @@ fn test_function_no_valid_overload() -> Result<(), TypeError> {
     add(5, "world")
     "#;
     let mut program = parse(src).unwrap();
+
     let result = checker.infer_program(&mut program, &mut my_ctx);
 
     assert_eq!(
@@ -2163,14 +2188,12 @@ fn test_explicit_type_params_type_error() -> Result<(), TypeError> {
     identity<number>("hello")
     "#;
     let mut program = parse(src).unwrap();
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
-    assert_eq!(
-        result,
-        Err(TypeError {
-            message: "type mismatch: unify(\"hello\", number) failed".to_string()
-        })
-    );
+    insta::assert_display_snapshot!(checker.current_report, @r###"
+    ESC_1000 - Function arguments are incorrect:
+    └ TypeError: type mismatch: unify("hello", number) failed
+    "###);
 
     Ok(())
 }
@@ -2275,14 +2298,12 @@ fn test_type_param_with_violated_constraint() -> Result<(), TypeError> {
     identity(true)
     "#;
     let mut program = parse(src).unwrap();
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
-    assert_eq!(
-        result,
-        Err(TypeError {
-            message: "type mismatch: unify(true, number | string) failed".to_string()
-        })
-    );
+    insta::assert_display_snapshot!(checker.current_report, @r###"
+    ESC_1000 - Function arguments are incorrect:
+    └ TypeError: type mismatch: unify(true, number | string) failed
+    "###);
 
     Ok(())
 }
@@ -2358,14 +2379,12 @@ fn test_callback_with_type_param_subtyping_error() -> Result<(), TypeError> {
     let result = foo(identity)
     "#;
     let mut program = parse(src).unwrap();
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
-    assert_eq!(
-        result,
-        Err(TypeError {
-            message: "type mismatch: string != number".to_string()
-        })
-    );
+    insta::assert_display_snapshot!(checker.current_report, @r###"
+    ESC_1000 - Function arguments are incorrect:
+    └ TypeError: type mismatch: string != number
+    "###);
 
     Ok(())
 }
@@ -2930,14 +2949,12 @@ fn methods_on_arrays_incorrect_type() -> Result<(), TypeError> {
     "#;
     let mut program = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
-    assert_eq!(
-        result,
-        Err(TypeError {
-            message: "type mismatch: unify(\"hello\", number) failed".to_string()
-        })
-    );
+    insta::assert_display_snapshot!(checker.current_report, @r###"
+    ESC_1000 - Function arguments are incorrect:
+    └ TypeError: type mismatch: unify("hello", number) failed
+    "###);
 
     Ok(())
 }

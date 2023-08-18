@@ -1,5 +1,3 @@
-use generational_arena::Arena;
-
 use escalier_ast::*;
 use escalier_parser::parse;
 
@@ -9,9 +7,7 @@ use escalier_hm::type_error::TypeError;
 use escalier_hm::types::{self, *};
 
 fn test_env() -> (Checker, Context) {
-    let mut checker = Checker {
-        arena: Arena::new(),
-    };
+    let mut checker = Checker::default();
     let mut context = Context::default();
 
     let number = checker.new_primitive(Primitive::Number);

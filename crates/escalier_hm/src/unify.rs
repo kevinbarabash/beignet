@@ -7,6 +7,7 @@ use escalier_ast::{BindingIdent, Expr, Literal as Lit, Span};
 
 use crate::checker::Checker;
 use crate::context::*;
+use crate::diagnostic::Diagnostic;
 use crate::infer::check_mutability;
 use crate::type_error::TypeError;
 use crate::types::*;
@@ -699,13 +700,19 @@ impl Checker {
             }
             TypeKind::Intersection(Intersection { types }) => {
                 for t in types.iter() {
+                    self.push_report();
+
                     // TODO: if there are multiple overloads that unify, pick the
                     // best one.
-                    let result = self.unify_call(ctx, args, type_args, *t);
-                    match result {
-                        Ok(ret_type) => return Ok(ret_type),
-                        Err(_) => continue,
+                    let (ret_type, maybe_throws_type) =
+                        self.unify_call(ctx, args, type_args, *t)?;
+
+                    if self.current_report.diagnostics.is_empty() {
+                        self.pop_report();
+                        return Ok((ret_type, maybe_throws_type));
                     }
+
+                    self.pop_report();
                 }
                 return Err(TypeError {
                     message: "no valid overload for args".to_string(),
@@ -791,11 +798,23 @@ impl Checker {
                     })
                     .collect::<Result<Vec<_>, _>>()?;
 
+                let mut reasons: Vec<TypeError> = vec![];
                 for ((arg, p), param) in arg_types.iter().zip(func.params.iter()) {
                     match check_mutability(ctx, &param.pattern, arg)? {
                         true => self.unify_mut(ctx, *p, param.t)?,
-                        false => self.unify(ctx, *p, param.t)?,
+                        false => match self.unify(ctx, *p, param.t) {
+                            Ok(_) => {}
+                            Err(error) => reasons.push(error),
+                        },
                     };
+                }
+
+                if !reasons.is_empty() {
+                    self.current_report.diagnostics.push(Diagnostic {
+                        code: 1000,
+                        message: "Function arguments are incorrect".to_string(),
+                        reasons,
+                    });
                 }
 
                 self.unify(ctx, ret_type, func.ret)?;
