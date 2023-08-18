@@ -5,7 +5,7 @@ use escalier_ast::{self as ast, *};
 
 use crate::checker::Checker;
 use crate::context::{Binding, Context};
-use crate::errors::*;
+use crate::type_error::TypeError;
 use crate::types::{self, *};
 
 // #[derive(Clone, Debug)]
@@ -22,13 +22,13 @@ impl Checker {
         &mut self,
         pattern: &mut Pattern,
         ctx: &Context,
-    ) -> Result<(Assump, Index), Errors> {
+    ) -> Result<(Assump, Index), TypeError> {
         fn infer_pattern_rec(
             checker: &mut Checker,
             pattern: &mut Pattern,
             assump: &mut Assump,
             ctx: &Context,
-        ) -> Result<Index, Errors> {
+        ) -> Result<Index, TypeError> {
             let t = match &mut pattern.kind {
                 PatternKind::Ident(BindingIdent { name, mutable, .. }) => {
                     let t = checker.new_var_type(None);
@@ -42,9 +42,9 @@ impl Checker {
                         )
                         .is_some()
                     {
-                        return Err(Errors::InferenceError(
-                            "Duplicate identifier in pattern".to_string(),
-                        ));
+                        return Err(TypeError {
+                            message: "Duplicate identifier in pattern".to_string(),
+                        });
                     }
                     t
                 }
@@ -105,10 +105,11 @@ impl Checker {
                             }
                             ObjectPatProp::Rest(rest) => {
                                 if rest_opt_ty.is_some() {
-                                    return Err(Errors::InferenceError(
-                                        "Maximum one rest pattern allowed in object patterns"
-                                            .to_string(),
-                                    ));
+                                    return Err(TypeError {
+                                        message:
+                                            "Maximum one rest pattern allowed in object patterns"
+                                                .to_string(),
+                                    });
                                 }
                                 // TypeScript doesn't support spreading/rest in types so instead we
                                 // do the following conversion:

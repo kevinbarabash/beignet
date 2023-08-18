@@ -1,14 +1,16 @@
 // Based on https://github.com/tcr/rust-hindley-milner/blob/master/src/lib.rs
 mod ast_utils;
-pub mod checker;
-pub mod context;
-pub mod errors;
+mod diagnostic;
 mod folder;
-pub mod infer;
 mod infer_pattern;
 mod key_value_store;
 mod provenance;
-pub mod types;
 mod unify;
-pub mod util;
 mod visitor;
+
+pub mod checker;
+pub mod context;
+pub mod infer;
+pub mod type_error;
+pub mod types;
+pub mod util;

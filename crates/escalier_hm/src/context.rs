@@ -3,10 +3,10 @@ use im::hashmap::HashMap;
 use im::hashset::HashSet;
 
 use crate::checker::Checker;
-use crate::errors::*;
 use crate::folder::walk_index;
 use crate::folder::{self, Folder};
 use crate::key_value_store::KeyValueStore;
+use crate::type_error::TypeError;
 use crate::types::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -31,10 +31,12 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn get_scheme(&self, name: &str) -> Result<Scheme, Errors> {
+    pub fn get_scheme(&self, name: &str) -> Result<Scheme, TypeError> {
         match self.schemes.get(name) {
             Some(scheme) => Ok(scheme.to_owned()),
-            None => Err(Errors::InferenceError(format!("{} is not in scope", name))),
+            None => Err(TypeError {
+                message: format!("{} is not in scope", name),
+            }),
         }
     }
 }
@@ -49,15 +51,14 @@ impl Checker {
     /// Raises:
     ///     ParseError: Raised if name is an undefined symbol in the type
     ///         environment.
-    pub fn get_type(&mut self, name: &str, ctx: &Context) -> Result<Index, Errors> {
+    pub fn get_type(&mut self, name: &str, ctx: &Context) -> Result<Index, TypeError> {
         if let Some(value) = ctx.values.get(name) {
             let result = self.fresh(&value.index, ctx);
             Ok(result)
         } else {
-            Err(Errors::InferenceError(format!(
-                "Undefined symbol {:?}",
-                name
-            )))
+            Err(TypeError {
+                message: format!("Undefined symbol {:?}", name),
+            })
         }
     }
 
@@ -95,7 +96,7 @@ impl Checker {
         &mut self,
         func: &Function,
         type_args: Option<&[Index]>,
-    ) -> Result<Function, Errors> {
+    ) -> Result<Function, TypeError> {
         // A mapping of TypeVariables to TypeVariables
         let mut mapping = std::collections::HashMap::default();
 
@@ -103,9 +104,9 @@ impl Checker {
             match type_args {
                 Some(type_args) => {
                     if type_args.len() != type_params.len() {
-                        return Err(Errors::InferenceError(
-                            "wrong number of type args".to_string(),
-                        ));
+                        return Err(TypeError {
+                            message: "wrong number of type args".to_string(),
+                        });
                     }
 
                     for (tp, ta) in type_params.iter().zip(type_args.iter()) {

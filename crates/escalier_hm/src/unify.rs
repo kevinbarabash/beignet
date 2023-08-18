@@ -7,8 +7,8 @@ use escalier_ast::{BindingIdent, Expr, Literal as Lit, Span};
 
 use crate::checker::Checker;
 use crate::context::*;
-use crate::errors::*;
 use crate::infer::check_mutability;
+use crate::type_error::TypeError;
 use crate::types::*;
 
 impl Checker {
@@ -25,7 +25,7 @@ impl Checker {
     ///
     /// Raises:
     ///     InferenceError: Raised if the types cannot be unified.
-    pub fn unify(&mut self, ctx: &Context, t1: Index, t2: Index) -> Result<(), Errors> {
+    pub fn unify(&mut self, ctx: &Context, t1: Index, t2: Index) -> Result<(), TypeError> {
         let a = self.prune(t1);
         let b = self.prune(t2);
 
@@ -48,11 +48,13 @@ impl Checker {
                 if kw1 == kw2 {
                     Ok(())
                 } else {
-                    Err(Errors::InferenceError(format!(
-                        "type mismatch: {} != {}",
-                        self.print_type(&a),
-                        self.print_type(&b),
-                    )))
+                    Err(TypeError {
+                        message: format!(
+                            "type mismatch: {} != {}",
+                            self.print_type(&a),
+                            self.print_type(&b),
+                        ),
+                    })
                 }
             }
 
@@ -77,11 +79,13 @@ impl Checker {
                     }
                 }
 
-                Err(Errors::InferenceError(format!(
-                    "type mismatch: unify({}, {}) failed",
-                    self.print_type(&a),
-                    self.print_type(&b),
-                )))
+                Err(TypeError {
+                    message: format!(
+                        "type mismatch: unify({}, {}) failed",
+                        self.print_type(&a),
+                        self.print_type(&b),
+                    ),
+                })
             }
             (TypeKind::Tuple(tuple1), TypeKind::Tuple(tuple2)) => {
                 'outer: {
@@ -94,11 +98,13 @@ impl Checker {
                             }
                         }
 
-                        return Err(Errors::InferenceError(format!(
-                            "Expected tuple of length {}, got tuple of length {}",
-                            tuple2.types.len(),
-                            tuple1.types.len()
-                        )));
+                        return Err(TypeError {
+                            message: format!(
+                                "Expected tuple of length {}, got tuple of length {}",
+                                tuple2.types.len(),
+                                tuple1.types.len()
+                            ),
+                        });
                     }
                 }
 
@@ -106,9 +112,9 @@ impl Checker {
                     // let q_t = arena[*q];
                     match (&self.arena[*p].kind, &self.arena[*q].kind) {
                         (TypeKind::Rest(_), TypeKind::Rest(_)) => {
-                            return Err(Errors::InferenceError(
-                                "Can't unify two rest elements".to_string(),
-                            ))
+                            return Err(TypeError {
+                                message: "Can't unify two rest elements".to_string(),
+                            })
                         }
                         (TypeKind::Rest(_), _) => {
                             let rest_q = self.new_tuple_type(&tuple2.types[i..]);
@@ -160,11 +166,13 @@ impl Checker {
             (TypeKind::Constructor(con_a), TypeKind::Constructor(con_b)) => {
                 // TODO: support type constructors with optional and default type params
                 if con_a.name != con_b.name || con_a.types.len() != con_b.types.len() {
-                    return Err(Errors::InferenceError(format!(
-                        "type mismatch: {} != {}",
-                        self.print_type(&a),
-                        self.print_type(&b),
-                    )));
+                    return Err(TypeError {
+                        message: format!(
+                            "type mismatch: {} != {}",
+                            self.print_type(&a),
+                            self.print_type(&b),
+                        ),
+                    });
                 }
                 for (p, q) in con_a.types.iter().zip(con_b.types.iter()) {
                     self.unify(ctx, *p, *q)?;
@@ -197,9 +205,9 @@ impl Checker {
                 for param in &params_a {
                     if let TPat::Rest(rest) = &param.pattern {
                         if rest_a.is_some() {
-                            return Err(Errors::InferenceError(
-                                "multiple rest params in function".to_string(),
-                            ));
+                            return Err(TypeError {
+                                message: "multiple rest params in function".to_string(),
+                            });
                         }
                         rest_a = Some((rest, param.t));
                     }
@@ -208,9 +216,9 @@ impl Checker {
                 for param in &params_b {
                     if let TPat::Rest(rest) = &param.pattern {
                         if rest_b.is_some() {
-                            return Err(Errors::InferenceError(
-                                "multiple rest params in function".to_string(),
-                            ));
+                            return Err(TypeError {
+                                message: "multiple rest params in function".to_string(),
+                            });
                         }
                         rest_b = Some((rest, param.t));
                     }
@@ -248,10 +256,12 @@ impl Checker {
                                     }
                                     TypeKind::Constructor(_) => todo!(),
                                     _ => {
-                                        return Err(Errors::InferenceError(format!(
-                                            "rest param must be an array or tuple, got {}",
-                                            self.print_type(&p.t)
-                                        )));
+                                        return Err(TypeError {
+                                            message: format!(
+                                                "rest param must be an array or tuple, got {}",
+                                                self.print_type(&p.t)
+                                            ),
+                                        });
                                     }
                                 },
                                 _ => p.t,
@@ -272,11 +282,13 @@ impl Checker {
                         return Ok(());
                     }
 
-                    return Err(Errors::InferenceError(format!(
-                        "{} is not a subtype of {} since it requires more params",
-                        self.print_type(&a),
-                        self.print_type(&b),
-                    )));
+                    return Err(TypeError {
+                        message: format!(
+                            "{} is not a subtype of {} since it requires more params",
+                            self.print_type(&a),
+                            self.print_type(&b),
+                        ),
+                    });
                 }
 
                 for i in 0..min_params_a {
@@ -322,11 +334,13 @@ impl Checker {
                     _ => false,
                 };
                 if !equal {
-                    return Err(Errors::InferenceError(format!(
-                        "type mismatch: {} != {}",
-                        self.print_type(&a),
-                        self.print_type(&b),
-                    )));
+                    return Err(TypeError {
+                        message: format!(
+                            "type mismatch: {} != {}",
+                            self.print_type(&a),
+                            self.print_type(&b),
+                        ),
+                    });
                 }
                 Ok(())
             }
@@ -338,11 +352,13 @@ impl Checker {
                 (Primitive::String, Primitive::String) => Ok(()),
                 (Primitive::Boolean, Primitive::Boolean) => Ok(()),
                 (Primitive::Symbol, Primitive::Symbol) => Ok(()),
-                _ => Err(Errors::InferenceError(format!(
-                    "type mismatch: {} != {}",
-                    self.print_type(&a),
-                    self.print_type(&b),
-                ))),
+                _ => Err(TypeError {
+                    message: format!(
+                        "type mismatch: {} != {}",
+                        self.print_type(&a),
+                        self.print_type(&b),
+                    ),
+                }),
             },
             (TypeKind::Object(object1), TypeKind::Object(object2)) => {
                 // object1 must have atleast as the same properties as object2
@@ -410,11 +426,13 @@ impl Checker {
                             self.unify(ctx, t1, t2)?;
                         }
                         None => {
-                            return Err(Errors::InferenceError(format!(
-                                "'{}' is missing in {}",
-                                name,
-                                self.print_type(&a),
-                            )));
+                            return Err(TypeError {
+                                message: format!(
+                                    "'{}' is missing in {}",
+                                    name,
+                                    self.print_type(&a),
+                                ),
+                            });
                         }
                     }
                 }
@@ -471,18 +489,19 @@ impl Checker {
                                 self.unify(ctx, mapped_2_key, mapped_1_key)?;
                             }
                             _ => {
-                                return Err(Errors::InferenceError(format!(
-                                    "{} has multiple indexers",
-                                    self.print_type(&a),
-                                )))
+                                return Err(TypeError {
+                                    message: format!(
+                                        "{} has multiple indexers",
+                                        self.print_type(&a),
+                                    ),
+                                })
                             }
                         }
                     }
                     _ => {
-                        return Err(Errors::InferenceError(format!(
-                            "{} has multiple indexers",
-                            self.print_type(&b),
-                        )))
+                        return Err(TypeError {
+                            message: format!("{} has multiple indexers", self.print_type(&b),),
+                        })
                     }
                 }
 
@@ -535,9 +554,9 @@ impl Checker {
 
                         Ok(())
                     }
-                    _ => Err(Errors::InferenceError(
-                        "Inference is undecidable".to_string(),
-                    )),
+                    _ => Err(TypeError {
+                        message: "Inference is undecidable".to_string(),
+                    }),
                 }
             }
             (TypeKind::Intersection(intersection), TypeKind::Object(object2)) => {
@@ -582,20 +601,22 @@ impl Checker {
 
                         Ok(())
                     }
-                    _ => Err(Errors::InferenceError(
-                        "Inference is undecidable".to_string(),
-                    )),
+                    _ => Err(TypeError {
+                        message: "Inference is undecidable".to_string(),
+                    }),
                 }
             }
-            _ => Err(Errors::InferenceError(format!(
-                "type mismatch: unify({}, {}) failed",
-                self.print_type(&a),
-                self.print_type(&b),
-            ))),
+            _ => Err(TypeError {
+                message: format!(
+                    "type mismatch: unify({}, {}) failed",
+                    self.print_type(&a),
+                    self.print_type(&b),
+                ),
+            }),
         }
     }
 
-    pub fn unify_mut(&mut self, ctx: &Context, t1: Index, t2: Index) -> Result<(), Errors> {
+    pub fn unify_mut(&mut self, ctx: &Context, t1: Index, t2: Index) -> Result<(), TypeError> {
         let t1 = self.prune(t1);
         let t2 = self.prune(t2);
 
@@ -606,11 +627,13 @@ impl Checker {
         if self.equals(&t1, &t2) {
             Ok(())
         } else {
-            Err(Errors::InferenceError(format!(
-                "unify_mut: {} != {}",
-                self.print_type(&t1),
-                self.print_type(&t2),
-            )))
+            Err(TypeError {
+                message: format!(
+                    "unify_mut: {} != {}",
+                    self.print_type(&t1),
+                    self.print_type(&t2),
+                ),
+            })
         }
     }
 
@@ -621,7 +644,7 @@ impl Checker {
         args: &mut [Expr],
         type_args: Option<&[Index]>,
         t2: Index,
-    ) -> Result<(Index, Option<Index>), Errors> {
+    ) -> Result<(Index, Option<Index>), TypeError> {
         let ret_type = self.new_var_type(None);
         let mut maybe_throws_type: Option<Index> = None;
         // let throws_type = new_var_type(arena, None);
@@ -684,12 +707,14 @@ impl Checker {
                         Err(_) => continue,
                     }
                 }
-                return Err(Errors::InferenceError(
-                    "no valid overload for args".to_string(),
-                ));
+                return Err(TypeError {
+                    message: "no valid overload for args".to_string(),
+                });
             }
             TypeKind::Tuple(_) => {
-                return Err(Errors::InferenceError("tuple is not callable".to_string()))
+                return Err(TypeError {
+                    message: "tuple is not callable".to_string(),
+                })
             }
             TypeKind::Constructor(Constructor {
                 name,
@@ -715,24 +740,30 @@ impl Checker {
                 return self.unify_call(ctx, args, type_args, t);
             }
             TypeKind::Literal(lit) => {
-                return Err(Errors::InferenceError(format!(
-                    "literal {lit:#?} is not callable"
-                )));
+                return Err(TypeError {
+                    message: format!("literal {lit:#?} is not callable"),
+                });
             }
             TypeKind::Primitive(primitive) => {
-                return Err(Errors::InferenceError(format!(
-                    "Primitive {primitive:#?} is not callable"
-                )));
+                return Err(TypeError {
+                    message: format!("Primitive {primitive:#?} is not callable"),
+                });
             }
             TypeKind::Keyword(keyword) => {
-                return Err(Errors::InferenceError(format!("{keyword} is not callable")))
+                return Err(TypeError {
+                    message: format!("{keyword} is not callable"),
+                })
             }
             TypeKind::Object(_) => {
                 // TODO: check if the object has a callbale signature
-                return Err(Errors::InferenceError("object is not callable".to_string()));
+                return Err(TypeError {
+                    message: "object is not callable".to_string(),
+                });
             }
             TypeKind::Rest(_) => {
-                return Err(Errors::InferenceError("rest is not callable".to_string()));
+                return Err(TypeError {
+                    message: "rest is not callable".to_string(),
+                });
             }
             TypeKind::Function(func) => {
                 let func = if func.type_params.is_some() {
@@ -742,11 +773,13 @@ impl Checker {
                 };
 
                 if args.len() < func.params.len() {
-                    return Err(Errors::InferenceError(format!(
-                        "too few arguments to function: expected {}, got {}",
-                        func.params.len(),
-                        args.len()
-                    )));
+                    return Err(TypeError {
+                        message: format!(
+                            "too few arguments to function: expected {}, got {}",
+                            func.params.len(),
+                            args.len()
+                        ),
+                    });
                 }
 
                 let arg_types = args
@@ -779,10 +812,9 @@ impl Checker {
                 }
             }
             TypeKind::KeyOf(KeyOf { t }) => {
-                return Err(Errors::InferenceError(format!(
-                    "keyof {} is not callable",
-                    self.print_type(&t)
-                )));
+                return Err(TypeError {
+                    message: format!("keyof {} is not callable", self.print_type(&t)),
+                });
             }
             TypeKind::IndexedAccess(IndexedAccess { obj, index }) => {
                 let t = self.get_prop(ctx, obj, index)?;
@@ -800,12 +832,14 @@ impl Checker {
                 };
             }
             TypeKind::Infer(Infer { name }) => {
-                return Err(Errors::InferenceError(format!(
-                    "infer {name} is not callable",
-                )));
+                return Err(TypeError {
+                    message: format!("infer {name} is not callable",),
+                });
             }
             TypeKind::Wildcard => {
-                return Err(Errors::InferenceError("_ is not callable".to_string()));
+                return Err(TypeError {
+                    message: "_ is not callable".to_string(),
+                });
             }
             TypeKind::Binary(BinaryT {
                 op: _,
@@ -820,7 +854,7 @@ impl Checker {
         Ok((ret_type, maybe_throws_type))
     }
 
-    fn bind(&mut self, ctx: &Context, a: Index, b: Index) -> Result<(), Errors> {
+    fn bind(&mut self, ctx: &Context, a: Index, b: Index) -> Result<(), TypeError> {
         // eprint!("bind(");
         // eprint!("{:#?}", arena[a].as_string(arena));
         // if let Some(provenance) = &arena[a].provenance {
@@ -834,7 +868,9 @@ impl Checker {
 
         if a != b {
             if self.occurs_in_type(a, b) {
-                return Err(Errors::InferenceError("recursive unification".to_string()));
+                return Err(TypeError {
+                    message: "recursive unification".to_string(),
+                });
             }
 
             match self.arena.get_mut(a) {
@@ -855,7 +891,7 @@ impl Checker {
         Ok(())
     }
 
-    fn expand(&mut self, ctx: &Context, a: Index) -> Result<Index, Errors> {
+    fn expand(&mut self, ctx: &Context, a: Index) -> Result<Index, TypeError> {
         let a_t = self.arena[a].clone();
 
         match &a_t.kind {

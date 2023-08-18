@@ -5,7 +5,7 @@ use escalier_parser::parse;
 
 use escalier_hm::checker::Checker;
 use escalier_hm::context::*;
-use escalier_hm::errors::*;
+use escalier_hm::type_error::TypeError;
 use escalier_hm::types::{self, *};
 
 fn new_num_lit_type(arena: &mut Arena<Type>, value: &str) -> Index {
@@ -89,7 +89,7 @@ fn test_env() -> (Checker, Context) {
 /// from each.
 
 #[test]
-fn test_complex_logic() -> Result<(), Errors> {
+fn test_complex_logic() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -109,7 +109,7 @@ fn test_complex_logic() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_string_equality() -> Result<(), Errors> {
+fn test_string_equality() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -131,7 +131,7 @@ fn test_string_equality() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_if_else() -> Result<(), Errors> {
+fn test_if_else() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -149,7 +149,7 @@ fn test_if_else() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_chained_if_else() -> Result<(), Errors> {
+fn test_chained_if_else() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -168,7 +168,7 @@ fn test_chained_if_else() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_factorial() -> Result<(), Errors> {
+fn test_factorial() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     // factorial
@@ -194,7 +194,7 @@ fn test_factorial() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_mutual_recursion() -> Result<(), Errors> {
+fn test_mutual_recursion() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -228,7 +228,7 @@ fn test_mutual_recursion() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_mutual_recursion_using_destructuring() -> Result<(), Errors> {
+fn test_mutual_recursion_using_destructuring() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -263,7 +263,7 @@ fn test_mutual_recursion_using_destructuring() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_no_top_level_redeclaration() -> Result<(), Errors> {
+fn test_no_top_level_redeclaration() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -275,9 +275,9 @@ fn test_no_top_level_redeclaration() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "id cannot be redeclared at the top-level".to_string()
-        ))
+        Err(TypeError {
+            message: "id cannot be redeclared at the top-level".to_string()
+        })
     );
 
     Ok(())
@@ -294,19 +294,27 @@ fn test_mismatch() {
     checker.infer_program(&mut program, &mut my_ctx).unwrap();
 }
 
-#[should_panic = "called `Result::unwrap()` on an `Err` value: InferenceError(\"Undefined symbol \\\"f\\\"\")"]
 #[test]
-fn test_pair() {
+fn test_pair() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"[f(3), f(true)]"#;
 
     let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx).unwrap();
+    let result = checker.infer_program(&mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(TypeError {
+            message: "Undefined symbol \"f\"".to_string()
+        })
+    );
+
+    Ok(())
 }
 
 #[test]
-fn test_mul() -> Result<(), Errors> {
+fn test_mul() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -334,7 +342,7 @@ fn test_recursive() {
 }
 
 #[test]
-fn test_number_literal() -> Result<(), Errors> {
+fn test_number_literal() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -351,7 +359,7 @@ fn test_number_literal() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_generic_nongeneric() -> Result<(), Errors> {
+fn test_generic_nongeneric() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -370,7 +378,7 @@ fn test_generic_nongeneric() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_basic_generics() -> Result<(), Errors> {
+fn test_basic_generics() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     // example that demonstrates generic and non-generic variables:
@@ -385,7 +393,7 @@ fn test_basic_generics() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_composition() -> Result<(), Errors> {
+fn test_composition() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     // Function composition
@@ -403,7 +411,7 @@ fn test_composition() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_skk() -> Result<(), Errors> {
+fn test_skk() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -432,7 +440,7 @@ fn test_skk() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_composition_with_statements() -> Result<(), Errors> {
+fn test_composition_with_statements() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     // Function composition
@@ -457,7 +465,7 @@ fn test_composition_with_statements() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_subtype() -> Result<(), Errors> {
+fn test_subtype() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -473,7 +481,7 @@ fn test_subtype() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_callback_subtyping() -> Result<(), Errors> {
+fn test_callback_subtyping() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     // It's okay for the callback arg to take fewer params since extra params
@@ -495,7 +503,7 @@ fn test_callback_subtyping() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_callback_error_too_many_params() -> Result<(), Errors> {
+fn test_callback_error_too_many_params() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -508,13 +516,13 @@ fn test_callback_error_too_many_params() -> Result<(), Errors> {
     let result = checker.infer_program(&mut program, &mut my_ctx);
     assert_eq!(
         result,
-        Err(Errors::InferenceError("(a: number, b: string) -> boolean is not a subtype of (x: number) -> boolean since it requires more params".to_string())),
+        Err(TypeError { message: "(a: number, b: string) -> boolean is not a subtype of (x: number) -> boolean since it requires more params".to_string()}),
     );
     Ok(())
 }
 
 #[test]
-fn test_union_subtype() -> Result<(), Errors> {
+fn test_union_subtype() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let lit1 = new_num_lit_type(&mut checker.arena, "5");
@@ -540,7 +548,7 @@ fn test_union_subtype() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_calling_a_union() -> Result<(), Errors> {
+fn test_calling_a_union() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let bool = checker.new_primitive(Primitive::Boolean);
@@ -565,7 +573,7 @@ fn test_calling_a_union() -> Result<(), Errors> {
 }
 
 #[test]
-fn call_with_too_few_args() -> Result<(), Errors> {
+fn call_with_too_few_args() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -578,16 +586,16 @@ fn call_with_too_few_args() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "too few arguments to function: expected 2, got 0".to_string()
-        ))
+        Err(TypeError {
+            message: "too few arguments to function: expected 2, got 0".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn literal_isnt_callable() -> Result<(), Errors> {
+fn literal_isnt_callable() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let lit = new_num_lit_type(&mut checker.arena, "5");
@@ -606,16 +614,16 @@ fn literal_isnt_callable() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "literal Number(\n    \"5\",\n) is not callable".to_string()
-        ))
+        Err(TypeError {
+            message: "literal Number(\n    \"5\",\n) is not callable".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn infer_basic_tuple() -> Result<(), Errors> {
+fn infer_basic_tuple() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"let result = [5, "hello"]"#;
@@ -632,7 +640,7 @@ fn infer_basic_tuple() -> Result<(), Errors> {
 }
 
 #[test]
-fn tuple_member() -> Result<(), Errors> {
+fn tuple_member() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -657,7 +665,7 @@ fn tuple_member() -> Result<(), Errors> {
 }
 
 #[test]
-fn tuple_member_invalid_index() -> Result<(), Errors> {
+fn tuple_member_invalid_index() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -670,16 +678,16 @@ fn tuple_member_invalid_index() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "Can't access property on non-object type".to_string()
-        ))
+        Err(TypeError {
+            message: "Can't access property on non-object type".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn array_member() -> Result<(), Errors> {
+fn array_member() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -707,7 +715,7 @@ fn array_member() -> Result<(), Errors> {
 }
 
 #[test]
-fn tuple_member_error_out_of_bounds() -> Result<(), Errors> {
+fn tuple_member_error_out_of_bounds() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -720,16 +728,16 @@ fn tuple_member_error_out_of_bounds() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "2 was outside the bounds 0..2 of the tuple".to_string()
-        ))
+        Err(TypeError {
+            message: "2 was outside the bounds 0..2 of the tuple".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn tuple_subtyping() -> Result<(), Errors> {
+fn tuple_subtyping() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -748,7 +756,7 @@ fn tuple_subtyping() -> Result<(), Errors> {
 // TODO(#654): update how we unify tuples with arrays and other tuples
 #[test]
 #[ignore]
-fn more_tuple_subtyping() -> Result<(), Errors> {
+fn more_tuple_subtyping() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -764,7 +772,7 @@ fn more_tuple_subtyping() -> Result<(), Errors> {
 }
 
 #[test]
-fn tuple_subtyping_not_enough_elements() -> Result<(), Errors> {
+fn tuple_subtyping_not_enough_elements() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -777,16 +785,16 @@ fn tuple_subtyping_not_enough_elements() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "Expected tuple of length 2, got tuple of length 1".to_string()
-        ))
+        Err(TypeError {
+            message: "Expected tuple of length 2, got tuple of length 1".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn infer_basic_object() -> Result<(), Errors> {
+fn infer_basic_object() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"let result = {a: 5, b: "hello"}"#;
@@ -804,7 +812,7 @@ fn infer_basic_object() -> Result<(), Errors> {
 }
 
 #[test]
-fn object_member() -> Result<(), Errors> {
+fn object_member() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -822,7 +830,7 @@ fn object_member() -> Result<(), Errors> {
 }
 
 #[test]
-fn object_member_string_key() -> Result<(), Errors> {
+fn object_member_string_key() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -844,7 +852,7 @@ fn object_member_string_key() -> Result<(), Errors> {
 }
 
 #[test]
-fn object_member_missing_prop() -> Result<(), Errors> {
+fn object_member_missing_prop() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -857,16 +865,16 @@ fn object_member_missing_prop() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "Couldn't find property 'c' on object".to_string()
-        ))
+        Err(TypeError {
+            message: "Couldn't find property 'c' on object".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn object_subtyping() -> Result<(), Errors> {
+fn object_subtyping() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     // Each prop must be a subtype of the expected element type
@@ -886,7 +894,7 @@ fn object_subtyping() -> Result<(), Errors> {
 }
 
 #[test]
-fn object_signatures() -> Result<(), Errors> {
+fn object_signatures() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     // Each prop must be a subtype of the expected element type
@@ -916,7 +924,7 @@ fn object_signatures() -> Result<(), Errors> {
 }
 
 #[test]
-fn object_callable_subtyping() -> Result<(), Errors> {
+fn object_callable_subtyping() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -938,7 +946,7 @@ fn object_callable_subtyping() -> Result<(), Errors> {
 // object types
 #[test]
 #[ignore]
-fn object_callable_subtyping_failure_case() -> Result<(), Errors> {
+fn object_callable_subtyping_failure_case() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -955,16 +963,16 @@ fn object_callable_subtyping_failure_case() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "Expected type number, found type string".to_string(),
-        ))
+        Err(TypeError {
+            message: "Expected type number, found type string".to_string(),
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn object_method_subtyping() -> Result<(), Errors> {
+fn object_method_subtyping() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -983,7 +991,7 @@ fn object_method_subtyping() -> Result<(), Errors> {
 }
 
 #[test]
-fn object_property_subtyping() -> Result<(), Errors> {
+fn object_property_subtyping() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1005,7 +1013,7 @@ fn object_property_subtyping() -> Result<(), Errors> {
 }
 
 #[test]
-fn object_mapped_subtyping() -> Result<(), Errors> {
+fn object_mapped_subtyping() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1024,7 +1032,7 @@ fn object_mapped_subtyping() -> Result<(), Errors> {
 }
 
 #[test]
-fn object_methods_and_properties_should_unify() -> Result<(), Errors> {
+fn object_methods_and_properties_should_unify() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1043,7 +1051,7 @@ fn object_methods_and_properties_should_unify() -> Result<(), Errors> {
 }
 
 #[test]
-fn object_mappeds_should_unify_with_all_named_obj_elems() -> Result<(), Errors> {
+fn object_mappeds_should_unify_with_all_named_obj_elems() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1066,7 +1074,7 @@ fn object_mappeds_should_unify_with_all_named_obj_elems() -> Result<(), Errors> 
 }
 
 #[test]
-fn object_mappeds_and_properties_unify_failure() -> Result<(), Errors> {
+fn object_mappeds_and_properties_unify_failure() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1084,16 +1092,16 @@ fn object_mappeds_and_properties_unify_failure() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "type mismatch: unify(number, boolean | undefined) failed".to_string()
-        ))
+        Err(TypeError {
+            message: "type mismatch: unify(number, boolean | undefined) failed".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn object_properties_and_getter_should_unify() -> Result<(), Errors> {
+fn object_properties_and_getter_should_unify() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1114,7 +1122,7 @@ fn object_properties_and_getter_should_unify() -> Result<(), Errors> {
 // TODO
 #[test]
 #[ignore]
-fn mutable_object_properties_unify_with_getters_setters() -> Result<(), Errors> {
+fn mutable_object_properties_unify_with_getters_setters() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1134,7 +1142,7 @@ fn mutable_object_properties_unify_with_getters_setters() -> Result<(), Errors> 
 }
 
 #[test]
-fn object_subtyping_missing_prop() -> Result<(), Errors> {
+fn object_subtyping_missing_prop() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1147,16 +1155,16 @@ fn object_subtyping_missing_prop() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "'a' is missing in {b: \"hello\"}".to_string()
-        ))
+        Err(TypeError {
+            message: "'a' is missing in {b: \"hello\"}".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_subtype_error() -> Result<(), Errors> {
+fn test_subtype_error() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1169,16 +1177,16 @@ fn test_subtype_error() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "type mismatch: unify(\"hello\", number) failed".to_string()
-        ))
+        Err(TypeError {
+            message: "type mismatch: unify(\"hello\", number) failed".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_union_subtype_error() -> Result<(), Errors> {
+fn test_union_subtype_error() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let lit1 = new_num_lit_type(&mut checker.arena, "5");
@@ -1201,16 +1209,16 @@ fn test_union_subtype_error() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "type mismatch: unify(\"hello\", number) failed".to_string()
-        ))
+        Err(TypeError {
+            message: "type mismatch: unify(\"hello\", number) failed".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_union_subtype_error_with_type_ann() -> Result<(), Errors> {
+fn test_union_subtype_error_with_type_ann() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1222,16 +1230,16 @@ fn test_union_subtype_error_with_type_ann() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "type mismatch: unify(true, number | string) failed".to_string()
-        ))
+        Err(TypeError {
+            message: "type mismatch: unify(true, number | string) failed".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_program() -> Result<(), Errors> {
+fn test_program() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1262,7 +1270,7 @@ fn test_program() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_program_with_generic_func() -> Result<(), Errors> {
+fn test_program_with_generic_func() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1287,7 +1295,7 @@ fn test_program_with_generic_func() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_program_with_generic_func_multiple_type_params() -> Result<(), Errors> {
+fn test_program_with_generic_func_multiple_type_params() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1314,7 +1322,7 @@ fn test_program_with_generic_func_multiple_type_params() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_function_with_multiple_statements() -> Result<(), Errors> {
+fn test_function_with_multiple_statements() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1365,7 +1373,7 @@ fn test_function_with_multiple_statements() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_inferred_type_on_ast_nodes() -> Result<(), Errors> {
+fn test_inferred_type_on_ast_nodes() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"let result = fn (x, y) => x * y"#;
@@ -1394,7 +1402,7 @@ fn test_inferred_type_on_ast_nodes() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_unary_op() -> Result<(), Errors> {
+fn test_unary_op() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"let neg = fn (x) => -x"#;
@@ -1411,7 +1419,7 @@ fn test_unary_op() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_async_return_type() -> Result<(), Errors> {
+fn test_async_return_type() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1430,7 +1438,7 @@ fn test_async_return_type() -> Result<(), Errors> {
 }
 
 #[test]
-fn throws_in_async() -> Result<(), Errors> {
+fn throws_in_async() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1449,7 +1457,7 @@ fn throws_in_async() -> Result<(), Errors> {
 }
 
 #[test]
-fn await_async_func_with_throw() -> Result<(), Errors> {
+fn await_async_func_with_throw() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1476,7 +1484,7 @@ fn await_async_func_with_throw() -> Result<(), Errors> {
 }
 
 #[test]
-fn catch_await_async_func_that_throws() -> Result<(), Errors> {
+fn catch_await_async_func_that_throws() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1509,7 +1517,7 @@ fn catch_await_async_func_that_throws() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_async_without_return() -> Result<(), Errors> {
+fn test_async_without_return() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1530,7 +1538,7 @@ fn test_async_without_return() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_await_in_async() -> Result<(), Errors> {
+fn test_await_in_async() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1561,7 +1569,7 @@ fn test_await_in_async() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_await_outside_of_async() -> Result<(), Errors> {
+fn test_await_outside_of_async() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1576,16 +1584,16 @@ fn test_await_outside_of_async() -> Result<(), Errors> {
     let result = checker.infer_program(&mut program, &mut my_ctx);
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "Can't use await outside of an async function".to_string()
-        ))
+        Err(TypeError {
+            message: "Can't use await outside of an async function".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_await_non_promise() -> Result<(), Errors> {
+fn test_await_non_promise() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1596,9 +1604,9 @@ fn test_await_non_promise() -> Result<(), Errors> {
     let result = checker.infer_program(&mut program, &mut my_ctx);
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "type mismatch: unify(5, Promise<t10, t11>) failed".to_string()
-        ))
+        Err(TypeError {
+            message: "type mismatch: unify(5, Promise<t10, t11>) failed".to_string()
+        })
     );
 
     Ok(())
@@ -1608,7 +1616,7 @@ fn test_await_non_promise() -> Result<(), Errors> {
 // In general, generic types should be covariant across their type parameters.
 
 #[test]
-fn test_do_expr() -> Result<(), Errors> {
+fn test_do_expr() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1637,7 +1645,7 @@ fn test_do_expr() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_empty_do_expr() -> Result<(), Errors> {
+fn test_empty_do_expr() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"let sum = do {}"#;
@@ -1651,7 +1659,7 @@ fn test_empty_do_expr() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_let_with_type_ann() -> Result<(), Errors> {
+fn test_let_with_type_ann() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1679,7 +1687,7 @@ fn test_let_with_type_ann() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_function_overloads() -> Result<(), Errors> {
+fn test_function_overloads() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1700,7 +1708,7 @@ fn test_function_overloads() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_function_no_valid_overload() -> Result<(), Errors> {
+fn test_function_no_valid_overload() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1712,16 +1720,16 @@ fn test_function_no_valid_overload() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "no valid overload for args".to_string()
-        ))
+        Err(TypeError {
+            message: "no valid overload for args".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_declare_cant_have_initializer() -> Result<(), Errors> {
+fn test_declare_cant_have_initializer() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1732,16 +1740,16 @@ fn test_declare_cant_have_initializer() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "Variable declarations using `declare` cannot have an initializer".to_string()
-        ))
+        Err(TypeError {
+            message: "Variable declarations using `declare` cannot have an initializer".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_declare_must_have_type_annotations() -> Result<(), Errors> {
+fn test_declare_must_have_type_annotations() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1752,16 +1760,17 @@ fn test_declare_must_have_type_annotations() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "Variable declarations using `declare` must have a type annotation".to_string()
-        ))
+        Err(TypeError {
+            message: "Variable declarations using `declare` must have a type annotation"
+                .to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_normal_decl_must_have_initializer() -> Result<(), Errors> {
+fn test_normal_decl_must_have_initializer() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1772,16 +1781,17 @@ fn test_normal_decl_must_have_initializer() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "Variable declarations not using `declare` must have an initializer".to_string()
-        ))
+        Err(TypeError {
+            message: "Variable declarations not using `declare` must have an initializer"
+                .to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_pattern_matching_is_patterns() -> Result<(), Errors> {
+fn test_pattern_matching_is_patterns() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     // TODO: allow trailing `,` when doing pattern matching
@@ -1802,7 +1812,7 @@ fn test_pattern_matching_is_patterns() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_pattern_matching_does_not_refine_expr() -> Result<(), Errors> {
+fn test_pattern_matching_does_not_refine_expr() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     // TODO: allow trailing `,` when doing pattern matching
@@ -1818,16 +1828,16 @@ fn test_pattern_matching_does_not_refine_expr() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "type mismatch: string != number".to_string()
-        ))
+        Err(TypeError {
+            message: "type mismatch: string != number".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_pattern_not_a_subtype_of_expr() -> Result<(), Errors> {
+fn test_pattern_not_a_subtype_of_expr() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     // TODO: allow trailing `,` when doing pattern matching
@@ -1844,16 +1854,16 @@ fn test_pattern_not_a_subtype_of_expr() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "type mismatch: unify(boolean, number | string) failed".to_string()
-        ))
+        Err(TypeError {
+            message: "type mismatch: unify(boolean, number | string) failed".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_pattern_matching_array() -> Result<(), Errors> {
+fn test_pattern_matching_array() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     // TODO: allow trailing `,` when doing pattern matching
@@ -1880,7 +1890,7 @@ fn test_pattern_matching_array() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_pattern_matching_object() -> Result<(), Errors> {
+fn test_pattern_matching_object() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     // TODO: allow trailing `,` when doing pattern matching
@@ -1902,7 +1912,7 @@ fn test_pattern_matching_object() -> Result<(), Errors> {
 }
 
 #[test]
-fn member_access_on_union() -> Result<(), Errors> {
+fn member_access_on_union() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     // TODO: allow trailing `,` when doing pattern matching
@@ -1921,7 +1931,7 @@ fn member_access_on_union() -> Result<(), Errors> {
 }
 
 #[test]
-fn member_access_optional_property() -> Result<(), Errors> {
+fn member_access_optional_property() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1941,7 +1951,7 @@ fn member_access_optional_property() -> Result<(), Errors> {
 }
 
 #[test]
-fn member_access_on_unknown_type() -> Result<(), Errors> {
+fn member_access_on_unknown_type() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1954,16 +1964,16 @@ fn member_access_on_unknown_type() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "Can't access properties on unknown".to_string()
-        ))
+        Err(TypeError {
+            message: "Can't access properties on unknown".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn member_access_on_type_variable() -> Result<(), Errors> {
+fn member_access_on_type_variable() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -1975,16 +1985,16 @@ fn member_access_on_type_variable() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "Can't access properties on t9".to_string()
-        ))
+        Err(TypeError {
+            message: "Can't access properties on t9".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_object_destructuring_assignment() -> Result<(), Errors> {
+fn test_object_destructuring_assignment() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     // TODO: add support for omitting fields in object patterns
@@ -2008,7 +2018,7 @@ fn test_object_destructuring_assignment() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_object_destructuring_assignment_with_rest() -> Result<(), Errors> {
+fn test_object_destructuring_assignment_with_rest() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2030,7 +2040,7 @@ fn test_object_destructuring_assignment_with_rest() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_object_nested_destructuring_assignment() -> Result<(), Errors> {
+fn test_object_nested_destructuring_assignment() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2050,7 +2060,7 @@ fn test_object_nested_destructuring_assignment() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_tuple_destrcuturing_assignment() -> Result<(), Errors> {
+fn test_tuple_destrcuturing_assignment() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2070,7 +2080,7 @@ fn test_tuple_destrcuturing_assignment() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_tuple_destructuring_assignment_with_rest() -> Result<(), Errors> {
+fn test_tuple_destructuring_assignment_with_rest() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2089,7 +2099,7 @@ fn test_tuple_destructuring_assignment_with_rest() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_array_destructuring_assignment_with_rest() -> Result<(), Errors> {
+fn test_array_destructuring_assignment_with_rest() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2108,7 +2118,7 @@ fn test_array_destructuring_assignment_with_rest() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_tuple_nested_destrcuturing_assignment() -> Result<(), Errors> {
+fn test_tuple_nested_destrcuturing_assignment() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2125,7 +2135,7 @@ fn test_tuple_nested_destrcuturing_assignment() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_explicit_type_params() -> Result<(), Errors> {
+fn test_explicit_type_params() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2145,7 +2155,7 @@ fn test_explicit_type_params() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_explicit_type_params_type_error() -> Result<(), Errors> {
+fn test_explicit_type_params_type_error() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2157,16 +2167,16 @@ fn test_explicit_type_params_type_error() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "type mismatch: unify(\"hello\", number) failed".to_string()
-        ))
+        Err(TypeError {
+            message: "type mismatch: unify(\"hello\", number) failed".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_explicit_type_params_too_many_type_args() -> Result<(), Errors> {
+fn test_explicit_type_params_too_many_type_args() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2178,16 +2188,16 @@ fn test_explicit_type_params_too_many_type_args() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "wrong number of type args".to_string()
-        ))
+        Err(TypeError {
+            message: "wrong number of type args".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_type_param_with_constraint() -> Result<(), Errors> {
+fn test_type_param_with_constraint() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2212,7 +2222,7 @@ fn test_type_param_with_constraint() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_mix_explicit_implicit_type_params() -> Result<(), Errors> {
+fn test_mix_explicit_implicit_type_params() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2237,7 +2247,7 @@ fn test_mix_explicit_implicit_type_params() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_duplicate_type_param_names_error() -> Result<(), Errors> {
+fn test_duplicate_type_param_names_error() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2248,16 +2258,16 @@ fn test_duplicate_type_param_names_error() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "type param identifiers must be unique".to_string()
-        ))
+        Err(TypeError {
+            message: "type param identifiers must be unique".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_type_param_with_violated_constraint() -> Result<(), Errors> {
+fn test_type_param_with_violated_constraint() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2269,16 +2279,16 @@ fn test_type_param_with_violated_constraint() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "type mismatch: unify(true, number | string) failed".to_string()
-        ))
+        Err(TypeError {
+            message: "type mismatch: unify(true, number | string) failed".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_type_ann_func_with_type_constraint() -> Result<(), Errors> {
+fn test_type_ann_func_with_type_constraint() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2300,7 +2310,7 @@ fn test_type_ann_func_with_type_constraint() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_type_ann_func_with_type_constraint_error() -> Result<(), Errors> {
+fn test_type_ann_func_with_type_constraint_error() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2312,16 +2322,16 @@ fn test_type_ann_func_with_type_constraint_error() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "type mismatch: unify(boolean, number | string) failed".to_string()
-        ))
+        Err(TypeError {
+            message: "type mismatch: unify(boolean, number | string) failed".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_callback_with_type_param_subtyping() -> Result<(), Errors> {
+fn test_callback_with_type_param_subtyping() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2339,7 +2349,7 @@ fn test_callback_with_type_param_subtyping() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_callback_with_type_param_subtyping_error() -> Result<(), Errors> {
+fn test_callback_with_type_param_subtyping_error() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2352,16 +2362,16 @@ fn test_callback_with_type_param_subtyping_error() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "type mismatch: string != number".to_string()
-        ))
+        Err(TypeError {
+            message: "type mismatch: string != number".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_return_type_checking() -> Result<(), Errors> {
+fn test_return_type_checking() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2380,7 +2390,7 @@ fn test_return_type_checking() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_return_value_is_not_subtype_of_return_type() -> Result<(), Errors> {
+fn test_return_value_is_not_subtype_of_return_type() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2391,16 +2401,16 @@ fn test_return_value_is_not_subtype_of_return_type() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "type mismatch: unify(\"hello\", number) failed".to_string()
-        ))
+        Err(TypeError {
+            message: "type mismatch: unify(\"hello\", number) failed".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_multiple_returns() -> Result<(), Errors> {
+fn test_multiple_returns() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2424,7 +2434,7 @@ fn test_multiple_returns() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_no_returns() -> Result<(), Errors> {
+fn test_no_returns() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2445,7 +2455,7 @@ fn test_no_returns() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_multiple_returns_with_nested_functions() -> Result<(), Errors> {
+fn test_multiple_returns_with_nested_functions() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2471,7 +2481,7 @@ fn test_multiple_returns_with_nested_functions() -> Result<(), Errors> {
 }
 
 #[test]
-fn type_alias() -> Result<(), Errors> {
+fn type_alias() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2491,7 +2501,7 @@ fn type_alias() -> Result<(), Errors> {
 }
 
 #[test]
-fn type_alias_with_params_with_destructuring() -> Result<(), Errors> {
+fn type_alias_with_params_with_destructuring() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2512,7 +2522,7 @@ fn type_alias_with_params_with_destructuring() -> Result<(), Errors> {
 }
 
 #[test]
-fn type_alias_with_params_with_member_access() -> Result<(), Errors> {
+fn type_alias_with_params_with_member_access() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2533,7 +2543,7 @@ fn type_alias_with_params_with_member_access() -> Result<(), Errors> {
 }
 
 #[test]
-fn type_alias_with_params_with_computed_member_access() -> Result<(), Errors> {
+fn type_alias_with_params_with_computed_member_access() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2555,7 +2565,7 @@ fn type_alias_with_params_with_computed_member_access() -> Result<(), Errors> {
 }
 
 #[test]
-fn instantiate_type_alias_with_too_many_type_args() -> Result<(), Errors> {
+fn instantiate_type_alias_with_too_many_type_args() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2568,16 +2578,16 @@ fn instantiate_type_alias_with_too_many_type_args() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "Node expects 1 type args, but was passed 2".to_string()
-        ))
+        Err(TypeError {
+            message: "Node expects 1 type args, but was passed 2".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn instantiate_type_alias_with_args_when_it_has_no_type_params() -> Result<(), Errors> {
+fn instantiate_type_alias_with_args_when_it_has_no_type_params() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2590,16 +2600,16 @@ fn instantiate_type_alias_with_args_when_it_has_no_type_params() -> Result<(), E
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "Point expects 0 type args, but was passed 1".to_string()
-        ))
+        Err(TypeError {
+            message: "Point expects 0 type args, but was passed 1".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn property_accesses_on_unions() -> Result<(), Errors> {
+fn property_accesses_on_unions() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2625,7 +2635,7 @@ fn property_accesses_on_unions() -> Result<(), Errors> {
 }
 
 #[test]
-fn maybe_property_accesses_on_unions() -> Result<(), Errors> {
+fn maybe_property_accesses_on_unions() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2647,7 +2657,7 @@ fn maybe_property_accesses_on_unions() -> Result<(), Errors> {
 }
 
 #[test]
-fn optional_chaining() -> Result<(), Errors> {
+fn optional_chaining() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2671,7 +2681,7 @@ fn optional_chaining() -> Result<(), Errors> {
 }
 
 #[test]
-fn optional_chaining_with_alias() -> Result<(), Errors> {
+fn optional_chaining_with_alias() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2694,7 +2704,7 @@ fn optional_chaining_with_alias() -> Result<(), Errors> {
 }
 
 #[test]
-fn optional_chaining_unnecessary_chaining() -> Result<(), Errors> {
+fn optional_chaining_unnecessary_chaining() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2713,7 +2723,7 @@ fn optional_chaining_unnecessary_chaining() -> Result<(), Errors> {
 }
 
 #[test]
-fn optional_chaining_multiple_levels() -> Result<(), Errors> {
+fn optional_chaining_multiple_levels() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2732,7 +2742,7 @@ fn optional_chaining_multiple_levels() -> Result<(), Errors> {
 }
 
 #[test]
-fn calling_variable_whose_type_is_aliased_function_type() -> Result<(), Errors> {
+fn calling_variable_whose_type_is_aliased_function_type() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2751,7 +2761,7 @@ fn calling_variable_whose_type_is_aliased_function_type() -> Result<(), Errors> 
 }
 
 #[test]
-fn optional_chaining_call() -> Result<(), Errors> {
+fn optional_chaining_call() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2771,7 +2781,7 @@ fn optional_chaining_call() -> Result<(), Errors> {
 
 #[test]
 #[ignore]
-fn destructuring_unions() -> Result<(), Errors> {
+fn destructuring_unions() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2791,7 +2801,7 @@ fn destructuring_unions() -> Result<(), Errors> {
 }
 
 #[test]
-fn missing_property_accesses_on_union_of_tuples() -> Result<(), Errors> {
+fn missing_property_accesses_on_union_of_tuples() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2804,16 +2814,16 @@ fn missing_property_accesses_on_union_of_tuples() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "Couldn't find property on object".to_string()
-        ))
+        Err(TypeError {
+            message: "Couldn't find property on object".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn missing_property_accesses_on_union_of_objects() -> Result<(), Errors> {
+fn missing_property_accesses_on_union_of_objects() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2826,16 +2836,16 @@ fn missing_property_accesses_on_union_of_objects() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "Couldn't find property \"z\" on object".to_string()
-        ))
+        Err(TypeError {
+            message: "Couldn't find property \"z\" on object".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn methods_on_arrays() -> Result<(), Errors> {
+fn methods_on_arrays() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2856,7 +2866,7 @@ fn methods_on_arrays() -> Result<(), Errors> {
 }
 
 #[test]
-fn properties_on_tuple() -> Result<(), Errors> {
+fn properties_on_tuple() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2875,7 +2885,7 @@ fn properties_on_tuple() -> Result<(), Errors> {
 
 #[test]
 #[ignore]
-fn set_array_element() -> Result<(), Errors> {
+fn set_array_element() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2892,7 +2902,7 @@ fn set_array_element() -> Result<(), Errors> {
 
 #[test]
 #[ignore]
-fn set_tuple_element() -> Result<(), Errors> {
+fn set_tuple_element() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2911,7 +2921,7 @@ fn set_tuple_element() -> Result<(), Errors> {
 }
 
 #[test]
-fn methods_on_arrays_incorrect_type() -> Result<(), Errors> {
+fn methods_on_arrays_incorrect_type() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2924,16 +2934,16 @@ fn methods_on_arrays_incorrect_type() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "type mismatch: unify(\"hello\", number) failed".to_string()
-        ))
+        Err(TypeError {
+            message: "type mismatch: unify(\"hello\", number) failed".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_unknown() -> Result<(), Errors> {
+fn test_unknown() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2956,7 +2966,7 @@ fn test_unknown() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_unknown_assignment_error() -> Result<(), Errors> {
+fn test_unknown_assignment_error() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2969,16 +2979,16 @@ fn test_unknown_assignment_error() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "type mismatch: unify(unknown, number) failed".to_string()
-        ))
+        Err(TypeError {
+            message: "type mismatch: unify(unknown, number) failed".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_type_param_explicit_unknown_constraint() -> Result<(), Errors> {
+fn test_type_param_explicit_unknown_constraint() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -2992,16 +3002,16 @@ fn test_type_param_explicit_unknown_constraint() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "type mismatch: unify(unknown, number) failed".to_string()
-        ))
+        Err(TypeError {
+            message: "type mismatch: unify(unknown, number) failed".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_type_param_implicit_unknown_constraint() -> Result<(), Errors> {
+fn test_type_param_implicit_unknown_constraint() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -3015,16 +3025,16 @@ fn test_type_param_implicit_unknown_constraint() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "type mismatch: unify(unknown, number) failed".to_string()
-        ))
+        Err(TypeError {
+            message: "type mismatch: unify(unknown, number) failed".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_optional_function_params() -> Result<(), Errors> {
+fn test_optional_function_params() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -3046,7 +3056,7 @@ fn test_optional_function_params() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_func_param_patterns() -> Result<(), Errors> {
+fn test_func_param_patterns() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -3076,7 +3086,7 @@ fn test_func_param_patterns() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_func_param_object_rest_patterns() -> Result<(), Errors> {
+fn test_func_param_object_rest_patterns() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -3098,7 +3108,7 @@ fn test_func_param_object_rest_patterns() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_func_param_object_multiple_rest_patterns() -> Result<(), Errors> {
+fn test_func_param_object_multiple_rest_patterns() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -3112,16 +3122,16 @@ fn test_func_param_object_multiple_rest_patterns() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "Maximum one rest pattern allowed in object patterns".to_string()
-        ))
+        Err(TypeError {
+            message: "Maximum one rest pattern allowed in object patterns".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_func_param_tuple_rest_patterns() -> Result<(), Errors> {
+fn test_func_param_tuple_rest_patterns() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -3143,7 +3153,7 @@ fn test_func_param_tuple_rest_patterns() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_index_access_type() -> Result<(), Errors> {
+fn test_index_access_type() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
@@ -3173,7 +3183,7 @@ fn test_index_access_type() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_index_access_type_using_string_as_mapped() -> Result<(), Errors> {
+fn test_index_access_type_using_string_as_mapped() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
@@ -3195,7 +3205,7 @@ fn test_index_access_type_using_string_as_mapped() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_index_access_type_using_number_as_mapped() -> Result<(), Errors> {
+fn test_index_access_type_using_number_as_mapped() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
@@ -3214,7 +3224,7 @@ fn test_index_access_type_using_number_as_mapped() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_index_access_type_missing_property() -> Result<(), Errors> {
+fn test_index_access_type_missing_property() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
@@ -3231,16 +3241,16 @@ fn test_index_access_type_missing_property() -> Result<(), Errors> {
     // TODO: check that the index access is valid where it's inferred
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "Couldn't find property 'c' on object".to_string()
-        ))
+        Err(TypeError {
+            message: "Couldn't find property 'c' on object".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_index_access_type_missing_mapped() -> Result<(), Errors> {
+fn test_index_access_type_missing_mapped() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
@@ -3257,16 +3267,16 @@ fn test_index_access_type_missing_mapped() -> Result<(), Errors> {
     // TODO: check that the index access is valid where it's inferred
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "Couldn't find property c in object".to_string()
-        ))
+        Err(TypeError {
+            message: "Couldn't find property c in object".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_index_access_type_number_mapped() -> Result<(), Errors> {
+fn test_index_access_type_number_mapped() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
@@ -3289,7 +3299,7 @@ fn test_index_access_type_number_mapped() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_mapped_type_pick() -> Result<(), Errors> {
+fn test_mapped_type_pick() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
@@ -3309,7 +3319,7 @@ fn test_mapped_type_pick() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_pick_type() -> Result<(), Errors> {
+fn test_pick_type() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -3329,7 +3339,7 @@ fn test_pick_type() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_exclude_type() -> Result<(), Errors> {
+fn test_exclude_type() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -3349,7 +3359,7 @@ fn test_exclude_type() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_omit_type() -> Result<(), Errors> {
+fn test_omit_type() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -3371,7 +3381,7 @@ fn test_omit_type() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_index_access_type_on_tuple() -> Result<(), Errors> {
+fn test_index_access_type_on_tuple() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
@@ -3390,7 +3400,7 @@ fn test_index_access_type_on_tuple() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_index_access_type_on_tuple_with_number_key() -> Result<(), Errors> {
+fn test_index_access_type_on_tuple_with_number_key() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
@@ -3412,7 +3422,7 @@ fn test_index_access_type_on_tuple_with_number_key() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_index_access_out_of_bounds_on_tuple() -> Result<(), Errors> {
+fn test_index_access_out_of_bounds_on_tuple() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
@@ -3426,16 +3436,16 @@ fn test_index_access_out_of_bounds_on_tuple() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "3 was outside the bounds 0..3 of the tuple".to_string()
-        ))
+        Err(TypeError {
+            message: "3 was outside the bounds 0..3 of the tuple".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_index_access_not_usize() -> Result<(), Errors> {
+fn test_index_access_not_usize() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
@@ -3449,16 +3459,16 @@ fn test_index_access_not_usize() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "1.5 isn't a valid index".to_string()
-        ))
+        Err(TypeError {
+            message: "1.5 isn't a valid index".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_typeof() -> Result<(), Errors> {
+fn test_typeof() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
@@ -3477,7 +3487,7 @@ fn test_typeof() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_keyof_obj() -> Result<(), Errors> {
+fn test_keyof_obj() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
@@ -3518,7 +3528,7 @@ fn test_keyof_obj() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_keyof_array_tuple() -> Result<(), Errors> {
+fn test_keyof_array_tuple() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"   
@@ -3551,7 +3561,7 @@ fn test_keyof_array_tuple() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_keyof_alias() -> Result<(), Errors> {
+fn test_keyof_alias() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -3570,7 +3580,7 @@ fn test_keyof_alias() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_keyof_literal() -> Result<(), Errors> {
+fn test_keyof_literal() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -3609,7 +3619,7 @@ fn test_keyof_literal() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_keyof_primitive() -> Result<(), Errors> {
+fn test_keyof_primitive() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -3648,7 +3658,7 @@ fn test_keyof_primitive() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_keyof_unknown_undefined_null() -> Result<(), Errors> {
+fn test_keyof_unknown_undefined_null() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -3681,7 +3691,7 @@ fn test_keyof_unknown_undefined_null() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_keyof_intersection() -> Result<(), Errors> {
+fn test_keyof_intersection() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -3714,7 +3724,7 @@ fn test_keyof_intersection() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_mutually_recursive_type() -> Result<(), Errors> {
+fn test_mutually_recursive_type() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
     let src = r#"
     type A = {
@@ -3736,7 +3746,7 @@ fn test_mutually_recursive_type() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_mutually_recursive_type_with_index_access_type() -> Result<(), Errors> {
+fn test_mutually_recursive_type_with_index_access_type() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
     let src = r#"
     type Foo = {
@@ -3760,7 +3770,7 @@ fn test_mutually_recursive_type_with_index_access_type() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_type_alias_with_undefined_def() -> Result<(), Errors> {
+fn test_type_alias_with_undefined_def() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
     let src = r#"
     type A = B
@@ -3772,14 +3782,16 @@ fn test_type_alias_with_undefined_def() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError("B is not in scope".to_string()))
+        Err(TypeError {
+            message: "B is not in scope".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_mutable_error_arg_passing() -> Result<(), Errors> {
+fn test_mutable_error_arg_passing() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     // TODO: handle `declare let scale: fn(mut p: Point, ...);
@@ -3797,16 +3809,16 @@ fn test_mutable_error_arg_passing() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "Can't assign immutable value to mutable binding".to_string()
-        ))
+        Err(TypeError {
+            message: "Can't assign immutable value to mutable binding".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_mutable_error_arg_passing_with_subtyping() -> Result<(), Errors> {
+fn test_mutable_error_arg_passing_with_subtyping() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     // TODO: handle `declare let scale: fn(mut p: Point, ...);
@@ -3821,16 +3833,16 @@ fn test_mutable_error_arg_passing_with_subtyping() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "unify_mut: Array<number> != Array<number | string>".to_string(),
-        )),
+        Err(TypeError {
+            message: "unify_mut: Array<number> != Array<number | string>".to_string(),
+        }),
     );
 
     Ok(())
 }
 
 #[test]
-fn test_mutable_ok_arg_passing() -> Result<(), Errors> {
+fn test_mutable_ok_arg_passing() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     // TODO: handle `declare let scale: fn(mut p: Point, ...);
@@ -3865,7 +3877,7 @@ fn test_mutable_ok_arg_passing() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_mutable_error_arg_passing_declared_fn() -> Result<(), Errors> {
+fn test_mutable_error_arg_passing_declared_fn() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -3880,16 +3892,16 @@ fn test_mutable_error_arg_passing_declared_fn() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "Can't assign immutable value to mutable binding".to_string()
-        ))
+        Err(TypeError {
+            message: "Can't assign immutable value to mutable binding".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_mutable_ok_arg_passing_declared_fns() -> Result<(), Errors> {
+fn test_mutable_ok_arg_passing_declared_fns() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     // TODO: handle `declare let scale: fn(mut p: Point, ...);
@@ -3920,7 +3932,7 @@ fn test_mutable_ok_arg_passing_declared_fns() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_mutable_error_assignment() -> Result<(), Errors> {
+fn test_mutable_error_assignment() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -3934,16 +3946,16 @@ fn test_mutable_error_assignment() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "Can't assign immutable value to mutable binding".to_string()
-        ))
+        Err(TypeError {
+            message: "Can't assign immutable value to mutable binding".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_mutable_ok_assignments() -> Result<(), Errors> {
+fn test_mutable_ok_assignments() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -3968,7 +3980,7 @@ fn test_mutable_ok_assignments() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_mutable_invalid_assignments() -> Result<(), Errors> {
+fn test_mutable_invalid_assignments() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"    
@@ -3981,16 +3993,16 @@ fn test_mutable_invalid_assignments() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "unify_mut: Array<number> != Array<number | string>".to_string(),
-        ))
+        Err(TypeError {
+            message: "unify_mut: Array<number> != Array<number | string>".to_string(),
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn test_sub_objects_are_mutable() -> Result<(), Errors> {
+fn test_sub_objects_are_mutable() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4015,7 +4027,7 @@ fn test_sub_objects_are_mutable() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_tuple_type_equality() -> Result<(), Errors> {
+fn test_tuple_type_equality() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4035,7 +4047,7 @@ fn test_tuple_type_equality() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_function_type_equality() -> Result<(), Errors> {
+fn test_function_type_equality() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4055,7 +4067,7 @@ fn test_function_type_equality() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_literal_type_equality() -> Result<(), Errors> {
+fn test_literal_type_equality() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4075,7 +4087,7 @@ fn test_literal_type_equality() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_mutable_object_type_equality() -> Result<(), Errors> {
+fn test_mutable_object_type_equality() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4096,7 +4108,7 @@ fn test_mutable_object_type_equality() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_mutating_mutable_object() -> Result<(), Errors> {
+fn test_mutating_mutable_object() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4113,7 +4125,7 @@ fn test_mutating_mutable_object() -> Result<(), Errors> {
 }
 
 #[test]
-fn test_mutating_immutable_object_errors() -> Result<(), Errors> {
+fn test_mutating_immutable_object_errors() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4127,16 +4139,16 @@ fn test_mutating_immutable_object_errors() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "Cannot assign to immutable lvalue".to_string()
-        ))
+        Err(TypeError {
+            message: "Cannot assign to immutable lvalue".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn conditional_type_exclude() -> Result<(), Errors> {
+fn conditional_type_exclude() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4155,7 +4167,7 @@ fn conditional_type_exclude() -> Result<(), Errors> {
 }
 
 #[test]
-fn chained_conditional_types() -> Result<(), Errors> {
+fn chained_conditional_types() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4180,7 +4192,7 @@ fn chained_conditional_types() -> Result<(), Errors> {
 }
 
 #[test]
-fn match_type_with_catchall() -> Result<(), Errors> {
+fn match_type_with_catchall() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4203,7 +4215,7 @@ fn match_type_with_catchall() -> Result<(), Errors> {
 }
 
 #[test]
-fn match_type_without_catchall() -> Result<(), Errors> {
+fn match_type_without_catchall() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4230,7 +4242,7 @@ fn match_type_without_catchall() -> Result<(), Errors> {
 }
 
 #[test]
-fn match_type_with_tuples() -> Result<(), Errors> {
+fn match_type_with_tuples() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     // NOTE: The arrays need to be matched in reverse order
@@ -4283,7 +4295,7 @@ fn match_type_with_tuples() -> Result<(), Errors> {
 }
 
 #[test]
-fn conditional_type_with_placeholders() -> Result<(), Errors> {
+fn conditional_type_with_placeholders() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4307,7 +4319,7 @@ fn conditional_type_with_placeholders() -> Result<(), Errors> {
 }
 
 #[test]
-fn conditional_type_with_constraint() -> Result<(), Errors> {
+fn conditional_type_with_constraint() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4331,7 +4343,7 @@ fn conditional_type_with_constraint() -> Result<(), Errors> {
 }
 
 #[test]
-fn unify_tuple_and_array() -> Result<(), Errors> {
+fn unify_tuple_and_array() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4347,7 +4359,7 @@ fn unify_tuple_and_array() -> Result<(), Errors> {
 
 #[test]
 #[ignore]
-fn conditional_type_with_function_subtyping() -> Result<(), Errors> {
+fn conditional_type_with_function_subtyping() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4371,7 +4383,7 @@ fn conditional_type_with_function_subtyping() -> Result<(), Errors> {
 }
 
 #[test]
-fn return_type_rest_placeholder() -> Result<(), Errors> {
+fn return_type_rest_placeholder() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     // TODO: introduce a placeholder type that will unify with anything
@@ -4408,7 +4420,7 @@ fn return_type_rest_placeholder() -> Result<(), Errors> {
 }
 
 #[test]
-fn return_type_of_union() -> Result<(), Errors> {
+fn return_type_of_union() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4433,7 +4445,7 @@ fn return_type_of_union() -> Result<(), Errors> {
 }
 
 #[test]
-fn parameters_utility_type() -> Result<(), Errors> {
+fn parameters_utility_type() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4477,7 +4489,7 @@ fn parameters_utility_type() -> Result<(), Errors> {
 }
 
 #[test]
-fn function_subtyping_with_rest_placeholder() -> Result<(), Errors> {
+fn function_subtyping_with_rest_placeholder() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4498,7 +4510,7 @@ fn function_subtyping_with_rest_placeholder() -> Result<(), Errors> {
 }
 
 #[test]
-fn function_subtyping_with_rest_array_fails() -> Result<(), Errors> {
+fn function_subtyping_with_rest_array_fails() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4510,16 +4522,16 @@ fn function_subtyping_with_rest_array_fails() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "type mismatch: unify(undefined, string) failed".to_string()
-        ))
+        Err(TypeError {
+            message: "type mismatch: unify(undefined, string) failed".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn function_multiple_rest_params_in_type_fails() -> Result<(), Errors> {
+fn function_multiple_rest_params_in_type_fails() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4531,16 +4543,16 @@ fn function_multiple_rest_params_in_type_fails() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "multiple rest params in function".to_string()
-        ))
+        Err(TypeError {
+            message: "multiple rest params in function".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn function_multiple_rest_params_function_fails() -> Result<(), Errors> {
+fn function_multiple_rest_params_function_fails() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4552,9 +4564,9 @@ fn function_multiple_rest_params_function_fails() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "multiple rest params in function".to_string()
-        ))
+        Err(TypeError {
+            message: "multiple rest params in function".to_string()
+        })
     );
 
     Ok(())
@@ -4563,7 +4575,7 @@ fn function_multiple_rest_params_function_fails() -> Result<(), Errors> {
 // TODO(#653): rest args in function calls
 #[test]
 #[ignore]
-fn function_call_with_spread_args() -> Result<(), Errors> {
+fn function_call_with_spread_args() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4579,7 +4591,7 @@ fn function_call_with_spread_args() -> Result<(), Errors> {
 }
 
 #[test]
-fn arithmetic_op_const_folding() -> Result<(), Errors> {
+fn arithmetic_op_const_folding() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4614,7 +4626,7 @@ fn arithmetic_op_const_folding() -> Result<(), Errors> {
 }
 
 #[test]
-fn comparison_op_const_folding() -> Result<(), Errors> {
+fn comparison_op_const_folding() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4653,7 +4665,7 @@ fn comparison_op_const_folding() -> Result<(), Errors> {
 }
 
 #[test]
-fn other_equality_checks() -> Result<(), Errors> {
+fn other_equality_checks() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4682,7 +4694,7 @@ fn other_equality_checks() -> Result<(), Errors> {
 }
 
 #[test]
-fn type_level_arithmetic() -> Result<(), Errors> {
+fn type_level_arithmetic() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4725,7 +4737,7 @@ fn type_level_arithmetic() -> Result<(), Errors> {
 }
 
 #[test]
-fn type_level_arithmetic_incorrect_operands() -> Result<(), Errors> {
+fn type_level_arithmetic_incorrect_operands() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4737,16 +4749,16 @@ fn type_level_arithmetic_incorrect_operands() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "type mismatch: unify(\"hello\", number) failed".to_string()
-        ))
+        Err(TypeError {
+            message: "type mismatch: unify(\"hello\", number) failed".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn check_type_constraints() -> Result<(), Errors> {
+fn check_type_constraints() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4759,16 +4771,16 @@ fn check_type_constraints() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "type mismatch: unify(\"hello\", number) failed".to_string()
-        ))
+        Err(TypeError {
+            message: "type mismatch: unify(\"hello\", number) failed".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn type_level_arithmetic_with_alias() -> Result<(), Errors> {
+fn type_level_arithmetic_with_alias() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4802,7 +4814,7 @@ fn type_level_arithmetic_with_alias() -> Result<(), Errors> {
 }
 
 #[test]
-fn type_level_arithmetic_with_incorrect_types() -> Result<(), Errors> {
+fn type_level_arithmetic_with_incorrect_types() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     // TODO: Eagerly check arithmetic in type aliases
@@ -4815,16 +4827,16 @@ fn type_level_arithmetic_with_incorrect_types() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "type mismatch: string != number".to_string()
-        ))
+        Err(TypeError {
+            message: "type mismatch: string != number".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn type_args_are_eagerly_checked() -> Result<(), Errors> {
+fn type_args_are_eagerly_checked() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -4837,9 +4849,9 @@ fn type_args_are_eagerly_checked() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "type mismatch: string != number".to_string()
-        ))
+        Err(TypeError {
+            message: "type mismatch: string != number".to_string()
+        })
     );
 
     Ok(())
