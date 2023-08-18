@@ -6,10 +6,10 @@ use escalier_ast::Literal;
 
 use crate::checker::Checker;
 use crate::context::*;
-use crate::errors::*;
 use crate::folder::walk_index;
 use crate::folder::Folder;
 use crate::key_value_store::KeyValueStore;
+use crate::type_error::TypeError;
 use crate::types::*;
 use crate::visitor::{self, Visitor};
 
@@ -162,17 +162,19 @@ impl Checker {
         ctx: &Context,
         name: &str,
         type_args: &[Index],
-    ) -> Result<Index, Errors> {
+    ) -> Result<Index, TypeError> {
         let scheme = ctx.get_scheme(name)?;
 
         match &scheme.type_params {
             Some(type_params) => {
                 if type_params.len() != type_args.len() {
-                    return Err(Errors::InferenceError(format!(
-                        "{name} expects {} type args, but was passed {}",
-                        type_params.len(),
-                        type_args.len()
-                    )));
+                    return Err(TypeError {
+                        message: format!(
+                            "{name} expects {} type args, but was passed {}",
+                            type_params.len(),
+                            type_args.len()
+                        ),
+                    });
                 }
 
                 if let TypeKind::Conditional(Conditional { check, .. }) = self.arena[scheme.t].kind
@@ -240,15 +242,15 @@ impl Checker {
                     let t = self.expand_type(ctx, scheme.t)?;
                     Ok(t)
                 } else {
-                    Err(Errors::InferenceError(format!(
-                        "{name} doesn't require any type args"
-                    )))
+                    Err(TypeError {
+                        message: format!("{name} doesn't require any type args"),
+                    })
                 }
             }
         }
     }
 
-    pub fn expand_type(&mut self, ctx: &Context, t: Index) -> Result<Index, Errors> {
+    pub fn expand_type(&mut self, ctx: &Context, t: Index) -> Result<Index, TypeError> {
         let t = self.prune(t);
 
         // It's okay to clone here because we aren't mutating the type
@@ -274,7 +276,7 @@ impl Checker {
     // - string, number, or symbol type
     // - never
     // - union of any of those types
-    pub fn expand_keyof(&mut self, ctx: &Context, t: Index) -> Result<Index, Errors> {
+    pub fn expand_keyof(&mut self, ctx: &Context, t: Index) -> Result<Index, TypeError> {
         let obj = match &self.arena[t].kind {
             // Don't expand Array's since they have a special `keyof` behavior.  We
             // don't want to expand them because we don't want to include array methods
@@ -481,7 +483,7 @@ impl Checker {
         &mut self,
         ctx: &Context,
         conditional: &Conditional,
-    ) -> Result<Index, Errors> {
+    ) -> Result<Index, TypeError> {
         let Conditional {
             check,
             extends,
@@ -507,7 +509,7 @@ impl Checker {
         }
     }
 
-    pub fn expand_binary(&mut self, _ctx: &Context, binary: &BinaryT) -> Result<Index, Errors> {
+    pub fn expand_binary(&mut self, _ctx: &Context, binary: &BinaryT) -> Result<Index, TypeError> {
         let t = match (
             &self.arena[binary.left].kind,
             &self.arena[binary.right].kind,
@@ -539,18 +541,20 @@ impl Checker {
                 self.new_primitive(Primitive::Number)
             }
             (_, _) => {
-                return Err(Errors::InferenceError(format!(
-                    "Cannot perform binary operation on types: {:?} and {:?}",
-                    self.print_type(&binary.left),
-                    self.print_type(&binary.right),
-                )));
+                return Err(TypeError {
+                    message: format!(
+                        "Cannot perform binary operation on types: {:?} and {:?}",
+                        self.print_type(&binary.left),
+                        self.print_type(&binary.right),
+                    ),
+                });
             }
         };
 
         Ok(t)
     }
 
-    pub fn expand_object(&mut self, ctx: &Context, object: &Object) -> Result<Index, Errors> {
+    pub fn expand_object(&mut self, ctx: &Context, object: &Object) -> Result<Index, TypeError> {
         let mut new_elems = vec![];
 
         for elem in &object.elems {
@@ -623,7 +627,7 @@ impl Checker {
         ctx: &Context,
         obj_idx: Index,
         key_idx: Index,
-    ) -> Result<Index, Errors> {
+    ) -> Result<Index, TypeError> {
         // NOTE: cloning is fine here because we aren't mutating `obj_type` or
         // `prop_type`.
         let obj_type = self.arena[obj_idx].clone();
@@ -636,17 +640,19 @@ impl Checker {
             TypeKind::Tuple(tuple) => {
                 match &key_type.kind {
                     TypeKind::Literal(Literal::Number(value)) => {
-                        let index: usize = str::parse(value).map_err(|_| {
-                            Errors::InferenceError(format!("{} isn't a valid index", value))
+                        let index: usize = str::parse(value).map_err(|_| TypeError {
+                            message: format!("{} isn't a valid index", value),
                         })?;
                         if index < tuple.types.len() {
                             // TODO: update AST with the inferred type
                             return Ok(tuple.types[index]);
                         }
-                        Err(Errors::InferenceError(format!(
-                            "{index} was outside the bounds 0..{} of the tuple",
-                            tuple.types.len()
-                        )))
+                        Err(TypeError {
+                            message: format!(
+                                "{index} was outside the bounds 0..{} of the tuple",
+                                tuple.types.len()
+                            ),
+                        })
                     }
                     TypeKind::Literal(Literal::String(_)) => {
                         // TODO: look up methods on the `Array` interface
@@ -659,9 +665,9 @@ impl Checker {
                         types.push(self.new_keyword(Keyword::Undefined));
                         Ok(self.new_union_type(&types))
                     }
-                    _ => Err(Errors::InferenceError(
-                        "Can only access tuple properties with a number".to_string(),
-                    )),
+                    _ => Err(TypeError {
+                        message: "Can only access tuple properties with a number".to_string(),
+                    }),
                 }
             }
             // declare let tuple: [number, number] | [string, string]
@@ -685,9 +691,9 @@ impl Checker {
                 }
                 if undefined_count == union.types.len() {
                     // TODO: include name of property in error message
-                    Err(Errors::InferenceError(
-                        "Couldn't find property on object".to_string(),
-                    ))
+                    Err(TypeError {
+                        message: "Couldn't find property on object".to_string(),
+                    })
                 } else {
                     Ok(self.new_union_type(&result_types))
                 }
@@ -698,9 +704,9 @@ impl Checker {
             }
             _ => {
                 // TODO: provide a more specific error message for type variables
-                Err(Errors::InferenceError(
-                    "Can only access properties on objects/tuples".to_string(),
-                ))
+                Err(TypeError {
+                    message: "Can only access properties on objects/tuples".to_string(),
+                })
             }
         }
     }
@@ -711,7 +717,7 @@ impl Checker {
         ctx: &Context,
         obj_idx: Index,
         key_idx: Index,
-    ) -> Result<Index, Errors> {
+    ) -> Result<Index, TypeError> {
         let undefined = self.new_keyword(Keyword::Undefined);
         // It's fine to clone here because we aren't mutating
         let obj_type = self.arena[obj_idx].clone();
@@ -734,10 +740,11 @@ impl Checker {
                             TObjElem::Call(_) => continue,
                             TObjElem::Mapped(mapped) => {
                                 if maybe_mapped.is_some() {
-                                    return Err(Errors::InferenceError(
-                                        "Object types can only have a single mapped signature"
-                                            .to_string(),
-                                    ));
+                                    return Err(TypeError {
+                                        message:
+                                            "Object types can only have a single mapped signature"
+                                                .to_string(),
+                                    });
                                 }
                                 maybe_mapped = Some(mapped);
                             }
@@ -766,20 +773,21 @@ impl Checker {
                                 let undefined = self.new_keyword(Keyword::Undefined);
                                 Ok(self.new_union_type(&[mapped.value, undefined]))
                             }
-                            Err(_) => Err(Errors::InferenceError(format!(
-                                "{} is not a valid indexer for {}",
-                                self.print_type(&key_idx),
-                                self.print_type(&obj_idx),
-                            ))),
+                            Err(_) => Err(TypeError {
+                                message: format!(
+                                    "{} is not a valid indexer for {}",
+                                    self.print_type(&key_idx),
+                                    self.print_type(&obj_idx),
+                                ),
+                            }),
                         }
                     } else if !values.is_empty() {
                         values.push(undefined);
                         Ok(self.new_union_type(&values))
                     } else {
-                        Err(Errors::InferenceError(format!(
-                            "{} has no indexer",
-                            self.print_type(&obj_idx),
-                        )))
+                        Err(TypeError {
+                            message: format!("{} has no indexer", self.print_type(&obj_idx),),
+                        })
                     }
                 }
                 TypeKind::Literal(Literal::String(name)) => {
@@ -791,10 +799,11 @@ impl Checker {
                             TObjElem::Call(_) => continue,
                             TObjElem::Mapped(mapped) => {
                                 if maybe_mapped.is_some() {
-                                    return Err(Errors::InferenceError(
-                                        "Object types can only have a single mapped signature"
-                                            .to_string(),
-                                    ));
+                                    return Err(TypeError {
+                                        message:
+                                            "Object types can only have a single mapped signature"
+                                                .to_string(),
+                                    });
                                 }
                                 maybe_mapped = Some(mapped);
                             }
@@ -822,15 +831,14 @@ impl Checker {
                                 let undefined = self.new_keyword(Keyword::Undefined);
                                 Ok(self.new_union_type(&[mapped.value, undefined]))
                             }
-                            Err(_) => Err(Errors::InferenceError(format!(
-                                "Couldn't find property {} in object",
-                                name,
-                            ))),
+                            Err(_) => Err(TypeError {
+                                message: format!("Couldn't find property {} in object", name,),
+                            }),
                         }
                     } else {
-                        Err(Errors::InferenceError(format!(
-                            "Couldn't find property '{name}' on object",
-                        )))
+                        Err(TypeError {
+                            message: format!("Couldn't find property '{name}' on object",),
+                        })
                     }
                 }
                 TypeKind::Literal(Literal::Number(name)) => {
@@ -838,10 +846,10 @@ impl Checker {
                     for elem in &object.elems {
                         if let TObjElem::Mapped(mapped) = elem {
                             if maybe_mapped.is_some() {
-                                return Err(Errors::InferenceError(
-                                    "Object types can only have a single mapped signature"
+                                return Err(TypeError {
+                                    message: "Object types can only have a single mapped signature"
                                         .to_string(),
-                                ));
+                                });
                             }
                             maybe_mapped = Some(mapped);
                         }
@@ -856,26 +864,24 @@ impl Checker {
                                 let undefined = self.new_keyword(Keyword::Undefined);
                                 Ok(self.new_union_type(&[mapped.value, undefined]))
                             }
-                            Err(_) => Err(Errors::InferenceError(format!(
-                                "Couldn't find property {} in object",
-                                name,
-                            ))),
+                            Err(_) => Err(TypeError {
+                                message: format!("Couldn't find property {} in object", name,),
+                            }),
                         }
                     } else {
-                        Err(Errors::InferenceError(format!(
-                            "Couldn't find property '{name}' on object",
-                        )))
+                        Err(TypeError {
+                            message: format!("Couldn't find property '{name}' on object",),
+                        })
                     }
                 }
-                _ => Err(Errors::InferenceError(format!(
-                    "{} is not a valid key",
-                    self.print_type(&key_idx)
-                ))),
+                _ => Err(TypeError {
+                    message: format!("{} is not a valid key", self.print_type(&key_idx)),
+                }),
             }
         } else {
-            Err(Errors::InferenceError(
-                "Can't access property on non-object type".to_string(),
-            ))
+            Err(TypeError {
+                message: "Can't access property on non-object type".to_string(),
+            })
         }
     }
 }

@@ -5,7 +5,7 @@ use escalier_parser::parse;
 
 use escalier_hm::checker::Checker;
 use escalier_hm::context::*;
-use escalier_hm::errors::*;
+use escalier_hm::type_error::TypeError;
 use escalier_hm::types::{self, *};
 
 fn test_env() -> (Checker, Context) {
@@ -76,7 +76,7 @@ fn test_env() -> (Checker, Context) {
 }
 
 #[test]
-fn basic_throws_test() -> Result<(), Errors> {
+fn basic_throws_test() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -115,7 +115,7 @@ fn basic_throws_test() -> Result<(), Errors> {
 }
 
 #[test]
-fn constrained_throws() -> Result<(), Errors> {
+fn constrained_throws() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -138,7 +138,7 @@ fn constrained_throws() -> Result<(), Errors> {
 }
 
 #[test]
-fn constrained_throws_type_mismatch() -> Result<(), Errors> {
+fn constrained_throws_type_mismatch() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -153,16 +153,16 @@ fn constrained_throws_type_mismatch() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "type mismatch: unify(\"DIV_BY_ZERO\", number) failed".to_string()
-        ))
+        Err(TypeError {
+            message: "type mismatch: unify(\"DIV_BY_ZERO\", number) failed".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn throws_multiple_exceptions() -> Result<(), Errors> {
+fn throws_multiple_exceptions() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -186,7 +186,7 @@ fn throws_multiple_exceptions() -> Result<(), Errors> {
 }
 
 #[test]
-fn unify_call_throws_with_func_sig_throws() -> Result<(), Errors> {
+fn unify_call_throws_with_func_sig_throws() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -210,7 +210,7 @@ fn unify_call_throws_with_func_sig_throws() -> Result<(), Errors> {
 }
 
 #[test]
-fn unify_call_throws_with_func_sig_throws_failure() -> Result<(), Errors> {
+fn unify_call_throws_with_func_sig_throws_failure() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -226,16 +226,16 @@ fn unify_call_throws_with_func_sig_throws_failure() -> Result<(), Errors> {
 
     assert_eq!(
         result,
-        Err(Errors::InferenceError(
-            "type mismatch: unify(\"NEGATIVE_NUMBER\", number) failed".to_string()
-        ))
+        Err(TypeError {
+            message: "type mismatch: unify(\"NEGATIVE_NUMBER\", number) failed".to_string()
+        })
     );
 
     Ok(())
 }
 
 #[test]
-fn scoped_throws() -> Result<(), Errors> {
+fn scoped_throws() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -259,7 +259,7 @@ fn scoped_throws() -> Result<(), Errors> {
 }
 
 #[test]
-fn throws_coalesces_duplicate_exceptions() -> Result<(), Errors> {
+fn throws_coalesces_duplicate_exceptions() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -283,7 +283,7 @@ fn throws_coalesces_duplicate_exceptions() -> Result<(), Errors> {
 }
 
 #[test]
-fn callback_with_throws() -> Result<(), Errors> {
+fn callback_with_throws() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -320,7 +320,7 @@ fn callback_with_throws() -> Result<(), Errors> {
 }
 
 #[test]
-fn infer_throws_from_throw() -> Result<(), Errors> {
+fn infer_throws_from_throw() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -345,7 +345,7 @@ fn infer_throws_from_throw() -> Result<(), Errors> {
 }
 
 #[test]
-fn try_catches_throw() -> Result<(), Errors> {
+fn try_catches_throw() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -374,7 +374,7 @@ fn try_catches_throw() -> Result<(), Errors> {
 }
 
 #[test]
-fn try_catches_throw_and_rethrows() -> Result<(), Errors> {
+fn try_catches_throw_and_rethrows() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
@@ -403,7 +403,7 @@ fn try_catches_throw_and_rethrows() -> Result<(), Errors> {
 }
 
 #[test]
-fn try_catches_throw_return_inside_try_catch() -> Result<(), Errors> {
+fn try_catches_throw_return_inside_try_catch() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"

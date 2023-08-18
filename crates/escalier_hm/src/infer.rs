@@ -8,11 +8,11 @@ use crate::ast_utils::find_returns;
 use crate::ast_utils::{find_throws, find_throws_in_block};
 use crate::checker::Checker;
 use crate::context::*;
-use crate::errors::*;
 use crate::folder::{self, Folder};
 use crate::infer_pattern::*;
 use crate::key_value_store::KeyValueStore;
 use crate::provenance::Provenance;
+use crate::type_error::TypeError;
 use crate::types::{self, *};
 use crate::util::*;
 
@@ -42,7 +42,7 @@ impl Checker {
         &mut self,
         node: &mut Expr,
         ctx: &mut Context,
-    ) -> Result<Index, Errors> {
+    ) -> Result<Index, TypeError> {
         let idx: Index = match &mut node.kind {
             ExprKind::Ident(Ident { name, .. }) => self.get_type(name, ctx)?,
             ExprKind::Str(str) => {
@@ -392,9 +392,9 @@ impl Checker {
             ExprKind::JSXElement(_) => todo!(),
             ExprKind::Assign(Assign { left, op: _, right }) => {
                 if !lvalue_mutability(ctx, left)? {
-                    return Err(Errors::InferenceError(
-                        "Cannot assign to immutable lvalue".to_string(),
-                    ));
+                    return Err(TypeError {
+                        message: "Cannot assign to immutable lvalue".to_string(),
+                    });
                 }
 
                 let l_t = self.infer_expression(left, ctx)?;
@@ -537,9 +537,9 @@ impl Checker {
             }
             ExprKind::Await(Await { arg: expr, throws }) => {
                 if !ctx.is_async {
-                    return Err(Errors::InferenceError(
-                        "Can't use await outside of an async function".to_string(),
-                    ));
+                    return Err(TypeError {
+                        message: "Can't use await outside of an async function".to_string(),
+                    });
                 }
 
                 let expr_t = self.infer_expression(expr, ctx)?;
@@ -642,7 +642,11 @@ impl Checker {
         Ok(idx)
     }
 
-    pub fn infer_block(&mut self, block: &mut Block, ctx: &mut Context) -> Result<Index, Errors> {
+    pub fn infer_block(
+        &mut self,
+        block: &mut Block,
+        ctx: &mut Context,
+    ) -> Result<Index, TypeError> {
         let mut new_ctx = ctx.clone();
         let mut result_t = self.new_keyword(Keyword::Undefined);
 
@@ -657,7 +661,7 @@ impl Checker {
         &mut self,
         type_ann: &mut TypeAnn,
         ctx: &mut Context,
-    ) -> Result<Index, Errors> {
+    ) -> Result<Index, TypeError> {
         let idx = match &mut type_ann.kind {
             TypeAnnKind::Function(FunctionType {
                 params,
@@ -896,11 +900,13 @@ impl Checker {
                 };
 
                 if type_params.len() != type_args.len() {
-                    return Err(Errors::InferenceError(format!(
-                        "{name} expects {} type args, but was passed {}",
-                        type_params.len(),
-                        type_args.len()
-                    )));
+                    return Err(TypeError {
+                        message: format!(
+                            "{name} expects {} type args, but was passed {}",
+                            type_params.len(),
+                            type_args.len()
+                        ),
+                    });
                 }
 
                 for (param, arg) in type_params.iter().zip(type_args.iter()) {
@@ -1049,135 +1055,135 @@ impl Checker {
         statement: &mut Stmt,
         ctx: &mut Context,
         top_level: bool,
-    ) -> Result<Index, Errors> {
-        let t = match &mut statement.kind {
-            StmtKind::Let {
-                is_declare,
-                pattern,
-                expr: init,
-                type_ann,
-                ..
-            } => {
-                let (pat_bindings, pat_type) = self.infer_pattern(pattern, ctx)?;
+    ) -> Result<Index, TypeError> {
+        let t =
+            match &mut statement.kind {
+                StmtKind::Let {
+                    is_declare,
+                    pattern,
+                    expr: init,
+                    type_ann,
+                    ..
+                } => {
+                    let (pat_bindings, pat_type) = self.infer_pattern(pattern, ctx)?;
 
-                match (is_declare, init, type_ann) {
-                    (false, Some(init), type_ann) => {
-                        let init_idx = self.infer_expression(init, ctx)?;
+                    match (is_declare, init, type_ann) {
+                        (false, Some(init), type_ann) => {
+                            let init_idx = self.infer_expression(init, ctx)?;
 
-                        let init_type = self.arena.get(init_idx).unwrap().clone();
-                        let init_idx = match &init_type.kind {
-                            TypeKind::Function(func) if top_level => generalize_func(self, func),
-                            _ => init_idx,
-                        };
+                            let init_type = self.arena.get(init_idx).unwrap().clone();
+                            let init_idx = match &init_type.kind {
+                                TypeKind::Function(func) if top_level => {
+                                    generalize_func(self, func)
+                                }
+                                _ => init_idx,
+                            };
 
-                        let tpat = pattern_to_tpat(pattern, false);
-                        let mutability = check_mutability(ctx, &tpat, init)?;
+                            let tpat = pattern_to_tpat(pattern, false);
+                            let mutability = check_mutability(ctx, &tpat, init)?;
 
-                        let idx = match type_ann {
-                            Some(type_ann) => {
-                                let type_ann_idx = self.infer_type_ann(type_ann, ctx)?;
+                            let idx = match type_ann {
+                                Some(type_ann) => {
+                                    let type_ann_idx = self.infer_type_ann(type_ann, ctx)?;
 
-                                // The initializer must conform to the type annotation's
-                                // inferred type.
-                                match mutability {
-                                    true => self.unify_mut(ctx, init_idx, type_ann_idx)?,
-                                    false => self.unify(ctx, init_idx, type_ann_idx)?,
-                                };
+                                    // The initializer must conform to the type annotation's
+                                    // inferred type.
+                                    match mutability {
+                                        true => self.unify_mut(ctx, init_idx, type_ann_idx)?,
+                                        false => self.unify(ctx, init_idx, type_ann_idx)?,
+                                    };
 
-                                // Results in bindings introduced by the LHS pattern
-                                // having their types inferred.
-                                // It's okay for pat_type to be the super type here
-                                // because all initializers it introduces are type
-                                // variables.  It also prevents patterns from including
-                                // variables that don't exist in the type annotation.
-                                self.unify(ctx, type_ann_idx, pat_type)?;
+                                    // Results in bindings introduced by the LHS pattern
+                                    // having their types inferred.
+                                    // It's okay for pat_type to be the super type here
+                                    // because all initializers it introduces are type
+                                    // variables.  It also prevents patterns from including
+                                    // variables that don't exist in the type annotation.
+                                    self.unify(ctx, type_ann_idx, pat_type)?;
 
-                                type_ann_idx
+                                    type_ann_idx
+                                }
+                                None => {
+                                    // Results in bindings introduced by the LHS pattern
+                                    // having their types inferred.
+                                    // It's okay for pat_type to be the super type here
+                                    // because all initializers it introduces are type
+                                    // variables.  It also prevents patterns from including
+                                    // variables that don't exist in the initializer.
+                                    self.unify(ctx, init_idx, pat_type)?;
+
+                                    init_idx
+                                }
+                            };
+
+                            for (name, binding) in pat_bindings {
+                                ctx.values.insert(name.clone(), binding);
                             }
-                            None => {
-                                // Results in bindings introduced by the LHS pattern
-                                // having their types inferred.
-                                // It's okay for pat_type to be the super type here
-                                // because all initializers it introduces are type
-                                // variables.  It also prevents patterns from including
-                                // variables that don't exist in the initializer.
-                                self.unify(ctx, init_idx, pat_type)?;
 
-                                init_idx
+                            pattern.inferred_type = Some(idx);
+
+                            idx // TODO: Should this be unit?
+                        }
+                        (false, None, _) => return Err(TypeError {
+                            message:
+                                "Variable declarations not using `declare` must have an initializer"
+                                    .to_string(),
+                        }),
+                        (true, None, Some(type_ann)) => {
+                            let idx = self.infer_type_ann(type_ann, ctx)?;
+
+                            self.unify(ctx, idx, pat_type)?;
+
+                            for (name, binding) in pat_bindings {
+                                ctx.values.insert(name.clone(), binding);
                             }
-                        };
 
-                        for (name, binding) in pat_bindings {
-                            ctx.values.insert(name.clone(), binding);
+                            idx
                         }
-
-                        pattern.inferred_type = Some(idx);
-
-                        idx // TODO: Should this be unit?
-                    }
-                    (false, None, _) => {
-                        return Err(Errors::InferenceError(
-                            "Variable declarations not using `declare` must have an initializer"
-                                .to_string(),
-                        ))
-                    }
-                    (true, None, Some(type_ann)) => {
-                        let idx = self.infer_type_ann(type_ann, ctx)?;
-
-                        self.unify(ctx, idx, pat_type)?;
-
-                        for (name, binding) in pat_bindings {
-                            ctx.values.insert(name.clone(), binding);
-                        }
-
-                        idx
-                    }
-                    (true, Some(_), _) => {
-                        return Err(Errors::InferenceError(
-                            "Variable declarations using `declare` cannot have an initializer"
-                                .to_string(),
-                        ))
-                    }
-                    (true, None, None) => {
-                        return Err(Errors::InferenceError(
-                            "Variable declarations using `declare` must have a type annotation"
-                                .to_string(),
-                        ))
+                        (true, Some(_), _) => return Err(TypeError {
+                            message:
+                                "Variable declarations using `declare` cannot have an initializer"
+                                    .to_string(),
+                        }),
+                        (true, None, None) => return Err(TypeError {
+                            message:
+                                "Variable declarations using `declare` must have a type annotation"
+                                    .to_string(),
+                        }),
                     }
                 }
-            }
-            StmtKind::Expr { expr } => self.infer_expression(expr, ctx)?,
-            StmtKind::Return { arg: expr } => {
-                // TODO: handle multiple return statements
-                // TODO: warn about unreachable code after a return statement
-                match expr {
-                    Some(expr) => self.infer_expression(expr, ctx)?,
-                    None => {
-                        // TODO: return `undefined` or `void`.
-                        todo!()
+                StmtKind::Expr { expr } => self.infer_expression(expr, ctx)?,
+                StmtKind::Return { arg: expr } => {
+                    // TODO: handle multiple return statements
+                    // TODO: warn about unreachable code after a return statement
+                    match expr {
+                        Some(expr) => self.infer_expression(expr, ctx)?,
+                        None => {
+                            // TODO: return `undefined` or `void`.
+                            todo!()
+                        }
                     }
                 }
-            }
-            // StmtKind::ClassDecl(_) => todo!(),
-            StmtKind::TypeDecl {
-                name,
-                type_ann,
-                type_params,
-            } => {
-                // NOTE: We clone `ctx` so that type params don't escape the signature
-                let mut sig_ctx = ctx.clone();
+                // StmtKind::ClassDecl(_) => todo!(),
+                StmtKind::TypeDecl {
+                    name,
+                    type_ann,
+                    type_params,
+                } => {
+                    // NOTE: We clone `ctx` so that type params don't escape the signature
+                    let mut sig_ctx = ctx.clone();
 
-                let type_params = self.infer_type_params(type_params, &mut sig_ctx)?;
-                let t = self.infer_type_ann(type_ann, &mut sig_ctx)?;
+                    let type_params = self.infer_type_params(type_params, &mut sig_ctx)?;
+                    let t = self.infer_type_ann(type_ann, &mut sig_ctx)?;
 
-                // TODO: generalize type `t` into a scheme
-                let scheme = Scheme { t, type_params };
+                    // TODO: generalize type `t` into a scheme
+                    let scheme = Scheme { t, type_params };
 
-                ctx.schemes.insert(name.to_owned(), scheme);
+                    ctx.schemes.insert(name.to_owned(), scheme);
 
-                t
-            } // StmtKind::ForStmt(_) => todo!(),
-        };
+                    t
+                } // StmtKind::ForStmt(_) => todo!(),
+            };
 
         statement.inferred_type = Some(t);
 
@@ -1187,7 +1193,11 @@ impl Checker {
     // TODO: introduce `infer_script` which has the same semantics as those used
     // to infer the body of a function.
     // TODO: rename to `infer_module`
-    pub fn infer_program(&mut self, node: &mut Program, ctx: &mut Context) -> Result<(), Errors> {
+    pub fn infer_program(
+        &mut self,
+        node: &mut Program,
+        ctx: &mut Context,
+    ) -> Result<(), TypeError> {
         for stmt in &node.stmts {
             if let StmtKind::TypeDecl { name, .. } = &stmt.kind {
                 let placeholder_scheme = Scheme {
@@ -1200,9 +1210,9 @@ impl Checker {
                     .insert(name.clone(), placeholder_scheme)
                     .is_some()
                 {
-                    return Err(Errors::InferenceError(format!(
-                        "{name} cannot be redeclared at the top-level"
-                    )));
+                    return Err(TypeError {
+                        message: format!("{name} cannot be redeclared at the top-level"),
+                    });
                 }
             }
         }
@@ -1214,9 +1224,9 @@ impl Checker {
                 for (name, binding) in bindings {
                     ctx.non_generic.insert(binding.index);
                     if ctx.values.insert(name.to_owned(), binding).is_some() {
-                        return Err(Errors::InferenceError(format!(
-                            "{name} cannot be redeclared at the top-level"
-                        )));
+                        return Err(TypeError {
+                            message: format!("{name} cannot be redeclared at the top-level"),
+                        });
                     }
                 }
             }
@@ -1237,7 +1247,7 @@ impl Checker {
         ctx: &mut Context,
         obj_idx: Index,
         key_idx: Index,
-    ) -> Result<Index, Errors> {
+    ) -> Result<Index, TypeError> {
         // NOTE: cloning is fine here because we aren't mutating `obj_type`
         match &self.arena[obj_idx].kind.clone() {
             TypeKind::Object(_) => self.get_prop(ctx, obj_idx, key_idx),
@@ -1261,10 +1271,12 @@ impl Checker {
                     }
                 }
                 if undefined_count == union.types.len() {
-                    Err(Errors::InferenceError(format!(
-                        "Couldn't find property {} on object",
-                        self.print_type(&key_idx),
-                    )))
+                    Err(TypeError {
+                        message: format!(
+                            "Couldn't find property {} on object",
+                            self.print_type(&key_idx),
+                        ),
+                    })
                 } else {
                     Ok(self.new_union_type(&result_types))
                 }
@@ -1278,10 +1290,9 @@ impl Checker {
                 let obj_idx = self.expand_alias(ctx, "Array", &[t])?;
                 self.get_ident_member(ctx, obj_idx, key_idx)
             }
-            _ => Err(Errors::InferenceError(format!(
-                "Can't access properties on {}",
-                self.print_type(&obj_idx)
-            ))),
+            _ => Err(TypeError {
+                message: format!("Can't access properties on {}", self.print_type(&obj_idx)),
+            }),
         }
     }
 
@@ -1289,7 +1300,7 @@ impl Checker {
         &mut self,
         type_params: &mut Option<Vec<syntax::TypeParam>>,
         sig_ctx: &mut Context,
-    ) -> Result<Option<Vec<types::TypeParam>>, Errors> {
+    ) -> Result<Option<Vec<types::TypeParam>>, TypeError> {
         if let Some(type_params) = type_params {
             for tp in type_params.iter_mut() {
                 let constraint = match &mut tp.bound {
@@ -1319,9 +1330,9 @@ impl Checker {
                     .iter_mut()
                     .map(|tp| {
                         if !type_param_names.insert(tp.name.to_owned()) {
-                            return Err(Errors::InferenceError(
-                                "type param identifiers must be unique".to_string(),
-                            ));
+                            return Err(TypeError {
+                                message: "type param identifiers must be unique".to_string(),
+                            });
                         }
                         Ok(types::TypeParam {
                             name: tp.name.to_owned(),
@@ -1357,7 +1368,7 @@ fn is_promise(t: &Type) -> bool {
 // NOTE: It's possible to have a mix of mutable and immutable bindings be
 // introduced.  In that situation, we only need to check certain parts of
 // the initializer for mutability.
-pub fn check_mutability(ctx: &Context, tpat: &TPat, init: &Expr) -> Result<bool, Errors> {
+pub fn check_mutability(ctx: &Context, tpat: &TPat, init: &Expr) -> Result<bool, TypeError> {
     let mut lhs_mutable = false;
 
     // TODO: handle other patterns
@@ -1379,16 +1390,16 @@ pub fn check_mutability(ctx: &Context, tpat: &TPat, init: &Expr) -> Result<bool,
 
     if lhs_mutable && !rhs_mutable {
         // TODO: include which bindings are involved in the assignment
-        return Err(Errors::InferenceError(
-            "Can't assign immutable value to mutable binding".to_string(),
-        ));
+        return Err(TypeError {
+            message: "Can't assign immutable value to mutable binding".to_string(),
+        });
     }
 
     Ok(lhs_mutable && rhs_mutable)
 }
 
 // TODO: find the rest of the identifiers in the expression
-fn find_identifiers(expr: &Expr) -> Result<Vec<Ident>, Errors> {
+fn find_identifiers(expr: &Expr) -> Result<Vec<Ident>, TypeError> {
     let mut idents = vec![];
 
     if let ExprKind::Ident(ident) = &expr.kind {
@@ -1398,16 +1409,16 @@ fn find_identifiers(expr: &Expr) -> Result<Vec<Ident>, Errors> {
     Ok(idents)
 }
 
-fn lvalue_mutability(ctx: &Context, expr: &Expr) -> Result<bool, Errors> {
+fn lvalue_mutability(ctx: &Context, expr: &Expr) -> Result<bool, TypeError> {
     match &expr.kind {
         ExprKind::Ident(ident) => {
             let binding = ctx.values.get(&ident.name).unwrap();
             Ok(binding.is_mut)
         }
         ExprKind::Member(member) => lvalue_mutability(ctx, &member.object),
-        _ => Err(Errors::InferenceError(
-            "Can't assign to non-lvalue".to_string(),
-        )),
+        _ => Err(TypeError {
+            message: "Can't assign to non-lvalue".to_string(),
+        }),
     }
 }
 
