@@ -1,5 +1,5 @@
-use escalier_codegen::d_ts::codegen_d_ts;
-use escalier_codegen::js::codegen_js;
+use escalier_old_codegen::d_ts::codegen_d_ts;
+use escalier_old_codegen::js::codegen_js;
 use escalier_old_infer::{infer_prog, Checker, TypeError};
 use escalier_old_parser::parse;
 

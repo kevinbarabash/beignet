@@ -126,7 +126,7 @@ fn compile(input: &str, lib: &str) -> (String, String, String, String) {
         }
     };
 
-    let (js, srcmap) = escalier_codegen::js::codegen_js(input, &program);
+    let (js, srcmap) = escalier_old_codegen::js::codegen_js(input, &program);
 
     // TODO: return errors as part of CompileResult
     let mut checker = parse_dts(lib).unwrap();
@@ -147,7 +147,7 @@ fn compile(input: &str, lib: &str) -> (String, String, String, String) {
         }
     };
 
-    let dts = match escalier_codegen::d_ts::codegen_d_ts(&program, &checker.current_scope) {
+    let dts = match escalier_old_codegen::d_ts::codegen_d_ts(&program, &checker.current_scope) {
         Ok(value) => value,
         Err(errors) => {
             return (
