@@ -1,5 +1,5 @@
 [package]
-name = "escalier_codegen"
+name = "escalier_old_codegen"
 version = "0.1.0"
 edition = "2021"
 

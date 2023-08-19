@@ -1,4 +1,4 @@
-use escalier_codegen::js::*;
+use escalier_old_codegen::js::*;
 use escalier_old_parser::parse;
 
 fn compile(input: &str) -> String {
