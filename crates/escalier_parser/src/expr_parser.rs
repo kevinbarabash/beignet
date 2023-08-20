@@ -220,7 +220,10 @@ impl<'a> Parser<'a> {
                                 if p.peek().unwrap_or(&EOF).kind == TokenKind::Comma
                                     || p.peek().unwrap_or(&EOF).kind == TokenKind::RightBrace =>
                             {
-                                Ok(PropOrSpread::Prop(expr::Prop::Shorthand(id.to_owned())))
+                                Ok(PropOrSpread::Prop(expr::Prop::Shorthand(Ident {
+                                    span: next.span,
+                                    name: id.to_owned(),
+                                })))
                             }
                             _ => {
                                 let key = match &next.kind {

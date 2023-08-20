@@ -6,4 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+swc_atoms = "0.5.6"
+swc_ecma_ast = "0.107.0"
+swc_common = { version = "0.31.16", features = ["sourcemap"] }
 generational-arena = "0.2.8"

@@ -94,12 +94,18 @@ Expr {
                                                         properties: [
                                                             Prop(
                                                                 Shorthand(
-                                                                    "x",
+                                                                    Ident {
+                                                                        name: "x",
+                                                                        span: 136..137,
+                                                                    },
                                                                 ),
                                                             ),
                                                             Prop(
                                                                 Shorthand(
-                                                                    "y",
+                                                                    Ident {
+                                                                        name: "y",
+                                                                        span: 139..140,
+                                                                    },
                                                                 ),
                                                             ),
                                                         ],

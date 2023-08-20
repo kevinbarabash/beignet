@@ -369,6 +369,9 @@ name = "escalier_ast"
 version = "0.1.0"
 dependencies = [
  "generational-arena",
+ "swc_atoms",
+ "swc_common",
+ "swc_ecma_ast",
 ]
 
 [[package]]
@@ -384,6 +387,26 @@ dependencies = [
  "pretty_assertions",
  "tree-sitter",
  "tree_sitter_escalier",
+]
+
+[[package]]
+name = "escalier_codegen"
+version = "0.1.0"
+dependencies = [
+ "escalier_ast",
+ "escalier_hm",
+ "escalier_parser",
+ "insta",
+ "itertools 0.10.5",
+ "pretty_assertions",
+ "sourcemap",
+ "swc_atoms",
+ "swc_common",
+ "swc_ecma_ast",
+ "swc_ecma_codegen",
+ "swc_ecma_transforms_react",
+ "swc_ecma_visit",
+ "testing_macros",
 ]
 
 [[package]]
