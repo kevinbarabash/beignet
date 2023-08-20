@@ -39,6 +39,15 @@ impl Context {
             }),
         }
     }
+
+    pub fn get_binding(&self, name: &str) -> Result<Binding, TypeError> {
+        match self.values.get(name) {
+            Some(binding) => Ok(binding.to_owned()),
+            None => Err(TypeError {
+                message: format!("{} is not in scope", name),
+            }),
+        }
+    }
 }
 
 impl Checker {

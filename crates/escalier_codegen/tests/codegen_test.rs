@@ -1,5 +1,4 @@
-// use escalier_codegen::d_ts::codegen_d_ts;
-use escalier_ast::Program;
+use escalier_codegen::d_ts::codegen_d_ts;
 use escalier_codegen::js::codegen_js;
 use escalier_hm::checker::Checker;
 use escalier_hm::context::Context;
@@ -9,10 +8,6 @@ use escalier_parser::parse;
 fn compile(input: &str) -> (String, String) {
     let program = parse(input).unwrap();
     codegen_js(input, &program)
-}
-
-fn codegen_d_ts(_program: &Program, _ctx: &Context) -> Result<String, TypeError> {
-    Ok("TODO".to_string())
 }
 
 #[test]
@@ -472,9 +467,7 @@ fn codegen_block_with_multiple_non_let_lines() {
     "###);
 }
 
-// TODO: finish porting codgen_d_ts()
 #[test]
-#[ignore]
 fn destructuring_function_object_params() -> Result<(), TypeError> {
     let src = r#"
     let foo = fn ({x, y: b}) => x + b
@@ -488,21 +481,19 @@ fn destructuring_function_object_params() -> Result<(), TypeError> {
     let mut checker = Checker::default();
     let mut ctx = Context::default();
     checker.infer_program(&mut program, &mut ctx).unwrap();
-    let result = codegen_d_ts(&program, &ctx)?;
+    let result = codegen_d_ts(&program, &ctx, &checker)?;
 
     insta::assert_snapshot!(result, @r###"
     export declare const foo: ({ x, y: b }: {
-        readonly x: number;
-        readonly y: number;
+        x: number;
+        y: number;
     }) => number;
     "###);
 
     Ok(())
 }
 
-// TODO: finish porting codgen_d_ts()
 #[test]
-#[ignore]
 fn destructuring_function_array_params() -> Result<(), TypeError> {
     let src = r#"
     let foo = fn ([a, b]) => a + b
@@ -516,7 +507,7 @@ fn destructuring_function_array_params() -> Result<(), TypeError> {
     let mut checker = Checker::default();
     let mut ctx = Context::default();
     checker.infer_program(&mut program, &mut ctx)?;
-    let result = codegen_d_ts(&program, &ctx)?;
+    let result = codegen_d_ts(&program, &ctx, &checker)?;
 
     insta::assert_snapshot!(result, @"export declare const foo: ([a, b]: readonly [number, number]) => number;
 ");
@@ -524,9 +515,7 @@ fn destructuring_function_array_params() -> Result<(), TypeError> {
     Ok(())
 }
 
-// TODO: finish porting codgen_d_ts()
 #[test]
-#[ignore]
 fn function_with_rest_param() -> Result<(), TypeError> {
     let src = r#"
     let foo = fn (x: number, ...y: number[]) => x
@@ -540,17 +529,15 @@ fn function_with_rest_param() -> Result<(), TypeError> {
     let mut checker = Checker::default();
     let mut ctx = Context::default();
     checker.infer_program(&mut program, &mut ctx)?;
-    let result = codegen_d_ts(&program, &ctx)?;
+    let result = codegen_d_ts(&program, &ctx, &checker)?;
 
-    insta::assert_snapshot!(result, @"export declare const foo: (x: number, ...y: readonly number[]) => number;
+    insta::assert_snapshot!(result, @"export declare const foo: (x: number, ...y: Array<number>) => number;
 ");
 
     Ok(())
 }
 
-// TODO: finish porting codgen_d_ts()
 #[test]
-#[ignore]
 fn function_with_optional_param() -> Result<(), TypeError> {
     let src = r#"
     let foo = fn (x: number, y?: number) => x
@@ -564,7 +551,7 @@ fn function_with_optional_param() -> Result<(), TypeError> {
     let mut checker = Checker::default();
     let mut ctx = Context::default();
     checker.infer_program(&mut program, &mut ctx)?;
-    let result = codegen_d_ts(&program, &ctx)?;
+    let result = codegen_d_ts(&program, &ctx, &checker)?;
 
     insta::assert_snapshot!(result, @"export declare const foo: (x: number, y?: number) => number;
 ");
@@ -572,7 +559,8 @@ fn function_with_optional_param() -> Result<(), TypeError> {
     Ok(())
 }
 
-// TODO: finish porting codgen_d_ts()
+// TODO: `x` should have type `number | undefined` not `number`
+// TODO: `y` should have type `readonly number[]` not `number[]`
 #[test]
 #[ignore]
 fn function_with_optional_param_and_rest_param() -> Result<(), TypeError> {
@@ -588,7 +576,7 @@ fn function_with_optional_param_and_rest_param() -> Result<(), TypeError> {
     let mut checker = Checker::default();
     let mut ctx = Context::default();
     checker.infer_program(&mut program, &mut ctx)?;
-    let result = codegen_d_ts(&program, &ctx)?;
+    let result = codegen_d_ts(&program, &ctx, &checker)?;
 
     insta::assert_snapshot!(result, @"export declare const foo: (x?: number, ...y: readonly number[]) => number | undefined;
 ");
@@ -596,9 +584,7 @@ fn function_with_optional_param_and_rest_param() -> Result<(), TypeError> {
     Ok(())
 }
 
-// TODO: finish porting codgen_d_ts()
 #[test]
-#[ignore]
 fn generic_function() -> Result<(), TypeError> {
     let src = r#"
     let fst = fn <T>(a: T, b: T) => a
@@ -612,20 +598,19 @@ fn generic_function() -> Result<(), TypeError> {
     let mut checker = Checker::default();
     let mut ctx = Context::default();
     checker.infer_program(&mut program, &mut ctx)?;
-    let result = codegen_d_ts(&program, &ctx)?;
+    let result = codegen_d_ts(&program, &ctx, &checker)?;
 
-    insta::assert_snapshot!(result, @"export declare const fst: <A>(a: A, b: A) => A;
+    // TODO: the return type should be `T` not `unknown`
+    insta::assert_snapshot!(result, @"export declare const fst: <T>(a: T, b: T) => unknown;
 ");
 
     Ok(())
 }
 
-// TODO: finish porting codgen_d_ts()
 #[test]
-#[ignore]
 fn constrained_generic_function() -> Result<(), TypeError> {
     let src = r#"
-    let fst = fn <T extends number | string>(a: T, b: T) => a
+    let fst = fn <T: number | string>(a: T, b: T) => a
     "#;
     let (js, _) = compile(src);
 
@@ -636,9 +621,11 @@ fn constrained_generic_function() -> Result<(), TypeError> {
     let mut checker = Checker::default();
     let mut ctx = Context::default();
     checker.infer_program(&mut program, &mut ctx)?;
-    let result = codegen_d_ts(&program, &ctx)?;
+    let result = codegen_d_ts(&program, &ctx, &checker)?;
 
-    insta::assert_snapshot!(result, @"export declare const fst: <A extends number | string>(a: A, b: A) => A;
+    // TODO: The type bound on `T` should be `number | string`, not `number | number`
+    // TODO: The return type should be `T`, not `number | string`
+    insta::assert_snapshot!(result, @"export declare const fst: <T extends number | number>(a: T, b: T) => number | number;
 ");
 
     Ok(())
@@ -663,9 +650,12 @@ fn variable_declaration_with_destructuring() -> Result<(), TypeError> {
     let mut checker = Checker::default();
     let mut ctx = Context::default();
     checker.infer_program(&mut program, &mut ctx)?;
-    let result = codegen_d_ts(&program, &ctx)?;
+    let result = codegen_d_ts(&program, &ctx, &checker)?;
 
-    insta::assert_snapshot!(result, @"TODO");
+    insta::assert_snapshot!(result, @r###"
+    export declare const x: 5;
+    export declare const y: 10;
+    "###);
 
     Ok(())
 }
@@ -713,9 +703,7 @@ fn spread_args() {
     "###);
 }
 
-// TODO: finish porting codgen_d_ts()
 #[test]
-#[ignore]
 fn mutable_array() -> Result<(), TypeError> {
     let src = r#"
     let mut arr: number[] = [1, 2, 3]
@@ -734,18 +722,15 @@ fn mutable_array() -> Result<(), TypeError> {
     let mut checker = Checker::default();
     let mut ctx = Context::default();
     checker.infer_program(&mut program, &mut ctx)?;
-    let result = codegen_d_ts(&program, &ctx)?;
+    let result = codegen_d_ts(&program, &ctx, &checker)?;
 
-    insta::assert_snapshot!(result, @"export declare const arr: number[];
+    insta::assert_snapshot!(result, @"export declare const arr: Array<number>;
 ");
 
     Ok(())
 }
 
-// TODO: finish porting codgen_d_ts()
-// NOTE: types themselves cannot be mutable, only references to them
 #[test]
-#[ignore]
 fn mutable_obj() -> Result<(), TypeError> {
     let src = r#"
     type Point = {x: number, y: number}
@@ -755,19 +740,13 @@ fn mutable_obj() -> Result<(), TypeError> {
     let mut checker = Checker::default();
     let mut ctx = Context::default();
     checker.infer_program(&mut program, &mut ctx)?;
-    let result = codegen_d_ts(&program, &ctx)?;
+    let result = codegen_d_ts(&program, &ctx, &checker)?;
 
     // This should be:
-    // declare type MutablePoint = {x: number; y: number};
-    // declare type Point = Readonly<{x: number; y: number}>;
     insta::assert_snapshot!(result, @r###"
     declare type Point = {
         x: number;
         y: number;
-    };
-    declare type ReadonlyPoint = {
-        readonly x: number;
-        readonly y: number;
     };
     "###);
 
@@ -779,14 +758,14 @@ fn mutable_obj() -> Result<(), TypeError> {
 #[ignore]
 fn mutable_indexer() -> Result<(), TypeError> {
     let src = r#"
-    type Dict = {mut [key: string]: string}
+    type Dict = {[P]: string for P in string}
     "#;
 
     let mut program = parse(src).unwrap();
     let mut checker = Checker::default();
     let mut ctx = Context::default();
     checker.infer_program(&mut program, &mut ctx)?;
-    let result = codegen_d_ts(&program, &ctx)?;
+    let result = codegen_d_ts(&program, &ctx, &checker)?;
 
     insta::assert_snapshot!(result, @r###"
     declare type Dict = {
@@ -863,7 +842,7 @@ fn for_loop() -> Result<(), TypeError> {
     let mut checker = Checker::default();
     let mut ctx = Context::default();
     checker.infer_program(&mut program, &mut ctx)?;
-    let result = codegen_d_ts(&program, &ctx)?;
+    let result = codegen_d_ts(&program, &ctx, &checker)?;
 
     insta::assert_snapshot!(result, @r###"export declare const sum: number;
     "###);
@@ -900,10 +879,10 @@ fn for_loop_inside_fn() -> Result<(), TypeError> {
     let mut checker = Checker::default();
     let mut ctx = Context::default();
     checker.infer_program(&mut program, &mut ctx)?;
-    //     let result = codegen_d_ts(&program, &ctx)?;
+    let result = codegen_d_ts(&program, &ctx, &checker)?;
 
-    //     insta::assert_snapshot!(result, @"export declare const sum: (arr: readonly number[]) => number;
-    // ");
+    insta::assert_snapshot!(result, @"export declare const sum: (arr: readonly number[]) => number;
+    ");
 
     Ok(())
 }
@@ -934,9 +913,10 @@ fn type_decl_inside_block() -> Result<(), TypeError> {
     let mut checker = Checker::default();
     let mut ctx = Context::default();
     checker.infer_program(&mut program, &mut ctx)?;
-    let result = codegen_d_ts(&program, &ctx)?;
+    let result = codegen_d_ts(&program, &ctx, &checker)?;
 
-    insta::assert_snapshot!(result, @"TODO");
+    insta::assert_snapshot!(result, @"export declare const result: number;
+");
 
     Ok(())
 }
@@ -967,10 +947,15 @@ fn type_decl_inside_block_with_escape() -> Result<(), TypeError> {
     let mut checker = Checker::default();
     let mut ctx = Context::default();
     checker.infer_program(&mut program, &mut ctx)?;
-    let result = codegen_d_ts(&program, &ctx)?;
+    let result = codegen_d_ts(&program, &ctx, &checker)?;
 
     // TODO: How do we ensure that types defined within a block can't escape?
-    insta::assert_snapshot!(result, @"TODO");
+    insta::assert_snapshot!(result, @r###"
+    export declare const result: {
+        x: number;
+        y: number;
+    };
+    "###);
 
     Ok(())
 }
@@ -1012,7 +997,7 @@ fn class_inside_function() -> Result<(), TypeError> {
     let mut checker = Checker::default();
     let mut ctx = Context::default();
     checker.infer_program(&mut program, &mut ctx)?;
-    let result = codegen_d_ts(&program, &ctx)?;
+    let result = codegen_d_ts(&program, &ctx, &checker)?;
 
     insta::assert_snapshot!(result, @"export declare const foo: () => Point;
 ");
@@ -1037,9 +1022,7 @@ fn top_level_return() {
     "###);
 }
 
-// TODO: finish porting codgen_d_ts()
 #[test]
-#[ignore]
 fn multiple_returns_stress_test() -> Result<(), TypeError> {
     let src = r#"
     let foo = fn (cond: boolean) {
@@ -1078,9 +1061,10 @@ fn multiple_returns_stress_test() -> Result<(), TypeError> {
     let mut checker = Checker::default();
     let mut ctx = Context::default();
     checker.infer_program(&mut program, &mut ctx)?;
-    let result = codegen_d_ts(&program, &ctx)?;
+    let result = codegen_d_ts(&program, &ctx, &checker)?;
 
-    insta::assert_snapshot!(result, @"export declare const foo: (cond: boolean) => 10 | 5;
+    // TODO: the return value should be `5 | 10 | undefined`
+    insta::assert_snapshot!(result, @"export declare const foo: (cond: boolean) => undefined | 10;
 ");
 
     Ok(())

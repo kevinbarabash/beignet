@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+generational-arena = "0.2.8"
 escalier_ast = { version = "0.1.0", path = "../escalier_ast" }
 escalier_hm = { version = "0.1.0", path = "../escalier_hm" }
 itertools = "0.10.3"

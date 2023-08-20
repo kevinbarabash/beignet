@@ -723,6 +723,11 @@ impl Checker {
                     message: "tuple is not callable".to_string(),
                 })
             }
+            TypeKind::Array(_) => {
+                return Err(TypeError {
+                    message: "array is not callable".to_string(),
+                })
+            }
             TypeKind::Constructor(Constructor {
                 name,
                 types: type_args,

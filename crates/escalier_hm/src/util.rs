@@ -73,6 +73,7 @@ impl Checker {
             TypeKind::Union(Union { types }) => self.occurs_in(v, &types),
             TypeKind::Intersection(Intersection { types }) => self.occurs_in(v, &types),
             TypeKind::Tuple(Tuple { types }) => self.occurs_in(v, &types),
+            TypeKind::Array(Array { t }) => self.occurs_in_type(v, t),
             TypeKind::Constructor(Constructor { types, .. }) => self.occurs_in(v, &types),
             TypeKind::KeyOf(KeyOf { t }) => self.occurs_in_type(v, t),
             TypeKind::IndexedAccess(IndexedAccess { obj, index }) => {

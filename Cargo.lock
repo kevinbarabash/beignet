@@ -396,6 +396,7 @@ dependencies = [
  "escalier_ast",
  "escalier_hm",
  "escalier_parser",
+ "generational-arena",
  "insta",
  "itertools 0.10.5",
  "pretty_assertions",

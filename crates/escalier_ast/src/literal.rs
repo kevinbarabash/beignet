@@ -1,5 +1,4 @@
 use std::fmt;
-use swc_atoms::JsWord;
 use swc_common;
 use swc_ecma_ast::*;
 
