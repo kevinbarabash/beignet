@@ -572,7 +572,7 @@ fn function_with_optional_param_and_rest_param() -> Result<(), TypeError> {
     checker.infer_program(&mut program, &mut ctx)?;
     let result = codegen_d_ts(&program, &ctx, &checker)?;
 
-    insta::assert_snapshot!(result, @"export declare const foo: (x?: number, ...y: readonly number[]) => number | undefined;
+    insta::assert_snapshot!(result, @"export declare const foo: (x?: number, ...y: Array<number>) => number;
 ");
 
     Ok(())
