@@ -105,20 +105,18 @@ fn tagged_template_literals() {
     "###);
 }
 
-// TODO: fix parsing of pattern matching, including `if` guards
 #[test]
-#[ignore]
 fn pattern_matching() {
     let src = r#"
     let result = match (count + 1) {
-        0 -> "none",
-        1 -> "one",
-        2 -> "a couple",
-        n if (n < 5) -> {
+        0 => "none",
+        1 => "one",
+        2 => "a couple",
+        n if (n < 5) => {
             console.log(`n = ${n}`)
             "a few"
         },
-        _ -> {
+        _ => {
             console.log("fallthrough")
             "many"
         }
@@ -148,16 +146,14 @@ fn pattern_matching() {
     "###);
 }
 
-// TODO: fix parsing of pattern matching, including `if` guards
 #[test]
-#[ignore]
 fn pattern_matching_with_disjoint_union() {
     let src = r#"
     type Event = {type: "mousedown", x: number, y: number} | {type: "keydown", key: string}
     declare let event: Event
     let result = match (event) {
-        {type: "mousedown", x, y} -> `mousedown: (${x}, ${y})`,
-        {type: "keydown", key} if (key != "Escape") -> key
+        {type: "mousedown", x, y} => `mousedown: (${x}, ${y})`,
+        {type: "keydown", key} if (key != "Escape") => key
     }
     "#;
     let (js, _) = compile(src);
@@ -178,16 +174,14 @@ fn pattern_matching_with_disjoint_union() {
     "###);
 }
 
-// TODO: finish porting codgen_d_ts()
 #[test]
 // TODO: Have a better error message when there's multiple catch-alls
 #[should_panic = "Catchall must appear last in match"]
-#[ignore]
 fn pattern_matching_multiple_catchall_panics() {
     let src = r#"
     let result = match (value) {
-        n -> "foo",
-        _ -> "bar"
+        n => "foo",
+        _ => "bar"
     }
     "#;
 

@@ -86,8 +86,17 @@ impl<'a> Parser<'a> {
                 self.next(); // consumes '{'
                 let mut props: Vec<ObjectProp> = vec![];
 
-                while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
-                    match self.next().unwrap_or(EOF.clone()).kind {
+                while self
+                    .peek_with_mode(IdentMode::PropName)
+                    .unwrap_or(&EOF)
+                    .kind
+                    != TokenKind::RightBrace
+                {
+                    match self
+                        .next_with_mode(IdentMode::PropName)
+                        .unwrap_or(EOF.clone())
+                        .kind
+                    {
                         TokenKind::Identifier(name) => {
                             let optional =
                                 if self.peek().unwrap_or(&EOF).kind == TokenKind::Question {
@@ -251,10 +260,11 @@ impl<'a> Parser<'a> {
                                 }
                             }
                         }
-                        _ => {
+                        token => {
+                            eprintln!("token: {:?}", token);
                             return Err(ParseError {
                                 message: "expected identifier or indexer".to_string(),
-                            })
+                            });
                         }
                     }
 
@@ -739,6 +749,9 @@ mod tests {
         insta::assert_debug_snapshot!(parse("{a: number, b?: string, c: boolean}"));
         insta::assert_debug_snapshot!(parse("{a: {b: {c: boolean}}}"));
         insta::assert_debug_snapshot!(parse("{\n  a: number,\n  b?: string,\n  c: boolean,\n}"));
+        insta::assert_debug_snapshot!(parse(
+            r#"{type: "mousedown", x: number, y: number} | {type: "keydown", key: string}"#
+        ))
     }
 
     #[test]

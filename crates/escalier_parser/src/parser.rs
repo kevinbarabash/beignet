@@ -20,11 +20,18 @@ impl<'a> Iterator for Parser<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         let result = match &self.peeked {
             Some(token) => Some(token.to_owned()),
-            None => self.take(),
+            None => self.take(IdentMode::Default),
         };
         self.peeked = None;
         result
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IdentMode {
+    Decl,
+    PropName,
+    Default,
 }
 
 impl<'a> Parser<'a> {
@@ -44,7 +51,7 @@ impl<'a> Parser<'a> {
 
     pub fn peek(&mut self) -> Option<&Token> {
         if self.peeked.is_none() {
-            self.peeked = self.take();
+            self.peeked = self.take(IdentMode::Default);
         }
         match &self.peeked {
             Some(value) => Some(value),
@@ -52,7 +59,26 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn take(&mut self) -> Option<Token> {
+    pub fn peek_with_mode(&mut self, mode: IdentMode) -> Option<&Token> {
+        if self.peeked.is_none() {
+            self.peeked = self.take(mode);
+        }
+        match &self.peeked {
+            Some(value) => Some(value),
+            _ => None,
+        }
+    }
+
+    pub fn next_with_mode(&mut self, mode: IdentMode) -> Option<Token> {
+        let result = match &self.peeked {
+            Some(token) => Some(token.to_owned()),
+            None => self.take(mode),
+        };
+        self.peeked = None;
+        result
+    }
+
+    fn take(&mut self, mode: IdentMode) -> Option<Token> {
         if !self.scanner.is_done() {
             let mut character = match self.scanner.peek(0) {
                 Some(c) => c,
@@ -73,7 +99,7 @@ impl<'a> Parser<'a> {
             let kind = match character {
                 'a'..='z' | 'A'..='Z' | '_' => {
                     // avoids an extra scanner.pop() call after the match
-                    return Some(self.lex_ident_or_keyword());
+                    return Some(self.lex_ident_or_keyword(mode));
                 }
                 '0'..='9' => {
                     // avoids an extra scanner.pop() call after the match
@@ -237,7 +263,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn lex_ident_or_keyword(&mut self) -> Token {
+    pub fn lex_ident_or_keyword(&mut self, mode: IdentMode) -> Token {
         let start = self.scanner.cursor();
         let mut ident = String::new();
         while !self.scanner.is_done() {
@@ -252,6 +278,24 @@ impl<'a> Parser<'a> {
                 }
             }
         }
+
+        if mode == IdentMode::PropName {
+            let kind = match ident.as_ref() {
+                // 'fn' is special because it's used to introduce a callable
+                // signature.
+                "fn" => TokenKind::Fn,
+                _ => TokenKind::Identifier(ident),
+            };
+
+            return Token {
+                kind,
+                span: Span {
+                    start,
+                    end: self.scanner.cursor(),
+                },
+            };
+        }
+
         let kind = match ident.as_ref() {
             "fn" => TokenKind::Fn,
             "get" => TokenKind::Get,

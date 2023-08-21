@@ -964,7 +964,19 @@ fn build_arm(
         values::BlockOrExpr::Block(body) => {
             build_body_block_stmt(body, &BlockFinalizer::Assign(ret_id.to_owned()), ctx)
         }
-        values::BlockOrExpr::Expr(_) => todo!(),
+        values::BlockOrExpr::Expr(expr) => {
+            let mut stmts = vec![];
+            let expr = build_expr(expr, &mut stmts, ctx);
+            stmts.push(build_finalizer(
+                &expr,
+                &BlockFinalizer::Assign(ret_id.to_owned()),
+            ));
+
+            BlockStmt {
+                span: DUMMY_SP,
+                stmts,
+            }
+        }
     };
 
     // If pattern has assignables, assign them
@@ -1235,36 +1247,69 @@ fn prop_name_from_prop_name(prop_name: &values::PropName, ctx: &mut Context) -> 
     }
 }
 
-fn build_cond_for_pat(_pat: &values::Pattern, _id: &Ident) -> Option<Expr> {
+fn build_cond_for_pat(pat: &values::Pattern, id: &Ident) -> Option<Expr> {
     // TODO: implmenent `is_refutable`
-    // if values::is_refutable(pat) {
-    //     // Right now the only refutable pattern we support is LitPat.
-    //     // In the future there will be other refutable patterns such as
-    //     // array length, typeof, and instanceof checks.
+    if is_refutable(pat) {
+        // Right now the only refutable pattern we support is LitPat.
+        // In the future there will be other refutable patterns such as
+        // array length, typeof, and instanceof checks.
 
-    //     let mut conds: Vec<Condition> = vec![];
+        let mut conds: Vec<Condition> = vec![];
 
-    //     get_conds_for_pat(pat, &mut conds, &mut vec![]);
+        get_conds_for_pat(pat, &mut conds, &mut vec![]);
 
-    //     let mut iter = conds.iter();
+        let mut iter = conds.iter();
 
-    //     let first = match iter.next() {
-    //         Some(cond) => cond_to_expr(cond, id),
-    //         None => return None,
-    //     };
+        let first = match iter.next() {
+            Some(cond) => cond_to_expr(cond, id),
+            None => return None,
+        };
 
-    //     Some(iter.fold(first, |prev, next| {
-    //         Expr::Bin(BinExpr {
-    //             span: DUMMY_SP,
-    //             op: BinaryOp::LogicalOr,
-    //             left: Box::from(prev),
-    //             right: Box::from(cond_to_expr(next, id)),
-    //         })
-    //     }))
-    // } else {
-    //     None
-    // }
-    None
+        Some(iter.fold(first, |prev, next| {
+            Expr::Bin(BinExpr {
+                span: DUMMY_SP,
+                op: BinaryOp::LogicalOr,
+                left: Box::from(prev),
+                right: Box::from(cond_to_expr(next, id)),
+            })
+        }))
+    } else {
+        None
+    }
+}
+
+fn is_refutable(pat: &values::Pattern) -> bool {
+    match &pat.kind {
+        // irrefutable
+        values::PatternKind::Ident(_) => false,
+        values::PatternKind::Rest(_) => false,
+        values::PatternKind::Wildcard => false,
+
+        // refutable
+        values::PatternKind::Lit(_) => true,
+        values::PatternKind::Is(_) => true,
+
+        // refutable if at least one sub-pattern is refutable
+        values::PatternKind::Object(values::ObjectPat { props, .. }) => {
+            props.iter().any(|prop| match prop {
+                values::ObjectPatProp::KeyValue(values::KeyValuePatProp { value, .. }) => {
+                    is_refutable(value)
+                }
+                values::ObjectPatProp::Shorthand(_) => false, // corresponds to {x} or {x = 5}
+                values::ObjectPatProp::Rest(values::RestPat { arg, .. }) => is_refutable(arg),
+            })
+        }
+        values::PatternKind::Tuple(values::TuplePat { elems, .. }) => {
+            elems.iter().any(|elem| {
+                match elem {
+                    Some(elem) => is_refutable(&elem.pattern),
+                    // FixMe: this should probably be true since it's equivalent
+                    // to having an element with the value `undefined`
+                    None => false,
+                }
+            })
+        }
+    }
 }
 
 fn build_template_literal(
