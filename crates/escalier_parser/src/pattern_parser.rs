@@ -1,7 +1,7 @@
 use escalier_ast::*;
 
 use crate::parse_error::ParseError;
-use crate::parser::Parser;
+use crate::parser::{IdentMode, Parser};
 use crate::token::*;
 
 impl<'a> Parser<'a> {
@@ -118,8 +118,13 @@ impl<'a> Parser<'a> {
             TokenKind::LeftBrace => {
                 let mut props: Vec<ObjectPatProp> = vec![];
 
-                while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
-                    let first = self.peek().unwrap_or(&EOF);
+                while self
+                    .peek_with_mode(IdentMode::PropName)
+                    .unwrap_or(&EOF)
+                    .kind
+                    != TokenKind::RightBrace
+                {
+                    let first = self.peek_with_mode(IdentMode::PropName).unwrap_or(&EOF);
                     let first_span = first.span;
                     match &self.next().unwrap_or(EOF.clone()).kind {
                         TokenKind::Identifier(name) => {

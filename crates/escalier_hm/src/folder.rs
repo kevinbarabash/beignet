@@ -72,6 +72,15 @@ pub fn walk_index<F: Folder>(folder: &mut F, index: &Index) -> Index {
 
             TypeKind::Tuple(Tuple { types: new_types })
         }
+        TypeKind::Array(Array { t }) => {
+            let new_t = folder.fold_index(t);
+
+            if new_t == *t {
+                return *index;
+            }
+
+            TypeKind::Array(Array { t: new_t })
+        }
         TypeKind::Keyword(_) => return *index,
         TypeKind::Primitive(_) => return *index,
         TypeKind::Literal(_) => return *index,

@@ -91,11 +91,11 @@ impl Checker {
                         match prop_or_spread {
                             PropOrSpread::Spread(_) => todo!(),
                             PropOrSpread::Prop(prop) => match prop {
-                                expr::Prop::Shorthand(ident) => {
+                                expr::Prop::Shorthand(Ident {name, span: _}) => {
                                     prop_types.push(types::TObjElem::Prop(types::TProp {
-                                        name: TPropKey::StringKey(ident.to_owned()),
+                                        name: TPropKey::StringKey(name.to_owned()),
                                         modifier: None,
-                                        t: checker.get_type(ident, ctx)?,
+                                        t: checker.get_type(name, ctx)?,
                                         mutable: false,
                                         optional: false,
                                     }));

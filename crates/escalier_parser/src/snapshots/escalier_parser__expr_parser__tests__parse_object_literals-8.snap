@@ -8,12 +8,18 @@ Expr {
             properties: [
                 Prop(
                     Shorthand(
-                        "a",
+                        Ident {
+                            name: "a",
+                            span: 2..3,
+                        },
                     ),
                 ),
                 Prop(
                     Shorthand(
-                        "b",
+                        Ident {
+                            name: "b",
+                            span: 5..6,
+                        },
                     ),
                 ),
             ],

@@ -1,4 +1,6 @@
 use std::fmt;
+use swc_common;
+use swc_ecma_ast::*;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Literal {
@@ -30,5 +32,33 @@ impl fmt::Display for Literal {
             Literal::Null => write!(f, "null"),
             Literal::Undefined => write!(f, "undefined"),
         }
+    }
+}
+
+impl From<&Literal> for swc_ecma_ast::Expr {
+    fn from(literal: &Literal) -> Self {
+        // TODO: use the span from the literal
+        let span = swc_common::DUMMY_SP;
+
+        let lit = match literal {
+            Literal::Number(value) => Lit::Num(Number {
+                span,
+                value: value.parse().unwrap(),
+                raw: None,
+            }),
+            Literal::String(value) => Lit::Str(Str {
+                span,
+                value: swc_atoms::JsWord::from(value.as_str()),
+                raw: None,
+            }),
+            Literal::Boolean(value) => Lit::Bool(Bool {
+                span,
+                value: *value,
+            }),
+            Literal::Null => todo!(),
+            Literal::Undefined => todo!(),
+        };
+
+        Expr::Lit(lit)
     }
 }

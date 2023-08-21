@@ -1,0 +1,102 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(r#\"{type: \"mousedown\", x: number, y: number} | {type: \"keydown\", key: string}\"#)"
+---
+TypeAnn {
+    kind: Union(
+        [
+            TypeAnn {
+                kind: Object(
+                    [
+                        Prop(
+                            Prop {
+                                span: 0..0,
+                                name: "type",
+                                modifier: None,
+                                optional: false,
+                                mutable: false,
+                                type_ann: TypeAnn {
+                                    kind: StrLit(
+                                        "mousedown",
+                                    ),
+                                    span: 7..18,
+                                    inferred_type: None,
+                                },
+                            },
+                        ),
+                        Prop(
+                            Prop {
+                                span: 0..0,
+                                name: "x",
+                                modifier: None,
+                                optional: false,
+                                mutable: false,
+                                type_ann: TypeAnn {
+                                    kind: Number,
+                                    span: 23..29,
+                                    inferred_type: None,
+                                },
+                            },
+                        ),
+                        Prop(
+                            Prop {
+                                span: 0..0,
+                                name: "y",
+                                modifier: None,
+                                optional: false,
+                                mutable: false,
+                                type_ann: TypeAnn {
+                                    kind: Number,
+                                    span: 34..40,
+                                    inferred_type: None,
+                                },
+                            },
+                        ),
+                    ],
+                ),
+                span: 0..41,
+                inferred_type: None,
+            },
+            TypeAnn {
+                kind: Object(
+                    [
+                        Prop(
+                            Prop {
+                                span: 0..0,
+                                name: "type",
+                                modifier: None,
+                                optional: false,
+                                mutable: false,
+                                type_ann: TypeAnn {
+                                    kind: StrLit(
+                                        "keydown",
+                                    ),
+                                    span: 51..60,
+                                    inferred_type: None,
+                                },
+                            },
+                        ),
+                        Prop(
+                            Prop {
+                                span: 0..0,
+                                name: "key",
+                                modifier: None,
+                                optional: false,
+                                mutable: false,
+                                type_ann: TypeAnn {
+                                    kind: String,
+                                    span: 67..73,
+                                    inferred_type: None,
+                                },
+                            },
+                        ),
+                    ],
+                ),
+                span: 43..74,
+                inferred_type: None,
+            },
+        ],
+    ),
+    span: 0..74,
+    inferred_type: None,
+}

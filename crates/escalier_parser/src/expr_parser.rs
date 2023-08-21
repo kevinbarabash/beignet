@@ -209,7 +209,8 @@ impl<'a> Parser<'a> {
 
                 let properties = self.parse_many(
                     |p| {
-                        let next = p.next().unwrap_or(EOF.clone());
+                        // TODO: we need `parse_many` to use the same `mode`
+                        let next = p.next_with_mode(IdentMode::PropName).unwrap_or(EOF.clone());
 
                         match &next.kind {
                             TokenKind::DotDotDot => {
@@ -220,7 +221,10 @@ impl<'a> Parser<'a> {
                                 if p.peek().unwrap_or(&EOF).kind == TokenKind::Comma
                                     || p.peek().unwrap_or(&EOF).kind == TokenKind::RightBrace =>
                             {
-                                Ok(PropOrSpread::Prop(expr::Prop::Shorthand(id.to_owned())))
+                                Ok(PropOrSpread::Prop(expr::Prop::Shorthand(Ident {
+                                    span: next.span,
+                                    name: id.to_owned(),
+                                })))
                             }
                             _ => {
                                 let key = match &next.kind {
@@ -283,9 +287,17 @@ impl<'a> Parser<'a> {
                 let arms = self.parse_many(
                     |p| {
                         let pattern = p.parse_pattern()?;
+
+                        let guard = if let TokenKind::If = p.peek().unwrap_or(&EOF).kind {
+                            p.next(); // consumes 'if'
+                            Some(Box::new(p.parse_expr()?))
+                        } else {
+                            None
+                        };
+
                         assert_eq!(p.next().unwrap_or(EOF.clone()).kind, TokenKind::DoubleArrow);
 
-                        let (body, end) = match p.peek().unwrap_or(&EOF).kind {
+                        let (body, end_span) = match p.peek().unwrap_or(&EOF).kind {
                             TokenKind::LeftBrace => {
                                 let block = p.parse_block()?;
                                 let span = block.span;
@@ -299,9 +311,9 @@ impl<'a> Parser<'a> {
                         };
 
                         Ok(MatchArm {
-                            span: merge_spans(&pattern.span, &end),
+                            span: merge_spans(&pattern.span, &end_span),
                             pattern,
-                            guard: None,
+                            guard,
                             body,
                         })
                     },

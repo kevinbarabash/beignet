@@ -268,7 +268,10 @@ mod tests {
             } else {
                 never 
             }"#
-        ))
+        ));
+        insta::assert_debug_snapshot!(parse(
+            r#"type Event = {type: "mousedown", x: number, y: number} | {type: "keydown", key: string}"#
+        ));
     }
 
     #[test]

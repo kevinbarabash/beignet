@@ -318,6 +318,11 @@ pub struct Tuple {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Array {
+    pub t: Index,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct KeyOf {
     pub t: Index,
 }
@@ -369,6 +374,7 @@ pub enum TypeKind {
     Constructor(Constructor), // TODO: rename to TypeRef
     Union(Union),
     Intersection(Intersection),
+    Array(Array),
     Tuple(Tuple),
     Keyword(Keyword),
     Primitive(Primitive),
@@ -426,6 +432,7 @@ impl Checker {
             TypeKind::Tuple(Tuple { types }) => {
                 format!("[{}]", self.print_types(types).join(", "))
             }
+            TypeKind::Array(Array { t }) => format!("{}[]", self.print_type(t)),
             TypeKind::Constructor(Constructor { name, types }) => {
                 if types.is_empty() {
                     name.to_string()

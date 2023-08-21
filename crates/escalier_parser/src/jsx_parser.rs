@@ -9,7 +9,7 @@ impl<'a> Parser<'a> {
         let start = self.scanner.cursor();
 
         assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::LessThan);
-        let name_token = self.lex_ident_or_keyword();
+        let name_token = self.lex_ident_or_keyword(IdentMode::Default);
         let name = match name_token.kind {
             TokenKind::Identifier(name) => JSXElementName::Ident(Ident {
                 name,
@@ -59,7 +59,7 @@ impl<'a> Parser<'a> {
 
             assert_eq!(self.scanner.pop(), Some('<'));
             assert_eq!(self.scanner.pop(), Some('/'));
-            let end_name = self.lex_ident_or_keyword();
+            let end_name = self.lex_ident_or_keyword(IdentMode::Default);
             assert_eq!(self.scanner.pop(), Some('>'));
 
             let end = self.scanner.cursor();
@@ -114,7 +114,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_jsx_attribute(&mut self) -> Result<JSXAttr, ParseError> {
-        let name = self.lex_ident_or_keyword();
+        let name = self.lex_ident_or_keyword(IdentMode::Default);
 
         let name = match name.kind {
             TokenKind::Identifier(name) => name,

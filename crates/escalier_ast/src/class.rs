@@ -73,6 +73,7 @@ pub struct Field {
     pub is_public: bool,
     pub type_ann: Option<TypeAnn>,
     pub init: Option<Box<Expr>>,
+    // TODO: add `is_static` and `is_optional` fields
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

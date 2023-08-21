@@ -33,6 +33,9 @@ pub fn walk_index<V: Visitor>(visitor: &mut V, index: &Index) {
         TypeKind::Tuple(Tuple { types }) => {
             walk_indexes(visitor, types);
         }
+        TypeKind::Array(Array { t }) => {
+            visitor.visit_index(t);
+        }
         TypeKind::Keyword(_) => (),
         TypeKind::Primitive(_) => (),
         TypeKind::Literal(_) => (),
