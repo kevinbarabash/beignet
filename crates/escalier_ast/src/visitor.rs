@@ -2,7 +2,7 @@ use crate::block::Block;
 use crate::class::*;
 use crate::expr::*;
 use crate::pattern::*;
-use crate::stmt::Stmt;
+use crate::stmt::*;
 use crate::type_ann::TypeAnn;
 
 pub trait Visitor: Sized {
@@ -263,14 +263,14 @@ pub fn walk_pattern<V: Visitor>(visitor: &mut V, pattern: &Pattern) {
 
 pub fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &Stmt) {
     match &stmt.kind {
-        crate::StmtKind::Expr { expr } => visitor.visit_expr(expr),
-        crate::StmtKind::Let {
+        StmtKind::Expr(ExprStmt { expr }) => visitor.visit_expr(expr),
+        StmtKind::VarDecl(crate::VarDecl {
             is_declare: _,
             is_var: _,
             pattern,
             expr,
             type_ann,
-        } => {
+        }) => {
             visitor.visit_pattern(pattern);
             if let Some(expr) = expr {
                 visitor.visit_expr(expr);
@@ -279,16 +279,16 @@ pub fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &Stmt) {
                 visitor.visit_type_ann(type_ann);
             }
         }
-        crate::StmtKind::Return { arg } => {
+        StmtKind::Return(ReturnStmt { arg }) => {
             if let Some(arg) = arg {
                 visitor.visit_expr(arg);
             }
         }
-        crate::StmtKind::TypeDecl {
+        StmtKind::TypeDecl(TypeDecl {
             name: _,
             type_ann,
             type_params,
-        } => {
+        }) => {
             if let Some(type_params) = type_params {
                 for type_param in type_params {
                     if let Some(bound) = &type_param.bound {

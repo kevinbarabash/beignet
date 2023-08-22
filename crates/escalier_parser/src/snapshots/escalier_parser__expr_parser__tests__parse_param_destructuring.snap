@@ -50,39 +50,41 @@ Expr {
                     span: 11..28,
                     stmts: [
                         Stmt {
-                            kind: Return {
-                                arg: Some(
-                                    Expr {
-                                        kind: Binary(
-                                            Binary {
-                                                left: Expr {
-                                                    kind: Ident(
-                                                        Ident {
-                                                            name: "x",
-                                                            span: 21..22,
-                                                        },
-                                                    ),
-                                                    span: 21..22,
-                                                    inferred_type: None,
+                            kind: Return(
+                                ReturnStmt {
+                                    arg: Some(
+                                        Expr {
+                                            kind: Binary(
+                                                Binary {
+                                                    left: Expr {
+                                                        kind: Ident(
+                                                            Ident {
+                                                                name: "x",
+                                                                span: 21..22,
+                                                            },
+                                                        ),
+                                                        span: 21..22,
+                                                        inferred_type: None,
+                                                    },
+                                                    op: Plus,
+                                                    right: Expr {
+                                                        kind: Ident(
+                                                            Ident {
+                                                                name: "y",
+                                                                span: 25..26,
+                                                            },
+                                                        ),
+                                                        span: 25..26,
+                                                        inferred_type: None,
+                                                    },
                                                 },
-                                                op: Plus,
-                                                right: Expr {
-                                                    kind: Ident(
-                                                        Ident {
-                                                            name: "y",
-                                                            span: 25..26,
-                                                        },
-                                                    ),
-                                                    span: 25..26,
-                                                    inferred_type: None,
-                                                },
-                                            },
-                                        ),
-                                        span: 21..26,
-                                        inferred_type: None,
-                                    },
-                                ),
-                            },
+                                            ),
+                                            span: 21..26,
+                                            inferred_type: None,
+                                        },
+                                    ),
+                                },
+                            ),
                             span: 21..26,
                             inferred_type: None,
                         },

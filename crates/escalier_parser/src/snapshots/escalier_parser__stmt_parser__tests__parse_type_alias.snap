@@ -4,18 +4,20 @@ expression: "parse(r#\"type Foo = Bar\"#)"
 ---
 [
     Stmt {
-        kind: TypeDecl {
-            name: "Foo",
-            type_ann: TypeAnn {
-                kind: TypeRef(
-                    "Bar",
-                    None,
-                ),
-                span: 11..14,
-                inferred_type: None,
+        kind: TypeDecl(
+            TypeDecl {
+                name: "Foo",
+                type_ann: TypeAnn {
+                    kind: TypeRef(
+                        "Bar",
+                        None,
+                    ),
+                    span: 11..14,
+                    inferred_type: None,
+                },
+                type_params: None,
             },
-            type_params: None,
-        },
+        ),
         span: 0..14,
         inferred_type: None,
     },

@@ -284,6 +284,9 @@ impl<'a> Parser<'a> {
                 // 'fn' is special because it's used to introduce a callable
                 // signature.
                 "fn" => TokenKind::Fn,
+                // 'mut' is special because it can be used to modify bindings
+                // introduced by patterns
+                "mut" => TokenKind::Mut,
                 _ => TokenKind::Identifier(ident),
             };
 

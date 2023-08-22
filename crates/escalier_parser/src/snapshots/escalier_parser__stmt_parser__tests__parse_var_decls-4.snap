@@ -4,89 +4,91 @@ expression: "parse(r#\"declare let scale: fn (mut p: Point, scale: number) -> vo
 ---
 [
     Stmt {
-        kind: Let {
-            is_declare: true,
-            is_var: false,
-            pattern: Pattern {
-                kind: Ident(
-                    BindingIdent {
-                        name: "scale",
-                        span: 12..17,
-                        mutable: false,
-                    },
-                ),
-                span: 12..17,
-                inferred_type: None,
-            },
-            expr: None,
-            type_ann: Some(
-                TypeAnn {
-                    kind: Function(
-                        FunctionType {
-                            type_params: None,
-                            params: [
-                                FuncParam {
-                                    pattern: Pattern {
-                                        kind: Ident(
-                                            BindingIdent {
-                                                name: "p",
-                                                span: 23..26,
-                                                mutable: true,
-                                            },
-                                        ),
-                                        span: 23..26,
-                                        inferred_type: None,
-                                    },
-                                    type_ann: Some(
-                                        TypeAnn {
-                                            kind: TypeRef(
-                                                "Point",
-                                                None,
-                                            ),
-                                            span: 30..35,
-                                            inferred_type: None,
-                                        },
-                                    ),
-                                    optional: false,
-                                },
-                                FuncParam {
-                                    pattern: Pattern {
-                                        kind: Ident(
-                                            BindingIdent {
-                                                name: "scale",
-                                                span: 37..42,
-                                                mutable: false,
-                                            },
-                                        ),
-                                        span: 37..42,
-                                        inferred_type: None,
-                                    },
-                                    type_ann: Some(
-                                        TypeAnn {
-                                            kind: Number,
-                                            span: 44..50,
-                                            inferred_type: None,
-                                        },
-                                    ),
-                                    optional: false,
-                                },
-                            ],
-                            ret: TypeAnn {
-                                kind: TypeRef(
-                                    "void",
-                                    None,
-                                ),
-                                span: 55..59,
-                                inferred_type: None,
-                            },
-                            throws: None,
+        kind: VarDecl(
+            VarDecl {
+                is_declare: true,
+                is_var: false,
+                pattern: Pattern {
+                    kind: Ident(
+                        BindingIdent {
+                            name: "scale",
+                            span: 12..17,
+                            mutable: false,
                         },
                     ),
-                    span: 19..21,
+                    span: 12..17,
                     inferred_type: None,
                 },
-            ),
-        },
+                expr: None,
+                type_ann: Some(
+                    TypeAnn {
+                        kind: Function(
+                            FunctionType {
+                                type_params: None,
+                                params: [
+                                    FuncParam {
+                                        pattern: Pattern {
+                                            kind: Ident(
+                                                BindingIdent {
+                                                    name: "p",
+                                                    span: 23..26,
+                                                    mutable: true,
+                                                },
+                                            ),
+                                            span: 23..26,
+                                            inferred_type: None,
+                                        },
+                                        type_ann: Some(
+                                            TypeAnn {
+                                                kind: TypeRef(
+                                                    "Point",
+                                                    None,
+                                                ),
+                                                span: 30..35,
+                                                inferred_type: None,
+                                            },
+                                        ),
+                                        optional: false,
+                                    },
+                                    FuncParam {
+                                        pattern: Pattern {
+                                            kind: Ident(
+                                                BindingIdent {
+                                                    name: "scale",
+                                                    span: 37..42,
+                                                    mutable: false,
+                                                },
+                                            ),
+                                            span: 37..42,
+                                            inferred_type: None,
+                                        },
+                                        type_ann: Some(
+                                            TypeAnn {
+                                                kind: Number,
+                                                span: 44..50,
+                                                inferred_type: None,
+                                            },
+                                        ),
+                                        optional: false,
+                                    },
+                                ],
+                                ret: TypeAnn {
+                                    kind: TypeRef(
+                                        "void",
+                                        None,
+                                    ),
+                                    span: 55..59,
+                                    inferred_type: None,
+                                },
+                                throws: None,
+                            },
+                        ),
+                        span: 19..21,
+                        inferred_type: None,
+                    },
+                ),
+            },
+        ),
         span: 0..21,
         inferred_type: None,
     },

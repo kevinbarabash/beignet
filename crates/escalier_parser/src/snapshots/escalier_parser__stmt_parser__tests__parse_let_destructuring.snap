@@ -4,56 +4,58 @@ expression: "parse(\"let {x, y} = point\")"
 ---
 [
     Stmt {
-        kind: Let {
-            is_declare: false,
-            is_var: false,
-            pattern: Pattern {
-                kind: Object(
-                    ObjectPat {
-                        props: [
-                            Shorthand(
-                                ShorthandPatProp {
-                                    span: 5..6,
-                                    ident: BindingIdent {
-                                        name: "x",
+        kind: VarDecl(
+            VarDecl {
+                is_declare: false,
+                is_var: false,
+                pattern: Pattern {
+                    kind: Object(
+                        ObjectPat {
+                            props: [
+                                Shorthand(
+                                    ShorthandPatProp {
                                         span: 5..6,
-                                        mutable: false,
+                                        ident: BindingIdent {
+                                            name: "x",
+                                            span: 5..6,
+                                            mutable: false,
+                                        },
+                                        init: None,
                                     },
-                                    init: None,
-                                },
-                            ),
-                            Shorthand(
-                                ShorthandPatProp {
-                                    span: 8..9,
-                                    ident: BindingIdent {
-                                        name: "y",
+                                ),
+                                Shorthand(
+                                    ShorthandPatProp {
                                         span: 8..9,
-                                        mutable: false,
+                                        ident: BindingIdent {
+                                            name: "y",
+                                            span: 8..9,
+                                            mutable: false,
+                                        },
+                                        init: None,
                                     },
-                                    init: None,
-                                },
-                            ),
-                        ],
-                        optional: false,
-                    },
-                ),
-                span: 3..10,
-                inferred_type: None,
-            },
-            expr: Some(
-                Expr {
-                    kind: Ident(
-                        Ident {
-                            name: "point",
-                            span: 13..18,
+                                ),
+                            ],
+                            optional: false,
                         },
                     ),
-                    span: 13..18,
+                    span: 3..10,
                     inferred_type: None,
                 },
-            ),
-            type_ann: None,
-        },
+                expr: Some(
+                    Expr {
+                        kind: Ident(
+                            Ident {
+                                name: "point",
+                                span: 13..18,
+                            },
+                        ),
+                        span: 13..18,
+                        inferred_type: None,
+                    },
+                ),
+                type_ann: None,
+            },
+        ),
         span: 0..18,
         inferred_type: None,
     },

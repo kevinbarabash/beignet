@@ -92,33 +92,35 @@ Expr {
                             span: 90..138,
                             stmts: [
                                 Stmt {
-                                    kind: Expr {
-                                        expr: Expr {
-                                            kind: Member(
-                                                Member {
-                                                    object: Expr {
-                                                        kind: Ident(
+                                    kind: Expr(
+                                        ExprStmt {
+                                            expr: Expr {
+                                                kind: Member(
+                                                    Member {
+                                                        object: Expr {
+                                                            kind: Ident(
+                                                                Ident {
+                                                                    name: "obj",
+                                                                    span: 113..116,
+                                                                },
+                                                            ),
+                                                            span: 113..116,
+                                                            inferred_type: None,
+                                                        },
+                                                        property: Ident(
                                                             Ident {
-                                                                name: "obj",
-                                                                span: 113..116,
+                                                                name: "bar",
+                                                                span: 117..120,
                                                             },
                                                         ),
-                                                        span: 113..116,
-                                                        inferred_type: None,
+                                                        opt_chain: false,
                                                     },
-                                                    property: Ident(
-                                                        Ident {
-                                                            name: "bar",
-                                                            span: 117..120,
-                                                        },
-                                                    ),
-                                                    opt_chain: false,
-                                                },
-                                            ),
-                                            span: 113..120,
-                                            inferred_type: None,
+                                                ),
+                                                span: 113..120,
+                                                inferred_type: None,
+                                            },
                                         },
-                                    },
+                                    ),
                                     span: 113..120,
                                     inferred_type: None,
                                 },

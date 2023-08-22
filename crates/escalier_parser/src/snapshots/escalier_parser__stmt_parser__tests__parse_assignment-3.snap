@@ -4,60 +4,62 @@ expression: "parse(r#\"p[\"y\"] = 10\"#)"
 ---
 [
     Stmt {
-        kind: Expr {
-            expr: Expr {
-                kind: Assign(
-                    Assign {
-                        left: Expr {
-                            kind: Member(
-                                Member {
-                                    object: Expr {
-                                        kind: Ident(
-                                            Ident {
-                                                name: "p",
-                                                span: 0..1,
+        kind: Expr(
+            ExprStmt {
+                expr: Expr {
+                    kind: Assign(
+                        Assign {
+                            left: Expr {
+                                kind: Member(
+                                    Member {
+                                        object: Expr {
+                                            kind: Ident(
+                                                Ident {
+                                                    name: "p",
+                                                    span: 0..1,
+                                                },
+                                            ),
+                                            span: 0..1,
+                                            inferred_type: None,
+                                        },
+                                        property: Computed(
+                                            ComputedPropName {
+                                                span: 0..5,
+                                                expr: Expr {
+                                                    kind: Str(
+                                                        Str {
+                                                            span: 2..5,
+                                                            value: "y",
+                                                        },
+                                                    ),
+                                                    span: 2..5,
+                                                    inferred_type: None,
+                                                },
                                             },
                                         ),
-                                        span: 0..1,
-                                        inferred_type: None,
+                                        opt_chain: false,
                                     },
-                                    property: Computed(
-                                        ComputedPropName {
-                                            span: 0..5,
-                                            expr: Expr {
-                                                kind: Str(
-                                                    Str {
-                                                        span: 2..5,
-                                                        value: "y",
-                                                    },
-                                                ),
-                                                span: 2..5,
-                                                inferred_type: None,
-                                            },
-                                        },
-                                    ),
-                                    opt_chain: false,
-                                },
-                            ),
-                            span: 0..5,
-                            inferred_type: None,
+                                ),
+                                span: 0..5,
+                                inferred_type: None,
+                            },
+                            op: Assign,
+                            right: Expr {
+                                kind: Num(
+                                    Num {
+                                        value: "10",
+                                    },
+                                ),
+                                span: 9..11,
+                                inferred_type: None,
+                            },
                         },
-                        op: Assign,
-                        right: Expr {
-                            kind: Num(
-                                Num {
-                                    value: "10",
-                                },
-                            ),
-                            span: 9..11,
-                            inferred_type: None,
-                        },
-                    },
-                ),
-                span: 0..11,
-                inferred_type: None,
+                    ),
+                    span: 0..11,
+                    inferred_type: None,
+                },
             },
-        },
+        ),
         span: 0..11,
         inferred_type: None,
     },

@@ -12,101 +12,107 @@ Expr {
                     span: 5..43,
                     stmts: [
                         Stmt {
-                            kind: Let {
-                                is_declare: false,
-                                is_var: false,
-                                pattern: Pattern {
-                                    kind: Ident(
-                                        BindingIdent {
-                                            name: "x",
-                                            span: 12..13,
-                                            mutable: false,
-                                        },
-                                    ),
-                                    span: 12..13,
-                                    inferred_type: None,
-                                },
-                                expr: Some(
-                                    Expr {
-                                        kind: Num(
-                                            Num {
-                                                value: "5",
+                            kind: VarDecl(
+                                VarDecl {
+                                    is_declare: false,
+                                    is_var: false,
+                                    pattern: Pattern {
+                                        kind: Ident(
+                                            BindingIdent {
+                                                name: "x",
+                                                span: 12..13,
+                                                mutable: false,
                                             },
                                         ),
-                                        span: 16..17,
+                                        span: 12..13,
                                         inferred_type: None,
                                     },
-                                ),
-                                type_ann: None,
-                            },
+                                    expr: Some(
+                                        Expr {
+                                            kind: Num(
+                                                Num {
+                                                    value: "5",
+                                                },
+                                            ),
+                                            span: 16..17,
+                                            inferred_type: None,
+                                        },
+                                    ),
+                                    type_ann: None,
+                                },
+                            ),
                             span: 8..17,
                             inferred_type: None,
                         },
                         Stmt {
-                            kind: Let {
-                                is_declare: false,
-                                is_var: false,
-                                pattern: Pattern {
-                                    kind: Ident(
-                                        BindingIdent {
-                                            name: "y",
-                                            span: 22..23,
-                                            mutable: false,
-                                        },
-                                    ),
-                                    span: 22..23,
-                                    inferred_type: None,
-                                },
-                                expr: Some(
-                                    Expr {
-                                        kind: Num(
-                                            Num {
-                                                value: "10",
+                            kind: VarDecl(
+                                VarDecl {
+                                    is_declare: false,
+                                    is_var: false,
+                                    pattern: Pattern {
+                                        kind: Ident(
+                                            BindingIdent {
+                                                name: "y",
+                                                span: 22..23,
+                                                mutable: false,
                                             },
                                         ),
-                                        span: 26..28,
+                                        span: 22..23,
                                         inferred_type: None,
                                     },
-                                ),
-                                type_ann: None,
-                            },
+                                    expr: Some(
+                                        Expr {
+                                            kind: Num(
+                                                Num {
+                                                    value: "10",
+                                                },
+                                            ),
+                                            span: 26..28,
+                                            inferred_type: None,
+                                        },
+                                    ),
+                                    type_ann: None,
+                                },
+                            ),
                             span: 18..28,
                             inferred_type: None,
                         },
                         Stmt {
-                            kind: Return {
-                                arg: Some(
-                                    Expr {
-                                        kind: Binary(
-                                            Binary {
-                                                left: Expr {
-                                                    kind: Ident(
-                                                        Ident {
-                                                            name: "x",
-                                                            span: 36..37,
-                                                        },
-                                                    ),
-                                                    span: 36..37,
-                                                    inferred_type: None,
+                            kind: Return(
+                                ReturnStmt {
+                                    arg: Some(
+                                        Expr {
+                                            kind: Binary(
+                                                Binary {
+                                                    left: Expr {
+                                                        kind: Ident(
+                                                            Ident {
+                                                                name: "x",
+                                                                span: 36..37,
+                                                            },
+                                                        ),
+                                                        span: 36..37,
+                                                        inferred_type: None,
+                                                    },
+                                                    op: Plus,
+                                                    right: Expr {
+                                                        kind: Ident(
+                                                            Ident {
+                                                                name: "y",
+                                                                span: 40..41,
+                                                            },
+                                                        ),
+                                                        span: 40..41,
+                                                        inferred_type: None,
+                                                    },
                                                 },
-                                                op: Plus,
-                                                right: Expr {
-                                                    kind: Ident(
-                                                        Ident {
-                                                            name: "y",
-                                                            span: 40..41,
-                                                        },
-                                                    ),
-                                                    span: 40..41,
-                                                    inferred_type: None,
-                                                },
-                                            },
-                                        ),
-                                        span: 36..41,
-                                        inferred_type: None,
-                                    },
-                                ),
-                            },
+                                            ),
+                                            span: 36..41,
+                                            inferred_type: None,
+                                        },
+                                    ),
+                                },
+                            ),
                             span: 36..41,
                             inferred_type: None,
                         },

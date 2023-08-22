@@ -4,66 +4,68 @@ expression: "parse(\"let [p1, p2] = line\")"
 ---
 [
     Stmt {
-        kind: Let {
-            is_declare: false,
-            is_var: false,
-            pattern: Pattern {
-                kind: Tuple(
-                    TuplePat {
-                        elems: [
-                            Some(
-                                TuplePatElem {
-                                    pattern: Pattern {
-                                        kind: Ident(
-                                            BindingIdent {
-                                                name: "p1",
-                                                span: 5..7,
-                                                mutable: false,
-                                            },
-                                        ),
-                                        span: 5..7,
-                                        inferred_type: None,
+        kind: VarDecl(
+            VarDecl {
+                is_declare: false,
+                is_var: false,
+                pattern: Pattern {
+                    kind: Tuple(
+                        TuplePat {
+                            elems: [
+                                Some(
+                                    TuplePatElem {
+                                        pattern: Pattern {
+                                            kind: Ident(
+                                                BindingIdent {
+                                                    name: "p1",
+                                                    span: 5..7,
+                                                    mutable: false,
+                                                },
+                                            ),
+                                            span: 5..7,
+                                            inferred_type: None,
+                                        },
+                                        init: None,
                                     },
-                                    init: None,
-                                },
-                            ),
-                            Some(
-                                TuplePatElem {
-                                    pattern: Pattern {
-                                        kind: Ident(
-                                            BindingIdent {
-                                                name: "p2",
-                                                span: 9..11,
-                                                mutable: false,
-                                            },
-                                        ),
-                                        span: 9..11,
-                                        inferred_type: None,
+                                ),
+                                Some(
+                                    TuplePatElem {
+                                        pattern: Pattern {
+                                            kind: Ident(
+                                                BindingIdent {
+                                                    name: "p2",
+                                                    span: 9..11,
+                                                    mutable: false,
+                                                },
+                                            ),
+                                            span: 9..11,
+                                            inferred_type: None,
+                                        },
+                                        init: None,
                                     },
-                                    init: None,
-                                },
-                            ),
-                        ],
-                        optional: false,
-                    },
-                ),
-                span: 3..12,
-                inferred_type: None,
-            },
-            expr: Some(
-                Expr {
-                    kind: Ident(
-                        Ident {
-                            name: "line",
-                            span: 15..19,
+                                ),
+                            ],
+                            optional: false,
                         },
                     ),
-                    span: 15..19,
+                    span: 3..12,
                     inferred_type: None,
                 },
-            ),
-            type_ann: None,
-        },
+                expr: Some(
+                    Expr {
+                        kind: Ident(
+                            Ident {
+                                name: "line",
+                                span: 15..19,
+                            },
+                        ),
+                        span: 15..19,
+                        inferred_type: None,
+                    },
+                ),
+                type_ann: None,
+            },
+        ),
         span: 0..19,
         inferred_type: None,
     },

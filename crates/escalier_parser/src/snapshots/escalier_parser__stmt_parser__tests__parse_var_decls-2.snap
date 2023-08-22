@@ -4,33 +4,35 @@ expression: "parse(r#\"var i = 0\"#)"
 ---
 [
     Stmt {
-        kind: Let {
-            is_declare: false,
-            is_var: true,
-            pattern: Pattern {
-                kind: Ident(
-                    BindingIdent {
-                        name: "i",
-                        span: 4..5,
-                        mutable: false,
-                    },
-                ),
-                span: 4..5,
-                inferred_type: None,
-            },
-            expr: Some(
-                Expr {
-                    kind: Num(
-                        Num {
-                            value: "0",
+        kind: VarDecl(
+            VarDecl {
+                is_declare: false,
+                is_var: true,
+                pattern: Pattern {
+                    kind: Ident(
+                        BindingIdent {
+                            name: "i",
+                            span: 4..5,
+                            mutable: false,
                         },
                     ),
-                    span: 8..9,
+                    span: 4..5,
                     inferred_type: None,
                 },
-            ),
-            type_ann: None,
-        },
+                expr: Some(
+                    Expr {
+                        kind: Num(
+                            Num {
+                                value: "0",
+                            },
+                        ),
+                        span: 8..9,
+                        inferred_type: None,
+                    },
+                ),
+                type_ann: None,
+            },
+        ),
         span: 0..9,
         inferred_type: None,
     },

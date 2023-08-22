@@ -1363,9 +1363,9 @@ fn test_function_with_multiple_statements() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"() -> 50"#);
 
-    if let StmtKind::Let {
+    if let StmtKind::VarDecl(VarDecl {
         expr: Some(init), ..
-    } = &program.stmts[0].kind
+    }) = &program.stmts[0].kind
     {
         if let ExprKind::Function(syntax::Function {
             body: BlockOrExpr::Block(Block { stmts: _, .. }),
@@ -1405,9 +1405,9 @@ fn test_inferred_type_on_ast_nodes() -> Result<(), TypeError> {
 
     checker.infer_program(&mut program, &mut my_ctx)?;
 
-    if let StmtKind::Let {
+    if let StmtKind::VarDecl(VarDecl {
         expr: Some(init), ..
-    } = &program.stmts[0].kind
+    }) = &program.stmts[0].kind
     {
         if let ExprKind::Function(expr::Function { params, .. }) = &init.kind {
             let x_t = params[0].pattern.inferred_type.unwrap();

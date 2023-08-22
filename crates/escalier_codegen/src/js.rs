@@ -88,12 +88,12 @@ fn build_js(program: &values::Program, ctx: &mut Context) -> Program {
         .flat_map(|child| {
             let mut stmts: Vec<Stmt> = vec![];
             let result = match &child.kind {
-                values::StmtKind::Let {
+                values::StmtKind::VarDecl(values::VarDecl {
                     pattern,
                     expr: init,
                     is_declare: declare,
                     ..
-                } => match declare {
+                }) => match declare {
                     true => ModuleItem::Stmt(Stmt::Empty(EmptyStmt { span: DUMMY_SP })),
                     false => {
                         // It should be okay to unwrap this here since any decl that isn't
@@ -114,10 +114,12 @@ fn build_js(program: &values::Program, ctx: &mut Context) -> Program {
                 values::StmtKind::TypeDecl { .. } => {
                     ModuleItem::Stmt(Stmt::Empty(EmptyStmt { span: DUMMY_SP }))
                 }
-                values::StmtKind::Expr { expr } => ModuleItem::Stmt(Stmt::Expr(ExprStmt {
-                    span: DUMMY_SP,
-                    expr: Box::from(build_expr(expr, &mut stmts, ctx)),
-                })),
+                values::StmtKind::Expr(values::ExprStmt { expr }) => {
+                    ModuleItem::Stmt(Stmt::Expr(ExprStmt {
+                        span: DUMMY_SP,
+                        expr: Box::from(build_expr(expr, &mut stmts, ctx)),
+                    }))
+                }
                 // values::StmtKind::ClassDecl(values::ClassDecl { class, ident, .. }) => {
                 //     let ident = Ident::from(ident);
                 //     let class = build_class(class, &mut stmts, ctx);
@@ -804,13 +806,13 @@ fn build_body_block_stmt(
 
     for (i, stmt) in body.stmts.iter().enumerate() {
         match &stmt.kind {
-            values::StmtKind::Let {
+            values::StmtKind::VarDecl(values::VarDecl {
                 pattern,
                 type_ann: _,
                 expr: Some(init),
                 is_declare: _,
                 ..
-            } => {
+            }) => {
                 let stmt = match build_pattern(pattern, &mut new_stmts, ctx) {
                     Some(name) => {
                         build_const_decl_stmt_with_pat(name, build_expr(init, &mut new_stmts, ctx))
@@ -819,7 +821,7 @@ fn build_body_block_stmt(
                 };
                 new_stmts.push(stmt);
             }
-            values::StmtKind::Expr { expr } => {
+            values::StmtKind::Expr(values::ExprStmt { expr }) => {
                 let expr = build_expr(expr, &mut new_stmts, ctx);
                 let stmt = if i == len - 1 {
                     build_finalizer(&expr, finalizer)
@@ -860,7 +862,7 @@ fn build_body_block_stmt(
             //     });
             //     new_stmts.push(stmt);
             // }
-            values::StmtKind::Return { arg } => {
+            values::StmtKind::Return(values::ReturnStmt { arg }) => {
                 let stmt = Stmt::Return(ReturnStmt {
                     span: DUMMY_SP,
                     arg: arg
@@ -873,7 +875,7 @@ fn build_body_block_stmt(
             // Types are ignored when generating .js code.
             values::StmtKind::TypeDecl { .. } => (),
             // Variable declarations that use `declare` are ignored as well.
-            values::StmtKind::Let { .. } => (),
+            values::StmtKind::VarDecl { .. } => (),
         }
     }
 

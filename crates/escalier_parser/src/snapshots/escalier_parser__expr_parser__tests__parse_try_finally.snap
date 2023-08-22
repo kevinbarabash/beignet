@@ -9,30 +9,32 @@ Expr {
                 span: 16..59,
                 stmts: [
                     Stmt {
-                        kind: Expr {
-                            expr: Expr {
-                                kind: Call(
-                                    Call {
-                                        callee: Expr {
-                                            kind: Ident(
-                                                Ident {
-                                                    name: "canThrow",
-                                                    span: 35..43,
-                                                },
-                                            ),
-                                            span: 35..43,
-                                            inferred_type: None,
+                        kind: Expr(
+                            ExprStmt {
+                                expr: Expr {
+                                    kind: Call(
+                                        Call {
+                                            callee: Expr {
+                                                kind: Ident(
+                                                    Ident {
+                                                        name: "canThrow",
+                                                        span: 35..43,
+                                                    },
+                                                ),
+                                                span: 35..43,
+                                                inferred_type: None,
+                                            },
+                                            type_args: None,
+                                            args: [],
+                                            opt_chain: false,
+                                            throws: None,
                                         },
-                                        type_args: None,
-                                        args: [],
-                                        opt_chain: false,
-                                        throws: None,
-                                    },
-                                ),
-                                span: 35..45,
-                                inferred_type: None,
+                                    ),
+                                    span: 35..45,
+                                    inferred_type: None,
+                                },
                             },
-                        },
+                        ),
                         span: 35..45,
                         inferred_type: None,
                     },
@@ -44,30 +46,32 @@ Expr {
                     span: 67..109,
                     stmts: [
                         Stmt {
-                            kind: Expr {
-                                expr: Expr {
-                                    kind: Call(
-                                        Call {
-                                            callee: Expr {
-                                                kind: Ident(
-                                                    Ident {
-                                                        name: "cleanup",
-                                                        span: 86..93,
-                                                    },
-                                                ),
-                                                span: 86..93,
-                                                inferred_type: None,
+                            kind: Expr(
+                                ExprStmt {
+                                    expr: Expr {
+                                        kind: Call(
+                                            Call {
+                                                callee: Expr {
+                                                    kind: Ident(
+                                                        Ident {
+                                                            name: "cleanup",
+                                                            span: 86..93,
+                                                        },
+                                                    ),
+                                                    span: 86..93,
+                                                    inferred_type: None,
+                                                },
+                                                type_args: None,
+                                                args: [],
+                                                opt_chain: false,
+                                                throws: None,
                                             },
-                                            type_args: None,
-                                            args: [],
-                                            opt_chain: false,
-                                            throws: None,
-                                        },
-                                    ),
-                                    span: 86..95,
-                                    inferred_type: None,
+                                        ),
+                                        span: 86..95,
+                                        inferred_type: None,
+                                    },
                                 },
-                            },
+                            ),
                             span: 86..95,
                             inferred_type: None,
                         },

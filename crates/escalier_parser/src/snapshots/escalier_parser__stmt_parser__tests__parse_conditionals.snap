@@ -4,107 +4,113 @@ expression: "parse(\"let max = if (x > y) { x } else { y }\")"
 ---
 [
     Stmt {
-        kind: Let {
-            is_declare: false,
-            is_var: false,
-            pattern: Pattern {
-                kind: Ident(
-                    BindingIdent {
-                        name: "max",
-                        span: 4..7,
-                        mutable: false,
-                    },
-                ),
-                span: 4..7,
-                inferred_type: None,
-            },
-            expr: Some(
-                Expr {
-                    kind: IfElse(
-                        IfElse {
-                            cond: Expr {
-                                kind: Binary(
-                                    Binary {
-                                        left: Expr {
-                                            kind: Ident(
-                                                Ident {
-                                                    name: "x",
-                                                    span: 14..15,
-                                                },
-                                            ),
-                                            span: 14..15,
-                                            inferred_type: None,
-                                        },
-                                        op: GreaterThan,
-                                        right: Expr {
-                                            kind: Ident(
-                                                Ident {
-                                                    name: "y",
-                                                    span: 18..19,
-                                                },
-                                            ),
-                                            span: 18..19,
-                                            inferred_type: None,
-                                        },
-                                    },
-                                ),
-                                span: 14..19,
-                                inferred_type: None,
-                            },
-                            consequent: Block {
-                                span: 20..26,
-                                stmts: [
-                                    Stmt {
-                                        kind: Expr {
-                                            expr: Expr {
+        kind: VarDecl(
+            VarDecl {
+                is_declare: false,
+                is_var: false,
+                pattern: Pattern {
+                    kind: Ident(
+                        BindingIdent {
+                            name: "max",
+                            span: 4..7,
+                            mutable: false,
+                        },
+                    ),
+                    span: 4..7,
+                    inferred_type: None,
+                },
+                expr: Some(
+                    Expr {
+                        kind: IfElse(
+                            IfElse {
+                                cond: Expr {
+                                    kind: Binary(
+                                        Binary {
+                                            left: Expr {
                                                 kind: Ident(
                                                     Ident {
                                                         name: "x",
-                                                        span: 23..24,
+                                                        span: 14..15,
                                                     },
                                                 ),
-                                                span: 23..24,
+                                                span: 14..15,
+                                                inferred_type: None,
+                                            },
+                                            op: GreaterThan,
+                                            right: Expr {
+                                                kind: Ident(
+                                                    Ident {
+                                                        name: "y",
+                                                        span: 18..19,
+                                                    },
+                                                ),
+                                                span: 18..19,
                                                 inferred_type: None,
                                             },
                                         },
-                                        span: 23..24,
-                                        inferred_type: None,
-                                    },
-                                ],
-                            },
-                            alternate: Some(
-                                Block(
-                                    Block {
-                                        span: 31..37,
-                                        stmts: [
-                                            Stmt {
-                                                kind: Expr {
+                                    ),
+                                    span: 14..19,
+                                    inferred_type: None,
+                                },
+                                consequent: Block {
+                                    span: 20..26,
+                                    stmts: [
+                                        Stmt {
+                                            kind: Expr(
+                                                ExprStmt {
                                                     expr: Expr {
                                                         kind: Ident(
                                                             Ident {
-                                                                name: "y",
-                                                                span: 34..35,
+                                                                name: "x",
+                                                                span: 23..24,
                                                             },
                                                         ),
-                                                        span: 34..35,
+                                                        span: 23..24,
                                                         inferred_type: None,
                                                     },
                                                 },
-                                                span: 34..35,
-                                                inferred_type: None,
-                                            },
-                                        ],
-                                    },
+                                            ),
+                                            span: 23..24,
+                                            inferred_type: None,
+                                        },
+                                    ],
+                                },
+                                alternate: Some(
+                                    Block(
+                                        Block {
+                                            span: 31..37,
+                                            stmts: [
+                                                Stmt {
+                                                    kind: Expr(
+                                                        ExprStmt {
+                                                            expr: Expr {
+                                                                kind: Ident(
+                                                                    Ident {
+                                                                        name: "y",
+                                                                        span: 34..35,
+                                                                    },
+                                                                ),
+                                                                span: 34..35,
+                                                                inferred_type: None,
+                                                            },
+                                                        },
+                                                    ),
+                                                    span: 34..35,
+                                                    inferred_type: None,
+                                                },
+                                            ],
+                                        },
+                                    ),
                                 ),
-                            ),
-                        },
-                    ),
-                    span: 10..37,
-                    inferred_type: None,
-                },
-            ),
-            type_ann: None,
-        },
+                            },
+                        ),
+                        span: 10..37,
+                        inferred_type: None,
+                    },
+                ),
+                type_ann: None,
+            },
+        ),
         span: 0..37,
         inferred_type: None,
     },

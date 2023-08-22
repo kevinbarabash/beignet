@@ -4,45 +4,47 @@ expression: "parse(\"foo\\n.bar()\")"
 ---
 [
     Stmt {
-        kind: Expr {
-            expr: Expr {
-                kind: Call(
-                    Call {
-                        callee: Expr {
-                            kind: Member(
-                                Member {
-                                    object: Expr {
-                                        kind: Ident(
+        kind: Expr(
+            ExprStmt {
+                expr: Expr {
+                    kind: Call(
+                        Call {
+                            callee: Expr {
+                                kind: Member(
+                                    Member {
+                                        object: Expr {
+                                            kind: Ident(
+                                                Ident {
+                                                    name: "foo",
+                                                    span: 0..3,
+                                                },
+                                            ),
+                                            span: 0..3,
+                                            inferred_type: None,
+                                        },
+                                        property: Ident(
                                             Ident {
-                                                name: "foo",
-                                                span: 0..3,
+                                                name: "bar",
+                                                span: 5..8,
                                             },
                                         ),
-                                        span: 0..3,
-                                        inferred_type: None,
+                                        opt_chain: false,
                                     },
-                                    property: Ident(
-                                        Ident {
-                                            name: "bar",
-                                            span: 5..8,
-                                        },
-                                    ),
-                                    opt_chain: false,
-                                },
-                            ),
-                            span: 0..8,
-                            inferred_type: None,
+                                ),
+                                span: 0..8,
+                                inferred_type: None,
+                            },
+                            type_args: None,
+                            args: [],
+                            opt_chain: false,
+                            throws: None,
                         },
-                        type_args: None,
-                        args: [],
-                        opt_chain: false,
-                        throws: None,
-                    },
-                ),
-                span: 0..10,
-                inferred_type: None,
+                    ),
+                    span: 0..10,
+                    inferred_type: None,
+                },
             },
-        },
+        ),
         span: 0..10,
         inferred_type: None,
     },

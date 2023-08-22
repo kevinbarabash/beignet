@@ -4,35 +4,37 @@ expression: "parse(\"1 \\n+ 2\")"
 ---
 [
     Stmt {
-        kind: Expr {
-            expr: Expr {
-                kind: Binary(
-                    Binary {
-                        left: Expr {
-                            kind: Num(
-                                Num {
-                                    value: "1",
-                                },
-                            ),
-                            span: 0..1,
-                            inferred_type: None,
+        kind: Expr(
+            ExprStmt {
+                expr: Expr {
+                    kind: Binary(
+                        Binary {
+                            left: Expr {
+                                kind: Num(
+                                    Num {
+                                        value: "1",
+                                    },
+                                ),
+                                span: 0..1,
+                                inferred_type: None,
+                            },
+                            op: Plus,
+                            right: Expr {
+                                kind: Num(
+                                    Num {
+                                        value: "2",
+                                    },
+                                ),
+                                span: 5..6,
+                                inferred_type: None,
+                            },
                         },
-                        op: Plus,
-                        right: Expr {
-                            kind: Num(
-                                Num {
-                                    value: "2",
-                                },
-                            ),
-                            span: 5..6,
-                            inferred_type: None,
-                        },
-                    },
-                ),
-                span: 0..6,
-                inferred_type: None,
+                    ),
+                    span: 0..6,
+                    inferred_type: None,
+                },
             },
-        },
+        ),
         span: 0..6,
         inferred_type: None,
     },
