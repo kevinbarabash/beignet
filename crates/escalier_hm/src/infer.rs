@@ -238,7 +238,7 @@ impl Checker {
                                 for stmt in stmts.iter_mut() {
                                     body_ctx = body_ctx.clone();
                                     checker.infer_statement(stmt, &mut body_ctx, false)?;
-                                    if let StmtKind::Return { arg: _ } = stmt.kind {
+                                    if let StmtKind::Return(_) = stmt.kind {
                                         let ret_types: Vec<Index> = find_returns(body)
                                             .iter()
                                             .filter_map(|ret| ret.inferred_type)
@@ -1060,13 +1060,13 @@ impl Checker {
     ) -> Result<Index, TypeError> {
         self.with_report(|checker| -> Result<Index, TypeError> {
             let t = match &mut statement.kind {
-                StmtKind::Let {
+                StmtKind::VarDecl(VarDecl{
                     is_declare,
                     pattern,
                     expr: init,
                     type_ann,
                     ..
-                } => {
+                }) => {
                     let (pat_bindings, pat_type) = checker.infer_pattern(pattern, ctx)?;
     
                     match (is_declare, init, type_ann) {
@@ -1158,8 +1158,8 @@ impl Checker {
                         }
                     }
                 }
-                StmtKind::Expr { expr } => checker.infer_expression(expr, ctx)?,
-                StmtKind::Return { arg: expr } => {
+                StmtKind::Expr(expr) => checker.infer_expression(expr, ctx)?,
+                StmtKind::Return(ReturnStmt { arg: expr }) => {
                     // TODO: handle multiple return statements
                     // TODO: warn about unreachable code after a return statement
                     match expr {
@@ -1171,11 +1171,11 @@ impl Checker {
                     }
                 }
                 // StmtKind::ClassDecl(_) => todo!(),
-                StmtKind::TypeDecl {
+                StmtKind::TypeDecl(TypeDecl {
                     name,
                     type_ann,
                     type_params,
-                } => {
+                }) => {
                     // NOTE: We clone `ctx` so that type params don't escape the signature
                     let mut sig_ctx = ctx.clone();
     
@@ -1206,7 +1206,7 @@ impl Checker {
         ctx: &mut Context,
     ) -> Result<(), TypeError> {
         for stmt in &node.stmts {
-            if let StmtKind::TypeDecl { name, .. } = &stmt.kind {
+            if let StmtKind::TypeDecl(TypeDecl { name, .. }) = &stmt.kind {
                 let placeholder_scheme = Scheme {
                     t: self.new_keyword(Keyword::Unknown),
                     type_params: None,
@@ -1225,7 +1225,7 @@ impl Checker {
         }
 
         for stmt in &mut node.stmts {
-            if let StmtKind::Let { pattern, .. } = &mut stmt.kind {
+            if let StmtKind::VarDecl(VarDecl { pattern, .. }) = &mut stmt.kind {
                 let (bindings, _) = self.infer_pattern(pattern, ctx)?;
 
                 for (name, binding) in bindings {

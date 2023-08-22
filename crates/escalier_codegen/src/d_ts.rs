@@ -89,13 +89,13 @@ fn build_d_ts(
             //     // NOTE: The Readonly version of the interface type is generated
             //     // when we process `type_exports`.
             // }
-            values::StmtKind::Let { pattern, .. } => {
+            values::StmtKind::VarDecl(values::VarDecl { pattern, .. }) => {
                 let bindings = get_bindings(pattern);
                 for name in bindings {
                     value_exports.insert(name);
                 }
             }
-            values::StmtKind::TypeDecl { name, .. } => {
+            values::StmtKind::TypeDecl(values::TypeDecl { name, .. }) => {
                 type_exports.insert(name.to_owned());
             }
             values::StmtKind::Expr { .. } => (), // nothing is exported

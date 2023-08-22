@@ -56,13 +56,13 @@ impl<'a> Parser<'a> {
 
                 // TODO: check invariants in semantic analysis pass
                 Stmt {
-                    kind: StmtKind::Let {
+                    kind: StmtKind::VarDecl(VarDecl {
                         is_declare,
                         is_var,
                         pattern,
                         expr,
                         type_ann,
-                    },
+                    }),
                     span,
                     inferred_type: None,
                 }
@@ -72,7 +72,7 @@ impl<'a> Parser<'a> {
                 let next = self.peek().unwrap_or(&EOF).clone();
                 match next.kind {
                     TokenKind::Eof => Stmt {
-                        kind: StmtKind::Return { arg: None },
+                        kind: StmtKind::Return(ReturnStmt { arg: None }),
                         span: token.span,
                         inferred_type: None,
                     },
@@ -81,7 +81,7 @@ impl<'a> Parser<'a> {
 
                         let span = merge_spans(&next.span, &arg.get_span());
                         Stmt {
-                            kind: StmtKind::Return { arg: Some(arg) },
+                            kind: StmtKind::Return(ReturnStmt { arg: Some(arg) }),
                             span,
                             inferred_type: None,
                         }
@@ -107,11 +107,11 @@ impl<'a> Parser<'a> {
                 let span = merge_spans(&token.span, &type_ann.span);
 
                 Stmt {
-                    kind: StmtKind::TypeDecl {
+                    kind: StmtKind::TypeDecl(TypeDecl {
                         name,
                         type_ann,
                         type_params,
-                    },
+                    }),
                     span,
                     inferred_type: None,
                 }
@@ -120,7 +120,7 @@ impl<'a> Parser<'a> {
                 let expr = self.parse_expr()?;
                 let span = expr.get_span();
                 Stmt {
-                    kind: StmtKind::Expr { expr },
+                    kind: StmtKind::Expr(expr),
                     span,
                     inferred_type: None,
                 }

@@ -7,7 +7,7 @@ struct ReturnVisitor {
 
 impl Visitor for ReturnVisitor {
     fn visit_stmt(&mut self, stmt: &Stmt) {
-        if let StmtKind::Return { arg: Some(arg) } = &stmt.kind {
+        if let StmtKind::Return(ReturnStmt { arg: Some(arg) }) = &stmt.kind {
             self.returns.push(arg.to_owned());
         }
         walk_stmt(self, stmt);

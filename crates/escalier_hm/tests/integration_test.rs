@@ -1363,7 +1363,7 @@ fn test_function_with_multiple_statements() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"() -> 50"#);
 
-    if let StmtKind::Let {
+    if let StmtKind::VarDecl {
         expr: Some(init), ..
     } = &program.stmts[0].kind
     {
@@ -1405,7 +1405,7 @@ fn test_inferred_type_on_ast_nodes() -> Result<(), TypeError> {
 
     checker.infer_program(&mut program, &mut my_ctx)?;
 
-    if let StmtKind::Let {
+    if let StmtKind::VarDecl {
         expr: Some(init), ..
     } = &program.stmts[0].kind
     {

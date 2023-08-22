@@ -7,25 +7,33 @@ use crate::type_ann::TypeAnn;
 use crate::TypeParam;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub struct VarDecl {
+    pub is_declare: bool,
+    pub is_var: bool,
+    pub pattern: Pattern,
+    pub expr: Option<Expr>,
+    pub type_ann: Option<TypeAnn>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct ReturnStmt {
+    pub arg: Option<Expr>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct TypeDecl {
+    pub name: String,
+    pub type_ann: TypeAnn,
+    pub type_params: Option<Vec<TypeParam>>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum StmtKind {
-    Expr {
-        expr: Expr,
-    },
-    Let {
-        is_declare: bool,
-        is_var: bool,
-        pattern: Pattern,
-        expr: Option<Expr>,
-        type_ann: Option<TypeAnn>,
-    },
-    Return {
-        arg: Option<Expr>,
-    },
-    TypeDecl {
-        name: String,
-        type_ann: TypeAnn,
-        type_params: Option<Vec<TypeParam>>,
-    },
+    Expr(Expr),
+    Return(ReturnStmt),
+
+    VarDecl(VarDecl),
+    TypeDecl(TypeDecl),
     // TODO:
     // - explicit type annotations
     // - function decls: `fn foo() {}` desugars to `let foo = fn () {}`
