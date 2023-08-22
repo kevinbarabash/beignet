@@ -19,18 +19,20 @@ Expr {
                 span: 9..15,
                 stmts: [
                     Stmt {
-                        kind: Expr {
-                            expr: Expr {
-                                kind: Ident(
-                                    Ident {
-                                        name: "x",
-                                        span: 12..13,
-                                    },
-                                ),
-                                span: 12..13,
-                                inferred_type: None,
+                        kind: Expr(
+                            ExprStmt {
+                                expr: Expr {
+                                    kind: Ident(
+                                        Ident {
+                                            name: "x",
+                                            span: 12..13,
+                                        },
+                                    ),
+                                    span: 12..13,
+                                    inferred_type: None,
+                                },
                             },
-                        },
+                        ),
                         span: 12..13,
                         inferred_type: None,
                     },
@@ -42,18 +44,20 @@ Expr {
                         span: 20..26,
                         stmts: [
                             Stmt {
-                                kind: Expr {
-                                    expr: Expr {
-                                        kind: Ident(
-                                            Ident {
-                                                name: "y",
-                                                span: 23..24,
-                                            },
-                                        ),
-                                        span: 23..24,
-                                        inferred_type: None,
+                                kind: Expr(
+                                    ExprStmt {
+                                        expr: Expr {
+                                            kind: Ident(
+                                                Ident {
+                                                    name: "y",
+                                                    span: 23..24,
+                                                },
+                                            ),
+                                            span: 23..24,
+                                            inferred_type: None,
+                                        },
                                     },
-                                },
+                                ),
                                 span: 23..24,
                                 inferred_type: None,
                             },

@@ -4,51 +4,53 @@ expression: "parse(r#\"p.x = 5\"#)"
 ---
 [
     Stmt {
-        kind: Expr {
-            expr: Expr {
-                kind: Assign(
-                    Assign {
-                        left: Expr {
-                            kind: Member(
-                                Member {
-                                    object: Expr {
-                                        kind: Ident(
+        kind: Expr(
+            ExprStmt {
+                expr: Expr {
+                    kind: Assign(
+                        Assign {
+                            left: Expr {
+                                kind: Member(
+                                    Member {
+                                        object: Expr {
+                                            kind: Ident(
+                                                Ident {
+                                                    name: "p",
+                                                    span: 0..1,
+                                                },
+                                            ),
+                                            span: 0..1,
+                                            inferred_type: None,
+                                        },
+                                        property: Ident(
                                             Ident {
-                                                name: "p",
-                                                span: 0..1,
+                                                name: "x",
+                                                span: 2..3,
                                             },
                                         ),
-                                        span: 0..1,
-                                        inferred_type: None,
+                                        opt_chain: false,
                                     },
-                                    property: Ident(
-                                        Ident {
-                                            name: "x",
-                                            span: 2..3,
-                                        },
-                                    ),
-                                    opt_chain: false,
-                                },
-                            ),
-                            span: 0..3,
-                            inferred_type: None,
+                                ),
+                                span: 0..3,
+                                inferred_type: None,
+                            },
+                            op: Assign,
+                            right: Expr {
+                                kind: Num(
+                                    Num {
+                                        value: "5",
+                                    },
+                                ),
+                                span: 6..7,
+                                inferred_type: None,
+                            },
                         },
-                        op: Assign,
-                        right: Expr {
-                            kind: Num(
-                                Num {
-                                    value: "5",
-                                },
-                            ),
-                            span: 6..7,
-                            inferred_type: None,
-                        },
-                    },
-                ),
-                span: 0..7,
-                inferred_type: None,
+                    ),
+                    span: 0..7,
+                    inferred_type: None,
+                },
             },
-        },
+        ),
         span: 0..7,
         inferred_type: None,
     },

@@ -4,32 +4,34 @@ expression: "parse(\"return\\nfoo()\")"
 ---
 [
     Stmt {
-        kind: Return {
-            arg: Some(
-                Expr {
-                    kind: Call(
-                        Call {
-                            callee: Expr {
-                                kind: Ident(
-                                    Ident {
-                                        name: "foo",
-                                        span: 7..10,
-                                    },
-                                ),
-                                span: 7..10,
-                                inferred_type: None,
+        kind: Return(
+            ReturnStmt {
+                arg: Some(
+                    Expr {
+                        kind: Call(
+                            Call {
+                                callee: Expr {
+                                    kind: Ident(
+                                        Ident {
+                                            name: "foo",
+                                            span: 7..10,
+                                        },
+                                    ),
+                                    span: 7..10,
+                                    inferred_type: None,
+                                },
+                                type_args: None,
+                                args: [],
+                                opt_chain: false,
+                                throws: None,
                             },
-                            type_args: None,
-                            args: [],
-                            opt_chain: false,
-                            throws: None,
-                        },
-                    ),
-                    span: 7..12,
-                    inferred_type: None,
-                },
-            ),
-        },
+                        ),
+                        span: 7..12,
+                        inferred_type: None,
+                    },
+                ),
+            },
+        ),
         span: 7..12,
         inferred_type: None,
     },

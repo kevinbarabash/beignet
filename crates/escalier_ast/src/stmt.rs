@@ -7,17 +7,22 @@ use crate::type_ann::TypeAnn;
 use crate::TypeParam;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub struct ExprStmt {
+    pub expr: Expr,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct ReturnStmt {
+    pub arg: Option<Expr>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct VarDecl {
     pub is_declare: bool,
     pub is_var: bool,
     pub pattern: Pattern,
     pub expr: Option<Expr>,
     pub type_ann: Option<TypeAnn>,
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct ReturnStmt {
-    pub arg: Option<Expr>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -29,7 +34,7 @@ pub struct TypeDecl {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum StmtKind {
-    Expr(Expr),
+    Expr(ExprStmt),
     Return(ReturnStmt),
 
     VarDecl(VarDecl),

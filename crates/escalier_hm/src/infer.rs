@@ -1158,7 +1158,7 @@ impl Checker {
                         }
                     }
                 }
-                StmtKind::Expr(expr) => checker.infer_expression(expr, ctx)?,
+                StmtKind::Expr(ExprStmt { expr }) => checker.infer_expression(expr, ctx)?,
                 StmtKind::Return(ReturnStmt { arg: expr }) => {
                     // TODO: handle multiple return statements
                     // TODO: warn about unreachable code after a return statement

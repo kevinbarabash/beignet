@@ -12,71 +12,77 @@ Expr {
                     span: 22..111,
                     stmts: [
                         Stmt {
-                            kind: Expr {
-                                expr: Expr {
-                                    kind: Yield(
-                                        Yield {
-                                            arg: Expr {
-                                                kind: Num(
-                                                    Num {
-                                                        value: "1",
-                                                    },
-                                                ),
-                                                span: 48..49,
-                                                inferred_type: None,
+                            kind: Expr(
+                                ExprStmt {
+                                    expr: Expr {
+                                        kind: Yield(
+                                            Yield {
+                                                arg: Expr {
+                                                    kind: Num(
+                                                        Num {
+                                                            value: "1",
+                                                        },
+                                                    ),
+                                                    span: 48..49,
+                                                    inferred_type: None,
+                                                },
                                             },
-                                        },
-                                    ),
-                                    span: 42..49,
-                                    inferred_type: None,
+                                        ),
+                                        span: 42..49,
+                                        inferred_type: None,
+                                    },
                                 },
-                            },
+                            ),
                             span: 42..49,
                             inferred_type: None,
                         },
                         Stmt {
-                            kind: Expr {
-                                expr: Expr {
-                                    kind: Yield(
-                                        Yield {
-                                            arg: Expr {
-                                                kind: Num(
-                                                    Num {
-                                                        value: "2",
-                                                    },
-                                                ),
-                                                span: 72..73,
-                                                inferred_type: None,
+                            kind: Expr(
+                                ExprStmt {
+                                    expr: Expr {
+                                        kind: Yield(
+                                            Yield {
+                                                arg: Expr {
+                                                    kind: Num(
+                                                        Num {
+                                                            value: "2",
+                                                        },
+                                                    ),
+                                                    span: 72..73,
+                                                    inferred_type: None,
+                                                },
                                             },
-                                        },
-                                    ),
-                                    span: 66..73,
-                                    inferred_type: None,
+                                        ),
+                                        span: 66..73,
+                                        inferred_type: None,
+                                    },
                                 },
-                            },
+                            ),
                             span: 66..73,
                             inferred_type: None,
                         },
                         Stmt {
-                            kind: Expr {
-                                expr: Expr {
-                                    kind: Yield(
-                                        Yield {
-                                            arg: Expr {
-                                                kind: Num(
-                                                    Num {
-                                                        value: "3",
-                                                    },
-                                                ),
-                                                span: 96..97,
-                                                inferred_type: None,
+                            kind: Expr(
+                                ExprStmt {
+                                    expr: Expr {
+                                        kind: Yield(
+                                            Yield {
+                                                arg: Expr {
+                                                    kind: Num(
+                                                        Num {
+                                                            value: "3",
+                                                        },
+                                                    ),
+                                                    span: 96..97,
+                                                    inferred_type: None,
+                                                },
                                             },
-                                        },
-                                    ),
-                                    span: 90..97,
-                                    inferred_type: None,
+                                        ),
+                                        span: 90..97,
+                                        inferred_type: None,
+                                    },
                                 },
-                            },
+                            ),
                             span: 90..97,
                             inferred_type: None,
                         },

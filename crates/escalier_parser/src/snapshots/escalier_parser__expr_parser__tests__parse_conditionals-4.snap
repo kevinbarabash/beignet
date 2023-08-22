@@ -19,18 +19,20 @@ Expr {
                 span: 10..16,
                 stmts: [
                     Stmt {
-                        kind: Expr {
-                            expr: Expr {
-                                kind: Ident(
-                                    Ident {
-                                        name: "x",
-                                        span: 13..14,
-                                    },
-                                ),
-                                span: 13..14,
-                                inferred_type: None,
+                        kind: Expr(
+                            ExprStmt {
+                                expr: Expr {
+                                    kind: Ident(
+                                        Ident {
+                                            name: "x",
+                                            span: 13..14,
+                                        },
+                                    ),
+                                    span: 13..14,
+                                    inferred_type: None,
+                                },
                             },
-                        },
+                        ),
                         span: 13..14,
                         inferred_type: None,
                     },
@@ -55,18 +57,20 @@ Expr {
                                     span: 32..38,
                                     stmts: [
                                         Stmt {
-                                            kind: Expr {
-                                                expr: Expr {
-                                                    kind: Ident(
-                                                        Ident {
-                                                            name: "y",
-                                                            span: 35..36,
-                                                        },
-                                                    ),
-                                                    span: 35..36,
-                                                    inferred_type: None,
+                                            kind: Expr(
+                                                ExprStmt {
+                                                    expr: Expr {
+                                                        kind: Ident(
+                                                            Ident {
+                                                                name: "y",
+                                                                span: 35..36,
+                                                            },
+                                                        ),
+                                                        span: 35..36,
+                                                        inferred_type: None,
+                                                    },
                                                 },
-                                            },
+                                            ),
                                             span: 35..36,
                                             inferred_type: None,
                                         },
@@ -78,18 +82,20 @@ Expr {
                                             span: 43..49,
                                             stmts: [
                                                 Stmt {
-                                                    kind: Expr {
-                                                        expr: Expr {
-                                                            kind: Ident(
-                                                                Ident {
-                                                                    name: "z",
-                                                                    span: 46..47,
-                                                                },
-                                                            ),
-                                                            span: 46..47,
-                                                            inferred_type: None,
+                                                    kind: Expr(
+                                                        ExprStmt {
+                                                            expr: Expr {
+                                                                kind: Ident(
+                                                                    Ident {
+                                                                        name: "z",
+                                                                        span: 46..47,
+                                                                    },
+                                                                ),
+                                                                span: 46..47,
+                                                                inferred_type: None,
+                                                            },
                                                         },
-                                                    },
+                                                    ),
                                                     span: 46..47,
                                                     inferred_type: None,
                                                 },

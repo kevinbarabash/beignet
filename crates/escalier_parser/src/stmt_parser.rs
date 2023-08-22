@@ -120,7 +120,7 @@ impl<'a> Parser<'a> {
                 let expr = self.parse_expr()?;
                 let span = expr.get_span();
                 Stmt {
-                    kind: StmtKind::Expr(expr),
+                    kind: StmtKind::Expr(ExprStmt { expr }),
                     span,
                     inferred_type: None,
                 }

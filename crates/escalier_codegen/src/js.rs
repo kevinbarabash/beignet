@@ -114,10 +114,12 @@ fn build_js(program: &values::Program, ctx: &mut Context) -> Program {
                 values::StmtKind::TypeDecl { .. } => {
                     ModuleItem::Stmt(Stmt::Empty(EmptyStmt { span: DUMMY_SP }))
                 }
-                values::StmtKind::Expr(expr) => ModuleItem::Stmt(Stmt::Expr(ExprStmt {
-                    span: DUMMY_SP,
-                    expr: Box::from(build_expr(expr, &mut stmts, ctx)),
-                })),
+                values::StmtKind::Expr(values::ExprStmt { expr }) => {
+                    ModuleItem::Stmt(Stmt::Expr(ExprStmt {
+                        span: DUMMY_SP,
+                        expr: Box::from(build_expr(expr, &mut stmts, ctx)),
+                    }))
+                }
                 // values::StmtKind::ClassDecl(values::ClassDecl { class, ident, .. }) => {
                 //     let ident = Ident::from(ident);
                 //     let class = build_class(class, &mut stmts, ctx);
@@ -819,7 +821,7 @@ fn build_body_block_stmt(
                 };
                 new_stmts.push(stmt);
             }
-            values::StmtKind::Expr(expr) => {
+            values::StmtKind::Expr(values::ExprStmt { expr }) => {
                 let expr = build_expr(expr, &mut new_stmts, ctx);
                 let stmt = if i == len - 1 {
                     build_finalizer(&expr, finalizer)

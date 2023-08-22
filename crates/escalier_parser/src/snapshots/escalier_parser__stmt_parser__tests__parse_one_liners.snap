@@ -4,58 +4,62 @@ expression: "parse(r#\"foo() bar()\"#)"
 ---
 [
     Stmt {
-        kind: Expr {
-            expr: Expr {
-                kind: Call(
-                    Call {
-                        callee: Expr {
-                            kind: Ident(
-                                Ident {
-                                    name: "foo",
-                                    span: 0..3,
-                                },
-                            ),
-                            span: 0..3,
-                            inferred_type: None,
+        kind: Expr(
+            ExprStmt {
+                expr: Expr {
+                    kind: Call(
+                        Call {
+                            callee: Expr {
+                                kind: Ident(
+                                    Ident {
+                                        name: "foo",
+                                        span: 0..3,
+                                    },
+                                ),
+                                span: 0..3,
+                                inferred_type: None,
+                            },
+                            type_args: None,
+                            args: [],
+                            opt_chain: false,
+                            throws: None,
                         },
-                        type_args: None,
-                        args: [],
-                        opt_chain: false,
-                        throws: None,
-                    },
-                ),
-                span: 0..5,
-                inferred_type: None,
+                    ),
+                    span: 0..5,
+                    inferred_type: None,
+                },
             },
-        },
+        ),
         span: 0..5,
         inferred_type: None,
     },
     Stmt {
-        kind: Expr {
-            expr: Expr {
-                kind: Call(
-                    Call {
-                        callee: Expr {
-                            kind: Ident(
-                                Ident {
-                                    name: "bar",
-                                    span: 6..9,
-                                },
-                            ),
-                            span: 6..9,
-                            inferred_type: None,
+        kind: Expr(
+            ExprStmt {
+                expr: Expr {
+                    kind: Call(
+                        Call {
+                            callee: Expr {
+                                kind: Ident(
+                                    Ident {
+                                        name: "bar",
+                                        span: 6..9,
+                                    },
+                                ),
+                                span: 6..9,
+                                inferred_type: None,
+                            },
+                            type_args: None,
+                            args: [],
+                            opt_chain: false,
+                            throws: None,
                         },
-                        type_args: None,
-                        args: [],
-                        opt_chain: false,
-                        throws: None,
-                    },
-                ),
-                span: 6..11,
-                inferred_type: None,
+                    ),
+                    span: 6..11,
+                    inferred_type: None,
+                },
             },
-        },
+        ),
         span: 6..11,
         inferred_type: None,
     },

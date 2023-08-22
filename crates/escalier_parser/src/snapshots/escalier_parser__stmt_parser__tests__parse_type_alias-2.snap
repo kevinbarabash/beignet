@@ -4,61 +4,63 @@ expression: "parse(r#\"type Point<T> = {x: T, y: T}\"#)"
 ---
 [
     Stmt {
-        kind: TypeDecl {
-            name: "Point",
-            type_ann: TypeAnn {
-                kind: Object(
+        kind: TypeDecl(
+            TypeDecl {
+                name: "Point",
+                type_ann: TypeAnn {
+                    kind: Object(
+                        [
+                            Prop(
+                                Prop {
+                                    span: 0..0,
+                                    name: "x",
+                                    modifier: None,
+                                    optional: false,
+                                    mutable: false,
+                                    type_ann: TypeAnn {
+                                        kind: TypeRef(
+                                            "T",
+                                            None,
+                                        ),
+                                        span: 20..21,
+                                        inferred_type: None,
+                                    },
+                                },
+                            ),
+                            Prop(
+                                Prop {
+                                    span: 0..0,
+                                    name: "y",
+                                    modifier: None,
+                                    optional: false,
+                                    mutable: false,
+                                    type_ann: TypeAnn {
+                                        kind: TypeRef(
+                                            "T",
+                                            None,
+                                        ),
+                                        span: 26..27,
+                                        inferred_type: None,
+                                    },
+                                },
+                            ),
+                        ],
+                    ),
+                    span: 15..28,
+                    inferred_type: None,
+                },
+                type_params: Some(
                     [
-                        Prop(
-                            Prop {
-                                span: 0..0,
-                                name: "x",
-                                modifier: None,
-                                optional: false,
-                                mutable: false,
-                                type_ann: TypeAnn {
-                                    kind: TypeRef(
-                                        "T",
-                                        None,
-                                    ),
-                                    span: 20..21,
-                                    inferred_type: None,
-                                },
-                            },
-                        ),
-                        Prop(
-                            Prop {
-                                span: 0..0,
-                                name: "y",
-                                modifier: None,
-                                optional: false,
-                                mutable: false,
-                                type_ann: TypeAnn {
-                                    kind: TypeRef(
-                                        "T",
-                                        None,
-                                    ),
-                                    span: 26..27,
-                                    inferred_type: None,
-                                },
-                            },
-                        ),
+                        TypeParam {
+                            span: 12..13,
+                            name: "T",
+                            bound: None,
+                            default: None,
+                        },
                     ],
                 ),
-                span: 15..28,
-                inferred_type: None,
             },
-            type_params: Some(
-                [
-                    TypeParam {
-                        span: 12..13,
-                        name: "T",
-                        bound: None,
-                        default: None,
-                    },
-                ],
-            ),
-        },
+        ),
         span: 0..28,
         inferred_type: None,
     },

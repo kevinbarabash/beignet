@@ -12,73 +12,77 @@ Expr {
                     span: 24..102,
                     stmts: [
                         Stmt {
-                            kind: Let {
-                                is_declare: false,
-                                is_var: false,
-                                pattern: Pattern {
-                                    kind: Ident(
-                                        BindingIdent {
-                                            name: "x",
-                                            span: 48..49,
-                                            mutable: false,
-                                        },
-                                    ),
-                                    span: 48..49,
-                                    inferred_type: None,
-                                },
-                                expr: Some(
-                                    Expr {
-                                        kind: Await(
-                                            Await {
-                                                arg: Expr {
-                                                    kind: Call(
-                                                        Call {
-                                                            callee: Expr {
-                                                                kind: Ident(
-                                                                    Ident {
-                                                                        name: "foo",
-                                                                        span: 58..61,
-                                                                    },
-                                                                ),
-                                                                span: 58..61,
-                                                                inferred_type: None,
-                                                            },
-                                                            type_args: None,
-                                                            args: [],
-                                                            opt_chain: false,
-                                                            throws: None,
-                                                        },
-                                                    ),
-                                                    span: 58..63,
-                                                    inferred_type: None,
-                                                },
-                                                throws: None,
+                            kind: VarDecl(
+                                VarDecl {
+                                    is_declare: false,
+                                    is_var: false,
+                                    pattern: Pattern {
+                                        kind: Ident(
+                                            BindingIdent {
+                                                name: "x",
+                                                span: 48..49,
+                                                mutable: false,
                                             },
                                         ),
-                                        span: 52..63,
+                                        span: 48..49,
                                         inferred_type: None,
                                     },
-                                ),
-                                type_ann: None,
-                            },
+                                    expr: Some(
+                                        Expr {
+                                            kind: Await(
+                                                Await {
+                                                    arg: Expr {
+                                                        kind: Call(
+                                                            Call {
+                                                                callee: Expr {
+                                                                    kind: Ident(
+                                                                        Ident {
+                                                                            name: "foo",
+                                                                            span: 58..61,
+                                                                        },
+                                                                    ),
+                                                                    span: 58..61,
+                                                                    inferred_type: None,
+                                                                },
+                                                                type_args: None,
+                                                                args: [],
+                                                                opt_chain: false,
+                                                                throws: None,
+                                                            },
+                                                        ),
+                                                        span: 58..63,
+                                                        inferred_type: None,
+                                                    },
+                                                    throws: None,
+                                                },
+                                            ),
+                                            span: 52..63,
+                                            inferred_type: None,
+                                        },
+                                    ),
+                                    type_ann: None,
+                                },
+                            ),
                             span: 44..63,
                             inferred_type: None,
                         },
                         Stmt {
-                            kind: Return {
-                                arg: Some(
-                                    Expr {
-                                        kind: Ident(
-                                            Ident {
-                                                name: "x",
-                                                span: 87..88,
-                                            },
-                                        ),
-                                        span: 87..88,
-                                        inferred_type: None,
-                                    },
-                                ),
-                            },
+                            kind: Return(
+                                ReturnStmt {
+                                    arg: Some(
+                                        Expr {
+                                            kind: Ident(
+                                                Ident {
+                                                    name: "x",
+                                                    span: 87..88,
+                                                },
+                                            ),
+                                            span: 87..88,
+                                            inferred_type: None,
+                                        },
+                                    ),
+                                },
+                            ),
                             span: 87..88,
                             inferred_type: None,
                         },

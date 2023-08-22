@@ -263,7 +263,7 @@ pub fn walk_pattern<V: Visitor>(visitor: &mut V, pattern: &Pattern) {
 
 pub fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &Stmt) {
     match &stmt.kind {
-        StmtKind::Expr(expr) => visitor.visit_expr(expr),
+        StmtKind::Expr(ExprStmt { expr }) => visitor.visit_expr(expr),
         StmtKind::VarDecl(crate::VarDecl {
             is_declare: _,
             is_var: _,

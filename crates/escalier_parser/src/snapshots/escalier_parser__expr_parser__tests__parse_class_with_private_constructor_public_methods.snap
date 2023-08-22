@@ -86,36 +86,38 @@ Expr {
                             span: 105..159,
                             stmts: [
                                 Stmt {
-                                    kind: Return {
-                                        arg: Some(
-                                            Expr {
-                                                kind: Object(
-                                                    Object {
-                                                        properties: [
-                                                            Prop(
-                                                                Shorthand(
-                                                                    Ident {
-                                                                        name: "x",
-                                                                        span: 136..137,
-                                                                    },
+                                    kind: Return(
+                                        ReturnStmt {
+                                            arg: Some(
+                                                Expr {
+                                                    kind: Object(
+                                                        Object {
+                                                            properties: [
+                                                                Prop(
+                                                                    Shorthand(
+                                                                        Ident {
+                                                                            name: "x",
+                                                                            span: 136..137,
+                                                                        },
+                                                                    ),
                                                                 ),
-                                                            ),
-                                                            Prop(
-                                                                Shorthand(
-                                                                    Ident {
-                                                                        name: "y",
-                                                                        span: 139..140,
-                                                                    },
+                                                                Prop(
+                                                                    Shorthand(
+                                                                        Ident {
+                                                                            name: "y",
+                                                                            span: 139..140,
+                                                                        },
+                                                                    ),
                                                                 ),
-                                                            ),
-                                                        ],
-                                                    },
-                                                ),
-                                                span: 134..141,
-                                                inferred_type: None,
-                                            },
-                                        ),
-                                    },
+                                                            ],
+                                                        },
+                                                    ),
+                                                    span: 134..141,
+                                                    inferred_type: None,
+                                                },
+                                            ),
+                                        },
+                                    ),
                                     span: 134..141,
                                     inferred_type: None,
                                 },
@@ -173,84 +175,88 @@ Expr {
                             span: 199..273,
                             stmts: [
                                 Stmt {
-                                    kind: Return {
-                                        arg: Some(
-                                            Expr {
-                                                kind: Ident(
-                                                    Ident {
-                                                        name: "new",
-                                                        span: 229..232,
-                                                    },
-                                                ),
-                                                span: 229..232,
-                                                inferred_type: None,
-                                            },
-                                        ),
-                                    },
+                                    kind: Return(
+                                        ReturnStmt {
+                                            arg: Some(
+                                                Expr {
+                                                    kind: Ident(
+                                                        Ident {
+                                                            name: "new",
+                                                            span: 229..232,
+                                                        },
+                                                    ),
+                                                    span: 229..232,
+                                                    inferred_type: None,
+                                                },
+                                            ),
+                                        },
+                                    ),
                                     span: 229..232,
                                     inferred_type: None,
                                 },
                                 Stmt {
-                                    kind: Expr {
-                                        expr: Expr {
-                                            kind: Call(
-                                                Call {
-                                                    callee: Expr {
-                                                        kind: Member(
-                                                            Member {
-                                                                object: Expr {
-                                                                    kind: Ident(
+                                    kind: Expr(
+                                        ExprStmt {
+                                            expr: Expr {
+                                                kind: Call(
+                                                    Call {
+                                                        callee: Expr {
+                                                            kind: Member(
+                                                                Member {
+                                                                    object: Expr {
+                                                                        kind: Ident(
+                                                                            Ident {
+                                                                                name: "Self",
+                                                                                span: 233..237,
+                                                                            },
+                                                                        ),
+                                                                        span: 233..237,
+                                                                        inferred_type: None,
+                                                                    },
+                                                                    property: Ident(
                                                                         Ident {
-                                                                            name: "Self",
-                                                                            span: 233..237,
+                                                                            name: "constructor",
+                                                                            span: 238..249,
                                                                         },
                                                                     ),
-                                                                    span: 233..237,
-                                                                    inferred_type: None,
+                                                                    opt_chain: false,
                                                                 },
-                                                                property: Ident(
+                                                            ),
+                                                            span: 233..249,
+                                                            inferred_type: None,
+                                                        },
+                                                        type_args: None,
+                                                        args: [
+                                                            Expr {
+                                                                kind: Ident(
                                                                     Ident {
-                                                                        name: "constructor",
-                                                                        span: 238..249,
+                                                                        name: "x",
+                                                                        span: 250..251,
                                                                     },
                                                                 ),
-                                                                opt_chain: false,
+                                                                span: 250..251,
+                                                                inferred_type: None,
                                                             },
-                                                        ),
-                                                        span: 233..249,
-                                                        inferred_type: None,
+                                                            Expr {
+                                                                kind: Ident(
+                                                                    Ident {
+                                                                        name: "y",
+                                                                        span: 253..254,
+                                                                    },
+                                                                ),
+                                                                span: 253..254,
+                                                                inferred_type: None,
+                                                            },
+                                                        ],
+                                                        opt_chain: false,
+                                                        throws: None,
                                                     },
-                                                    type_args: None,
-                                                    args: [
-                                                        Expr {
-                                                            kind: Ident(
-                                                                Ident {
-                                                                    name: "x",
-                                                                    span: 250..251,
-                                                                },
-                                                            ),
-                                                            span: 250..251,
-                                                            inferred_type: None,
-                                                        },
-                                                        Expr {
-                                                            kind: Ident(
-                                                                Ident {
-                                                                    name: "y",
-                                                                    span: 253..254,
-                                                                },
-                                                            ),
-                                                            span: 253..254,
-                                                            inferred_type: None,
-                                                        },
-                                                    ],
-                                                    opt_chain: false,
-                                                    throws: None,
-                                                },
-                                            ),
-                                            span: 233..255,
-                                            inferred_type: None,
+                                                ),
+                                                span: 233..255,
+                                                inferred_type: None,
+                                            },
                                         },
-                                    },
+                                    ),
                                     span: 233..255,
                                     inferred_type: None,
                                 },
@@ -291,35 +297,37 @@ Expr {
                             span: 305..359,
                             stmts: [
                                 Stmt {
-                                    kind: Return {
-                                        arg: Some(
-                                            Expr {
-                                                kind: Member(
-                                                    Member {
-                                                        object: Expr {
-                                                            kind: Ident(
+                                    kind: Return(
+                                        ReturnStmt {
+                                            arg: Some(
+                                                Expr {
+                                                    kind: Member(
+                                                        Member {
+                                                            object: Expr {
+                                                                kind: Ident(
+                                                                    Ident {
+                                                                        name: "self",
+                                                                        span: 335..339,
+                                                                    },
+                                                                ),
+                                                                span: 335..339,
+                                                                inferred_type: None,
+                                                            },
+                                                            property: Ident(
                                                                 Ident {
-                                                                    name: "self",
-                                                                    span: 335..339,
+                                                                    name: "x",
+                                                                    span: 340..341,
                                                                 },
                                                             ),
-                                                            span: 335..339,
-                                                            inferred_type: None,
+                                                            opt_chain: false,
                                                         },
-                                                        property: Ident(
-                                                            Ident {
-                                                                name: "x",
-                                                                span: 340..341,
-                                                            },
-                                                        ),
-                                                        opt_chain: false,
-                                                    },
-                                                ),
-                                                span: 335..341,
-                                                inferred_type: None,
-                                            },
-                                        ),
-                                    },
+                                                    ),
+                                                    span: 335..341,
+                                                    inferred_type: None,
+                                                },
+                                            ),
+                                        },
+                                    ),
                                     span: 335..341,
                                     inferred_type: None,
                                 },
@@ -374,52 +382,54 @@ Expr {
                             span: 398..453,
                             stmts: [
                                 Stmt {
-                                    kind: Expr {
-                                        expr: Expr {
-                                            kind: Assign(
-                                                Assign {
-                                                    left: Expr {
-                                                        kind: Member(
-                                                            Member {
-                                                                object: Expr {
-                                                                    kind: Ident(
+                                    kind: Expr(
+                                        ExprStmt {
+                                            expr: Expr {
+                                                kind: Assign(
+                                                    Assign {
+                                                        left: Expr {
+                                                            kind: Member(
+                                                                Member {
+                                                                    object: Expr {
+                                                                        kind: Ident(
+                                                                            Ident {
+                                                                                name: "self",
+                                                                                span: 421..425,
+                                                                            },
+                                                                        ),
+                                                                        span: 421..425,
+                                                                        inferred_type: None,
+                                                                    },
+                                                                    property: Ident(
                                                                         Ident {
-                                                                            name: "self",
-                                                                            span: 421..425,
+                                                                            name: "x",
+                                                                            span: 426..427,
                                                                         },
                                                                     ),
-                                                                    span: 421..425,
-                                                                    inferred_type: None,
+                                                                    opt_chain: false,
                                                                 },
-                                                                property: Ident(
-                                                                    Ident {
-                                                                        name: "x",
-                                                                        span: 426..427,
-                                                                    },
-                                                                ),
-                                                                opt_chain: false,
-                                                            },
-                                                        ),
-                                                        span: 421..427,
-                                                        inferred_type: None,
+                                                            ),
+                                                            span: 421..427,
+                                                            inferred_type: None,
+                                                        },
+                                                        op: Assign,
+                                                        right: Expr {
+                                                            kind: Ident(
+                                                                Ident {
+                                                                    name: "value",
+                                                                    span: 430..435,
+                                                                },
+                                                            ),
+                                                            span: 430..435,
+                                                            inferred_type: None,
+                                                        },
                                                     },
-                                                    op: Assign,
-                                                    right: Expr {
-                                                        kind: Ident(
-                                                            Ident {
-                                                                name: "value",
-                                                                span: 430..435,
-                                                            },
-                                                        ),
-                                                        span: 430..435,
-                                                        inferred_type: None,
-                                                    },
-                                                },
-                                            ),
-                                            span: 421..435,
-                                            inferred_type: None,
+                                                ),
+                                                span: 421..435,
+                                                inferred_type: None,
+                                            },
                                         },
-                                    },
+                                    ),
                                     span: 421..435,
                                     inferred_type: None,
                                 },

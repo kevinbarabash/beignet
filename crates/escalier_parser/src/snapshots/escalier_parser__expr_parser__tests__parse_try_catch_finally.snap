@@ -9,30 +9,32 @@ Expr {
                 span: 16..59,
                 stmts: [
                     Stmt {
-                        kind: Expr {
-                            expr: Expr {
-                                kind: Call(
-                                    Call {
-                                        callee: Expr {
-                                            kind: Ident(
-                                                Ident {
-                                                    name: "canThrow",
-                                                    span: 35..43,
-                                                },
-                                            ),
-                                            span: 35..43,
-                                            inferred_type: None,
+                        kind: Expr(
+                            ExprStmt {
+                                expr: Expr {
+                                    kind: Call(
+                                        Call {
+                                            callee: Expr {
+                                                kind: Ident(
+                                                    Ident {
+                                                        name: "canThrow",
+                                                        span: 35..43,
+                                                    },
+                                                ),
+                                                span: 35..43,
+                                                inferred_type: None,
+                                            },
+                                            type_args: None,
+                                            args: [],
+                                            opt_chain: false,
+                                            throws: None,
                                         },
-                                        type_args: None,
-                                        args: [],
-                                        opt_chain: false,
-                                        throws: None,
-                                    },
-                                ),
-                                span: 35..45,
-                                inferred_type: None,
+                                    ),
+                                    span: 35..45,
+                                    inferred_type: None,
+                                },
                             },
-                        },
+                        ),
                         span: 35..45,
                         inferred_type: None,
                     },
@@ -57,75 +59,77 @@ Expr {
                         span: 69..128,
                         stmts: [
                             Stmt {
-                                kind: Expr {
-                                    expr: Expr {
-                                        kind: Call(
-                                            Call {
-                                                callee: Expr {
-                                                    kind: Member(
-                                                        Member {
-                                                            object: Expr {
-                                                                kind: Ident(
-                                                                    Ident {
-                                                                        name: "console",
-                                                                        span: 88..95,
-                                                                    },
-                                                                ),
-                                                                span: 88..95,
-                                                                inferred_type: None,
-                                                            },
-                                                            property: Ident(
-                                                                Ident {
-                                                                    name: "log",
-                                                                    span: 96..99,
-                                                                },
-                                                            ),
-                                                            opt_chain: false,
-                                                        },
-                                                    ),
-                                                    span: 88..99,
-                                                    inferred_type: None,
-                                                },
-                                                type_args: None,
-                                                args: [
-                                                    Expr {
-                                                        kind: Binary(
-                                                            Binary {
-                                                                left: Expr {
-                                                                    kind: Str(
-                                                                        Str {
-                                                                            span: 100..109,
-                                                                            value: "Error: ",
-                                                                        },
-                                                                    ),
-                                                                    span: 100..109,
-                                                                    inferred_type: None,
-                                                                },
-                                                                op: Plus,
-                                                                right: Expr {
+                                kind: Expr(
+                                    ExprStmt {
+                                        expr: Expr {
+                                            kind: Call(
+                                                Call {
+                                                    callee: Expr {
+                                                        kind: Member(
+                                                            Member {
+                                                                object: Expr {
                                                                     kind: Ident(
                                                                         Ident {
-                                                                            name: "e",
-                                                                            span: 112..113,
+                                                                            name: "console",
+                                                                            span: 88..95,
                                                                         },
                                                                     ),
-                                                                    span: 112..113,
+                                                                    span: 88..95,
                                                                     inferred_type: None,
                                                                 },
+                                                                property: Ident(
+                                                                    Ident {
+                                                                        name: "log",
+                                                                        span: 96..99,
+                                                                    },
+                                                                ),
+                                                                opt_chain: false,
                                                             },
                                                         ),
-                                                        span: 100..113,
+                                                        span: 88..99,
                                                         inferred_type: None,
                                                     },
-                                                ],
-                                                opt_chain: false,
-                                                throws: None,
-                                            },
-                                        ),
-                                        span: 88..114,
-                                        inferred_type: None,
+                                                    type_args: None,
+                                                    args: [
+                                                        Expr {
+                                                            kind: Binary(
+                                                                Binary {
+                                                                    left: Expr {
+                                                                        kind: Str(
+                                                                            Str {
+                                                                                span: 100..109,
+                                                                                value: "Error: ",
+                                                                            },
+                                                                        ),
+                                                                        span: 100..109,
+                                                                        inferred_type: None,
+                                                                    },
+                                                                    op: Plus,
+                                                                    right: Expr {
+                                                                        kind: Ident(
+                                                                            Ident {
+                                                                                name: "e",
+                                                                                span: 112..113,
+                                                                            },
+                                                                        ),
+                                                                        span: 112..113,
+                                                                        inferred_type: None,
+                                                                    },
+                                                                },
+                                                            ),
+                                                            span: 100..113,
+                                                            inferred_type: None,
+                                                        },
+                                                    ],
+                                                    opt_chain: false,
+                                                    throws: None,
+                                                },
+                                            ),
+                                            span: 88..114,
+                                            inferred_type: None,
+                                        },
                                     },
-                                },
+                                ),
                                 span: 88..114,
                                 inferred_type: None,
                             },
@@ -138,30 +142,32 @@ Expr {
                     span: 136..178,
                     stmts: [
                         Stmt {
-                            kind: Expr {
-                                expr: Expr {
-                                    kind: Call(
-                                        Call {
-                                            callee: Expr {
-                                                kind: Ident(
-                                                    Ident {
-                                                        name: "cleanup",
-                                                        span: 155..162,
-                                                    },
-                                                ),
-                                                span: 155..162,
-                                                inferred_type: None,
+                            kind: Expr(
+                                ExprStmt {
+                                    expr: Expr {
+                                        kind: Call(
+                                            Call {
+                                                callee: Expr {
+                                                    kind: Ident(
+                                                        Ident {
+                                                            name: "cleanup",
+                                                            span: 155..162,
+                                                        },
+                                                    ),
+                                                    span: 155..162,
+                                                    inferred_type: None,
+                                                },
+                                                type_args: None,
+                                                args: [],
+                                                opt_chain: false,
+                                                throws: None,
                                             },
-                                            type_args: None,
-                                            args: [],
-                                            opt_chain: false,
-                                            throws: None,
-                                        },
-                                    ),
-                                    span: 155..164,
-                                    inferred_type: None,
+                                        ),
+                                        span: 155..164,
+                                        inferred_type: None,
+                                    },
                                 },
-                            },
+                            ),
                             span: 155..164,
                             inferred_type: None,
                         },
