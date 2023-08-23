@@ -842,9 +842,7 @@ fn for_loop() -> Result<(), TypeError> {
     Ok(())
 }
 
-// TODO: handle for-loops
 #[test]
-#[ignore]
 fn for_loop_inside_fn() -> Result<(), TypeError> {
     let src = r#"
     let sum = fn (arr: number[]) {
@@ -873,7 +871,7 @@ fn for_loop_inside_fn() -> Result<(), TypeError> {
     checker.infer_program(&mut program, &mut ctx)?;
     let result = codegen_d_ts(&program, &ctx, &checker)?;
 
-    insta::assert_snapshot!(result, @"export declare const sum: (arr: readonly number[]) => number;
+    insta::assert_snapshot!(result, @"export declare const sum: (arr: Array<number>) => number;
     ");
 
     Ok(())

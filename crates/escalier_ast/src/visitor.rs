@@ -264,11 +264,11 @@ pub fn walk_pattern<V: Visitor>(visitor: &mut V, pattern: &Pattern) {
 pub fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &Stmt) {
     match &stmt.kind {
         StmtKind::Expr(ExprStmt { expr }) => visitor.visit_expr(expr),
-        StmtKind::For(ForStmt {
-            left: _,
-            right: _,
-            body: _,
-        }) => todo!(),
+        StmtKind::For(ForStmt { left, right, body }) => {
+            visitor.visit_pattern(left);
+            visitor.visit_expr(right);
+            walk_block(visitor, body);
+        }
         StmtKind::Return(ReturnStmt { arg }) => {
             if let Some(arg) = arg {
                 visitor.visit_expr(arg);
