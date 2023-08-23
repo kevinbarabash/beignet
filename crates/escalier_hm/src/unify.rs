@@ -131,16 +131,21 @@ impl Checker {
                 Ok(())
             }
             (TypeKind::Tuple(tuple), TypeKind::Constructor(array)) if array.name == "Array" => {
-                let q = array.types[0];
-                for p in &tuple.types {
-                    match &self.arena[*p].kind {
-                        TypeKind::Constructor(Constructor { name, types }) if name == "Array" => {
-                            self.unify(ctx, types[0], q)?;
-                        }
-                        TypeKind::Rest(_) => self.unify(ctx, *p, b)?,
-                        _ => self.unify(ctx, *p, q)?,
+                // TODO: handle rest elements in the tuple
+
+                let mut types = vec![];
+                for t in &tuple.types {
+                    match &self.arena[*t].kind {
+                        TypeKind::Rest(Rest { arg }) => self.unify(ctx, *arg, t2)?,
+                        _ => types.push(*t),
                     }
                 }
+
+                if !types.is_empty() {
+                    let p = self.new_union_type(&types);
+                    self.unify(ctx, p, array.types[0])?;
+                }
+
                 Ok(())
             }
             (TypeKind::Constructor(array), TypeKind::Tuple(tuple)) if array.name == "Array" => {

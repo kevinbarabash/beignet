@@ -3835,6 +3835,25 @@ fn test_mutable_error_arg_passing() -> Result<(), TypeError> {
 }
 
 #[test]
+#[ignore]
+fn test_infer_array_element_type_from_assignment() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    // TODO: handle `declare let scale: fn(mut p: Point, ...);
+    let src = r#"
+    let numbers: Array<_> = [1, 2, 3]
+    "#;
+    let mut program = parse(src).unwrap();
+
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    let numbers = my_ctx.values.get("numbers").unwrap();
+    assert_eq!(checker.print_type(&numbers.index), r#"Array<1 | 2 | 3>"#);
+
+    Ok(())
+}
+
+#[test]
 fn test_mutable_error_arg_passing_with_subtyping() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
@@ -4870,6 +4889,43 @@ fn type_args_are_eagerly_checked() -> Result<(), TypeError> {
             message: "type mismatch: string != number".to_string()
         })
     );
+
+    Ok(())
+}
+
+#[test]
+fn for_in_loop() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    let mut sum: number = 0
+    for (num in [1, 2, 3]) {
+        sum = sum + num
+    }
+    "#;
+    let mut program = parse(src).unwrap();
+
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    Ok(())
+}
+
+#[test]
+fn for_in_loop_with_patterns() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Point = {x: number, y: number}
+    declare let points: Array<Point>
+    let mut centroid: Point = {x: 0, y: 0}
+    for ({x, y} in points) {
+        centroid.x += x
+        centroid.y += y
+    }
+    "#;
+    let mut program = parse(src).unwrap();
+
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     Ok(())
 }

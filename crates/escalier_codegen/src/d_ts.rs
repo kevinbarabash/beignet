@@ -98,9 +98,9 @@ fn build_d_ts(
             values::StmtKind::TypeDecl(values::TypeDecl { name, .. }) => {
                 type_exports.insert(name.to_owned());
             }
-            values::StmtKind::Expr { .. } => (), // nothing is exported
-            // values::StmtKind::ForStmt(_) => (), // nothing is exported
-            values::StmtKind::Return { .. } => (), // nothing is exported
+            values::StmtKind::Expr(_) => (),   // nothing is exported
+            values::StmtKind::For(_) => (),    // nothing is exported
+            values::StmtKind::Return(_) => (), // nothing is exported
         }
     }
 

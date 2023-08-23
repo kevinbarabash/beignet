@@ -1,5 +1,6 @@
 use generational_arena::Index;
 
+use crate::block::Block;
 use crate::expr::Expr;
 use crate::pattern::Pattern;
 use crate::span::Span;
@@ -9,6 +10,13 @@ use crate::TypeParam;
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ExprStmt {
     pub expr: Expr,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct ForStmt {
+    pub left: Box<Pattern>,
+    pub right: Box<Expr>,
+    pub body: Block,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -35,6 +43,7 @@ pub struct TypeDecl {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum StmtKind {
     Expr(ExprStmt),
+    For(ForStmt),
     Return(ReturnStmt),
 
     VarDecl(VarDecl),

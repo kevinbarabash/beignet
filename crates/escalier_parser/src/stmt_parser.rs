@@ -67,6 +67,35 @@ impl<'a> Parser<'a> {
                     inferred_type: None,
                 }
             }
+            TokenKind::For => {
+                self.next(); // consumes 'for'
+
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::LeftParen
+                );
+                let left = self.parse_pattern()?;
+                assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::In);
+                let right = self.parse_expr()?;
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::RightParen
+                );
+                assert_eq!(self.peek().unwrap_or(&EOF).kind, TokenKind::LeftBrace);
+                let body = self.parse_block()?;
+
+                let span = merge_spans(&left.span, &body.span);
+
+                Stmt {
+                    kind: StmtKind::For(ForStmt {
+                        left: Box::new(left),
+                        right: Box::new(right),
+                        body,
+                    }),
+                    span,
+                    inferred_type: None,
+                }
+            }
             TokenKind::Return => {
                 self.next(); // consumes 'return'
                 let next = self.peek().unwrap_or(&EOF).clone();
@@ -281,6 +310,16 @@ mod tests {
         insta::assert_debug_snapshot!(parse(r#"var mut p = {x: 5, y: 10}"#));
         insta::assert_debug_snapshot!(parse(
             r#"declare let scale: fn (mut p: Point, scale: number) -> void"#
+        ));
+    }
+
+    #[test]
+    fn parse_for_loop() {
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            for ({x, y} in points) {
+                console.log(`(${x}, ${y})`)
+            }"#
         ));
     }
 }

@@ -264,6 +264,17 @@ pub fn walk_pattern<V: Visitor>(visitor: &mut V, pattern: &Pattern) {
 pub fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &Stmt) {
     match &stmt.kind {
         StmtKind::Expr(ExprStmt { expr }) => visitor.visit_expr(expr),
+        StmtKind::For(ForStmt {
+            left: _,
+            right: _,
+            body: _,
+        }) => todo!(),
+        StmtKind::Return(ReturnStmt { arg }) => {
+            if let Some(arg) = arg {
+                visitor.visit_expr(arg);
+            }
+        }
+
         StmtKind::VarDecl(crate::VarDecl {
             is_declare: _,
             is_var: _,
@@ -277,11 +288,6 @@ pub fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &Stmt) {
             }
             if let Some(type_ann) = type_ann {
                 visitor.visit_type_ann(type_ann);
-            }
-        }
-        StmtKind::Return(ReturnStmt { arg }) => {
-            if let Some(arg) = arg {
-                visitor.visit_expr(arg);
             }
         }
         StmtKind::TypeDecl(TypeDecl {
