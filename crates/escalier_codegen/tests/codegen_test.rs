@@ -809,13 +809,11 @@ fn class_with_methods() {
     "###);
 }
 
-// TODO: finish porting codgen_d_ts()
 #[test]
-#[ignore]
 fn for_loop() -> Result<(), TypeError> {
     let src = r#"
     let mut sum: number = 0
-    for (const num in [1, 2, 3]) {
+    for (num in [1, 2, 3]) {
         sum = sum + num
     }
     "#;
@@ -844,18 +842,16 @@ fn for_loop() -> Result<(), TypeError> {
     Ok(())
 }
 
-// TODO: handle for-loops
 #[test]
-#[ignore]
 fn for_loop_inside_fn() -> Result<(), TypeError> {
     let src = r#"
     let sum = fn (arr: number[]) {
         let mut result: number = 0
-        for (const num in arr) {
+        for (num in arr) {
             result = result + num
         }
         return result
-    };
+    }
     "#;
 
     let (js, _) = compile(src);
@@ -875,7 +871,7 @@ fn for_loop_inside_fn() -> Result<(), TypeError> {
     checker.infer_program(&mut program, &mut ctx)?;
     let result = codegen_d_ts(&program, &ctx, &checker)?;
 
-    insta::assert_snapshot!(result, @"export declare const sum: (arr: readonly number[]) => number;
+    insta::assert_snapshot!(result, @"export declare const sum: (arr: Array<number>) => number;
     ");
 
     Ok(())

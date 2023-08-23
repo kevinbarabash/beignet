@@ -1060,6 +1060,35 @@ impl Checker {
     ) -> Result<Index, TypeError> {
         self.with_report(|checker| -> Result<Index, TypeError> {
             let t = match &mut statement.kind {
+                StmtKind::Expr(ExprStmt { expr }) => checker.infer_expression(expr, ctx)?,
+                StmtKind::For(ForStmt { left, right, body }) => {
+                    let right_t = checker.infer_expression(right, ctx)?;
+
+                    let (bindings, left_t) = checker.infer_pattern(left, &ctx)?;
+                    let array_t = checker.new_constructor("Array", &[left_t]);
+                    // The expression we're iterating over must be assignable
+                    // to an array.
+                    checker.unify(ctx, right_t, array_t)?;
+                    
+                    let mut new_ctx = ctx.clone();
+
+                    for (name, binding) in bindings {
+                        new_ctx.values.insert(name, binding);
+                    }
+
+                    checker.infer_block(body, &mut new_ctx)?
+                }
+                StmtKind::Return(ReturnStmt { arg: expr }) => {
+                    // TODO: handle multiple return statements
+                    // TODO: warn about unreachable code after a return statement
+                    match expr {
+                        Some(expr) => checker.infer_expression(expr, ctx)?,
+                        None => {
+                            // TODO: return `undefined` or `void`.
+                            todo!()
+                        }
+                    }
+                }
                 StmtKind::VarDecl(VarDecl{
                     is_declare,
                     pattern,
@@ -1155,18 +1184,6 @@ impl Checker {
                                     "Variable declarations using `declare` must have a type annotation"
                                         .to_string(),
                             });
-                        }
-                    }
-                }
-                StmtKind::Expr(ExprStmt { expr }) => checker.infer_expression(expr, ctx)?,
-                StmtKind::Return(ReturnStmt { arg: expr }) => {
-                    // TODO: handle multiple return statements
-                    // TODO: warn about unreachable code after a return statement
-                    match expr {
-                        Some(expr) => checker.infer_expression(expr, ctx)?,
-                        None => {
-                            // TODO: return `undefined` or `void`.
-                            todo!()
                         }
                     }
                 }

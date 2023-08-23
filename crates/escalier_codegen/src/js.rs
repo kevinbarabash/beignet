@@ -120,6 +120,22 @@ fn build_js(program: &values::Program, ctx: &mut Context) -> Program {
                         expr: Box::from(build_expr(expr, &mut stmts, ctx)),
                     }))
                 }
+                values::StmtKind::For(values::ForStmt { left, right, body }) => {
+                    let stmt = Stmt::ForOf(ForOfStmt {
+                        span: DUMMY_SP,
+                        is_await: false,
+                        left: ForHead::VarDecl(Box::from(build_var_decl(
+                            left, None, &mut stmts, ctx,
+                        ))),
+                        right: Box::from(build_expr(right, &mut stmts, ctx)),
+                        body: Box::from(Stmt::Block(build_body_block_stmt(
+                            body,
+                            &BlockFinalizer::ExprStmt,
+                            ctx,
+                        ))),
+                    });
+                    ModuleItem::Stmt(stmt)
+                }
                 // values::StmtKind::ClassDecl(values::ClassDecl { class, ident, .. }) => {
                 //     let ident = Ident::from(ident);
                 //     let class = build_class(class, &mut stmts, ctx);
@@ -831,6 +847,25 @@ fn build_body_block_stmt(
                         expr: Box::from(expr),
                     })
                 };
+                new_stmts.push(stmt);
+            }
+            values::StmtKind::For(values::ForStmt { left, right, body }) => {
+                let stmt = Stmt::ForOf(ForOfStmt {
+                    span: DUMMY_SP,
+                    is_await: false,
+                    left: ForHead::VarDecl(Box::from(build_var_decl(
+                        left,
+                        None,
+                        &mut new_stmts,
+                        ctx,
+                    ))),
+                    right: Box::from(build_expr(right, &mut new_stmts, ctx)),
+                    body: Box::from(Stmt::Block(build_body_block_stmt(
+                        body,
+                        &BlockFinalizer::ExprStmt,
+                        ctx,
+                    ))),
+                });
                 new_stmts.push(stmt);
             }
             // values::StmtKind::Class { class, ident, .. } => {
