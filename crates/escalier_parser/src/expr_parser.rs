@@ -60,6 +60,9 @@ fn get_postfix_precedence(op: &Token) -> Option<(u8, Associativity)> {
             .get(&Operator::ComputedMemberAccess)
             .cloned(),
         TokenKind::LeftParen => PRECEDENCE_TABLE.get(&Operator::FunctionCall).cloned(),
+        TokenKind::StrTemplateLit { .. } => {
+            PRECEDENCE_TABLE.get(&Operator::TemplateLiteral).cloned()
+        }
         TokenKind::Dot => PRECEDENCE_TABLE.get(&Operator::MemberAccess).cloned(),
         TokenKind::QuestionDot => PRECEDENCE_TABLE.get(&Operator::OptionalChaining).cloned(),
         TokenKind::LessThan => PRECEDENCE_TABLE.get(&Operator::LessThan).cloned(),
@@ -136,6 +139,7 @@ impl<'a> Parser<'a> {
             TokenKind::StrTemplateLit { parts, exprs } => {
                 self.next(); // consume string template
                 let kind = ExprKind::TemplateLiteral(TemplateLiteral {
+                    tag: None,
                     parts: parts
                         .iter()
                         .map(|token| match &token.kind {
@@ -933,6 +937,29 @@ impl<'a> Parser<'a> {
                     }
                 }
             }
+            TokenKind::StrTemplateLit { parts, exprs } => {
+                self.next(); // consume string template
+                let kind = ExprKind::TemplateLiteral(TemplateLiteral {
+                    tag: Some(Box::new(lhs)),
+                    parts: parts
+                        .iter()
+                        .map(|token| match &token.kind {
+                            TokenKind::StrLit(value) => Str {
+                                span: token.span,
+                                value: value.to_owned(),
+                            },
+                            _ => panic!("Expected string literal, got {:?}", token),
+                        })
+                        .collect(),
+                    exprs: exprs.to_owned(),
+                });
+
+                Expr {
+                    kind,
+                    span: token.span,
+                    inferred_type: None,
+                }
+            }
             _ => panic!("unexpected token: {:?}", token),
         };
 
@@ -1326,6 +1353,11 @@ mod tests {
     #[test]
     fn parse_exprs_with_template_strings() {
         insta::assert_debug_snapshot!(parse("a + `b ${c} d`"));
+    }
+
+    #[test]
+    fn parse_tagged_template_string() {
+        insta::assert_debug_snapshot!(parse("gql`query foo(id: ${id}) { bar }`"));
     }
 
     #[test]

@@ -1,0 +1,46 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(\"gql`query foo(id: ${id}) { bar }`\")"
+---
+Expr {
+    kind: TemplateLiteral(
+        TemplateLiteral {
+            tag: Some(
+                Expr {
+                    kind: Ident(
+                        Ident {
+                            name: "gql",
+                            span: 0..3,
+                        },
+                    ),
+                    span: 0..3,
+                    inferred_type: None,
+                },
+            ),
+            parts: [
+                Str {
+                    span: 3..18,
+                    value: "query foo(id: ",
+                },
+                Str {
+                    span: 23..33,
+                    value: ") { bar }",
+                },
+            ],
+            exprs: [
+                Expr {
+                    kind: Ident(
+                        Ident {
+                            name: "id",
+                            span: 20..22,
+                        },
+                    ),
+                    span: 20..22,
+                    inferred_type: None,
+                },
+            ],
+        },
+    ),
+    span: 3..33,
+    inferred_type: None,
+}

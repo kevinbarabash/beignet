@@ -62,6 +62,7 @@ pub struct Undefined {}
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct TemplateLiteral {
+    pub tag: Option<Box<Expr>>,
     pub parts: Vec<Str>,
     pub exprs: Vec<Expr>,
 }

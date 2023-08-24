@@ -19,6 +19,7 @@ Expr {
             right: Expr {
                 kind: TemplateLiteral(
                     TemplateLiteral {
+                        tag: None,
                         parts: [
                             Str {
                                 span: 3..7,
