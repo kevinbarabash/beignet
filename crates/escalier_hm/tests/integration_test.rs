@@ -8,6 +8,19 @@ use escalier_hm::context::*;
 use escalier_hm::type_error::TypeError;
 use escalier_hm::types::{self, *};
 
+fn assert_no_errors(checker: &Checker) -> Result<(), TypeError> {
+    if !checker.current_report.diagnostics.is_empty() {
+        return Err(TypeError {
+            message: format!(
+                "expected no errors, found: {:?}",
+                checker.current_report.diagnostics
+            ),
+        });
+    }
+
+    Ok(())
+}
+
 fn new_num_lit_type(arena: &mut Arena<Type>, value: &str) -> Index {
     arena.insert(Type::from(TypeKind::Literal(Lit::Number(value.to_owned()))))
 }
@@ -103,7 +116,7 @@ fn test_complex_logic() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"boolean"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -125,7 +138,7 @@ fn test_string_equality() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("neq").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"boolean"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -143,7 +156,7 @@ fn test_if_else() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("result").unwrap();
 
     assert_eq!(checker.print_type(&binding.index), r#"5 | 10"#);
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -162,7 +175,7 @@ fn test_chained_if_else() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("result").unwrap();
 
     assert_eq!(checker.print_type(&binding.index), r#"5 | 10 | 15"#);
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -188,7 +201,7 @@ fn test_factorial() -> Result<(), TypeError> {
         checker.print_type(&binding.index),
         r#"(n: number) -> 1 | number"#
     );
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -222,7 +235,7 @@ fn test_mutual_recursion() -> Result<(), TypeError> {
         r#"(x: number) -> true | boolean"#
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -257,7 +270,7 @@ fn test_mutual_recursion_using_destructuring() -> Result<(), TypeError> {
         r#"(x: number) -> true | boolean"#
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -278,7 +291,7 @@ fn test_no_top_level_redeclaration() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -338,7 +351,7 @@ fn test_pair() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -355,7 +368,7 @@ fn test_mul() -> Result<(), TypeError> {
 
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"[4, true]"#);
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[should_panic = "recursive unification"]
@@ -383,7 +396,7 @@ fn test_number_literal() -> Result<(), TypeError> {
 
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"5"#);
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -402,7 +415,7 @@ fn test_generic_nongeneric() -> Result<(), TypeError> {
 
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"<A>(g: A) -> [A, A]"#);
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -417,7 +430,7 @@ fn test_basic_generics() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"<A>(x: A) -> A"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -435,7 +448,7 @@ fn test_composition() -> Result<(), TypeError> {
         checker.print_type(&binding.index),
         r#"<A, C, B>(f: (arg0: A) -> B) -> (g: (arg0: B) -> C) -> (arg: A) -> C"#
     );
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -464,7 +477,7 @@ fn test_skk() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("I").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"<A>(x: A) -> A"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -489,7 +502,7 @@ fn test_composition_with_statements() -> Result<(), TypeError> {
         checker.print_type(&binding.index),
         r#"<A, B, C>(f: (arg0: A) -> B) -> (g: (arg0: B) -> C) -> (arg: A) -> C"#
     );
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -505,7 +518,7 @@ fn test_subtype() -> Result<(), TypeError> {
     checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number"#);
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -527,7 +540,7 @@ fn test_callback_subtyping() -> Result<(), TypeError> {
     checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"boolean"#);
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -574,7 +587,7 @@ fn test_union_subtype() -> Result<(), TypeError> {
     checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number"#);
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -599,7 +612,7 @@ fn test_calling_a_union() -> Result<(), TypeError> {
     checker.infer_program(&mut program, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"boolean | string"#);
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -621,7 +634,7 @@ fn call_with_too_few_args() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -649,7 +662,7 @@ fn literal_isnt_callable() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -666,7 +679,7 @@ fn infer_basic_tuple() -> Result<(), TypeError> {
         "[5, \"hello\"]".to_string(),
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -691,7 +704,7 @@ fn tuple_member() -> Result<(), TypeError> {
         r#"5 | "hello" | undefined"#.to_string(),
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -713,7 +726,7 @@ fn tuple_member_invalid_index() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -741,7 +754,7 @@ fn array_member() -> Result<(), TypeError> {
         "number | undefined".to_string(),
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -763,7 +776,7 @@ fn tuple_member_error_out_of_bounds() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -780,7 +793,7 @@ fn tuple_subtyping() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), "boolean".to_string(),);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 // TODO(#654): update how we unify tuples with arrays and other tuples
@@ -798,7 +811,7 @@ fn more_tuple_subtyping() -> Result<(), TypeError> {
 
     checker.infer_program(&mut program, &mut my_ctx)?;
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -836,7 +849,7 @@ fn infer_basic_object() -> Result<(), TypeError> {
         "{a: 5, b: \"hello\"}".to_string(),
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -854,7 +867,7 @@ fn object_member() -> Result<(), TypeError> {
 
     assert_eq!(checker.print_type(&binding.index), "5".to_string(),);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -876,7 +889,7 @@ fn object_member_string_key() -> Result<(), TypeError> {
         "5 | \"hello\" | undefined".to_string(),
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -898,7 +911,7 @@ fn object_member_missing_prop() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -918,7 +931,7 @@ fn object_subtyping() -> Result<(), TypeError> {
 
     assert_eq!(checker.print_type(&binding.index), "boolean".to_string(),);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -948,7 +961,7 @@ fn object_signatures() -> Result<(), TypeError> {
         "{fn(a: number) -> string, foo: (a: number) -> string, bar: (self: t14, a: number) -> string, get baz: (self: t18) -> string, set baz: (self: t21, value: string) -> undefined, [P]: number for P in string, qux: string}".to_string(),
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -967,7 +980,7 @@ fn object_callable_subtyping() -> Result<(), TypeError> {
 
     checker.infer_program(&mut program, &mut my_ctx)?;
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 // TODO: This fail, we need to check unify callable siagntures in
@@ -996,7 +1009,7 @@ fn object_callable_subtyping_failure_case() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1015,7 +1028,7 @@ fn object_method_subtyping() -> Result<(), TypeError> {
 
     checker.infer_program(&mut program, &mut my_ctx)?;
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1037,7 +1050,7 @@ fn object_property_subtyping() -> Result<(), TypeError> {
 
     checker.infer_program(&mut program, &mut my_ctx)?;
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1056,7 +1069,7 @@ fn object_mapped_subtyping() -> Result<(), TypeError> {
 
     checker.infer_program(&mut program, &mut my_ctx)?;
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1075,7 +1088,7 @@ fn object_methods_and_properties_should_unify() -> Result<(), TypeError> {
 
     checker.infer_program(&mut program, &mut my_ctx)?;
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1098,7 +1111,7 @@ fn object_mappeds_should_unify_with_all_named_obj_elems() -> Result<(), TypeErro
 
     checker.infer_program(&mut program, &mut my_ctx)?;
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1125,7 +1138,7 @@ fn object_mappeds_and_properties_unify_failure() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1144,7 +1157,7 @@ fn object_properties_and_getter_should_unify() -> Result<(), TypeError> {
 
     checker.infer_program(&mut program, &mut my_ctx)?;
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 // TODO
@@ -1166,7 +1179,7 @@ fn mutable_object_properties_unify_with_getters_setters() -> Result<(), TypeErro
 
     checker.infer_program(&mut program, &mut my_ctx)?;
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1259,7 +1272,7 @@ fn test_union_subtype_error_with_type_ann() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1290,7 +1303,7 @@ fn test_program() -> Result<(), TypeError> {
     // times(num, num)
     // "###);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1315,7 +1328,7 @@ fn test_program_with_generic_func() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("b").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#""hello""#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1342,7 +1355,7 @@ fn test_program_with_generic_func_multiple_type_params() -> Result<(), TypeError
         r#"<A, B>(x: A, y: B) -> B"#
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1393,7 +1406,7 @@ fn test_function_with_multiple_statements() -> Result<(), TypeError> {
     // return times(x, y)}
     // "###);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1422,7 +1435,7 @@ fn test_inferred_type_on_ast_nodes() -> Result<(), TypeError> {
         panic!("expected a variable declaration");
     }
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1439,7 +1452,7 @@ fn test_unary_op() -> Result<(), TypeError> {
         checker.print_type(&binding.index),
         r#"(x: number) -> number"#
     );
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1458,7 +1471,7 @@ fn test_async_return_type() -> Result<(), TypeError> {
         checker.print_type(&binding.index),
         r#"() -> Promise<5, never>"#
     );
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1477,7 +1490,7 @@ fn throws_in_async() -> Result<(), TypeError> {
         checker.print_type(&binding.index),
         r#"(cond: boolean) -> Promise<5, "error">"#
     );
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1504,7 +1517,7 @@ fn await_async_func_with_throw() -> Result<(), TypeError> {
         r#"() -> Promise<5, "error">"#
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1537,7 +1550,7 @@ fn catch_await_async_func_that_throws() -> Result<(), TypeError> {
         r#"() -> Promise<5 | 10, never>"#
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1558,7 +1571,7 @@ fn test_async_without_return() -> Result<(), TypeError> {
         checker.print_type(&binding.index),
         r#"() -> Promise<undefined, never>"#
     );
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1589,7 +1602,7 @@ fn test_await_in_async() -> Result<(), TypeError> {
         r#"() -> Promise<5, never>"#
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1613,7 +1626,7 @@ fn test_await_outside_of_async() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1633,7 +1646,7 @@ fn test_await_non_promise() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 // TODO: write a test to ensure that Promise<5> is a subtype of Promise<number>
@@ -1665,7 +1678,7 @@ fn test_do_expr() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("sum").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"["hello", 15]"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1679,7 +1692,7 @@ fn test_empty_do_expr() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("sum").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"undefined"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1707,7 +1720,7 @@ fn test_let_with_type_ann() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("x").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1728,7 +1741,7 @@ fn test_function_overloads() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("msg").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1750,7 +1763,7 @@ fn test_function_no_valid_overload() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1770,7 +1783,7 @@ fn test_declare_cant_have_initializer() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1791,7 +1804,7 @@ fn test_declare_must_have_type_annotations() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1812,7 +1825,7 @@ fn test_normal_decl_must_have_initializer() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1833,7 +1846,7 @@ fn test_pattern_matching_is_patterns() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("name").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number | "bar""#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1858,7 +1871,7 @@ fn test_pattern_matching_does_not_refine_expr() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1884,7 +1897,7 @@ fn test_pattern_not_a_subtype_of_expr() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1911,7 +1924,7 @@ fn test_pattern_matching_array() -> Result<(), TypeError> {
         r#"0 | number | number | Array<number>"#
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1933,7 +1946,7 @@ fn test_pattern_matching_object() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("key").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string | string"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1952,7 +1965,7 @@ fn member_access_on_union() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("b").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string | boolean"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1972,7 +1985,7 @@ fn member_access_optional_property() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("b").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -1994,7 +2007,7 @@ fn member_access_on_unknown_type() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2015,7 +2028,7 @@ fn member_access_on_type_variable() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2039,7 +2052,7 @@ fn test_object_destructuring_assignment() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("c").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"boolean"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2061,7 +2074,7 @@ fn test_object_destructuring_assignment_with_rest() -> Result<(), TypeError> {
         r#"{b: string, c: boolean}"#
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2081,7 +2094,7 @@ fn test_object_nested_destructuring_assignment() -> Result<(), TypeError> {
     assert_eq!(my_ctx.values.get("a"), None);
     assert_eq!(my_ctx.values.get("b"), None);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2101,7 +2114,7 @@ fn test_tuple_destrcuturing_assignment() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("b").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2120,7 +2133,7 @@ fn test_tuple_destructuring_assignment_with_rest() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("tuple_rest").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"[string, boolean]"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2139,7 +2152,7 @@ fn test_array_destructuring_assignment_with_rest() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("array_rest").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"Array<string>"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2156,7 +2169,7 @@ fn test_tuple_nested_destrcuturing_assignment() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("c").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"boolean"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2176,7 +2189,7 @@ fn test_explicit_type_params() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("y").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2216,7 +2229,7 @@ fn test_explicit_type_params_too_many_type_args() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2241,7 +2254,7 @@ fn test_type_param_with_constraint() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("y").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#""hello""#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2266,7 +2279,7 @@ fn test_mix_explicit_implicit_type_params() -> Result<(), TypeError> {
         r#"<B, A>(a: A, b: B) -> B"#
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2286,7 +2299,7 @@ fn test_duplicate_type_param_names_error() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2327,7 +2340,7 @@ fn test_type_ann_func_with_type_constraint() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("x").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2348,7 +2361,7 @@ fn test_type_ann_func_with_type_constraint_error() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2366,7 +2379,7 @@ fn test_callback_with_type_param_subtyping() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"boolean"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2405,7 +2418,7 @@ fn test_return_type_checking() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2425,7 +2438,7 @@ fn test_return_value_is_not_subtype_of_return_type() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2449,7 +2462,7 @@ fn test_multiple_returns() -> Result<(), TypeError> {
         r#"(x: number) -> true | "hello""#
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2470,7 +2483,7 @@ fn test_no_returns() -> Result<(), TypeError> {
         r#"(x: number) -> undefined"#
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2496,7 +2509,7 @@ fn test_multiple_returns_with_nested_functions() -> Result<(), TypeError> {
         r#"(x: number) -> () -> true | "hello""#
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2516,7 +2529,7 @@ fn type_alias() -> Result<(), TypeError> {
         r#"{x: number, y: number}"#
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2537,7 +2550,7 @@ fn type_alias_with_params_with_destructuring() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("value").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2558,7 +2571,7 @@ fn type_alias_with_params_with_member_access() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("value").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2580,7 +2593,7 @@ fn type_alias_with_params_with_computed_member_access() -> Result<(), TypeError>
     let binding = my_ctx.values.get("value").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2602,7 +2615,7 @@ fn instantiate_type_alias_with_too_many_type_args() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2624,7 +2637,7 @@ fn instantiate_type_alias_with_args_when_it_has_no_type_params() -> Result<(), T
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2650,7 +2663,7 @@ fn property_accesses_on_unions() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("x2").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number | string"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2672,7 +2685,7 @@ fn maybe_property_accesses_on_unions() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("maybe_y").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number | undefined"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2696,7 +2709,7 @@ fn optional_chaining() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("y").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string | undefined"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2719,7 +2732,7 @@ fn optional_chaining_with_alias() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("y").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string | undefined"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2738,7 +2751,7 @@ fn optional_chaining_unnecessary_chaining() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("msg").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2757,7 +2770,7 @@ fn optional_chaining_multiple_levels() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("c").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number | undefined"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2776,7 +2789,7 @@ fn calling_variable_whose_type_is_aliased_function_type() -> Result<(), TypeErro
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2795,7 +2808,7 @@ fn optional_chaining_call() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number | undefined"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2816,7 +2829,7 @@ fn destructuring_unions() -> Result<(), TypeError> {
     // TODO: write assertions for this test once the desired
     // behavior has been implemented.
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2838,7 +2851,7 @@ fn missing_property_accesses_on_union_of_tuples() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2860,7 +2873,7 @@ fn missing_property_accesses_on_union_of_objects() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2881,7 +2894,7 @@ fn methods_on_arrays() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("len").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2899,7 +2912,7 @@ fn properties_on_tuple() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("len").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2916,7 +2929,7 @@ fn set_array_element() -> Result<(), TypeError> {
 
     checker.infer_program(&mut program, &mut my_ctx)?;
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2936,7 +2949,7 @@ fn set_tuple_element() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("len").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -2979,7 +2992,7 @@ fn test_unknown() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("c").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"unknown"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3001,7 +3014,7 @@ fn test_unknown_assignment_error() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3024,7 +3037,7 @@ fn test_type_param_explicit_unknown_constraint() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3047,7 +3060,7 @@ fn test_type_param_implicit_unknown_constraint() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3069,7 +3082,7 @@ fn test_optional_function_params() -> Result<(), TypeError> {
         r#"(a: number, b?: number) -> number"#
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3099,7 +3112,7 @@ fn test_func_param_patterns() -> Result<(), TypeError> {
         r#"([a, b]: [number, string]) -> string"#
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3121,7 +3134,7 @@ fn test_func_param_object_rest_patterns() -> Result<(), TypeError> {
         r#"({a, ...rest}: {a: number, b: string}) -> string"#
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3144,7 +3157,7 @@ fn test_func_param_object_multiple_rest_patterns() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3166,7 +3179,7 @@ fn test_func_param_tuple_rest_patterns() -> Result<(), TypeError> {
         r#"([a, ...rest]: [number, string, boolean]) -> boolean"#
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3196,7 +3209,7 @@ fn test_index_access_type() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, scheme.t)?;
     assert_eq!(checker.print_type(&t), r#"boolean | undefined"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3218,7 +3231,7 @@ fn test_index_access_type_using_string_as_mapped() -> Result<(), TypeError> {
         r#"string | number | boolean | undefined"#
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3237,7 +3250,7 @@ fn test_index_access_type_using_number_as_mapped() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, scheme.t)?;
     assert_eq!(checker.print_type(&t), r#"boolean | undefined"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3263,7 +3276,7 @@ fn test_index_access_type_missing_property() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3289,7 +3302,7 @@ fn test_index_access_type_missing_mapped() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3312,7 +3325,7 @@ fn test_index_access_type_number_mapped() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("t").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string | undefined"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3332,7 +3345,7 @@ fn test_mapped_type_pick() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, scheme.t)?;
     assert_eq!(checker.print_type(&t), r#"{a: string, b: number}"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3352,7 +3365,7 @@ fn test_pick_type() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, scheme.t)?;
     assert_eq!(checker.print_type(&t), r#"{a: string, b: number}"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3372,7 +3385,7 @@ fn test_exclude_type() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, scheme.t)?;
     assert_eq!(checker.print_type(&t), r#""a" | "b""#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3394,7 +3407,7 @@ fn test_omit_type() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, scheme.t)?;
     assert_eq!(checker.print_type(&t), r#"{a: string, b: number}"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3413,7 +3426,7 @@ fn test_index_access_type_on_tuple() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("t").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3435,7 +3448,7 @@ fn test_index_access_type_on_tuple_with_number_key() -> Result<(), TypeError> {
         r#"number | string | boolean | undefined"#
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3458,7 +3471,7 @@ fn test_index_access_out_of_bounds_on_tuple() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3481,7 +3494,7 @@ fn test_index_access_not_usize() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3500,7 +3513,7 @@ fn test_typeof() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, scheme.t)?;
     assert_eq!(checker.print_type(&t), r#"{a: "hello", b: 5, c: true}"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3541,7 +3554,7 @@ fn test_keyof_obj() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, scheme.t)?;
     assert_eq!(checker.print_type(&t), r#"number | "x""#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3574,7 +3587,7 @@ fn test_keyof_array_tuple() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, scheme.t)?;
     assert_eq!(checker.print_type(&t), r#"never"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3593,7 +3606,7 @@ fn test_keyof_alias() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, scheme.t)?;
     assert_eq!(checker.print_type(&t), r#""x" | "y""#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3632,7 +3645,7 @@ fn test_keyof_literal() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, scheme.t)?;
     assert_eq!(checker.print_type(&t), r#""valueOf""#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3671,7 +3684,7 @@ fn test_keyof_primitive() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, scheme.t)?;
     assert_eq!(checker.print_type(&t), r#""valueOf""#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3704,7 +3717,7 @@ fn test_keyof_unknown_undefined_null() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, scheme.t)?;
     assert_eq!(checker.print_type(&t), r#"string | number | symbol"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3737,7 +3750,7 @@ fn test_keyof_intersection() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, scheme.t)?;
     assert_eq!(checker.print_type(&t), r#"string"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3759,7 +3772,7 @@ fn test_mutually_recursive_type() -> Result<(), TypeError> {
 
     checker.infer_program(&mut program, &mut my_ctx)?;
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3783,7 +3796,7 @@ fn test_mutually_recursive_type_with_index_access_type() -> Result<(), TypeError
 
     checker.infer_program(&mut program, &mut my_ctx)?;
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3804,7 +3817,7 @@ fn test_type_alias_with_undefined_def() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3831,7 +3844,7 @@ fn test_mutable_error_arg_passing() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3850,7 +3863,7 @@ fn test_infer_array_element_type_from_assignment() -> Result<(), TypeError> {
     let numbers = my_ctx.values.get("numbers").unwrap();
     assert_eq!(checker.print_type(&numbers.index), r#"Array<1 | 2 | 3>"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3874,7 +3887,7 @@ fn test_mutable_error_arg_passing_with_subtyping() -> Result<(), TypeError> {
         }),
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3909,7 +3922,7 @@ fn test_mutable_ok_arg_passing() -> Result<(), TypeError> {
 
     checker.infer_program(&mut program, &mut my_ctx)?;
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3933,7 +3946,7 @@ fn test_mutable_error_arg_passing_declared_fn() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3964,7 +3977,7 @@ fn test_mutable_ok_arg_passing_declared_fns() -> Result<(), TypeError> {
 
     checker.infer_program(&mut program, &mut my_ctx)?;
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -3987,7 +4000,7 @@ fn test_mutable_error_assignment() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4012,7 +4025,7 @@ fn test_mutable_ok_assignments() -> Result<(), TypeError> {
 
     checker.infer_program(&mut program, &mut my_ctx)?;
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4034,7 +4047,7 @@ fn test_mutable_invalid_assignments() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4059,7 +4072,7 @@ fn test_sub_objects_are_mutable() -> Result<(), TypeError> {
     // TODO: create helper function to print bindings, not just types
     assert_eq!(checker.print_type(&binding.index), r#"{c: string}"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4079,7 +4092,7 @@ fn test_tuple_type_equality() -> Result<(), TypeError> {
 
     assert!(checker.equals(&a.index, &b.index));
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4099,7 +4112,7 @@ fn test_function_type_equality() -> Result<(), TypeError> {
 
     assert!(checker.equals(&add.index, &sub.index));
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4119,7 +4132,7 @@ fn test_literal_type_equality() -> Result<(), TypeError> {
 
     assert!(checker.equals(&a.index, &b.index));
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4140,7 +4153,7 @@ fn test_mutable_object_type_equality() -> Result<(), TypeError> {
 
     assert!(checker.equals(&p.index, &q.index));
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4157,7 +4170,7 @@ fn test_mutating_mutable_object() -> Result<(), TypeError> {
 
     checker.infer_program(&mut program, &mut my_ctx)?;
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4180,7 +4193,7 @@ fn test_mutating_immutable_object_errors() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4199,7 +4212,7 @@ fn conditional_type_exclude() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, result.t)?;
     assert_eq!(checker.print_type(&t), r#""b" | "c" | "d""#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4224,7 +4237,7 @@ fn chained_conditional_types() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, result.t)?;
     assert_eq!(checker.print_type(&t), r#""num" | "str""#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4247,7 +4260,7 @@ fn match_type_with_catchall() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, result.t)?;
     assert_eq!(checker.print_type(&t), r#""num" | "str""#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4274,7 +4287,7 @@ fn match_type_without_catchall() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, result.t)?;
     assert_eq!(checker.print_type(&t), r#"never"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4327,7 +4340,7 @@ fn match_type_with_tuples() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, result.t)?;
     assert_eq!(checker.print_type(&t), r#""n-tuple""#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4351,7 +4364,7 @@ fn conditional_type_with_placeholders() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, result.t)?;
     assert_eq!(checker.print_type(&t), r#"false"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4375,7 +4388,7 @@ fn conditional_type_with_constraint() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, result.t)?;
     assert_eq!(checker.print_type(&t), r#"false"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4390,7 +4403,7 @@ fn unify_tuple_and_array() -> Result<(), TypeError> {
 
     checker.infer_program(&mut program, &mut my_ctx)?;
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4415,7 +4428,7 @@ fn conditional_type_with_function_subtyping() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, result.t)?;
     assert_eq!(checker.print_type(&t), r#"false"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4452,7 +4465,7 @@ fn return_type_rest_placeholder() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, result.t)?;
     assert_eq!(checker.print_type(&t), r#"string"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4477,7 +4490,7 @@ fn return_type_of_union() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, result.t)?;
     assert_eq!(checker.print_type(&t), r#"number | string"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4521,7 +4534,7 @@ fn parameters_utility_type() -> Result<(), TypeError> {
         r#"[string, number, boolean, ...Array<string>]"#
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4542,7 +4555,7 @@ fn function_subtyping_with_rest_placeholder() -> Result<(), TypeError> {
 
     checker.infer_program(&mut program, &mut my_ctx)?;
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4563,7 +4576,7 @@ fn function_subtyping_with_rest_array_fails() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4584,7 +4597,7 @@ fn function_multiple_rest_params_in_type_fails() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4605,7 +4618,7 @@ fn function_multiple_rest_params_function_fails() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 // TODO(#653): rest args in function calls
@@ -4623,7 +4636,7 @@ fn function_call_with_spread_args() -> Result<(), TypeError> {
 
     checker.infer_program(&mut program, &mut my_ctx)?;
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4658,7 +4671,7 @@ fn arithmetic_op_const_folding() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("rem").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"1"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4697,7 +4710,7 @@ fn comparison_op_const_folding() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("neq").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"true"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4726,7 +4739,7 @@ fn other_equality_checks() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("d").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"boolean"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4769,7 +4782,7 @@ fn type_level_arithmetic() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, result.t)?;
     assert_eq!(checker.print_type(&t), r#"0"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4790,7 +4803,7 @@ fn type_level_arithmetic_incorrect_operands() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4812,7 +4825,7 @@ fn check_type_constraints() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4846,7 +4859,7 @@ fn type_level_arithmetic_with_alias() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, result.t)?;
     assert_eq!(checker.print_type(&t), r#"number"#);
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4868,7 +4881,7 @@ fn type_level_arithmetic_with_incorrect_types() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4890,7 +4903,7 @@ fn type_args_are_eagerly_checked() -> Result<(), TypeError> {
         })
     );
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4907,7 +4920,7 @@ fn for_in_loop() -> Result<(), TypeError> {
 
     checker.infer_program(&mut program, &mut my_ctx)?;
 
-    Ok(())
+    assert_no_errors(&checker)
 }
 
 #[test]
@@ -4927,5 +4940,23 @@ fn for_in_loop_with_patterns() -> Result<(), TypeError> {
 
     checker.infer_program(&mut program, &mut my_ctx)?;
 
-    Ok(())
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn tagged_template_literal() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let foo: fn(strings: Array<string>, ...args: Array<number>) -> number
+    let result = foo`hello ${1} world ${5}`
+    "#;
+    let mut program = parse(src).unwrap();
+
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("result").unwrap();
+    assert_eq!(checker.print_type(&binding.index), r#"number"#);
+
+    assert_no_errors(&checker)
 }

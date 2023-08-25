@@ -62,6 +62,7 @@ pub struct Undefined {}
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct TemplateLiteral {
+    // TODO: split this into its own node so that we can add a `throws: Option<Index>` field
     pub tag: Option<Box<Expr>>,
     pub parts: Vec<Str>,
     pub exprs: Vec<Expr>,
