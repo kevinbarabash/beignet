@@ -62,10 +62,15 @@ pub struct Undefined {}
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct TemplateLiteral {
-    // TODO: split this into its own node so that we can add a `throws: Option<Index>` field
-    pub tag: Option<Box<Expr>>,
     pub parts: Vec<Str>,
     pub exprs: Vec<Expr>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct TaggedTemplateLiteral {
+    // TODO: split this into its own node so that we can add a `throws: Option<Index>` field
+    pub tag: Box<Expr>,
+    pub template: TemplateLiteral,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -195,6 +200,7 @@ pub enum ExprKind {
     Null(Null),
     Undefined(Undefined),
     TemplateLiteral(TemplateLiteral),
+    TaggedTemplateLiteral(TaggedTemplateLiteral),
     // TODO: Add regex support
     // Regex(Regex),
     Object(Object),

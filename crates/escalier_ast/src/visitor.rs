@@ -31,15 +31,14 @@ pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &Expr) {
         crate::ExprKind::Bool(_) => {}
         crate::ExprKind::Null(_) => {}
         crate::ExprKind::Undefined(_) => {}
-        crate::ExprKind::TemplateLiteral(TemplateLiteral {
-            tag,
-            parts: _,
-            exprs,
-        }) => {
-            if let Some(tag) = tag {
-                visitor.visit_expr(tag);
-            }
+        crate::ExprKind::TemplateLiteral(TemplateLiteral { parts: _, exprs }) => {
             for expr in exprs {
+                visitor.visit_expr(expr);
+            }
+        }
+        crate::ExprKind::TaggedTemplateLiteral(TaggedTemplateLiteral { tag, template }) => {
+            visitor.visit_expr(tag);
+            for expr in &template.exprs {
                 visitor.visit_expr(expr);
             }
         }

@@ -139,7 +139,6 @@ impl<'a> Parser<'a> {
             TokenKind::StrTemplateLit { parts, exprs } => {
                 self.next(); // consume string template
                 let kind = ExprKind::TemplateLiteral(TemplateLiteral {
-                    tag: None,
                     parts: parts
                         .iter()
                         .map(|token| match &token.kind {
@@ -939,19 +938,21 @@ impl<'a> Parser<'a> {
             }
             TokenKind::StrTemplateLit { parts, exprs } => {
                 self.next(); // consume string template
-                let kind = ExprKind::TemplateLiteral(TemplateLiteral {
-                    tag: Some(Box::new(lhs)),
-                    parts: parts
-                        .iter()
-                        .map(|token| match &token.kind {
-                            TokenKind::StrLit(value) => Str {
-                                span: token.span,
-                                value: value.to_owned(),
-                            },
-                            _ => panic!("Expected string literal, got {:?}", token),
-                        })
-                        .collect(),
-                    exprs: exprs.to_owned(),
+                let kind = ExprKind::TaggedTemplateLiteral(TaggedTemplateLiteral {
+                    tag: Box::new(lhs),
+                    template: TemplateLiteral {
+                        parts: parts
+                            .iter()
+                            .map(|token| match &token.kind {
+                                TokenKind::StrLit(value) => Str {
+                                    span: token.span,
+                                    value: value.to_owned(),
+                                },
+                                _ => panic!("Expected string literal, got {:?}", token),
+                            })
+                            .collect(),
+                        exprs: exprs.to_owned(),
+                    },
                 });
 
                 Expr {

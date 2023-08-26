@@ -79,7 +79,6 @@ StrTemplateLit {
                                                                 Expr {
                                                                     kind: TemplateLiteral(
                                                                         TemplateLiteral {
-                                                                            tag: None,
                                                                             parts: [
                                                                                 Str {
                                                                                     span: 27..30,
