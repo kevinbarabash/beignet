@@ -953,6 +953,7 @@ impl<'a> Parser<'a> {
                             .collect(),
                         exprs: exprs.to_owned(),
                     },
+                    throws: None,
                 });
 
                 Expr {

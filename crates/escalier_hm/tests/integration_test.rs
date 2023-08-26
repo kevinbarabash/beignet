@@ -4975,3 +4975,24 @@ fn tagged_template_literal() -> Result<(), TypeError> {
 
     assert_no_errors(&checker)
 }
+
+#[test]
+fn tagged_template_literal_with_throw() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let foo: fn(strings: Array<string>, ...args: Array<number>) -> number throws "RangeError"
+    let bar = fn () => foo`hello ${1} world ${5}`
+    "#;
+    let mut program = parse(src).unwrap();
+
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("bar").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"() -> number throws "RangeError""#
+    );
+
+    assert_no_errors(&checker)
+}

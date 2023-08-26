@@ -67,6 +67,12 @@ impl Visitor for ThrowsVisitor {
                 }
                 walk_expr(self, expr);
             }
+            ExprKind::TaggedTemplateLiteral(TaggedTemplateLiteral { throws, .. }) => {
+                if let Some(throws) = throws {
+                    self.throws.push(*throws);
+                }
+                walk_expr(self, expr);
+            }
             ExprKind::Throw(Throw { throws, .. }) => {
                 if let Some(throws) = throws {
                     self.throws.push(*throws);

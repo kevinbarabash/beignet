@@ -39,6 +39,7 @@ Expr {
                     },
                 ],
             },
+            throws: None,
         },
     ),
     span: 3..33,

@@ -563,6 +563,7 @@ impl Checker {
                 ExprKind::TaggedTemplateLiteral(TaggedTemplateLiteral { 
                     tag,
                     template: TemplateLiteral { parts, exprs },
+                    throws,
                 }) => {
                     let tag = checker.infer_expression(tag, ctx)?;
 
@@ -583,10 +584,13 @@ impl Checker {
                     }];
                     args.extend(exprs.clone());
 
-                    // TODO: handle `_throws`
-                    let (result, _throws) = checker.unify_call(ctx, &mut args, None, tag)?;
+                    let (call_result, call_throws) = checker.unify_call(ctx, &mut args, None, tag)?;
 
-                    result
+                    if let Some(call_throws) = call_throws {
+                        throws.replace(call_throws);
+                    }
+
+                    call_result
                 },
                 // ExprKind::TaggedTemplateLiteral(_) => todo!(),
                 ExprKind::Match(Match { expr, arms }) => {

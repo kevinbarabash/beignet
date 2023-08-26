@@ -68,9 +68,9 @@ pub struct TemplateLiteral {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct TaggedTemplateLiteral {
-    // TODO: split this into its own node so that we can add a `throws: Option<Index>` field
     pub tag: Box<Expr>,
     pub template: TemplateLiteral,
+    pub throws: Option<Index>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
