@@ -4621,24 +4621,6 @@ fn function_multiple_rest_params_function_fails() -> Result<(), TypeError> {
     assert_no_errors(&checker)
 }
 
-// TODO(#653): rest args in function calls
-#[test]
-#[ignore]
-fn function_call_with_spread_args() -> Result<(), TypeError> {
-    let (mut checker, mut my_ctx) = test_env();
-
-    let src = r#"
-    let foo = fn (a: number, b: string) => true
-    let args = [5, "hello"]
-    let result = foo(...args)
-    "#;
-    let mut program = parse(src).unwrap();
-
-    checker.infer_program(&mut program, &mut my_ctx)?;
-
-    assert_no_errors(&checker)
-}
-
 #[test]
 fn arithmetic_op_const_folding() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
@@ -4935,6 +4917,39 @@ fn for_in_loop_with_patterns() -> Result<(), TypeError> {
         centroid.x += x
         centroid.y += y
     }
+    "#;
+    let mut program = parse(src).unwrap();
+
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn function_call_func_wth_rest_arg() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    let foo = fn (a: Array<number>, ...rest: Array<string>) => true
+    let result = foo([5, 10], "hello", "world")
+    "#;
+    let mut program = parse(src).unwrap();
+
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    assert_no_errors(&checker)
+}
+
+// TODO(#676): handle array/tuple spread in function call
+#[test]
+#[ignore]
+fn function_call_with_spread_args() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    let foo = fn (a: number, b: string) => true
+    let args = [5, "hello"]
+    let result = foo(...args)
     "#;
     let mut program = parse(src).unwrap();
 

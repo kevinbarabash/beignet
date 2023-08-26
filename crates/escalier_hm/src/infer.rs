@@ -560,8 +560,6 @@ impl Checker {
                         Some(tag) => {
                             let tag = checker.infer_expression(tag, ctx)?;
 
-                            eprintln!("tag = {}", checker.print_type(&tag));
-
                             let mut args = vec![Expr {
                                 kind: ExprKind::Tuple(syntax::Tuple { elements: parts.iter().map(|part| {
                                     let part = Expr {

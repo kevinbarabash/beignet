@@ -717,7 +717,13 @@ impl Checker {
                         return Ok((ret_type, maybe_throws_type));
                     }
 
-                    self.pop_report();
+                    // We just throw away reports that don't unify until we find
+                    // one that does.  We should probably be saving these so that
+                    // we can provide a more detailed report when no overloads
+                    // match.
+                    if let Some(report) = self.parent_reports.pop() {
+                        self.current_report = report;
+                    }
                 }
                 return Err(TypeError {
                     message: "no valid overload for args".to_string(),
@@ -789,11 +795,19 @@ impl Checker {
                     func
                 };
 
-                if args.len() < func.params.len() {
+                let (params, rest_param) = match func.params.last() {
+                    Some(param) => match &param.pattern {
+                        TPat::Rest(rest) => (&func.params[..func.params.len() - 1], Some(param)),
+                        _ => (&func.params[..], None),
+                    },
+                    None => (&func.params[..], None),
+                };
+
+                if args.len() < params.len() {
                     return Err(TypeError {
                         message: format!(
                             "too few arguments to function: expected {}, got {}",
-                            func.params.len(),
+                            params.len(),
                             args.len()
                         ),
                     });
@@ -809,7 +823,7 @@ impl Checker {
                     .collect::<Result<Vec<_>, _>>()?;
 
                 let mut reasons: Vec<TypeError> = vec![];
-                for ((arg, p), param) in arg_types.iter().zip(func.params.iter()) {
+                for ((arg, p), param) in arg_types.iter().zip(params.iter()) {
                     match check_mutability(ctx, &param.pattern, arg)? {
                         true => self.unify_mut(ctx, *p, param.t)?,
                         false => match self.unify(ctx, *p, param.t) {
@@ -817,6 +831,29 @@ impl Checker {
                             Err(error) => reasons.push(error),
                         },
                     };
+                }
+
+                if let Some(rest_param) = rest_param {
+                    match &self.arena[rest_param.t].kind {
+                        TypeKind::Constructor(Constructor { name, types }) if name == "Array" => {
+                            let remaining_arg_types = &arg_types[params.len()..];
+                            let t = types[0];
+                            for (_, p) in remaining_arg_types.iter() {
+                                match self.unify(ctx, *p, t) {
+                                    Ok(_) => {}
+                                    Err(error) => reasons.push(error),
+                                }
+                            }
+                        }
+                        _ => {
+                            return Err(TypeError {
+                                message: format!(
+                                    "rest param must be an array, got {}",
+                                    self.print_type(&rest_param.t)
+                                ),
+                            });
+                        }
+                    }
                 }
 
                 if !reasons.is_empty() {
