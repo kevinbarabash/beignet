@@ -67,6 +67,13 @@ pub struct TemplateLiteral {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub struct TaggedTemplateLiteral {
+    pub tag: Box<Expr>,
+    pub template: TemplateLiteral,
+    pub throws: Option<Index>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Object {
     pub properties: Vec<PropOrSpread>,
 }
@@ -193,6 +200,7 @@ pub enum ExprKind {
     Null(Null),
     Undefined(Undefined),
     TemplateLiteral(TemplateLiteral),
+    TaggedTemplateLiteral(TaggedTemplateLiteral),
     // TODO: Add regex support
     // Regex(Regex),
     Object(Object),

@@ -89,9 +89,7 @@ fn template_literals() {
     "###);
 }
 
-// TODO: add support for tagged template strings
 #[test]
-#[ignore]
 fn tagged_template_literals() {
     let src = r#"
     let id = "12345"

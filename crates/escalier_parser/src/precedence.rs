@@ -21,6 +21,7 @@ pub enum Operator {
     ComputedMemberAccess,
     NewWithArgumentList,
     FunctionCall,
+    TemplateLiteral,
 
     // 16
     // NewWithoutArgList,
@@ -117,6 +118,7 @@ lazy_static! {
             (17, Associativity::NotApplicable),
         );
         table.insert(Operator::FunctionCall, (17, Associativity::NotApplicable));
+        table.insert(Operator::TemplateLiteral, (17, Associativity::NotApplicable));
 
         table.insert(Operator::LogicalNot, (14, Associativity::NotApplicable));
         table.insert(Operator::UnaryPlus, (14, Associativity::NotApplicable));

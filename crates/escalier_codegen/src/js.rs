@@ -649,19 +649,16 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
         values::ExprKind::TemplateLiteral(template) => {
             Expr::Tpl(build_template_literal(template, stmts, ctx))
         }
-        // TODO: support tagged templates
-        // values::ExprKind::TaggedTemplateLiteral(values::TaggedTemplateLiteral {
-        //     tag,
-        //     template,
-        // }) => {
-        //     Expr::TaggedTpl(TaggedTpl {
-        //         span,
-        //         tag: Box::from(Expr::Ident(Ident::from(tag))),
-        //         type_params: None, // TODO: support type params on tagged templates
-
-        //         tpl: Box::new(build_template_literal(template, stmts, ctx)),
-        //     })
-        // }
+        values::ExprKind::TaggedTemplateLiteral(ttl) => {
+            let tag = build_expr(&ttl.tag, stmts, ctx);
+            let tpl = build_template_literal(&ttl.template, stmts, ctx);
+            Expr::TaggedTpl(TaggedTpl {
+                span: DUMMY_SP,
+                tag: Box::from(tag),
+                type_params: None,
+                tpl: Box::new(tpl),
+            })
+        }
         values::ExprKind::Match(values::Match { expr, arms, .. }) => {
             // let $temp_n;
             let ret_temp_id = ctx.new_ident();

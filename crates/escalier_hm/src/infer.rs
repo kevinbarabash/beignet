@@ -555,8 +555,43 @@ impl Checker {
 
                     inner_t
                 }
-                // ExprKind::Empty => todo!(),
-                ExprKind::TemplateLiteral(_) => todo!(),
+                ExprKind::TemplateLiteral(TemplateLiteral { parts: _, exprs: _ }) => {
+                    // QUESTION: Do we want to require that each expr in
+                    // exprs has a .toString() method?
+                    checker.new_primitive(Primitive::String)
+                },
+                ExprKind::TaggedTemplateLiteral(TaggedTemplateLiteral { 
+                    tag,
+                    template: TemplateLiteral { parts, exprs },
+                    throws,
+                }) => {
+                    let tag = checker.infer_expression(tag, ctx)?;
+
+                    let mut args = vec![Expr {
+                        kind: ExprKind::Tuple(syntax::Tuple { elements: parts.iter().map(|part| {
+                            let part = Expr {
+                                kind: ExprKind::Str(Str { 
+                                    value: part.value.to_owned(),
+                                    span: Span {start: 0, end: 0},
+                                }),
+                                span: Span {start: 0, end: 0},
+                                inferred_type: None,
+                            };
+                            ExprOrSpread::Expr(part)
+                        }).collect() }),
+                        span: Span {start: 0, end: 0},
+                        inferred_type: None
+                    }];
+                    args.extend(exprs.clone());
+
+                    let (call_result, call_throws) = checker.unify_call(ctx, &mut args, None, tag)?;
+
+                    if let Some(call_throws) = call_throws {
+                        throws.replace(call_throws);
+                    }
+
+                    call_result
+                },
                 // ExprKind::TaggedTemplateLiteral(_) => todo!(),
                 ExprKind::Match(Match { expr, arms }) => {
                     let expr_idx = checker.infer_expression(expr, ctx)?;
