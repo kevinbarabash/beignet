@@ -11,7 +11,7 @@ use crate::checker::Checker;
 use crate::provenance::Provenance;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Variable {
+pub struct TypeVar {
     pub id: usize,
     pub instance: Option<Index>,
     pub constraint: Option<Index>,
@@ -19,7 +19,7 @@ pub struct Variable {
 
 // TODO: rename this TypeRef
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Constructor {
+pub struct TypeRef {
     pub name: String,
     // TODO: rename this to type_args
     pub types: Vec<Index>,
@@ -370,8 +370,8 @@ pub struct BinaryT {
 
 #[derive(Debug, Clone, Hash)]
 pub enum TypeKind {
-    Variable(Variable),       // TODO: rename to TypeVar
-    Constructor(Constructor), // TODO: rename to TypeRef
+    TypeVar(TypeVar),
+    TypeRef(TypeRef),
     Union(Union),
     Intersection(Intersection),
     Array(Array),
@@ -419,11 +419,11 @@ pub struct Scheme {
 impl Checker {
     pub fn print_type(&self, index: &Index) -> String {
         match &self.arena[*index].kind {
-            TypeKind::Variable(Variable {
+            TypeKind::TypeVar(TypeVar {
                 instance: Some(inst),
                 ..
             }) => self.print_type(inst),
-            TypeKind::Variable(Variable { id, constraint, .. }) => match constraint {
+            TypeKind::TypeVar(TypeVar { id, constraint, .. }) => match constraint {
                 Some(constraint) => format!("t{id}:{}", self.print_type(constraint)),
                 None => format!("t{id}"),
             },
@@ -433,7 +433,7 @@ impl Checker {
                 format!("[{}]", self.print_types(types).join(", "))
             }
             TypeKind::Array(Array { t }) => format!("{}[]", self.print_type(t)),
-            TypeKind::Constructor(Constructor { name, types }) => {
+            TypeKind::TypeRef(TypeRef { name, types }) => {
                 if types.is_empty() {
                     name.to_string()
                 } else {
@@ -695,13 +695,13 @@ impl Checker {
 
     pub fn equals(&self, a: &Index, b: &Index) -> bool {
         match (&self.arena[*a].kind, &self.arena[*b].kind) {
-            (TypeKind::Variable(v1), TypeKind::Variable(v2)) => match (v1.instance, v2.instance) {
+            (TypeKind::TypeVar(v1), TypeKind::TypeVar(v2)) => match (v1.instance, v2.instance) {
                 (Some(a_inst), Some(b_inst)) => self.equals(&a_inst, &b_inst),
                 (Some(a_inst), None) => self.equals(&a_inst, b),
                 (None, Some(b_inst)) => self.equals(a, &b_inst),
                 (None, None) => v1.id == v2.id,
             },
-            (TypeKind::Constructor(c1), TypeKind::Constructor(c2)) => {
+            (TypeKind::TypeRef(c1), TypeKind::TypeRef(c2)) => {
                 c1.name == c2.name && self.types_equal(&c1.types, &c2.types)
             }
             (TypeKind::Union(union1), TypeKind::Union(union2)) => {
@@ -812,7 +812,7 @@ impl Checker {
 
     /// A binary type constructor which builds function types
     pub fn new_var_type(&mut self, constraint: Option<Index>) -> Index {
-        self.arena.insert(Type::from(TypeKind::Variable(Variable {
+        self.arena.insert(Type::from(TypeKind::TypeVar(TypeVar {
             id: self.arena.len(), // use for debugging purposes only
             instance: None,
             constraint,
@@ -821,11 +821,10 @@ impl Checker {
 
     /// A binary type constructor which builds function types
     pub fn new_constructor(&mut self, name: &str, types: &[Index]) -> Index {
-        self.arena
-            .insert(Type::from(TypeKind::Constructor(Constructor {
-                name: name.to_string(),
-                types: types.to_vec(),
-            })))
+        self.arena.insert(Type::from(TypeKind::TypeRef(TypeRef {
+            name: name.to_string(),
+            types: types.to_vec(),
+        })))
     }
 
     pub fn new_array_type(&mut self, t: Index) -> Index {

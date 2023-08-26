@@ -327,7 +327,7 @@ pub fn build_type(
     let mutable = false;
     // let mutable = t.mutable;
     match &t.kind {
-        types::TypeKind::Variable(types::Variable {
+        types::TypeKind::TypeVar(types::TypeVar {
             id,
             constraint: _,
             instance,
@@ -449,7 +449,7 @@ pub fn build_type(
             ))
         }
         types::TypeKind::Object(obj) => build_obj_type(obj, ctx, checker),
-        types::TypeKind::Constructor(types::Constructor {
+        types::TypeKind::TypeRef(types::TypeRef {
             name,
             types: type_args,
             ..

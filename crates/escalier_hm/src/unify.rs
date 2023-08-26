@@ -38,8 +38,8 @@ impl Checker {
         let b_t = self.arena[b].clone();
 
         match (&a_t.kind, &b_t.kind) {
-            (TypeKind::Variable(_), _) => self.bind(ctx, a, b),
-            (_, TypeKind::Variable(_)) => self.bind(ctx, b, a),
+            (TypeKind::TypeVar(_), _) => self.bind(ctx, a, b),
+            (_, TypeKind::TypeVar(_)) => self.bind(ctx, b, a),
 
             // Wildcards are always unifiable
             (TypeKind::Wildcard, _) => Ok(()),
@@ -168,7 +168,7 @@ impl Checker {
             (TypeKind::Array(array_a), TypeKind::Array(array_b)) => {
                 self.unify(ctx, array_a.t, array_b.t)
             }
-            (TypeKind::Constructor(con_a), TypeKind::Constructor(con_b)) => {
+            (TypeKind::TypeRef(con_a), TypeKind::TypeRef(con_b)) => {
                 // TODO: support type constructors with optional and default type params
                 if con_a.name != con_b.name || con_a.types.len() != con_b.types.len() {
                     return Err(TypeError {
@@ -257,7 +257,7 @@ impl Checker {
                                         continue;
                                     }
                                     TypeKind::Array(_) => self.new_rest_type(p.t),
-                                    TypeKind::Constructor(_) => todo!(),
+                                    TypeKind::TypeRef(_) => todo!(),
                                     _ => {
                                         return Err(TypeError {
                                             message: format!(
@@ -524,7 +524,7 @@ impl Checker {
                 let rest_types: Vec<_> = intersection
                     .types
                     .iter()
-                    .filter(|t| matches!(self.arena[**t].kind, TypeKind::Variable(_)))
+                    .filter(|t| matches!(self.arena[**t].kind, TypeKind::TypeVar(_)))
                     .cloned()
                     .collect();
                 // TODO: check for other variants, if there are we should error
@@ -572,7 +572,7 @@ impl Checker {
                 let rest_types: Vec<_> = intersection
                     .types
                     .iter()
-                    .filter(|t| matches!(self.arena[**t].kind, TypeKind::Variable(_)))
+                    .filter(|t| matches!(self.arena[**t].kind, TypeKind::TypeVar(_)))
                     .cloned()
                     .collect();
 
@@ -656,7 +656,7 @@ impl Checker {
         let b_t = self.arena.get(b).unwrap().clone();
 
         match b_t.kind {
-            TypeKind::Variable(_) => {
+            TypeKind::TypeVar(_) => {
                 let arg_types: Vec<FuncParam> = args
                     .iter_mut()
                     .enumerate()
@@ -736,7 +736,7 @@ impl Checker {
                     message: "array is not callable".to_string(),
                 })
             }
-            TypeKind::Constructor(Constructor {
+            TypeKind::TypeRef(TypeRef {
                 name,
                 types: type_args,
             }) => {
@@ -938,7 +938,7 @@ impl Checker {
 
             match self.arena.get_mut(a) {
                 Some(t) => match &mut t.kind {
-                    TypeKind::Variable(avar) => {
+                    TypeKind::TypeVar(avar) => {
                         avar.instance = Some(b);
                         if let Some(constraint) = avar.constraint {
                             self.unify(ctx, b, constraint)?;
@@ -958,7 +958,7 @@ impl Checker {
         let a_t = self.arena[a].clone();
 
         match &a_t.kind {
-            TypeKind::Constructor(Constructor { name, .. }) if name == "Promise" => Ok(a),
+            TypeKind::TypeRef(TypeRef { name, .. }) if name == "Promise" => Ok(a),
             _ => self.expand_type(ctx, a),
         }
     }

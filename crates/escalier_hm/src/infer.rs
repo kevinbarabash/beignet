@@ -1348,7 +1348,7 @@ impl Checker {
                     Ok(self.new_union_type(&result_types))
                 }
             }
-            TypeKind::Constructor(types::Constructor { name, types, .. }) => {
+            TypeKind::TypeRef(types::TypeRef { name, types, .. }) => {
                 let obj_idx = self.expand_alias(ctx, name, types)?;
                 self.get_ident_member(ctx, obj_idx, key_idx)
             }
@@ -1430,7 +1430,7 @@ fn is_promise(t: &Type) -> bool {
     matches!(
         t,
         Type {
-            kind: TypeKind::Constructor(types::Constructor { name, .. }),
+            kind: TypeKind::TypeRef(types::TypeRef { name, .. }),
             provenance: _,
         } if name == "Promise"
     )
@@ -1516,7 +1516,7 @@ impl<'a, 'b> Folder for Generalize<'a, 'b> {
         let t = self.get_type(&index);
 
         match &t.kind {
-            TypeKind::Variable(Variable {
+            TypeKind::TypeVar(TypeVar {
                 id: _,
                 instance: _,
                 constraint: _,

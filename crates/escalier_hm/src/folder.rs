@@ -13,7 +13,7 @@ pub fn walk_index<F: Folder>(folder: &mut F, index: &Index) -> Index {
     let t = folder.get_type(index);
 
     let kind = match &t.kind {
-        TypeKind::Variable(Variable {
+        TypeKind::TypeVar(TypeVar {
             id,
             instance,
             constraint,
@@ -27,20 +27,20 @@ pub fn walk_index<F: Folder>(folder: &mut F, index: &Index) -> Index {
 
             // This doesn't seem right. We're creating a new type here, but
             // the `id` is the same.
-            TypeKind::Variable(Variable {
+            TypeKind::TypeVar(TypeVar {
                 id: *id,
                 instance: new_instance,
                 constraint: new_constraint,
             })
         }
-        TypeKind::Constructor(Constructor { name, types }) => {
+        TypeKind::TypeRef(TypeRef { name, types }) => {
             let new_types = walk_indexes(folder, types);
 
             if new_types == *types {
                 return *index;
             }
 
-            TypeKind::Constructor(Constructor {
+            TypeKind::TypeRef(TypeRef {
                 name: name.to_owned(),
                 types: new_types,
             })

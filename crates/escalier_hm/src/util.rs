@@ -33,7 +33,7 @@ impl Checker {
         // We clone here because we can't move out of a shared reference.
         // TODO: Consider using Rc<RefCell<Type>> to avoid unnecessary cloning.
         match self.arena.get(pruned_type2).unwrap().clone().kind {
-            TypeKind::Variable(_) => false,  // leaf node
+            TypeKind::TypeVar(_) => false,   // leaf node
             TypeKind::Literal(_) => false,   // leaf node
             TypeKind::Primitive(_) => false, // leaf node
             TypeKind::Keyword(_) => false,   // leaf node
@@ -74,7 +74,7 @@ impl Checker {
             TypeKind::Intersection(Intersection { types }) => self.occurs_in(v, &types),
             TypeKind::Tuple(Tuple { types }) => self.occurs_in(v, &types),
             TypeKind::Array(Array { t }) => self.occurs_in_type(v, t),
-            TypeKind::Constructor(Constructor { types, .. }) => self.occurs_in(v, &types),
+            TypeKind::TypeRef(TypeRef { types, .. }) => self.occurs_in(v, &types),
             TypeKind::KeyOf(KeyOf { t }) => self.occurs_in_type(v, t),
             TypeKind::IndexedAccess(IndexedAccess { obj, index }) => {
                 self.occurs_in_type(v, obj) || self.occurs_in_type(v, index)
@@ -134,7 +134,7 @@ impl Checker {
     pub fn prune(&mut self, t: Index) -> Index {
         let v2 = match self.arena.get(t).unwrap().kind {
             // TODO: handle .unwrap() panicing
-            TypeKind::Variable(Variable {
+            TypeKind::TypeVar(TypeVar {
                 instance: Some(value),
                 ..
             }) => value,
@@ -146,7 +146,7 @@ impl Checker {
         let value = self.prune(v2);
         match &mut self.arena.get_mut(t).unwrap().kind {
             // TODO: handle .unwrap() panicing
-            TypeKind::Variable(Variable {
+            TypeKind::TypeVar(TypeVar {
                 ref mut instance, ..
             }) => {
                 *instance = Some(value);
@@ -180,7 +180,7 @@ impl Checker {
 
                 if let TypeKind::Conditional(Conditional { check, .. }) = self.arena[scheme.t].kind
                 {
-                    if let TypeKind::Constructor(tref) = &self.arena[check].kind.clone() {
+                    if let TypeKind::TypeRef(tref) = &self.arena[check].kind.clone() {
                         if let Some((index_of_check_type, _)) = type_params
                             .iter()
                             .find_position(|type_param| type_param.name == tref.name)
@@ -261,7 +261,7 @@ impl Checker {
                 self.get_computed_member(ctx, *obj, *index)?
             }
             TypeKind::Conditional(conditional) => self.expand_conditional(ctx, conditional)?,
-            TypeKind::Constructor(Constructor { name, types, .. }) => {
+            TypeKind::TypeRef(TypeRef { name, types, .. }) => {
                 self.expand_alias(ctx, name, types)?
             }
             TypeKind::Binary(binary) => self.expand_binary(ctx, binary)?,
@@ -354,7 +354,7 @@ impl Checker {
                     .collect();
                 Ok(self.new_union_type(&keys))
             }
-            TypeKind::Constructor(constructor) => {
+            TypeKind::TypeRef(constructor) => {
                 let idx = self.expand_alias(ctx, &constructor.name, &constructor.types)?;
                 self.expand_keyof(ctx, idx)
             }
@@ -711,7 +711,7 @@ impl Checker {
                     Ok(self.new_union_type(&result_types))
                 }
             }
-            TypeKind::Constructor(Constructor { name, types, .. }) => {
+            TypeKind::TypeRef(TypeRef { name, types, .. }) => {
                 let idx = self.expand_alias(ctx, name, types)?;
                 self.get_computed_member(ctx, idx, key_idx)
             }

@@ -180,7 +180,7 @@ impl<'a, 'b> Folder for Fresh<'a, 'b> {
         let t = self.get_type(&index);
 
         match &t.kind {
-            TypeKind::Variable(Variable {
+            TypeKind::TypeVar(TypeVar {
                 id: _,
                 instance: _,
                 constraint,
@@ -225,7 +225,7 @@ impl<'a> Folder for Instantiate<'a> {
         let t = self.get_type(index);
 
         match &t.kind {
-            TypeKind::Constructor(Constructor { name, types }) => {
+            TypeKind::TypeRef(TypeRef { name, types }) => {
                 let new_types = folder::walk_indexes(self, types);
 
                 match self.mapping.get(name) {

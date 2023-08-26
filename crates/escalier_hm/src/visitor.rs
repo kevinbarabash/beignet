@@ -13,7 +13,7 @@ pub fn walk_index<V: Visitor>(visitor: &mut V, index: &Index) {
     let t = visitor.get_type(index);
 
     match &t.kind {
-        TypeKind::Variable(Variable {
+        TypeKind::TypeVar(TypeVar {
             id: _,
             instance,
             constraint,
@@ -21,7 +21,7 @@ pub fn walk_index<V: Visitor>(visitor: &mut V, index: &Index) {
             instance.map(|instance| visitor.visit_index(&instance));
             constraint.map(|constraint| visitor.visit_index(&constraint));
         }
-        TypeKind::Constructor(Constructor { name: _, types }) => {
+        TypeKind::TypeRef(TypeRef { name: _, types }) => {
             walk_indexes(visitor, types);
         }
         TypeKind::Union(Union { types }) => {
