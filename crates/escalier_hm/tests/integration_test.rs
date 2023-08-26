@@ -1921,7 +1921,7 @@ fn test_pattern_matching_array() -> Result<(), TypeError> {
     assert_eq!(
         checker.print_type(&binding.index),
         // TODO: update unions to merge elements whenever possible
-        r#"0 | number | number | Array<number>"#
+        r#"0 | number | number | number[]"#
     );
 
     assert_no_errors(&checker)
@@ -2150,7 +2150,7 @@ fn test_array_destructuring_assignment_with_rest() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("a").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string | undefined"#);
     let binding = my_ctx.values.get("array_rest").unwrap();
-    assert_eq!(checker.print_type(&binding.index), r#"Array<string>"#);
+    assert_eq!(checker.print_type(&binding.index), r#"string[]"#);
 
     assert_no_errors(&checker)
 }
@@ -3883,7 +3883,7 @@ fn test_mutable_error_arg_passing_with_subtyping() -> Result<(), TypeError> {
     assert_eq!(
         result,
         Err(TypeError {
-            message: "unify_mut: Array<number> != Array<number | string>".to_string(),
+            message: "unify_mut: number[] != number | string[]".to_string(),
         }),
     );
 
@@ -4043,7 +4043,7 @@ fn test_mutable_invalid_assignments() -> Result<(), TypeError> {
     assert_eq!(
         result,
         Err(TypeError {
-            message: "unify_mut: Array<number> != Array<number | string>".to_string(),
+            message: "unify_mut: number[] != number | string[]".to_string(),
         })
     );
 
@@ -4521,7 +4521,7 @@ fn parameters_utility_type() -> Result<(), TypeError> {
 
     let result = my_ctx.schemes.get("P2").unwrap();
     let t = checker.expand_type(&my_ctx, result.t)?;
-    assert_eq!(checker.print_type(&t), r#"[string, ...Array<number>]"#);
+    assert_eq!(checker.print_type(&t), r#"[string, ...number[]]"#);
 
     let result = my_ctx.schemes.get("P3").unwrap();
     let t = checker.expand_type(&my_ctx, result.t)?;
@@ -4531,7 +4531,7 @@ fn parameters_utility_type() -> Result<(), TypeError> {
     let t = checker.expand_type(&my_ctx, result.t)?;
     assert_eq!(
         checker.print_type(&t),
-        r#"[string, number, boolean, ...Array<string>]"#
+        r#"[string, number, boolean, ...string[]]"#
     );
 
     assert_no_errors(&checker)

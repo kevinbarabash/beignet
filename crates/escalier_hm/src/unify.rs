@@ -130,7 +130,7 @@ impl Checker {
                 }
                 Ok(())
             }
-            (TypeKind::Tuple(tuple), TypeKind::Constructor(array)) if array.name == "Array" => {
+            (TypeKind::Tuple(tuple), TypeKind::Array(array)) => {
                 // TODO: handle rest elements in the tuple
 
                 let mut types = vec![];
@@ -143,13 +143,13 @@ impl Checker {
 
                 if !types.is_empty() {
                     let p = self.new_union_type(&types);
-                    self.unify(ctx, p, array.types[0])?;
+                    self.unify(ctx, p, array.t)?;
                 }
 
                 Ok(())
             }
-            (TypeKind::Constructor(array), TypeKind::Tuple(tuple)) if array.name == "Array" => {
-                let p = array.types[0];
+            (TypeKind::Array(array), TypeKind::Tuple(tuple)) => {
+                let p = array.t;
                 for q in &tuple.types {
                     let undefined = self.new_keyword(Keyword::Undefined);
                     let p_or_undefined = self.new_union_type(&[p, undefined]);
@@ -161,14 +161,13 @@ impl Checker {
                 }
                 Ok(())
             }
-            (TypeKind::Rest(rest), TypeKind::Constructor(array)) if (array.name == "Array") => {
-                self.unify(ctx, rest.arg, b)
-            }
+            (TypeKind::Rest(rest), TypeKind::Array(_)) => self.unify(ctx, rest.arg, b),
             (TypeKind::Rest(rest), TypeKind::Tuple(_)) => self.unify(ctx, rest.arg, b),
-            (TypeKind::Constructor(array), TypeKind::Rest(rest)) if (array.name == "Array") => {
-                self.unify(ctx, a, rest.arg)
-            }
+            (TypeKind::Array(_), TypeKind::Rest(rest)) => self.unify(ctx, a, rest.arg),
             (TypeKind::Tuple(_), TypeKind::Rest(rest)) => self.unify(ctx, a, rest.arg),
+            (TypeKind::Array(array_a), TypeKind::Array(array_b)) => {
+                self.unify(ctx, array_a.t, array_b.t)
+            }
             (TypeKind::Constructor(con_a), TypeKind::Constructor(con_b)) => {
                 // TODO: support type constructors with optional and default type params
                 if con_a.name != con_b.name || con_a.types.len() != con_b.types.len() {
@@ -257,9 +256,7 @@ impl Checker {
                                         }
                                         continue;
                                     }
-                                    TypeKind::Constructor(array) if array.name == "Array" => {
-                                        self.new_rest_type(p.t)
-                                    }
+                                    TypeKind::Array(_) => self.new_rest_type(p.t),
                                     TypeKind::Constructor(_) => todo!(),
                                     _ => {
                                         return Err(TypeError {
@@ -835,9 +832,9 @@ impl Checker {
 
                 if let Some(rest_param) = rest_param {
                     match &self.arena[rest_param.t].kind {
-                        TypeKind::Constructor(Constructor { name, types }) if name == "Array" => {
+                        TypeKind::Array(array) => {
                             let remaining_arg_types = &arg_types[params.len()..];
-                            let t = types[0];
+                            let t = array.t;
                             for (_, p) in remaining_arg_types.iter() {
                                 match self.unify(ctx, *p, t) {
                                     Ok(_) => {}
@@ -961,7 +958,6 @@ impl Checker {
         let a_t = self.arena[a].clone();
 
         match &a_t.kind {
-            TypeKind::Constructor(Constructor { name, .. }) if name == "Array" => Ok(a),
             TypeKind::Constructor(Constructor { name, .. }) if name == "Promise" => Ok(a),
             _ => self.expand_type(ctx, a),
         }

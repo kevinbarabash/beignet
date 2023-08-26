@@ -278,13 +278,7 @@ impl Checker {
     // - never
     // - union of any of those types
     pub fn expand_keyof(&mut self, ctx: &Context, t: Index) -> Result<Index, TypeError> {
-        let obj = match &self.arena[t].kind {
-            // Don't expand Array's since they have a special `keyof` behavior.  We
-            // don't want to expand them because we don't want to include array methods
-            // in the list of keys.  This is similar to how objects are treated.
-            TypeKind::Constructor(Constructor { name, .. }) if name == "Array" => t,
-            _ => self.expand_type(ctx, t)?,
-        };
+        let obj = self.expand_type(ctx, t)?;
 
         match &self.arena[obj].kind.clone() {
             TypeKind::Object(Object { elems }) => {
@@ -350,9 +344,7 @@ impl Checker {
             // Array.prototype as well.
             // TODO(#637): Have interop layer translate between Escalier's and
             // TypeScript's `keyof` utility type.
-            TypeKind::Constructor(array) if array.name == "Array" => {
-                Ok(self.new_primitive(Primitive::Number))
-            }
+            TypeKind::Array(_) => Ok(self.new_primitive(Primitive::Number)),
             TypeKind::Tuple(tuple) => {
                 let keys: Vec<Index> = tuple
                     .types
@@ -636,8 +628,28 @@ impl Checker {
 
         match &obj_type.kind {
             TypeKind::Object(_) => self.get_prop(ctx, obj_idx, key_idx),
-            // let tuple = [5, "hello", true]
-            // tuple[1]; // "hello"
+            TypeKind::Array(array) => {
+                match &key_type.kind {
+                    TypeKind::Literal(Literal::Number(value)) => {
+                        // TODO: update AST with the inferred type
+                        let types = vec![array.t, self.new_keyword(Keyword::Undefined)];
+                        Ok(self.new_union_type(&types))
+                    }
+                    TypeKind::Literal(Literal::String(_)) => {
+                        // TODO: look up methods on the `Array` interface
+                        // we need to instantiate the scheme such that `T` is equal
+                        // to the union of all types in the tuple
+                        self.get_prop(ctx, obj_idx, key_idx)
+                    }
+                    TypeKind::Primitive(Primitive::Number) => {
+                        let types = vec![array.t, self.new_keyword(Keyword::Undefined)];
+                        Ok(self.new_union_type(&types))
+                    }
+                    _ => Err(TypeError {
+                        message: "Can only access tuple properties with a number".to_string(),
+                    }),
+                }
+            }
             TypeKind::Tuple(tuple) => {
                 match &key_type.kind {
                     TypeKind::Literal(Literal::Number(value)) => {

@@ -828,6 +828,10 @@ impl Checker {
             })))
     }
 
+    pub fn new_array_type(&mut self, t: Index) -> Index {
+        self.arena.insert(Type::from(TypeKind::Array(Array { t })))
+    }
+
     pub fn new_keyword(&mut self, keyword: Keyword) -> Index {
         self.arena.insert(Type::from(TypeKind::Keyword(keyword)))
     }
