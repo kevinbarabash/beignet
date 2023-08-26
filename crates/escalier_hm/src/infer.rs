@@ -917,6 +917,15 @@ impl Checker {
                 }
                 self.new_object_type(&props)
             }
+            TypeAnnKind::TypeRef(name, type_args) if name == "Array" => { 
+                match type_args {
+                    Some(type_args) => {
+                        let t = self.infer_type_ann(&mut type_args[0], ctx)?;
+                        self.new_array_type(t)
+                    },
+                    None => return Err(TypeError { message: "Array expects 1 type arg".to_string() }),
+                }
+            }
             TypeAnnKind::TypeRef(name, type_args) => {
                 let type_args = match type_args {
                     Some(type_args) => {
@@ -981,7 +990,7 @@ impl Checker {
             }
             TypeAnnKind::Array(elem_type) => {
                 let idx = self.infer_type_ann(elem_type, ctx)?;
-                self.new_constructor("Array", &[idx])
+                self.new_array_type(idx)
             }
             TypeAnnKind::IndexedAccess(obj_type, index_type) => {
                 let obj_idx = self.infer_type_ann(obj_type, ctx)?;
@@ -1098,9 +1107,8 @@ impl Checker {
                 StmtKind::Expr(ExprStmt { expr }) => checker.infer_expression(expr, ctx)?,
                 StmtKind::For(ForStmt { left, right, body }) => {
                     let right_t = checker.infer_expression(right, ctx)?;
-
-                    let (bindings, left_t) = checker.infer_pattern(left, &ctx)?;
-                    let array_t = checker.new_constructor("Array", &[left_t]);
+                    let (bindings, left_t) = checker.infer_pattern(left, ctx)?;
+                    let array_t = checker.new_array_type(left_t);
                     // The expression we're iterating over must be assignable
                     // to an array.
                     checker.unify(ctx, right_t, array_t)?;
@@ -1342,6 +1350,10 @@ impl Checker {
             }
             TypeKind::Constructor(types::Constructor { name, types, .. }) => {
                 let obj_idx = self.expand_alias(ctx, name, types)?;
+                self.get_ident_member(ctx, obj_idx, key_idx)
+            }
+            TypeKind::Array(types::Array { t }) => {
+                let obj_idx = self.expand_alias(ctx, "Array", &[*t])?;
                 self.get_ident_member(ctx, obj_idx, key_idx)
             }
             TypeKind::Tuple(types::Tuple { types }) => {

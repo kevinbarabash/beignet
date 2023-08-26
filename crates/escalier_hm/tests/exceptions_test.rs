@@ -306,11 +306,11 @@ fn callback_with_throws() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
         checker.print_type(&binding.index),
-        r#"() -> Array<number> throws "DIV_BY_ZERO""#
+        r#"() -> number[] throws "DIV_BY_ZERO""#
     );
 
     let binding = my_ctx.values.get("bar").unwrap();
-    assert_eq!(checker.print_type(&binding.index), r#"() -> Array<number>"#);
+    assert_eq!(checker.print_type(&binding.index), r#"() -> number[]"#);
 
     Ok(())
 }
