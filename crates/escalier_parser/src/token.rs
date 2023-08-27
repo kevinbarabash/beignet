@@ -3,6 +3,7 @@ use escalier_ast::*;
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum TokenKind {
     Identifier(String), // [a-zA-Z_][a-zA-Z0-9_]*
+    Comment(String),
 
     // Literals
     BoolLit(bool),

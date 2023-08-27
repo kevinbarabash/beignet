@@ -162,6 +162,11 @@ impl<'a> Parser<'a> {
     pub fn parse_program(&mut self) -> Result<Program, ParseError> {
         let mut stmts = Vec::new();
         while self.peek().unwrap_or(&EOF).kind != TokenKind::Eof {
+            // TODO: attach comments to AST nodes
+            if let TokenKind::Comment(_) = &self.peek().unwrap_or(&EOF).kind {
+                self.next(); // consumes the comment
+                continue;
+            }
             stmts.push(self.parse_stmt()?);
         }
         Ok(Program { stmts })
@@ -320,6 +325,25 @@ mod tests {
             for ({x, y} in points) {
                 console.log(`(${x}, ${y})`)
             }"#
+        ));
+    }
+
+    #[test]
+    fn parse_comments() {
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            let x = 5  // x-coord
+            let y = 10 // y-coord
+            "#
+        ));
+
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            let make_point = fn (x: number, y: number) {
+                // returns a point
+                return {x, y}
+            }
+            "#
         ));
     }
 }

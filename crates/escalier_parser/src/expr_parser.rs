@@ -77,6 +77,12 @@ impl<'a> Parser<'a> {
         assert_eq!(open.kind, TokenKind::LeftBrace);
         let mut stmts = Vec::new();
         while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
+            // TODO: attach comments to AST nodes
+            if let TokenKind::Comment(_) = &self.peek().unwrap_or(&EOF).kind {
+                self.next(); // consumes the comment
+                continue;
+            }
+
             stmts.push(self.parse_stmt()?);
 
             // The last statement in a block is allowed to omit the trailing

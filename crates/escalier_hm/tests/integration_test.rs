@@ -5036,3 +5036,36 @@ fn tagged_template_literal_with_throw() -> Result<(), TypeError> {
 
     assert_no_errors(&checker)
 }
+
+#[test]
+fn test_generalization_inside_function() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    // this is foo
+    let foo = fn () {
+        // TODO: generalize `bar` before returning it
+        let bar = fn (x) => x // `bar` is the identity function
+        return [bar(5), bar("hello"), bar] // we include `bar` in the return value
+    }
+    let bar = foo()
+    "#;
+    let mut program = parse(src).unwrap();
+
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    // TODO: do let-generalization within functions, not just
+    // at the top level.
+    let binding = my_ctx.values.get("foo").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"<A>() -> [5, "hello", (x: A) -> A]"#
+    );
+    let binding = my_ctx.values.get("bar").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"[5, "hello", (x: t33) -> t33]"#
+    );
+
+    assert_no_errors(&checker)
+}

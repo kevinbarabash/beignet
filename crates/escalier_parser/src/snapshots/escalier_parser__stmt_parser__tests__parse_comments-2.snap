@@ -1,0 +1,130 @@
+---
+source: crates/escalier_parser/src/stmt_parser.rs
+expression: "parse(r#\"\n            let make_point = fn (x: number, y: number) {\n                // returns a point\n                return {x, y}\n            }\n            \"#)"
+---
+[
+    Stmt {
+        kind: VarDecl(
+            VarDecl {
+                is_declare: false,
+                is_var: false,
+                pattern: Pattern {
+                    kind: Ident(
+                        BindingIdent {
+                            name: "make_point",
+                            span: 17..27,
+                            mutable: false,
+                        },
+                    ),
+                    span: 17..27,
+                    inferred_type: None,
+                },
+                expr: Some(
+                    Expr {
+                        kind: Function(
+                            Function {
+                                type_params: None,
+                                params: [
+                                    FuncParam {
+                                        pattern: Pattern {
+                                            kind: Ident(
+                                                BindingIdent {
+                                                    name: "x",
+                                                    span: 34..35,
+                                                    mutable: false,
+                                                },
+                                            ),
+                                            span: 34..35,
+                                            inferred_type: None,
+                                        },
+                                        type_ann: Some(
+                                            TypeAnn {
+                                                kind: Number,
+                                                span: 37..43,
+                                                inferred_type: None,
+                                            },
+                                        ),
+                                        optional: false,
+                                    },
+                                    FuncParam {
+                                        pattern: Pattern {
+                                            kind: Ident(
+                                                BindingIdent {
+                                                    name: "y",
+                                                    span: 45..46,
+                                                    mutable: false,
+                                                },
+                                            ),
+                                            span: 45..46,
+                                            inferred_type: None,
+                                        },
+                                        type_ann: Some(
+                                            TypeAnn {
+                                                kind: Number,
+                                                span: 48..54,
+                                                inferred_type: None,
+                                            },
+                                        ),
+                                        optional: false,
+                                    },
+                                ],
+                                body: Block(
+                                    Block {
+                                        span: 55..136,
+                                        stmts: [
+                                            Stmt {
+                                                kind: Return(
+                                                    ReturnStmt {
+                                                        arg: Some(
+                                                            Expr {
+                                                                kind: Object(
+                                                                    Object {
+                                                                        properties: [
+                                                                            Prop(
+                                                                                Shorthand(
+                                                                                    Ident {
+                                                                                        name: "x",
+                                                                                        span: 117..118,
+                                                                                    },
+                                                                                ),
+                                                                            ),
+                                                                            Prop(
+                                                                                Shorthand(
+                                                                                    Ident {
+                                                                                        name: "y",
+                                                                                        span: 120..121,
+                                                                                    },
+                                                                                ),
+                                                                            ),
+                                                                        ],
+                                                                    },
+                                                                ),
+                                                                span: 115..122,
+                                                                inferred_type: None,
+                                                            },
+                                                        ),
+                                                    },
+                                                ),
+                                                span: 115..122,
+                                                inferred_type: None,
+                                            },
+                                        ],
+                                    },
+                                ),
+                                type_ann: None,
+                                throws: None,
+                                is_async: false,
+                                is_gen: false,
+                            },
+                        ),
+                        span: 30..136,
+                        inferred_type: None,
+                    },
+                ),
+                type_ann: None,
+            },
+        ),
+        span: 13..136,
+        inferred_type: None,
+    },
+]
