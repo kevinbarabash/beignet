@@ -157,6 +157,23 @@ impl<'a> Parser<'a> {
                         self.scanner.pop();
                         TokenKind::DivideAssign
                     }
+                    Some('/') => {
+                        self.scanner.pop();
+                        self.scanner.pop();
+                        let mut comment = String::new();
+                        while !self.scanner.is_done() && self.scanner.peek(0) != Some('\n') {
+                            if let Some(c) = self.scanner.pop() {
+                                comment.push(c);
+                            }
+                        }
+                        let end = self.scanner.cursor();
+                        let kind = TokenKind::Comment(comment);
+
+                        return Some(Token {
+                            kind,
+                            span: Span { start, end },
+                        });
+                    }
                     _ => TokenKind::Divide,
                 },
                 '%' => match self.scanner.peek(1) {
@@ -707,5 +724,25 @@ mod tests {
         assert_eq!(tokens[3].kind, crate::token::TokenKind::TimesAssign);
         assert_eq!(tokens[4].kind, crate::token::TokenKind::DivideAssign);
         assert_eq!(tokens[5].kind, crate::token::TokenKind::ModuloAssign);
+    }
+
+    #[test]
+    fn parse_with_comments() {
+        let parser = Parser::new("a // comment\nb");
+
+        let tokens = parser.collect::<Vec<_>>();
+
+        assert_eq!(
+            tokens[0].kind,
+            crate::token::TokenKind::Identifier("a".to_string())
+        );
+        assert_eq!(
+            tokens[1].kind,
+            crate::token::TokenKind::Comment(" comment".to_string())
+        );
+        assert_eq!(
+            tokens[2].kind,
+            crate::token::TokenKind::Identifier("b".to_string())
+        );
     }
 }

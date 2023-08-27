@@ -1,0 +1,72 @@
+---
+source: crates/escalier_parser/src/stmt_parser.rs
+expression: "parse(r#\"\n            let x = 5  // x-coord\n            let y = 10 // y-coord\n            \"#)"
+---
+[
+    Stmt {
+        kind: VarDecl(
+            VarDecl {
+                is_declare: false,
+                is_var: false,
+                pattern: Pattern {
+                    kind: Ident(
+                        BindingIdent {
+                            name: "x",
+                            span: 17..18,
+                            mutable: false,
+                        },
+                    ),
+                    span: 17..18,
+                    inferred_type: None,
+                },
+                expr: Some(
+                    Expr {
+                        kind: Num(
+                            Num {
+                                value: "5",
+                            },
+                        ),
+                        span: 21..22,
+                        inferred_type: None,
+                    },
+                ),
+                type_ann: None,
+            },
+        ),
+        span: 13..22,
+        inferred_type: None,
+    },
+    Stmt {
+        kind: VarDecl(
+            VarDecl {
+                is_declare: false,
+                is_var: false,
+                pattern: Pattern {
+                    kind: Ident(
+                        BindingIdent {
+                            name: "y",
+                            span: 51..52,
+                            mutable: false,
+                        },
+                    ),
+                    span: 51..52,
+                    inferred_type: None,
+                },
+                expr: Some(
+                    Expr {
+                        kind: Num(
+                            Num {
+                                value: "10",
+                            },
+                        ),
+                        span: 55..57,
+                        inferred_type: None,
+                    },
+                ),
+                type_ann: None,
+            },
+        ),
+        span: 47..57,
+        inferred_type: None,
+    },
+]
