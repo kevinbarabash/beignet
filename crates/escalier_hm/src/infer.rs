@@ -716,7 +716,16 @@ impl Checker {
                     .map(|param| {
                         let t = match &mut param.type_ann {
                             Some(type_ann) => self.infer_type_ann(type_ann, &mut sig_ctx)?,
-                            None => self.new_var_type(None),
+                            None => {
+                                match &param.pattern.kind {
+                                    // TODO: add a check that `self` is only allowed 
+                                    // as the first param in a method signature.
+                                    PatternKind::Ident(ident) if ident.name == "self" => {
+                                        self.new_constructor("Self", &[])
+                                    },
+                                    _ => self.new_var_type(None),
+                                }
+                            },
                         };
 
                         Ok(types::FuncParam {
@@ -774,6 +783,15 @@ impl Checker {
 
             TypeAnnKind::Object(obj) => {
                 let mut props: Vec<types::TObjElem> = Vec::new();
+                let mut obj_ctx = ctx.clone();
+                let self_idx = self.new_var_type(None);
+                obj_ctx.schemes.insert(
+                    "Self".to_string(),
+                    Scheme {
+                        type_params: None,
+                        t: self_idx,
+                    },
+                );
                 for elem in obj.iter_mut() {
                     match elem {
                         ObjectProp::Mapped(Mapped {
@@ -822,7 +840,7 @@ impl Checker {
                             props.push(types::TObjElem::Prop(types::TProp {
                                 name: TPropKey::StringKey(prop.name.to_owned()),
                                 modifier,
-                                t: self.infer_type_ann(&mut prop.type_ann, ctx)?,
+                                t: self.infer_type_ann(&mut prop.type_ann, &mut obj_ctx)?,
                                 mutable: prop.mutable,
                                 optional: prop.optional,
                             }));

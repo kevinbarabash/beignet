@@ -958,7 +958,7 @@ fn object_signatures() -> Result<(), TypeError> {
 
     assert_eq!(
         checker.print_type(&binding.index),
-        "{fn(a: number) -> string, foo: (a: number) -> string, bar: (self: t14, a: number) -> string, get baz: (self: t18) -> string, set baz: (self: t21, value: string) -> undefined, [P]: number for P in string, qux: string}".to_string(),
+        "{fn(a: number) -> string, foo: (a: number) -> string, bar: (self: Self, a: number) -> string, get baz: (self: Self) -> string, set baz: (self: Self, value: string) -> undefined, [P]: number for P in string, qux: string}".to_string(),
     );
 
     assert_no_errors(&checker)
