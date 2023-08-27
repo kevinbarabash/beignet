@@ -4926,18 +4926,58 @@ fn for_in_loop_with_patterns() -> Result<(), TypeError> {
 }
 
 #[test]
-fn function_call_func_wth_rest_arg() -> Result<(), TypeError> {
+fn function_call_func_wth_rest_arg_array() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     let foo = fn (a: Array<number>, ...rest: Array<string>) => true
-    let result = foo([5, 10], "hello", "world")
+    foo([5, 10], "hello", "world")
+    foo([5, 10], "hello")
+    foo([5, 10])
     "#;
     let mut program = parse(src).unwrap();
 
     checker.infer_program(&mut program, &mut my_ctx)?;
 
     assert_no_errors(&checker)
+}
+
+#[test]
+fn function_call_func_wth_rest_arg_tuple() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    let foo = fn (a: Array<number>, ...rest: [string, boolean]) => true
+    foo([5, 10], "hello", true)
+    foo([5, 10], "hello", true, "world")
+    "#;
+    let mut program = parse(src).unwrap();
+
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn function_call_func_wth_rest_arg_tuple_not_enough_args() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    let foo = fn (a: Array<number>, ...rest: [string, boolean]) => true
+    foo([5, 10], "hello")
+    "#;
+    let mut program = parse(src).unwrap();
+
+    let result = checker.infer_program(&mut program, &mut my_ctx);
+
+    assert_eq!(
+        result,
+        Err(TypeError {
+            message: "too few arguments to function: expected 3, got 2".to_string()
+        })
+    );
+
+    Ok(())
 }
 
 // TODO(#676): handle array/tuple spread in function call
