@@ -794,7 +794,7 @@ impl Checker {
 
                 let (params, rest_param) = match func.params.last() {
                     Some(param) => match &param.pattern {
-                        TPat::Rest(rest) => (&func.params[..func.params.len() - 1], Some(param)),
+                        TPat::Rest(_) => (&func.params[..func.params.len() - 1], Some(param)),
                         _ => (&func.params[..], None),
                     },
                     None => (&func.params[..], None),
@@ -831,7 +831,7 @@ impl Checker {
                 }
 
                 if let Some(rest_param) = rest_param {
-                    match &self.arena[rest_param.t].kind {
+                    match &self.arena[rest_param.t].kind.clone() {
                         TypeKind::Array(array) => {
                             let remaining_arg_types = &arg_types[params.len()..];
                             let t = array.t;
@@ -840,6 +840,25 @@ impl Checker {
                                     Ok(_) => {}
                                     Err(error) => reasons.push(error),
                                 }
+                            }
+                        }
+                        TypeKind::Tuple(tuple) => {
+                            let remaining_arg_types = &arg_types[params.len()..];
+                            if remaining_arg_types.len() < tuple.types.len() {
+                                return Err(TypeError {
+                                    message: format!(
+                                        "too few arguments to function: expected {}, got {}",
+                                        tuple.types.len(),
+                                        remaining_arg_types.len()
+                                    ),
+                                });
+                            }
+
+                            for ((_, p), t) in remaining_arg_types.iter().zip(tuple.types.iter()) {
+                                match self.unify(ctx, *p, *t) {
+                                    Ok(_) => {}
+                                    Err(error) => reasons.push(error),
+                                };
                             }
                         }
                         _ => {
