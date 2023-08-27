@@ -1,3 +1,4 @@
+use generational_arena::Index;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -6,60 +7,65 @@ use swc_ecma_ast::*;
 use swc_ecma_parser::{error::Error, parse_file_as_module, Syntax, TsConfig};
 use swc_ecma_visit::*;
 
-use escalier_old_ast::types::{
-    self as types, RestPat, TCallable, TConditionalType, TFnParam, TIndex, TIndexAccess, TIndexKey,
-    TKeyword, TLam, TMappedType, TMappedTypeChangeProp, TObjElem, TObject, TPat, TProp, TPropKey,
-    TRef, Type, TypeKind, TypeParam,
+use escalier_ast::identifier;
+use escalier_ast::literal::Literal as Lit;
+use escalier_ast::span::Span;
+use escalier_hm::checker::Checker;
+use escalier_hm::context::{Binding, Context};
+use escalier_hm::types::{
+    self, Conditional, FuncParam, Function, IndexedAccess, Keyword, MappedType, Object, Primitive,
+    RestPat, Scheme, TCallable, TObjElem, TPat, TProp, TPropKey, TypeKind, TypeParam, TypeRef,
 };
-use escalier_old_ast::values::{Lit, DUMMY_LOC};
-use escalier_old_infer::{self, get_sub_and_type_params, Checker, Scheme, Subst, Substitutable};
 
-use crate::overrides::maybe_override_string_methods;
+// use crate::overrides::maybe_override_string_methods;
 use crate::util;
 
-pub fn infer_ts_type_ann(checker: &'_ mut Checker, type_ann: &TsType) -> Result<Type, String> {
+pub fn infer_ts_type_ann(checker: &'_ mut Checker, type_ann: &TsType) -> Result<Index, String> {
     match type_ann {
         TsType::TsKeywordType(keyword) => match &keyword.kind {
-            TsKeywordTypeKind::TsAnyKeyword => Ok(checker.fresh_var(None)),
-            TsKeywordTypeKind::TsUnknownKeyword => Ok(checker.fresh_var(None)),
+            TsKeywordTypeKind::TsAnyKeyword => Ok(checker.new_var_type(None)),
+            TsKeywordTypeKind::TsUnknownKeyword => Ok(checker.new_var_type(None)),
             TsKeywordTypeKind::TsNumberKeyword => {
-                Ok(checker.from_type_kind(TypeKind::Keyword(TKeyword::Number)))
+                Ok(checker.from_type_kind(TypeKind::Primitive(Primitive::Number)))
             }
             TsKeywordTypeKind::TsObjectKeyword => {
-                Ok(checker.from_type_kind(TypeKind::Keyword(TKeyword::Object)))
+                Ok(checker.from_type_kind(TypeKind::Keyword(Keyword::Object)))
             }
             TsKeywordTypeKind::TsBooleanKeyword => {
-                Ok(checker.from_type_kind(TypeKind::Keyword(TKeyword::Boolean)))
+                Ok(checker.from_type_kind(TypeKind::Primitive(Primitive::Boolean)))
             }
             TsKeywordTypeKind::TsBigIntKeyword => Err(String::from("can't parse BigInt yet")),
             TsKeywordTypeKind::TsStringKeyword => {
-                Ok(checker.from_type_kind(TypeKind::Keyword(TKeyword::String)))
+                Ok(checker.from_type_kind(TypeKind::Primitive(Primitive::String)))
             }
             TsKeywordTypeKind::TsSymbolKeyword => {
-                Ok(checker.from_type_kind(TypeKind::Keyword(TKeyword::Symbol)))
+                Ok(checker.from_type_kind(TypeKind::Primitive(Primitive::Symbol)))
             }
             // NOTE: `void` is treated the same as `undefined` ...for now.
             TsKeywordTypeKind::TsVoidKeyword => {
-                Ok(checker.from_type_kind(TypeKind::Keyword(TKeyword::Undefined)))
+                Ok(checker.from_type_kind(TypeKind::Keyword(Keyword::Undefined)))
             }
             TsKeywordTypeKind::TsUndefinedKeyword => {
-                Ok(checker.from_type_kind(TypeKind::Keyword(TKeyword::Undefined)))
+                Ok(checker.from_type_kind(TypeKind::Keyword(Keyword::Undefined)))
             }
             TsKeywordTypeKind::TsNullKeyword => {
-                Ok(checker.from_type_kind(TypeKind::Keyword(TKeyword::Null)))
+                Ok(checker.from_type_kind(TypeKind::Keyword(Keyword::Null)))
             }
             TsKeywordTypeKind::TsNeverKeyword => {
-                Ok(checker.from_type_kind(TypeKind::Keyword(TKeyword::Never)))
+                Ok(checker.from_type_kind(TypeKind::Keyword(Keyword::Never)))
             }
             TsKeywordTypeKind::TsIntrinsicKeyword => {
                 Err(String::from("can't parse Intrinsics yet"))
             }
         },
-        TsType::TsThisType(_) => Ok(checker.from_type_kind(TypeKind::This)),
+        TsType::TsThisType(_) => {
+            todo!("Add TypeKind::Self")
+            // Ok(checker.from_type_kind(TypeKind::This))
+        }
         TsType::TsFnOrConstructorType(fn_or_constructor) => match &fn_or_constructor {
             TsFnOrConstructorType::TsFnType(fn_type) => {
                 let params = infer_fn_params(checker, &fn_type.params)?;
-                let ret = Box::from(infer_ts_type_ann(checker, &fn_type.type_ann.type_ann)?);
+                let ret = infer_ts_type_ann(checker, &fn_type.type_ann.type_ann)?;
 
                 let type_params = match &fn_type.type_params {
                     Some(type_param_decl) => {
@@ -70,7 +76,7 @@ pub fn infer_ts_type_ann(checker: &'_ mut Checker, type_ann: &TsType) -> Result<
                                 let constraint = match &type_param.constraint {
                                     Some(constraint) => {
                                         let t = infer_ts_type_ann(checker, constraint)?;
-                                        Some(Box::from(t))
+                                        Some(t)
                                     }
                                     None => None,
                                 };
@@ -78,7 +84,7 @@ pub fn infer_ts_type_ann(checker: &'_ mut Checker, type_ann: &TsType) -> Result<
                                 let default = match &type_param.default {
                                     Some(default) => {
                                         let t = infer_ts_type_ann(checker, default)?;
-                                        Some(Box::from(t))
+                                        Some(t)
                                     }
                                     None => None,
                                 };
@@ -100,10 +106,11 @@ pub fn infer_ts_type_ann(checker: &'_ mut Checker, type_ann: &TsType) -> Result<
                     None => None,
                 };
 
-                let t = checker.from_type_kind(TypeKind::Lam(TLam {
+                let t = checker.from_type_kind(TypeKind::Function(Function {
                     type_params,
                     params,
                     ret,
+                    throws: None,
                 }));
 
                 Ok(t)
@@ -130,14 +137,15 @@ pub fn infer_ts_type_ann(checker: &'_ mut Checker, type_ann: &TsType) -> Result<
                         .iter()
                         .map(|t| infer_ts_type_ann(checker, t))
                         .collect();
-                    Ok(checker.from_type_kind(TypeKind::Ref(types::TRef {
+                    Ok(checker.from_type_kind(TypeKind::TypeRef(TypeRef {
                         name,
-                        type_args: result.ok(),
+                        // TODO: Update TypeRef's .types field to be Option<Vec<Index>>
+                        types: result.ok().unwrap(),
                     })))
                 }
-                None => Ok(checker.from_type_kind(TypeKind::Ref(types::TRef {
+                None => Ok(checker.from_type_kind(TypeKind::TypeRef(TypeRef {
                     name,
-                    type_args: None,
+                    types: vec![],
                 }))),
             }
         }
@@ -160,9 +168,9 @@ pub fn infer_ts_type_ann(checker: &'_ mut Checker, type_ann: &TsType) -> Result<
                 })
                 .collect();
 
-            let t = checker.from_type_kind(TypeKind::Object(TObject {
+            let t = checker.from_type_kind(TypeKind::Object(Object {
                 elems,
-                is_interface: false,
+                // is_interface: false,
             }));
 
             Ok(t)
@@ -170,29 +178,29 @@ pub fn infer_ts_type_ann(checker: &'_ mut Checker, type_ann: &TsType) -> Result<
         TsType::TsArrayType(array) => {
             let elem_type = infer_ts_type_ann(checker, &array.elem_type)?;
             // TODO: link back to the TypeScript source type annotation
-            let mut t = checker.from_type_kind(TypeKind::Array(Box::from(elem_type)));
-            t.mutable = true;
-            Ok(t)
+            let array_type = checker.new_array_type(elem_type);
+            // t.mutable = true;
+            Ok(array_type)
         }
         TsType::TsTupleType(_) => Err(String::from("can't parse tuple type yet")),
         TsType::TsOptionalType(_) => Err(String::from("can't parse optional type yet")),
         TsType::TsRestType(_) => Err(String::from("can't parse rest type yet")),
         TsType::TsUnionOrIntersectionType(union_or_intersection) => match union_or_intersection {
             TsUnionOrIntersectionType::TsUnionType(union) => {
-                let types: Result<Vec<_>, String> = union
+                let types = union
                     .types
                     .iter()
                     .map(|ts_type| infer_ts_type_ann(checker, ts_type))
-                    .collect();
-                Ok(checker.from_type_kind(TypeKind::Union(types?)))
+                    .collect::<Result<Vec<_>, String>>()?;
+                Ok(checker.new_union_type(&types))
             }
             TsUnionOrIntersectionType::TsIntersectionType(intersection) => {
-                let types: Result<Vec<_>, String> = intersection
+                let types = intersection
                     .types
                     .iter()
                     .map(|ts_type| infer_ts_type_ann(checker, ts_type))
-                    .collect();
-                Ok(checker.from_type_kind(TypeKind::Intersection(types?)))
+                    .collect::<Result<Vec<_>, String>>()?;
+                Ok(checker.new_intersection_type(&types))
             }
         },
         TsType::TsConditionalType(TsConditionalType {
@@ -202,15 +210,15 @@ pub fn infer_ts_type_ann(checker: &'_ mut Checker, type_ann: &TsType) -> Result<
             true_type,
             false_type,
         }) => {
-            let check_type = infer_ts_type_ann(checker, check_type)?;
-            let extends_type = infer_ts_type_ann(checker, extends_type)?;
+            let check = infer_ts_type_ann(checker, check_type)?;
+            let extends = infer_ts_type_ann(checker, extends_type)?;
             let true_type = infer_ts_type_ann(checker, true_type)?;
             let false_type = infer_ts_type_ann(checker, false_type)?;
-            let t = checker.from_type_kind(TypeKind::ConditionalType(TConditionalType {
-                check_type: Box::from(check_type),
-                extends_type: Box::from(extends_type),
-                true_type: Box::from(true_type),
-                false_type: Box::from(false_type),
+            let t = checker.from_type_kind(TypeKind::Conditional(Conditional {
+                check,
+                extends,
+                true_type,
+                false_type,
             }));
             Ok(t)
         }
@@ -229,16 +237,15 @@ pub fn infer_ts_type_ann(checker: &'_ mut Checker, type_ann: &TsType) -> Result<
                         kind: TsKeywordTypeKind::TsAnyKeyword,
                         ..
                     }) => {
-                        let number = checker.from_type_kind(TypeKind::Keyword(TKeyword::Number));
-                        let string = checker.from_type_kind(TypeKind::Keyword(TKeyword::String));
-                        let symbol = checker.from_type_kind(TypeKind::Keyword(TKeyword::Symbol));
-                        let t =
-                            checker.from_type_kind(TypeKind::Union(vec![number, string, symbol]));
+                        let number = checker.from_type_kind(TypeKind::Primitive(Primitive::Number));
+                        let string = checker.from_type_kind(TypeKind::Primitive(Primitive::String));
+                        let symbol = checker.from_type_kind(TypeKind::Primitive(Primitive::Symbol));
+                        let t = checker.new_union_type(&[number, string, symbol]);
                         Ok(t)
                     }
                     _ => {
                         let type_ann = infer_ts_type_ann(checker, type_ann)?;
-                        Ok(checker.from_type_kind(TypeKind::KeyOf(Box::from(type_ann))))
+                        Ok(checker.new_keyof_type(type_ann))
                     }
                 },
                 TsTypeOperatorOp::Unique => todo!(),
@@ -255,66 +262,53 @@ pub fn infer_ts_type_ann(checker: &'_ mut Checker, type_ann: &TsType) -> Result<
             index_type,
         }) => {
             let object_t = infer_ts_type_ann(checker, obj_type)?;
-            let index_t = infer_ts_type_ann(checker, index_type)?;
-            let t = checker.from_type_kind(TypeKind::IndexAccess(TIndexAccess {
-                object: Box::from(object_t),
-                index: Box::from(index_t),
+            let index_t = infer_ts_type_ann(checker, index_type.as_ref())?;
+            let t = checker.from_type_kind(TypeKind::IndexedAccess(IndexedAccess {
+                obj: object_t,
+                index: index_t,
             }));
             Ok(t)
         }
         TsType::TsMappedType(TsMappedType {
             span: _,
-            readonly,
             type_param,
-            optional,
             type_ann,
+            readonly: _,
+            optional: _,
             ..
         }) => {
             let type_ann = infer_ts_type_ann(checker, type_ann.as_ref().unwrap())?;
             let constraint = match &type_param.constraint {
-                Some(constraint) => Some(Box::from(infer_ts_type_ann(checker, constraint)?)),
-                None => None,
+                Some(constraint) => infer_ts_type_ann(checker, constraint)?,
+                None => {
+                    return Err(String::from(
+                        "MappedType is missing a type parameter constraint",
+                    ))
+                }
             };
-            let default = match &type_param.default {
-                Some(default) => Some(Box::from(infer_ts_type_ann(checker, default)?)),
-                None => None,
-            };
-            let t = checker.from_type_kind(TypeKind::MappedType(TMappedType {
-                type_param: TypeParam {
-                    name: type_param.name.sym.to_string(),
-                    constraint,
-                    default,
-                },
-                optional: match optional {
-                    Some(change) => match change {
-                        TruePlusMinus::True => Some(TMappedTypeChangeProp::Plus),
-                        TruePlusMinus::Plus => Some(TMappedTypeChangeProp::Plus),
-                        TruePlusMinus::Minus => Some(TMappedTypeChangeProp::Minus),
-                    },
-                    None => None,
-                },
-                mutable: match readonly {
-                    Some(change) => match change {
-                        // NOTE: We reverse plus/minus here because we converting
-                        // from `readonly` to `mutable`.
-                        TruePlusMinus::True => Some(TMappedTypeChangeProp::Minus),
-                        TruePlusMinus::Plus => Some(TMappedTypeChangeProp::Minus),
-                        TruePlusMinus::Minus => Some(TMappedTypeChangeProp::Plus),
-                    },
-                    None => None,
-                },
-                t: Box::from(type_ann),
-            }));
+
+            // TODO: handle readonly modifier
+            // TODO: handle optional modifier
+
+            let name = type_param.name.sym.to_string();
+
+            let elems = vec![TObjElem::Mapped(MappedType {
+                key: checker.new_constructor(&name, &[]),
+                target: name,
+                source: constraint,
+                value: type_ann,
+                check: None,
+                extends: None,
+            })];
+
+            let t = checker.new_object_type(&elems);
+
             Ok(t)
         }
         TsType::TsLitType(lit) => match &lit.lit {
-            TsLit::Number(num) => {
-                Ok(checker.from_lit(Lit::num(format!("{}", num.value), 0..0, DUMMY_LOC)))
-            }
-            TsLit::Str(str) => {
-                Ok(checker.from_lit(Lit::str(str.value.to_string(), 0..0, DUMMY_LOC)))
-            }
-            TsLit::Bool(b) => Ok(checker.from_lit(Lit::bool(b.value, 0..0, DUMMY_LOC))),
+            TsLit::Number(num) => Ok(checker.new_lit_type(&Lit::Number(format!("{}", num.value)))),
+            TsLit::Str(str) => Ok(checker.new_lit_type(&Lit::String(str.value.to_string()))),
+            TsLit::Bool(b) => Ok(checker.new_lit_type(&Lit::Boolean(b.value))),
             TsLit::BigInt(_) => Err(String::from("can't parse BigInt literal yet")),
             TsLit::Tpl(_) => Err(String::from("can't parse Tpl literal yet")),
         },
@@ -326,15 +320,16 @@ pub fn infer_ts_type_ann(checker: &'_ mut Checker, type_ann: &TsType) -> Result<
 fn infer_fn_params(
     checker: &'_ mut Checker,
     params: &[TsFnParam],
-) -> Result<Vec<TFnParam>, String> {
-    let params: Vec<TFnParam> = params
+) -> Result<Vec<FuncParam>, String> {
+    let params: Vec<FuncParam> = params
         .iter()
         .enumerate()
         .filter_map(|(index, param)| match param {
             TsFnParam::Ident(ident) => {
                 let type_ann = ident.type_ann.clone().unwrap();
-                let param = TFnParam {
-                    pat: TPat::Ident(types::BindingIdent {
+                let param = FuncParam {
+                    pattern: TPat::Ident(identifier::BindingIdent {
+                        span: Span { start: 0, end: 0 },
                         name: ident.id.sym.to_string(),
                         mutable: false,
                     }),
@@ -354,9 +349,10 @@ fn infer_fn_params(
                     Pat::Ident(BindingIdent { id, .. }) => id.sym.to_string(),
                     _ => format!("arg{index}"),
                 };
-                let param = TFnParam {
-                    pat: TPat::Rest(RestPat {
-                        arg: Box::from(TPat::Ident(types::BindingIdent {
+                let param = FuncParam {
+                    pattern: TPat::Rest(RestPat {
+                        arg: Box::from(TPat::Ident(identifier::BindingIdent {
+                            span: Span { start: 0, end: 0 },
                             name,
                             mutable: false,
                         })),
@@ -380,7 +376,7 @@ fn infer_fn_params(
 fn infer_method_sig(
     checker: &'_ mut Checker,
     sig: &TsMethodSignature,
-    obj_is_mutable: bool,
+    _obj_is_mutable: bool,
 ) -> Result<TObjElem, String> {
     if sig.computed {
         panic!("unexpected computed property in TypElement")
@@ -392,7 +388,9 @@ fn infer_method_sig(
         None => Err(String::from("method has no return type")),
     }?;
 
-    let mut type_params = match &sig.type_params {
+    // TODO: check to see if there are any type variables in the signature
+    // that can be turned into type params.
+    let type_params = match &sig.type_params {
         Some(type_param_decl) => type_param_decl
             .params
             .iter()
@@ -400,7 +398,7 @@ fn infer_method_sig(
                 let constraint = match &type_param.constraint {
                     Some(constraint) => {
                         let t = infer_ts_type_ann(checker, constraint)?;
-                        Some(Box::from(t))
+                        Some(t)
                     }
                     None => None,
                 };
@@ -408,7 +406,7 @@ fn infer_method_sig(
                 let default = match &type_param.default {
                     Some(default) => {
                         let t = infer_ts_type_ann(checker, default)?;
-                        Some(Box::from(t))
+                        Some(t)
                     }
                     None => None,
                 };
@@ -425,45 +423,26 @@ fn infer_method_sig(
 
     let name = get_key_name(sig.key.as_ref())?;
 
-    // If there are any free type variables, add them to `type_params`.
-    let mut tvs = params.ftv();
-    tvs.append(&mut ret.ftv());
-
-    let mut sub: Subst = Subst::default();
-    let mut char_code: u32 = 65; // TODO: avoid naming collisions
-    for tv in tvs {
-        let c = char::from_u32(char_code).unwrap();
-        let t = checker.from_type_kind(TypeKind::Ref(TRef {
-            name: c.to_string(),
-            type_args: None,
-        }));
-        sub.insert(tv.id, t);
-        type_params.push(TypeParam {
-            name: c.to_string(),
-            constraint: tv.constraint,
-            default: None,
-        });
-        char_code += 1;
-    }
-
-    let elem = types::TObjElem::Method(types::TMethod {
-        name: TPropKey::StringKey(name),
-        params,
-        ret: Box::from(ret),
+    let t = checker.from_type_kind(TypeKind::Function(Function {
         type_params: if type_params.is_empty() {
             None
         } else {
             Some(type_params)
         },
-        // Assume that all methods in mutable object can mutate the object.
-        // If there's a ReadonlyFoo and Foo pair, duplicates will be merged such
-        // that `is_mutating: false`.
-        is_mutating: obj_is_mutable,
+        params,
+        ret,
+        throws: None,
+    }));
+
+    let elem = types::TObjElem::Prop(TProp {
+        name: TPropKey::StringKey(name),
+        modifier: None,
+        optional: false,
+        mutable: false,
+        t,
     });
 
-    let t = elem.apply(&sub, checker);
-
-    Ok(t)
+    Ok(elem)
 }
 
 fn get_type_params(
@@ -478,7 +457,7 @@ fn get_type_params(
                 let constraint = match &type_param.constraint {
                     Some(constraint) => {
                         let t = infer_ts_type_ann(checker, constraint)?;
-                        Some(Box::from(t))
+                        Some(t)
                     }
                     None => None,
                 };
@@ -486,7 +465,7 @@ fn get_type_params(
                 let default = match &type_param.default {
                     Some(default) => {
                         let t = infer_ts_type_ann(checker, default)?;
-                        Some(Box::from(t))
+                        Some(t)
                     }
                     None => None,
                 };
@@ -510,22 +489,14 @@ fn infer_callable(
 ) -> Result<TCallable, String> {
     let params = infer_fn_params(checker, params)?;
     let ret = infer_ts_type_ann(checker, type_ann)?;
-    let mut type_params = get_type_params(checker, type_params)?;
+    let type_params = get_type_params(checker, type_params)?;
 
-    let mut tvars = params.ftv();
-    tvars.append(&mut ret.ftv());
-
-    let (sub, more_type_params) = get_sub_and_type_params(&tvars, checker);
-    if let Some(mut more_type_params) = more_type_params {
-        type_params.append(&mut more_type_params);
-    }
-
-    let params = params.apply(&sub, checker);
-    let ret = ret.apply(&sub, checker);
+    // TODO: check signature to see if there are any free type variables that
+    // can be converted to additional type params.
 
     Ok(TCallable {
         params,
-        ret: Box::from(ret),
+        ret,
         type_params: if type_params.is_empty() {
             None
         } else {
@@ -568,6 +539,7 @@ fn infer_ts_type_element(
                     // TODO: warn about mutable props inside of a readonly object
                     mutable: !sig.readonly,
                     t,
+                    modifier: None,
                 }))
             }
             None => Err(String::from("Property is missing type annotation")),
@@ -588,14 +560,14 @@ fn infer_ts_type_element(
                 let params = infer_fn_params(checker, &sig.params)?;
                 let key = params.get(0).unwrap();
 
-                if let TPat::Ident(escalier_old_ast::types::BindingIdent { name, .. }) = &key.pat {
-                    Ok(TObjElem::Index(TIndex {
-                        key: TIndexKey {
-                            name: name.to_owned(),
-                            t: Box::from(key.t.to_owned()),
-                        },
-                        mutable: !sig.readonly,
-                        t,
+                if let TPat::Ident(identifier::BindingIdent { name, .. }) = &key.pattern {
+                    Ok(TObjElem::Mapped(MappedType {
+                        key: checker.new_constructor(name.as_str(), &[]),
+                        target: name.to_owned(),
+                        value: t,
+                        source: key.t,
+                        check: None,
+                        extends: None,
                     }))
                 } else {
                     Err(String::from("Invalid key in index signature"))
@@ -621,7 +593,7 @@ fn infer_type_alias_decl(
                     let constraint = match &type_param.constraint {
                         Some(constraint) => {
                             let t = infer_ts_type_ann(checker, constraint)?;
-                            Some(Box::from(t))
+                            Some(t)
                         }
                         None => None,
                     };
@@ -629,7 +601,7 @@ fn infer_type_alias_decl(
                     let default = match &type_param.default {
                         Some(default) => {
                             let t = infer_ts_type_ann(checker, default)?;
-                            Some(Box::from(t))
+                            Some(t)
                         }
                         None => None,
                     };
@@ -645,10 +617,7 @@ fn infer_type_alias_decl(
         None => None,
     };
 
-    let scheme = Scheme {
-        t: Box::from(t),
-        type_params,
-    };
+    let scheme = Scheme { t, type_params };
 
     Ok(scheme)
 }
@@ -667,10 +636,13 @@ fn infer_interface_decl(
             let elem = infer_ts_type_element(checker, elem, obj_is_mutable);
 
             match elem {
-                Ok(elem) => match maybe_override_string_methods(decl, &elem, checker) {
-                    Some(override_elem) => Some(override_elem),
-                    None => Some(elem),
-                },
+                Ok(_elem) => {
+                    todo!("implement 'maybe_override_string_methods'");
+                    // match maybe_override_string_methods(decl, &elem, checker) {
+                    //     Some(override_elem) => Some(override_elem),
+                    //     None => Some(elem),
+                    // }
+                }
                 Err(msg) => {
                     eprintln!("Err: {msg}");
                     None
@@ -679,9 +651,9 @@ fn infer_interface_decl(
         })
         .collect();
 
-    let t = checker.from_type_kind(TypeKind::Object(TObject {
+    let t = checker.from_type_kind(TypeKind::Object(Object {
         elems,
-        is_interface: false,
+        // is_interface: false,
     }));
 
     let mut type_params = match &decl.type_params {
@@ -693,7 +665,7 @@ fn infer_interface_decl(
                     let constraint = match &type_param.constraint {
                         Some(constraint) => {
                             let t = infer_ts_type_ann(checker, constraint)?;
-                            Some(Box::from(t))
+                            Some(t)
                         }
                         None => None,
                     };
@@ -701,7 +673,7 @@ fn infer_interface_decl(
                     let default = match &type_param.default {
                         Some(default) => {
                             let t = infer_ts_type_ann(checker, default)?;
-                            Some(Box::from(t))
+                            Some(t)
                         }
                         None => None,
                     };
@@ -738,10 +710,7 @@ fn infer_interface_decl(
         ])
     }
 
-    let scheme = Scheme {
-        t: Box::from(t),
-        type_params,
-    };
+    let scheme = Scheme { t, type_params };
 
     Ok(scheme)
 }
@@ -754,9 +723,10 @@ fn get_key_name(key: &Expr) -> Result<String, String> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct InterfaceCollector {
     pub checker: Checker,
+    pub ctx: Context,
     pub comments: SingleThreadedComments,
     pub namespace: Vec<String>,
     pub interfaces: HashMap<String, Vec<TsInterfaceDecl>>,
@@ -767,8 +737,8 @@ impl Visit for InterfaceCollector {
         let name = decl.id.sym.to_string();
         match infer_type_alias_decl(&mut self.checker, decl) {
             Ok(scheme) => {
-                eprintln!("inferring: {name} as scheme: {scheme}");
-                self.checker.insert_scheme(name, scheme)
+                // eprintln!("inferring: {name} as scheme: {scheme}");
+                self.ctx.schemes.insert(name, scheme);
             }
             Err(err) => {
                 eprintln!("couldn't infer {name}, {err:#?}")
@@ -817,7 +787,11 @@ impl Visit for InterfaceCollector {
                             let t =
                                 infer_ts_type_ann(&mut self.checker, &type_ann.type_ann).unwrap();
                             let name = bi.id.sym.to_string();
-                            self.checker.insert_value(name, t)
+                            let binding = Binding {
+                                index: t.to_owned(),
+                                is_mut: false,
+                            };
+                            self.ctx.values.insert(name, binding);
                         }
                         None => todo!(),
                     }
@@ -833,7 +807,7 @@ impl Visit for InterfaceCollector {
     }
 }
 
-pub fn parse_dts(d_ts_source: &str) -> Result<escalier_old_infer::Checker, Error> {
+pub fn parse_dts(d_ts_source: &str) -> Result<Checker, Error> {
     let cm = Arc::<SourceMap>::default();
     let fm = cm.new_source_file(FileName::Anon, d_ts_source.to_owned());
 
@@ -856,6 +830,7 @@ pub fn parse_dts(d_ts_source: &str) -> Result<escalier_old_infer::Checker, Error
 
     let mut collector = InterfaceCollector {
         checker: Checker::default(),
+        ctx: Context::default(),
         comments,
         namespace: vec![],
         interfaces: HashMap::new(),
@@ -879,16 +854,16 @@ pub fn parse_dts(d_ts_source: &str) -> Result<escalier_old_infer::Checker, Error
             let name = name.to_owned();
             match infer_interface_decl(&mut collector.checker, &decl, mutable) {
                 Ok(new_scheme) => {
-                    match collector.checker.lookup_scheme(&name).ok() {
+                    match collector.ctx.get_scheme(&name).ok() {
                         Some(old_scheme) => {
                             let merged_scheme = util::merge_schemes(
                                 &old_scheme,
                                 &new_scheme,
                                 &mut collector.checker,
                             );
-                            collector.checker.insert_scheme(name, merged_scheme);
+                            collector.ctx.schemes.insert(name, merged_scheme)
                         }
-                        None => collector.checker.insert_scheme(name, new_scheme),
+                        None => collector.ctx.schemes.insert(name, new_scheme),
                     };
                 }
                 Err(_) => eprintln!("couldn't infer {name}"),
@@ -896,10 +871,5 @@ pub fn parse_dts(d_ts_source: &str) -> Result<escalier_old_infer::Checker, Error
         }
     }
 
-    let checker = escalier_old_infer::Checker {
-        next_id: collector.checker.next_id,
-        current_scope: collector.checker.current_scope,
-        ..escalier_old_infer::Checker::default()
-    };
-    Ok(checker)
+    Ok(collector.checker)
 }

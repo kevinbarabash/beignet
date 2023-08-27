@@ -27,19 +27,21 @@ pub struct TypeRef {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Keyword {
+    Never,
     Null,
+    Object,
     Undefined,
     Unknown,
-    Never,
 }
 
 impl fmt::Display for Keyword {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let result = match self {
+            Self::Never => "never",
             Self::Null => "null",
+            Self::Object => "object",
             Self::Undefined => "undefined",
             Self::Unknown => "unknown",
-            Self::Never => "never",
         };
         write!(f, "{result}")
     }

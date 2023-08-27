@@ -1,3 +1,3 @@
 // mod overrides;
-// pub mod parse;
+pub mod parse;
 mod util;

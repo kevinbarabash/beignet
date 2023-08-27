@@ -424,6 +424,7 @@ dependencies = [
  "escalier_ast",
  "escalier_hm",
  "escalier_parser",
+ "generational-arena",
  "memoize",
  "swc_atoms",
  "swc_common",

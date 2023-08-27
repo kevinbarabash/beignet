@@ -440,14 +440,15 @@ impl Checker {
             TypeKind::Keyword(keyword) => match keyword {
                 // TODO: update get_property to handle these cases as well
                 Keyword::Null => Ok(self.new_keyword(Keyword::Never)),
-                Keyword::Undefined => Ok(self.new_keyword(Keyword::Never)),
-                Keyword::Unknown => Ok(self.new_keyword(Keyword::Never)),
                 Keyword::Never => {
                     let string = self.new_primitive(Primitive::String);
                     let number = self.new_primitive(Primitive::Number);
                     let symbol = self.new_primitive(Primitive::Symbol);
                     Ok(self.new_union_type(&[string, number, symbol]))
                 }
+                Keyword::Object => Ok(self.new_keyword(Keyword::Object)),
+                Keyword::Undefined => Ok(self.new_keyword(Keyword::Never)),
+                Keyword::Unknown => Ok(self.new_keyword(Keyword::Never)),
             },
             TypeKind::Primitive(primitive) => {
                 let name = primitive.get_scheme_name();
