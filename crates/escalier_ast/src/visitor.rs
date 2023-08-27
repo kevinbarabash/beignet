@@ -39,7 +39,7 @@ pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &Expr) {
         crate::ExprKind::TaggedTemplateLiteral(TaggedTemplateLiteral {
             tag,
             template,
-            throws,
+            throws: _,
         }) => {
             visitor.visit_expr(tag);
 

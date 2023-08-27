@@ -1,6 +1,7 @@
 use generational_arena::Index;
 use itertools::Itertools;
 use std::collections::{BTreeMap, HashSet};
+use std::mem::transmute;
 
 use escalier_ast::{self as syntax, *};
 
@@ -168,8 +169,7 @@ impl Checker {
                     match *opt_chain && has_undefined {
                         true => {
                             let undefined = checker.new_keyword(Keyword::Undefined);
-
-                            if let TypeKind::Union(union) = &checker.arena[result].kind.clone() {
+                            if let TypeKind::Union(union) = &checker.arena[result].kind {
                                 let mut types = filter_nullables(&checker.arena, &union.types);
 
                                 if types.len() != union.types.len() {
@@ -1315,8 +1315,9 @@ impl Checker {
         obj_idx: Index,
         key_idx: Index,
     ) -> Result<Index, TypeError> {
-        // NOTE: cloning is fine here because we aren't mutating `obj_type`
-        match &self.arena[obj_idx].kind.clone() {
+        // We're not mutating `kind` so this should be safe.
+        let kind: &TypeKind = unsafe { transmute(&self.arena[obj_idx].kind) };
+        match kind {
             TypeKind::Object(_) => self.get_prop(ctx, obj_idx, key_idx),
             // declare let obj: {x: number} | {x: string}
             // obj.x; // number | string

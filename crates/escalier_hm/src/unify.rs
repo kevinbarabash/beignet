@@ -2,6 +2,7 @@ use defaultmap::*;
 use generational_arena::Index;
 use itertools::Itertools;
 use std::collections::{BTreeSet, HashMap};
+use std::mem::transmute;
 
 use escalier_ast::{BindingIdent, Expr, Literal as Lit, Span};
 
@@ -831,7 +832,9 @@ impl Checker {
                 }
 
                 if let Some(rest_param) = rest_param {
-                    match &self.arena[rest_param.t].kind.clone() {
+                    // We're not mutating `kind` so this should be safe.
+                    let kind: &TypeKind = unsafe { transmute(&self.arena[rest_param.t].kind) };
+                    match kind {
                         TypeKind::Array(array) => {
                             let remaining_arg_types = &arg_types[params.len()..];
                             let t = array.t;
