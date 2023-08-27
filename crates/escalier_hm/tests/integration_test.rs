@@ -1934,10 +1934,10 @@ fn test_pattern_matching_object() -> Result<(), TypeError> {
     // TODO: allow trailing `,` when doing pattern matching
     // TODO: add support for omitting fields in object patterns
     let src = r#"
-    declare let action: {kind: "insert", key: string, value: string} | {kind: "delete", key: string}
+    declare let action: {type: "insert", key: string, value: string} | {type: "delete", key: string}
     let key = match (action) {
-        {kind: "insert", key, value} => key,
-        {kind: "delete", key} => key
+        {type: "insert", key, value} => key,
+        {type: "delete", key} => key
     }
     "#;
     let mut program = parse(src).unwrap();
