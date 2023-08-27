@@ -4973,7 +4973,7 @@ fn function_call_func_wth_rest_arg_tuple_not_enough_args() -> Result<(), TypeErr
     assert_eq!(
         result,
         Err(TypeError {
-            message: "too few arguments to function: expected 2, got 1".to_string()
+            message: "too few arguments to function: expected 3, got 2".to_string()
         })
     );
 

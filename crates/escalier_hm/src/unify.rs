@@ -848,8 +848,8 @@ impl Checker {
                                 return Err(TypeError {
                                     message: format!(
                                         "too few arguments to function: expected {}, got {}",
-                                        tuple.types.len(),
-                                        remaining_arg_types.len()
+                                        params.len() + tuple.types.len(),
+                                        params.len() + remaining_arg_types.len()
                                     ),
                                 });
                             }
