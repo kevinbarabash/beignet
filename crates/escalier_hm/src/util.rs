@@ -1,6 +1,7 @@
 use generational_arena::{Arena, Index};
 use itertools::Itertools;
 use std::collections::{BTreeMap, HashMap};
+use std::mem::transmute;
 
 use escalier_ast::Literal;
 
@@ -180,16 +181,18 @@ impl Checker {
 
                 if let TypeKind::Conditional(Conditional { check, .. }) = self.arena[scheme.t].kind
                 {
-                    if let TypeKind::TypeRef(tref) = &self.arena[check].kind.clone() {
+                    // We're not mutating `kind` so this should be safe.
+                    let check_kind: &TypeKind = unsafe { transmute(&self.arena[check].kind) };
+                    if let TypeKind::TypeRef(tref) = check_kind {
                         if let Some((index_of_check_type, _)) = type_params
                             .iter()
                             .find_position(|type_param| type_param.name == tref.name)
                         {
                             let type_arg = self.expand_type(ctx, type_args[index_of_check_type])?;
-
-                            if let TypeKind::Union(Union { types: union_types }) =
-                                &self.arena[type_arg].kind.clone()
-                            {
+                            // We're not mutating `kind` so this should be safe.
+                            let type_arg_kind: &TypeKind =
+                                unsafe { transmute(&self.arena[type_arg].kind) };
+                            if let TypeKind::Union(Union { types: union_types }) = type_arg_kind {
                                 let mut types = vec![];
 
                                 for t in union_types.iter() {
@@ -279,8 +282,9 @@ impl Checker {
     // - union of any of those types
     pub fn expand_keyof(&mut self, ctx: &Context, t: Index) -> Result<Index, TypeError> {
         let obj = self.expand_type(ctx, t)?;
-
-        match &self.arena[obj].kind.clone() {
+        // We're not mutating `kind` so this should be safe.
+        let obj_kind: &TypeKind = unsafe { transmute(&self.arena[obj].kind) };
+        match obj_kind {
             TypeKind::Object(Object { elems }) => {
                 let mut string_keys: Vec<Index> = Vec::new();
                 let mut number_keys: Vec<Index> = Vec::new();
@@ -630,7 +634,7 @@ impl Checker {
             TypeKind::Object(_) => self.get_prop(ctx, obj_idx, key_idx),
             TypeKind::Array(array) => {
                 match &key_type.kind {
-                    TypeKind::Literal(Literal::Number(value)) => {
+                    TypeKind::Literal(Literal::Number(_)) => {
                         // TODO: update AST with the inferred type
                         let types = vec![array.t, self.new_keyword(Keyword::Undefined)];
                         Ok(self.new_union_type(&types))
