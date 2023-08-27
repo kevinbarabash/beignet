@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 escalier_old_ast = { version = "0.1.0", path = "../escalier_old_ast" }
-itertools = "0.10.3"
+itertools = "0.11.0"
 tree-sitter = "0.20.8"
 tree_sitter_escalier = { version = "0.1.0", path = "../tree_sitter_escalier" }
 unescape = "0.1.0"

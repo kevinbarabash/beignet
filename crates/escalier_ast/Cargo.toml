@@ -7,6 +7,6 @@ edition = "2021"
 
 [dependencies]
 swc_atoms = "0.5.6"
-swc_ecma_ast = "0.107.0"
-swc_common = { version = "0.31.16", features = ["sourcemap"] }
+swc_ecma_ast = "0.108.0"
+swc_common = { version = "0.32.0", features = ["sourcemap"] }
 generational-arena = "0.2.8"
