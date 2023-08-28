@@ -801,11 +801,13 @@ impl Checker {
                     None => (&func.params[..], None),
                 };
 
-                if args.len() < params.len() {
+                let required_params = params.iter().filter(|param| !param.optional).collect_vec();
+
+                if args.len() < required_params.len() {
                     return Err(TypeError {
                         message: format!(
                             "too few arguments to function: expected {}, got {}",
-                            params.len(),
+                            required_params.len(),
                             args.len()
                         ),
                     });

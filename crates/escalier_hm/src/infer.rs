@@ -1380,6 +1380,22 @@ impl Checker {
                 let obj_idx = self.expand_alias(ctx, "Array", &[t])?;
                 self.get_ident_member(ctx, obj_idx, key_idx)
             }
+            TypeKind::Literal(Literal::String(_)) => {
+                let obj_idx = self.expand_alias(ctx, "String", &[])?;
+                self.get_ident_member(ctx, obj_idx, key_idx)
+            }
+            TypeKind::Literal(Literal::Number(_)) => {
+                let obj_idx = self.expand_alias(ctx, "Number", &[])?;
+                self.get_ident_member(ctx, obj_idx, key_idx)
+            }
+            TypeKind::Primitive(Primitive::String) => {
+                let obj_idx = self.expand_alias(ctx, "String", &[])?;
+                self.get_ident_member(ctx, obj_idx, key_idx)
+            }
+            TypeKind::Primitive(Primitive::Number) => {
+                let obj_idx = self.expand_alias(ctx, "Number", &[])?;
+                self.get_ident_member(ctx, obj_idx, key_idx)
+            }
             _ => Err(TypeError {
                 message: format!("Can't access properties on {}", self.print_type(&obj_idx)),
             }),

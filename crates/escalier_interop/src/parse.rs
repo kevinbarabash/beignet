@@ -59,8 +59,8 @@ pub fn infer_ts_type_ann(checker: &'_ mut Checker, type_ann: &TsType) -> Result<
             }
         },
         TsType::TsThisType(_) => {
-            todo!("Add TypeKind::Self")
-            // Ok(checker.from_type_kind(TypeKind::This))
+            // TODO: create a new type variable for `Self`
+            Ok(checker.new_constructor("This", &[]))
         }
         TsType::TsFnOrConstructorType(fn_or_constructor) => match &fn_or_constructor {
             TsFnOrConstructorType::TsFnType(fn_type) => {
@@ -636,13 +636,7 @@ fn infer_interface_decl(
             let elem = infer_ts_type_element(checker, elem, obj_is_mutable);
 
             match elem {
-                Ok(_elem) => {
-                    todo!("implement 'maybe_override_string_methods'");
-                    // match maybe_override_string_methods(decl, &elem, checker) {
-                    //     Some(override_elem) => Some(override_elem),
-                    //     None => Some(elem),
-                    // }
-                }
+                Ok(elem) => Some(elem),
                 Err(msg) => {
                     eprintln!("Err: {msg}");
                     None
@@ -807,7 +801,7 @@ impl Visit for InterfaceCollector {
     }
 }
 
-pub fn parse_dts(d_ts_source: &str) -> Result<Checker, Error> {
+pub fn parse_dts(d_ts_source: &str) -> Result<(Checker, Context), Error> {
     let cm = Arc::<SourceMap>::default();
     let fm = cm.new_source_file(FileName::Anon, d_ts_source.to_owned());
 
@@ -871,5 +865,5 @@ pub fn parse_dts(d_ts_source: &str) -> Result<Checker, Error> {
         }
     }
 
-    Ok(collector.checker)
+    Ok((collector.checker, collector.ctx))
 }
