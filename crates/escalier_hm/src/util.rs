@@ -260,8 +260,11 @@ impl Checker {
         // It's okay to clone here because we aren't mutating the type
         let t = match &self.arena[t].clone().kind {
             TypeKind::KeyOf(KeyOf { t }) => self.expand_keyof(ctx, *t)?,
+            // TODO: Readonly<T> should remove mutating methods
+            // TODO: IndexedAccess["key"] should remove the `self` param from methods
             TypeKind::IndexedAccess(IndexedAccess { obj, index }) => {
-                self.get_computed_member(ctx, *obj, *index)?
+                let is_mut = true;
+                self.get_computed_member(ctx, *obj, *index, is_mut)?
             }
             TypeKind::Conditional(conditional) => self.expand_conditional(ctx, conditional)?,
             TypeKind::TypeRef(TypeRef { name, types, .. }) => {
@@ -625,6 +628,7 @@ impl Checker {
         ctx: &Context,
         obj_idx: Index,
         key_idx: Index,
+        is_mut: bool,
     ) -> Result<Index, TypeError> {
         // NOTE: cloning is fine here because we aren't mutating `obj_type` or
         // `prop_type`.
@@ -632,7 +636,7 @@ impl Checker {
         let key_type = self.arena[key_idx].clone();
 
         match &obj_type.kind {
-            TypeKind::Object(_) => self.get_prop(ctx, obj_idx, key_idx),
+            TypeKind::Object(_) => self.get_prop(ctx, obj_idx, key_idx, is_mut),
             TypeKind::Array(array) => {
                 match &key_type.kind {
                     TypeKind::Literal(Literal::Number(_)) => {
@@ -644,7 +648,7 @@ impl Checker {
                         // TODO: look up methods on the `Array` interface
                         // we need to instantiate the scheme such that `T` is equal
                         // to the union of all types in the tuple
-                        self.get_prop(ctx, obj_idx, key_idx)
+                        self.get_prop(ctx, obj_idx, key_idx, is_mut)
                     }
                     TypeKind::Primitive(Primitive::Number) => {
                         let types = vec![array.t, self.new_keyword(Keyword::Undefined)];
@@ -676,7 +680,7 @@ impl Checker {
                         // TODO: look up methods on the `Array` interface
                         // we need to instantiate the scheme such that `T` is equal
                         // to the union of all types in the tuple
-                        self.get_prop(ctx, obj_idx, key_idx)
+                        self.get_prop(ctx, obj_idx, key_idx, is_mut)
                     }
                     TypeKind::Primitive(Primitive::Number) => {
                         let mut types = tuple.types.clone();
@@ -694,7 +698,7 @@ impl Checker {
                 let mut result_types = vec![];
                 let mut undefined_count = 0;
                 for idx in &union.types {
-                    match self.get_computed_member(ctx, *idx, key_idx) {
+                    match self.get_computed_member(ctx, *idx, key_idx, is_mut) {
                         Ok(t) => result_types.push(t),
                         Err(_) => {
                             // TODO: check what the error is, we may want to propagate
@@ -718,7 +722,7 @@ impl Checker {
             }
             TypeKind::TypeRef(TypeRef { name, types, .. }) => {
                 let idx = self.expand_alias(ctx, name, types)?;
-                self.get_computed_member(ctx, idx, key_idx)
+                self.get_computed_member(ctx, idx, key_idx, is_mut)
             }
             _ => {
                 // TODO: provide a more specific error message for type variables
@@ -730,11 +734,14 @@ impl Checker {
     }
 
     // TODO(#624) - to behave differently when used to look up an lvalue vs a rvalue
+    // TODO: add a param which indiciates whether the object we're getting the property
+    // on is a mutable reference or not
     pub fn get_prop(
         &mut self,
         ctx: &Context,
         obj_idx: Index,
         key_idx: Index,
+        is_mut: bool,
     ) -> Result<Index, TypeError> {
         let undefined = self.new_keyword(Keyword::Undefined);
         // It's fine to clone here because we aren't mutating
@@ -831,6 +838,21 @@ impl Checker {
                                     TPropKey::NumberKey(key) => key,
                                 };
                                 if key == name {
+                                    if let TypeKind::Function(Function { params, .. }) =
+                                        &self.arena[prop.t].kind
+                                    {
+                                        if let Some(param) = params.first() {
+                                            if param.is_mut_self() && !is_mut {
+                                                return Err(TypeError {
+                                                    message: format!(
+                                                        "Cannot call mutating method {} on a non-mutable object",
+                                                        name,
+                                                    ),
+                                                });
+                                            }
+                                        }
+                                    }
+
                                     let prop_t = match prop.optional {
                                         true => self.new_union_type(&[prop.t, undefined]),
                                         false => prop.t,

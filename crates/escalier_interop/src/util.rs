@@ -1,128 +1,132 @@
 use std::collections::BTreeMap;
+use std::collections::HashSet;
 
 use escalier_hm::checker::Checker;
-use escalier_hm::types::{Object as TObject, Scheme, TObjElem, TPropKey, TypeKind};
+use escalier_hm::types::{
+    Function, MappedType, Object as TObject, Scheme, TCallable, TObjElem, TPat, TProp, TPropKey,
+    TypeKind,
+};
 
-pub fn merge_schemes(old_scheme: &Scheme, new_scheme: &Scheme, checker: &mut Checker) -> Scheme {
-    let type_params_1 = &old_scheme.type_params;
-    let type_params_2 = &new_scheme.type_params;
+pub fn new_merge_schemes(schemes: &[Scheme], checker: &mut Checker) -> Scheme {
+    let mut elems: Vec<TObjElem> = vec![];
 
-    let type_params = match (type_params_1, type_params_2) {
-        (None, None) => None,
-        (None, Some(_)) => panic!("Mismatch in type param count when attempting to merge type"),
-        (Some(_), None) => panic!("Mismatch in type param count when attempting to merge type"),
-        (Some(type_params_1), Some(type_params_2)) => {
-            if type_params_1.len() != type_params_2.len() {
-                panic!("Mismatch in type param count when attempting to merge type");
-            }
-
-            // TODO: check if the type params are in the same order
-            for (type_param_1, type_param_2) in type_params_1.iter().zip(type_params_2.iter()) {
-                if type_param_1.name != type_param_2.name {
-                    panic!("Type params must have the same names when merging schemes");
-                }
-            }
-
-            Some(type_params_1.to_owned())
+    let type_params = schemes[0].type_params.to_owned();
+    for scheme in schemes.iter().skip(1) {
+        if scheme.type_params != type_params {
+            panic!("Mismatch in type param count when attempting to merge type");
         }
-    };
+    }
 
-    let t = match (
-        &checker.arena[old_scheme.t].kind,
-        &checker.arena[new_scheme.t].kind,
-    ) {
-        (TypeKind::Object(old_obj), TypeKind::Object(new_obj)) => {
-            // TODO: Handle function overloads.  `map` only allows a single entry
-            // per key which means that we end up with only the first declaration
-            // instead of all of them.  This is complicated by the fact that the
-            // Readonly variant may define the methods in slightly different ways.
-            // See `reduce` in `Array` and `ReadonlyArray`.  The callback is
-            // passed `T[]` in the first on and `readonly T[]` in the second one.
-            let mut map: BTreeMap<String, TObjElem> = BTreeMap::new();
-
-            let mut calls: Vec<TObjElem> = vec![];
-            let mut constructors: Vec<TObjElem> = vec![];
-            let mut mapped_types: Vec<TObjElem> = vec![];
-
-            for elem in &old_obj.elems {
-                match elem {
-                    TObjElem::Call(_) => {
-                        calls.push(elem.to_owned());
-                    }
-                    TObjElem::Constructor(_) => {
-                        constructors.push(elem.to_owned());
-                    }
-                    TObjElem::Mapped(_) => {
-                        mapped_types.push(elem.to_owned());
-                    }
-                    TObjElem::Prop(prop) => {
-                        let key = match &prop.name {
-                            TPropKey::StringKey(key) => key.to_owned(),
-                            TPropKey::NumberKey(key) => key.to_owned(),
-                        };
-                        map.insert(key, elem.to_owned());
-                    }
-                }
-            }
-
-            for elem in &new_obj.elems {
-                match elem {
-                    TObjElem::Call(_) => {
-                        calls.push(elem.to_owned());
-                    }
-                    TObjElem::Constructor(_) => {
-                        constructors.push(elem.to_owned());
-                    }
-                    TObjElem::Mapped(_) => {
-                        mapped_types.push(elem.to_owned());
-                    }
-                    TObjElem::Prop(prop) => {
-                        let key = match &prop.name {
-                            TPropKey::StringKey(key) => key.to_owned(),
-                            TPropKey::NumberKey(key) => key.to_owned(),
-                        };
-                        match map.get(&key) {
-                            Some(old_elem) => {
-                                // NOTE: Properties can be marked as `readonly`
-                                // in TS interfaces.  If the old properties is
-                                // not mutable, but the new one is, we use the
-                                // new one.
-                                if let TObjElem::Prop(old_prop) = old_elem {
-                                    if !old_prop.mutable && prop.mutable {
-                                        map.insert(key, elem.to_owned());
-                                    }
-                                }
-                            }
-                            None => {
-                                map.insert(key, elem.to_owned());
-                            }
-                        };
-                    }
-                }
-            }
-
-            let mut elems: Vec<TObjElem> = vec![];
-
-            // TODO: Dedupe these while handling overloads.
-            elems.append(&mut calls);
-            elems.append(&mut constructors);
-            elems.append(&mut mapped_types);
-
-            for (_, elem) in map {
+    for scheme in schemes {
+        if let TypeKind::Object(obj) = &checker.arena[scheme.t].kind {
+            for elem in &obj.elems {
                 elems.push(elem.to_owned());
             }
-
-            checker.from_type_kind(TypeKind::Object(TObject {
-                elems,
-                // NOTE: This function is called from the code parsing interfaces
-                // so this should always be true.
-                // TODO: add a check to make sure since we shouldn't be trying to
-                // merge things that aren't interfaces.
-                // is_interface: true,
-            }))
         }
-        (_, _) => todo!(),
-    };
+    }
+
+    let t = checker.from_type_kind(TypeKind::Object(TObject { elems }));
+
+    Scheme { t, type_params }
+}
+
+pub fn merge_readonly_and_mutable_schemes(
+    readonly_scheme: &Scheme,
+    mutable_scheme: &Scheme,
+    checker: &mut Checker,
+) -> Scheme {
+    let mut mapped_types: Vec<MappedType> = vec![];
+    let mut callables: Vec<TCallable> = vec![];
+    // BTreeMap is used here to ensure that the props are in alphabetical order
+    let mut props: BTreeMap<String, TProp> = BTreeMap::new(); // TODO: figure out how to handle overloads
+    let mut mutating_methods: HashSet<String> = HashSet::new();
+
+    // TODO: check that the type params are the same for both schemes
+    let type_params = mutable_scheme.type_params.to_owned();
+
+    // the readonly_scheme should have fewer properties than mutable_scheme
+    // if there's a property in both scheme's that's marked as `readonly` then
+    // we should mark in the merged scheme as `readonly`
+
+    if let TypeKind::Object(TObject { elems }) = &checker.arena[readonly_scheme.t].kind {
+        for elem in elems {
+            match elem {
+                TObjElem::Mapped(mapped_type) => {
+                    mapped_types.push(mapped_type.to_owned());
+                }
+                TObjElem::Call(callable) => {
+                    callables.push(callable.to_owned());
+                }
+                TObjElem::Prop(prop) => {
+                    let key = match &prop.name {
+                        TPropKey::StringKey(key) => key,
+                        TPropKey::NumberKey(key) => key,
+                    };
+                    props.insert(key.to_owned(), prop.to_owned());
+                }
+                TObjElem::Constructor(_) => (),
+            }
+        }
+    }
+
+    if let TypeKind::Object(TObject { elems }) = &checker.arena[mutable_scheme.t].kind {
+        for elem in elems {
+            if let TObjElem::Prop(prop) = elem {
+                let key = match &prop.name {
+                    TPropKey::StringKey(key) => key,
+                    TPropKey::NumberKey(key) => key,
+                };
+                if !props.contains_key(key) {
+                    if let TypeKind::Function(Function { params, .. }) = &checker.arena[prop.t].kind
+                    {
+                        if let Some(param) = params.get(0) {
+                            if param.is_self() {
+                                mutating_methods.insert(key.to_owned());
+                            }
+                        }
+                    }
+                    props.insert(key.to_owned(), prop.to_owned());
+                }
+            }
+        }
+    }
+
+    // NOTE: we need to update methods that should have a `mut self` param after
+    // iterating over the props in order to avoid borrowing `checker` as mut twice.
+    for (key, prop) in props.iter_mut() {
+        if mutating_methods.contains(key) {
+            if let TypeKind::Function(Function { params, .. }) = &mut checker.arena[prop.t].kind {
+                if let Some(param) = params.get_mut(0) {
+                    if let TPat::Ident(binding) = &mut param.pattern {
+                        binding.mutable = true;
+                    }
+                }
+            }
+        }
+    }
+
+    let mut elems: Vec<TObjElem> = vec![];
+
+    for c in callables {
+        elems.push(TObjElem::Call(c));
+    }
+
+    for m in mapped_types {
+        elems.push(TObjElem::Mapped(m));
+    }
+
+    for (_, prop) in props {
+        elems.push(TObjElem::Prop(prop));
+    }
+
+    let t = checker.from_type_kind(TypeKind::Object(TObject {
+        elems,
+        // NOTE: This function is called from the code parsing interfaces
+        // so this should always be true.
+        // TODO: add a check to make sure since we shouldn't be trying to
+        // merge things that aren't interfaces.
+        // is_interface: true,
+    }));
 
     Scheme { t, type_params }
 }
@@ -158,89 +162,11 @@ mod tests {
         let scheme_a = ctx.schemes.get("A").unwrap();
         let scheme_b = ctx.schemes.get("B").unwrap();
 
-        let result = merge_schemes(scheme_a, scheme_b, &mut checker);
+        let result = merge_readonly_and_mutable_schemes(scheme_a, scheme_b, &mut checker);
 
         assert_eq!(
             checker.print_scheme(&result),
-            "{bar: (self: Self) -> boolean, foo: (self: Self) -> boolean}"
-        );
-    }
-
-    #[test]
-    fn new_is_mutating_and_old_is_mutating_with_different_method_names() {
-        let src = r#"
-        type A = {
-            foo: fn (mut self) -> boolean,
-        }
-        type B = {
-            bar: fn (mut self) -> boolean,
-        }
-        "#;
-        let mut checker = Checker::default();
-        let mut ctx = Context::default();
-        let mut program = parse(src).unwrap();
-        checker.infer_program(&mut program, &mut ctx).unwrap();
-
-        let scheme_a = ctx.schemes.get("A").unwrap();
-        let scheme_b = ctx.schemes.get("B").unwrap();
-
-        let result = merge_schemes(scheme_a, scheme_b, &mut checker);
-
-        assert_eq!(
-            checker.print_scheme(&result),
-            "{bar: (mut self: Self) -> boolean, foo: (mut self: Self) -> boolean}"
-        );
-    }
-
-    #[test]
-    fn old_is_mutating_and_new_is_not_mutating_with_same_method_names() {
-        let src = r#"
-        type A = {
-            foo: fn (mut self) -> boolean,
-        }
-        type B = {
-            foo: fn (self) -> boolean,
-        }
-        "#;
-        let mut checker = Checker::default();
-        let mut ctx = Context::default();
-        let mut program = parse(src).unwrap();
-        checker.infer_program(&mut program, &mut ctx).unwrap();
-
-        let scheme_a = ctx.schemes.get("A").unwrap();
-        let scheme_b = ctx.schemes.get("B").unwrap();
-
-        let result = merge_schemes(scheme_a, scheme_b, &mut checker);
-
-        assert_eq!(
-            checker.print_scheme(&result),
-            "{foo: (mut self: Self) -> boolean}"
-        );
-    }
-
-    #[test]
-    fn old_is_not_mutating_and_new_is_mutating_with_same_method_names() {
-        let src = r#"
-        type A = {
-            foo: fn (self) -> boolean,
-        }
-        type B = {
-            foo: fn (mut self) -> boolean,
-        }
-        "#;
-        let mut checker = Checker::default();
-        let mut ctx = Context::default();
-        let mut program = parse(src).unwrap();
-        checker.infer_program(&mut program, &mut ctx).unwrap();
-
-        let scheme_a = ctx.schemes.get("A").unwrap();
-        let scheme_b = ctx.schemes.get("B").unwrap();
-
-        let result = merge_schemes(scheme_a, scheme_b, &mut checker);
-
-        assert_eq!(
-            checker.print_scheme(&result),
-            "{foo: (self: Self) -> boolean}"
+            "{bar: (mut self: Self) -> boolean, foo: (self: Self) -> boolean}"
         );
     }
 
@@ -259,10 +185,10 @@ mod tests {
         let mut program = parse(src).unwrap();
         checker.infer_program(&mut program, &mut ctx).unwrap();
 
-        let scheme_a = ctx.schemes.get("A").unwrap();
-        let scheme_b = ctx.schemes.get("B").unwrap();
+        let scheme_a = ctx.schemes.get("A").unwrap().to_owned();
+        let scheme_b = ctx.schemes.get("B").unwrap().to_owned();
 
-        let result = merge_schemes(scheme_a, scheme_b, &mut checker);
+        let result = new_merge_schemes(&[scheme_a, scheme_b], &mut checker);
 
         assert_eq!(
             checker.print_scheme(&result),
@@ -285,10 +211,10 @@ mod tests {
         let mut program = parse(src).unwrap();
         checker.infer_program(&mut program, &mut ctx).unwrap();
 
-        let scheme_a = ctx.schemes.get("A").unwrap();
-        let scheme_b = ctx.schemes.get("B").unwrap();
+        let scheme_a = ctx.schemes.get("A").unwrap().to_owned();
+        let scheme_b = ctx.schemes.get("B").unwrap().to_owned();
 
-        let result = merge_schemes(scheme_a, scheme_b, &mut checker);
+        let result = new_merge_schemes(&[scheme_a, scheme_b], &mut checker);
 
         assert_eq!(
             checker.print_scheme(&result),

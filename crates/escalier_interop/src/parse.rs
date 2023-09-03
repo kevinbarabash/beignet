@@ -18,7 +18,7 @@ use escalier_hm::types::{
 };
 
 // use crate::overrides::maybe_override_string_methods;
-use crate::util;
+use crate::util::{merge_readonly_and_mutable_schemes, new_merge_schemes};
 
 pub fn infer_ts_type_ann(checker: &'_ mut Checker, type_ann: &TsType) -> Result<Index, String> {
     match type_ann {
@@ -382,7 +382,19 @@ fn infer_method_sig(
         panic!("unexpected computed property in TypElement")
     }
 
-    let params = infer_fn_params(checker, &sig.params)?;
+    let mut params = infer_fn_params(checker, &sig.params)?;
+    params.insert(
+        0,
+        FuncParam {
+            pattern: TPat::Ident(identifier::BindingIdent {
+                span: Span { start: 0, end: 0 },
+                name: "self".to_string(),
+                mutable: false,
+            }),
+            t: checker.new_constructor("Self", &[]), // TODO: add `Self` type
+            optional: false,
+        },
+    );
     let ret = match &sig.type_ann {
         Some(type_ann) => infer_ts_type_ann(checker, &type_ann.type_ann),
         None => Err(String::from("method has no return type")),
@@ -741,10 +753,10 @@ impl Visit for InterfaceCollector {
     }
 
     fn visit_ts_interface_decl(&mut self, decl: &TsInterfaceDecl) {
-        let mut name = decl.id.sym.to_string();
-        if name.starts_with("Readonly") {
-            name = name.replace("Readonly", "");
-        }
+        let name = decl.id.sym.to_string();
+        // if name.starts_with("Readonly") {
+        //     name = name.replace("Readonly", "");
+        // }
 
         match self.interfaces.get_mut(&name) {
             Some(decls) => decls.push(decl.to_owned()),
@@ -832,38 +844,39 @@ pub fn parse_dts(d_ts_source: &str) -> Result<(Checker, Context), Error> {
 
     module.visit_with(&mut collector);
 
-    for (name, decls) in collector.interfaces {
-        let has_readonly = decls
-            .iter()
-            .any(|decl| decl.id.sym.to_string().starts_with("Readonly"));
-        for decl in decls {
-            let readonly = decl.id.sym.to_string().starts_with("Readonly");
-            // NOTE: If there is no interface prefixed with `Readonly` then we
-            // assume the interface is unsafe (since there's no way to know which
-            // methods are mutable or not).  In this situation we set `mutable`
-            // to `false` so that all methods are accessible from both mutable
-            // and immutable references.
-            let mutable = has_readonly && !readonly;
+    // TODO - make this a two step process
+    // 1. merge interfaces with exactly the same name
+    // 2. merge Readonly interfaces with their non-Readonly counterparts
+    // 3. maintain a list of standard library methods that mutate
 
-            let name = name.to_owned();
-            match infer_interface_decl(&mut collector.checker, &decl, mutable) {
-                Ok(new_scheme) => {
-                    match collector.ctx.get_scheme(&name).ok() {
-                        Some(old_scheme) => {
-                            let merged_scheme = util::merge_schemes(
-                                &old_scheme,
-                                &new_scheme,
-                                &mut collector.checker,
-                            );
-                            collector.ctx.schemes.insert(name, merged_scheme)
-                        }
-                        None => collector.ctx.schemes.insert(name, new_scheme),
-                    };
-                }
-                Err(_) => eprintln!("couldn't infer {name}"),
-            }
-        }
+    for (name, decls) in collector.interfaces {
+        let schemes = decls
+            .iter()
+            .filter_map(
+                |decl| match infer_interface_decl(&mut collector.checker, decl, false) {
+                    Ok(scheme) => Some(scheme),
+                    Err(_) => {
+                        eprintln!("couldn't infer {name}");
+                        None
+                    }
+                },
+            )
+            .collect::<Vec<_>>();
+
+        let scheme = new_merge_schemes(&schemes, &mut collector.checker);
+
+        collector.ctx.schemes.insert(name.to_owned(), scheme);
+
+        // TODO: handle ReadonlyArray
+
+        // TODO: add values to ctx for each constructor
     }
+
+    let array = collector.ctx.schemes.get("Array").unwrap();
+    let readonly_array = collector.ctx.schemes.get("ReadonlyArray").unwrap();
+
+    let array = merge_readonly_and_mutable_schemes(readonly_array, array, &mut collector.checker);
+    collector.ctx.schemes.insert("Array".to_string(), array);
 
     Ok((collector.checker, collector.ctx))
 }

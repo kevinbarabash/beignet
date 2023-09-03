@@ -100,6 +100,13 @@ impl FuncParam {
             _ => false,
         }
     }
+
+    pub fn is_mut_self(&self) -> bool {
+        match &self.pattern {
+            TPat::Ident(BindingIdent { name, mutable, .. }) => name == "self" && *mutable,
+            _ => false,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
