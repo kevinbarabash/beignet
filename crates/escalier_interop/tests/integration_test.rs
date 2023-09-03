@@ -84,21 +84,6 @@ fn infer_method_on_readonly_array() {
 }
 
 #[test]
-fn infer_method_on_mutable_array() {
-    let src = r#"
-    declare let mut arr: string[]
-    let map = arr.splice
-    "#;
-    let (checker, ctx) = infer_prog(src);
-    let binding = ctx.get_binding("map").unwrap();
-    let result = checker.print_type(&binding.index);
-    assert_eq!(
-        result,
-        "(mut self: Self, start: number, deleteCount?: number) -> string[]"
-    );
-}
-
-#[test]
 #[should_panic = "TypeError: Cannot call mutating method splice on a non-mutable object"]
 fn infer_mutable_method_on_readonly_array_errors() {
     let src = r#"
@@ -109,80 +94,90 @@ fn infer_mutable_method_on_readonly_array_errors() {
     infer_prog(src);
 }
 
-// #[test]
-// fn infer_method_on_readonly_arrays_of_different_things() {
-//     let src = r#"
-//     declare let str_arr: string[];
-//     declare let num_arr: number[];
-//     let map1 = str_arr.map;
-//     let map2 = num_arr.map;
-//     "#;
-//     let (_, ctx) = infer_prog(src);
+#[test]
+fn infer_method_on_readonly_arrays_of_different_things() {
+    let src = r#"
+    declare let str_arr: string[]
+    declare let num_arr: number[]
+    let map1 = str_arr.map
+    let map2 = num_arr.map
+    "#;
+    let (checker, ctx) = infer_prog(src);
 
-//     let result = format!("{}", ctx.get_binding("map1").unwrap());
-//     assert_eq!(
-//         result,
-//         "<U, A>(callbackfn: (value: string, index: number, array: mut string[]) => U, thisArg?: A) => mut U[]"
-//     );
-//     let result = format!("{}", ctx.lookup_value("map2").unwrap());
-//     assert_eq!(
-//         result,
-//         "<U, A>(callbackfn: (value: number, index: number, array: mut number[]) => U, thisArg?: A) => mut U[]"
-//     );
-// }
+    let binding = ctx.get_binding("map1").unwrap();
+    let result = checker.print_type(&binding.index);
+    assert_eq!(
+        result,
+        "<U, A>(self: Self, callbackfn: (value: string, index: number, array: string[]) -> U, thisArg?: A) -> U[]"
+    );
 
-// #[test]
-// fn infer_method_on_mutable_array() {
-//     let src = r#"
-//     declare let mut_arr: mut string[];
-//     let sort = mut_arr.sort;
-//     let splice = mut_arr.splice;
-//     let sorted_arr = mut_arr.sort();
-//     "#;
-//     let (_, ctx) = infer_prog(src);
+    let binding = ctx.get_binding("map2").unwrap();
+    let result = checker.print_type(&binding.index);
+    assert_eq!(
+        result,
+        "<U, A>(self: Self, callbackfn: (value: number, index: number, array: number[]) -> U, thisArg?: A) -> U[]"
+    );
+}
 
-//     let result = format!("{}", ctx.lookup_value("sort").unwrap());
-//     assert_eq!(
-//         result,
-//         "(compareFn?: (a: string, b: string) => number) => mut string[]"
-//     );
-//     let result = format!("{}", ctx.lookup_value("splice").unwrap());
-//     assert_eq!(
-//         result,
-//         "(start: number, deleteCount?: number) => mut string[]"
-//     );
-//     let result = format!("{}", ctx.lookup_value("sorted_arr").unwrap());
-//     assert_eq!(result, "mut string[]");
-// }
+#[test]
+fn infer_method_on_mutable_array() {
+    let src = r#"
+    declare let mut mut_arr: string[]
+    let sort = mut_arr.sort
+    let splice = mut_arr.splice
+    let sorted_arr = mut_arr.sort()
+    "#;
+    let (checker, ctx) = infer_prog(src);
 
-// #[test]
-// fn infer_array_method_on_tuple() {
-//     let src = r#"
-//     let tuple = [5, "hello", true];
-//     let map = tuple.map;
-//     "#;
-//     let (_, ctx) = infer_prog(src);
-//     let result = format!("{}", ctx.lookup_value("map").unwrap());
-//     assert_eq!(
-//         result,
-//         // TODO: add parens around a union when it's the child of an arry
-//         "<U, A>(callbackfn: (value: \"hello\" | 5 | true, index: number, array: mut \"hello\" | 5 | true[]) => U, thisArg?: A) => mut U[]"
-//     );
-// }
+    let binding = ctx.get_binding("sort").unwrap();
+    let result = checker.print_type(&binding.index);
+    assert_eq!(
+        result,
+        "(mut self: Self, compareFn?: (a: string, b: string) -> number) -> Array<string>"
+    );
+    let binding = ctx.get_binding("splice").unwrap();
+    let result = checker.print_type(&binding.index);
+    assert_eq!(
+        result,
+        "(mut self: Self, start: number, deleteCount?: number) -> string[]"
+    );
+    // TODO: Don't expand the type unless required
+    // let binding = ctx.get_binding("sorted_arr").unwrap();
+    // let result = checker.print_type(&binding.index);
+    // assert_eq!(result, "mut string[]");
+}
 
-// #[test]
-// fn infer_static_properties() {
-//     let src = r#"
-//     let max = Number.MAX_VALUE;
-//     let parse = Date.parse;
-//     "#;
-//     let (_, ctx) = infer_prog(src);
+#[test]
+fn infer_array_method_on_tuple() {
+    let src = r#"
+    let tuple = [5, "hello", true]
+    let map = tuple.map
+    "#;
+    let (checker, ctx) = infer_prog(src);
+    let binding = ctx.get_binding("map").unwrap();
+    let result = checker.print_type(&binding.index);
+    assert_eq!(
+        result,
+        // TODO: add parens around a union when it's the child of an arry
+        "<U, A>(self: Self, callbackfn: (value: 5 | \"hello\" | true, index: number, array: 5 | \"hello\" | true[]) -> U, thisArg?: A) -> U[]"
+    );
+}
 
-//     let result = format!("{}", ctx.lookup_value("max").unwrap());
-//     assert_eq!(result, "number");
-//     let result = format!("{}", ctx.lookup_value("parse").unwrap());
-//     assert_eq!(result, "(s: string) => number");
-// }
+#[test]
+fn infer_static_properties() {
+    let src = r#"
+    let max = Number.MAX_VALUE
+    let parse = Date.parse
+    "#;
+    let (checker, ctx) = infer_prog(src);
+
+    let binding = ctx.values.get("max").unwrap();
+    let result = checker.print_type(&binding.index);
+    assert_eq!(result, "number");
+    let binding = ctx.values.get("parse").unwrap();
+    let result = checker.print_type(&binding.index);
+    assert_eq!(result, "(s: string) -> number");
+}
 
 // #[test]
 // fn infer_callable_results_on_interface() {
