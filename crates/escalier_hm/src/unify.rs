@@ -649,7 +649,7 @@ impl Checker {
         type_args: Option<&[Index]>,
         t2: Index,
     ) -> Result<(Index, Option<Index>), TypeError> {
-        let ret_type = self.new_var_type(None);
+        let ret_type = self.new_type_var(None);
         let mut maybe_throws_type: Option<Index> = None;
         // let throws_type = new_var_type(arena, None);
 
@@ -899,7 +899,7 @@ impl Checker {
                 self.unify(ctx, ret_type, func.ret)?;
 
                 if let Some(throws) = func.throws {
-                    let throws_type = self.new_var_type(None);
+                    let throws_type = self.new_type_var(None);
                     self.unify(ctx, throws_type, throws)?;
 
                     let throws_type = self.prune(throws_type);

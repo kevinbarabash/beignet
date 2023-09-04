@@ -31,7 +31,7 @@ impl Checker {
         ) -> Result<Index, TypeError> {
             let t = match &mut pattern.kind {
                 PatternKind::Ident(BindingIdent { name, mutable, .. }) => {
-                    let t = checker.new_var_type(None);
+                    let t = checker.new_type_var(None);
                     if assump
                         .insert(
                             name.to_owned(),
@@ -81,7 +81,7 @@ impl Checker {
                                 // default values.
                                 // TODO: handle default values
 
-                                let t = checker.new_var_type(None);
+                                let t = checker.new_type_var(None);
                                 if assump
                                     .insert(
                                         ident.name.to_owned(),
@@ -166,7 +166,7 @@ impl Checker {
 
                     t
                 }
-                PatternKind::Wildcard => checker.new_var_type(None),
+                PatternKind::Wildcard => checker.new_type_var(None),
             };
 
             Ok(t)

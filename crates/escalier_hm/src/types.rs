@@ -838,8 +838,7 @@ impl Checker {
         })))
     }
 
-    /// A binary type constructor which builds function types
-    pub fn new_var_type(&mut self, constraint: Option<Index>) -> Index {
+    pub fn new_type_var(&mut self, constraint: Option<Index>) -> Index {
         self.arena.insert(Type::from(TypeKind::TypeVar(TypeVar {
             id: self.arena.len(), // use for debugging purposes only
             instance: None,
@@ -847,8 +846,7 @@ impl Checker {
         })))
     }
 
-    /// A binary type constructor which builds function types
-    pub fn new_constructor(&mut self, name: &str, types: &[Index]) -> Index {
+    pub fn new_type_ref(&mut self, name: &str, types: &[Index]) -> Index {
         self.arena.insert(Type::from(TypeKind::TypeRef(TypeRef {
             name: name.to_string(),
             types: types.to_vec(),

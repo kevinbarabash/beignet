@@ -124,7 +124,7 @@ impl Checker {
                 }
                 None => {
                     for tp in type_params {
-                        mapping.insert(tp.name.to_owned(), self.new_var_type(tp.constraint));
+                        mapping.insert(tp.name.to_owned(), self.new_type_var(tp.constraint));
                     }
                 }
             }
@@ -189,7 +189,7 @@ impl<'a, 'b> Folder for Fresh<'a, 'b> {
                 if !self.checker.occurs_in(index, &self.ctx.non_generic) {
                     self.mapping
                         .entry(index)
-                        .or_insert_with(|| self.checker.new_var_type(*constraint))
+                        .or_insert_with(|| self.checker.new_type_var(*constraint))
                         .to_owned()
                 } else {
                     index
@@ -236,7 +236,7 @@ impl<'a> Folder for Instantiate<'a> {
                     }
                     None => {
                         if &new_types != types {
-                            self.checker.new_constructor(name, &new_types)
+                            self.checker.new_type_ref(name, &new_types)
                         } else {
                             *index
                         }

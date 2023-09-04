@@ -510,7 +510,7 @@ impl Checker {
 
         let mut type_param_map: HashMap<String, Index> = HashMap::new();
         for infer_t in infer_types {
-            type_param_map.insert(infer_t.name.to_owned(), self.new_var_type(None));
+            type_param_map.insert(infer_t.name.to_owned(), self.new_type_var(None));
         }
 
         let extends = replace_infer_types(&mut self.arena, extends, &type_param_map);

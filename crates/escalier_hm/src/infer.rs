@@ -210,7 +210,7 @@ impl Checker {
                     {
                         let type_ann_t = match type_ann {
                             Some(type_ann) => checker.infer_type_ann(type_ann, &mut sig_ctx)?,
-                            None => checker.new_var_type(None),
+                            None => checker.new_type_var(None),
                         };
                         pattern.inferred_type = Some(type_ann_t);
 
@@ -296,7 +296,7 @@ impl Checker {
                     if *is_async && !is_promise(&checker.arena[body_t]) {
                         let never = checker.new_keyword(Keyword::Never);
                         let throws_t = throws.unwrap_or(never);
-                        body_t = checker.new_constructor("Promise", &[body_t, throws_t]);
+                        body_t = checker.new_type_ref("Promise", &[body_t, throws_t]);
 
                         match return_type {
                             Some(return_type) => {
@@ -504,8 +504,8 @@ impl Checker {
                                     checker.new_lit_type(&Literal::Boolean(result))
                                 }
                                 (_, _) => {
-                                    let var_a = checker.new_var_type(None);
-                                    let var_b = checker.new_var_type(None);
+                                    let var_a = checker.new_type_var(None);
+                                    let var_b = checker.new_type_var(None);
                                     checker.unify(ctx, left_type, var_a)?;
                                     checker.unify(ctx, right_type, var_b)?;
                                     boolean
@@ -545,12 +545,12 @@ impl Checker {
                     }
 
                     let expr_t = checker.infer_expression(expr, ctx)?;
-                    let inner_t = checker.new_var_type(None);
-                    let throws_t = checker.new_var_type(None);
+                    let inner_t = checker.new_type_var(None);
+                    let throws_t = checker.new_type_var(None);
                     // TODO: Merge Constructor and TypeRef
                     // NOTE: This isn't quite right because we can await non-promise values.
                     // That being said, we should avoid doing so.
-                    let promise_t = checker.new_constructor("Promise", &[inner_t, throws_t]);
+                    let promise_t = checker.new_type_ref("Promise", &[inner_t, throws_t]);
                     checker.unify(ctx, expr_t, promise_t)?;
                     *throws = Some(throws_t);
 
@@ -722,9 +722,9 @@ impl Checker {
                                     // TODO: add a check that `self` is only allowed 
                                     // as the first param in a method signature.
                                     PatternKind::Ident(ident) if ident.name == "self" => {
-                                        self.new_constructor("Self", &[])
+                                        self.new_type_ref("Self", &[])
                                     },
-                                    _ => self.new_var_type(None),
+                                    _ => self.new_type_var(None),
                                 }
                             },
                         };
@@ -785,7 +785,7 @@ impl Checker {
             TypeAnnKind::Object(obj) => {
                 let mut props: Vec<types::TObjElem> = Vec::new();
                 let mut obj_ctx = ctx.clone();
-                let self_idx = self.new_var_type(None);
+                let self_idx = self.new_type_var(None);
                 obj_ctx.schemes.insert(
                     "Self".to_string(),
                     Scheme {
@@ -866,7 +866,7 @@ impl Checker {
                                         Some(type_ann) => {
                                             self.infer_type_ann(type_ann, &mut sig_ctx)?
                                         }
-                                        None => self.new_var_type(None),
+                                        None => self.new_type_var(None),
                                     };
 
                                     Ok(types::FuncParam {
@@ -909,7 +909,7 @@ impl Checker {
                                         Some(type_ann) => {
                                             self.infer_type_ann(type_ann, &mut sig_ctx)?
                                         }
-                                        None => self.new_var_type(None),
+                                        None => self.new_type_var(None),
                                     };
 
                                     Ok(types::FuncParam {
@@ -994,7 +994,7 @@ impl Checker {
                     }
                 }
 
-                self.new_constructor(name, &type_args)
+                self.new_type_ref(name, &type_args)
             }
             TypeAnnKind::Union(types) => {
                 let mut idxs = Vec::new();
@@ -1057,7 +1057,7 @@ impl Checker {
 
                 let infer_types = find_infer_types(&mut self.arena, &extends_idx);
                 for infer in infer_types {
-                    let tp = self.new_var_type(None);
+                    let tp = self.new_type_var(None);
                     let scheme = Scheme {
                         type_params: None,
                         t: tp,
@@ -1587,7 +1587,7 @@ impl<'a, 'b> Folder for Generalize<'a, 'b> {
                         name
                     }
                 };
-                self.checker.new_constructor(&name, &[])
+                self.checker.new_type_ref(&name, &[])
             }
             _ => folder::walk_index(self, &index),
         }

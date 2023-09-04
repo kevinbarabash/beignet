@@ -27,8 +27,8 @@ pub fn infer_ts_type_ann(
 ) -> Result<Index, String> {
     match type_ann {
         TsType::TsKeywordType(keyword) => match &keyword.kind {
-            TsKeywordTypeKind::TsAnyKeyword => Ok(checker.new_var_type(None)),
-            TsKeywordTypeKind::TsUnknownKeyword => Ok(checker.new_var_type(None)),
+            TsKeywordTypeKind::TsAnyKeyword => Ok(checker.new_type_var(None)),
+            TsKeywordTypeKind::TsUnknownKeyword => Ok(checker.new_type_var(None)),
             TsKeywordTypeKind::TsNumberKeyword => {
                 Ok(checker.from_type_kind(TypeKind::Primitive(Primitive::Number)))
             }
@@ -302,7 +302,7 @@ pub fn infer_ts_type_ann(
             let name = type_param.name.sym.to_string();
 
             let elems = vec![TObjElem::Mapped(MappedType {
-                key: checker.new_constructor(&name, &[]),
+                key: checker.new_type_ref(&name, &[]),
                 target: name,
                 source: constraint,
                 value: type_ann,
@@ -403,7 +403,7 @@ fn infer_method_sig(
                     name: "self".to_string(),
                     mutable: false,
                 }),
-                t: checker.new_constructor("Self", &[]), // TODO: add `Self` type
+                t: checker.new_type_ref("Self", &[]), // TODO: add `Self` type
                 optional: false,
             },
         );
@@ -592,7 +592,7 @@ fn infer_ts_type_element(
 
                 if let TPat::Ident(identifier::BindingIdent { name, .. }) = &key.pattern {
                     Ok(TObjElem::Mapped(MappedType {
-                        key: checker.new_constructor(name.as_str(), &[]),
+                        key: checker.new_type_ref(name.as_str(), &[]),
                         target: name.to_owned(),
                         value: t,
                         source: key.t,
@@ -665,10 +665,10 @@ fn infer_interface_decl(
 
     if let Some(type_params) = &decl.type_params {
         for param in &type_params.as_ref().params {
-            type_args.push(checker.new_constructor(&param.name.sym, &[]));
+            type_args.push(checker.new_type_ref(&param.name.sym, &[]));
         }
     }
-    let self_type = checker.new_constructor(&decl.id.sym, &type_args);
+    let self_type = checker.new_type_ref(&decl.id.sym, &type_args);
 
     sig_ctx.schemes.insert(
         "Self".to_string(),
