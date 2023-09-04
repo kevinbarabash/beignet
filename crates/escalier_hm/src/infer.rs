@@ -1016,8 +1016,10 @@ impl Checker {
                 let index_idx = self.infer_type_ann(index_type, ctx)?;
                 self.new_indexed_access_type(obj_idx, index_idx)
             }
-            TypeAnnKind::TypeOf(expr) => self.infer_expression(expr, ctx)?,
-
+            TypeAnnKind::TypeOf(arg) => {
+                let arg = ctx.values.get(&arg.name).unwrap();
+                arg.index
+            }
             // TODO: Create types for all of these
             TypeAnnKind::KeyOf(type_ann) => {
                 let t = self.infer_type_ann(type_ann, ctx)?;

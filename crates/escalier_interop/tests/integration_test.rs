@@ -552,68 +552,60 @@ fn tuple_mapping() {
     assert_eq!(checker.print_type(&binding.index), "string[]");
 }
 
-// #[test]
-// fn infer_exclude() {
-//     let src = r#"
-//     type T1 = Exclude<"a" | "b" | "c", "a" | "b">;
-//     "#;
-//     let (_, ctx) = infer_prog(src);
-//     let (mut checker, mut ctx) = Checker::from(ctx);
-//     let t = checker.lookup_type("T1").unwrap();
+#[test]
+fn infer_exclude() {
+    let src = r#"
+    type T1 = Exclude<"a" | "b" | "c", "a" | "b">
+    "#;
+    let (mut checker, ctx) = infer_prog(src);
+    let scheme = ctx.get_scheme("T1").unwrap();
+    let result = checker.print_scheme(&scheme);
+    assert_eq!(result, "Exclude<\"a\" | \"b\" | \"c\", \"a\" | \"b\">");
 
-//     let result = format!("{}", t);
-//     assert_eq!(result, "Exclude<\"a\" | \"b\" | \"c\", \"a\" | \"b\">");
+    let t = checker.expand_type(&ctx, scheme.t).unwrap();
+    let result = checker.print_type(&t);
 
-//     let t = checker.expand_type(&t).unwrap();
-//     let result = format!("{}", t);
+    assert_eq!(result, "\"c\"");
+}
 
-//     assert_eq!(result, "\"c\"");
-// }
+#[test]
+fn infer_out_of_order_exclude() {
+    let lib = r#"
+    type Exclude<U, T> = T extends U ? never : T;
+    "#;
+    let (mut checker, mut ctx) = parse_dts(lib).unwrap();
 
-// #[test]
-// fn infer_out_of_order_exclude() {
-//     let lib = r#"
-//     type Exclude<U, T> = T extends U ? never : T;
-//     "#;
-//     let (mut checker, mut ctx) = parse_dts(lib).unwrap();
+    let src = r#"
+    type T1 = Exclude<"a" | "b", "a" | "b" | "c">
+    "#;
 
-//     let src = r#"
-//     type T1 = Exclude<"a" | "b", "a" | "b" | "c">;
-//     "#;
-//     let result = parse(src);
-//     let mut prog = match result {
-//         Ok(prog) -> prog,
-//         Err(err) -> {
-//             println!("err = {:?}", err);
-//             panic!("Error parsing expression");
-//         }
-//     };
-//     escalier_old_infer::infer_prog(&mut prog, &mut checker).unwrap();
+    infer_prog_with_checker(src, &mut checker, &mut ctx).unwrap();
 
-//     let t = checker.lookup_type("T1").unwrap();
-//     let t = checker.expand_type(&t).unwrap();
-//     let result = format!("{}", t);
-//     assert_eq!(result, "\"c\"");
-// }
+    let scheme = ctx.get_scheme("T1").unwrap();
+    let t = checker.expand_type(&ctx, scheme.t).unwrap();
+    let result = checker.print_type(&t);
+    assert_eq!(result, "\"c\"");
+}
 
-// #[test]
-// fn infer_omit() {
-//     let src = r#"
-//     type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
-//     type T1 = Omit<Obj, "b" | "c">;
-//     "#;
-//     let (_, ctx) = infer_prog(src);
-//     let (mut checker, mut ctx) = Checker::from(ctx);
-//     let t = checker.lookup_type("T1").unwrap();
+// TODO: fix Omit ... T is not in scope (this is probably an issue wiht Pick)
+#[test]
+#[ignore]
+fn infer_omit() {
+    let src = r#"
+    type Obj = {a: number, b?: string, c: boolean, d?: number}
+    type T1 = Omit<Obj, "b" | "c">
+    "#;
+    let (mut checker, ctx) = infer_prog(src);
+    let scheme = ctx.get_scheme("T1").unwrap();
 
-//     let result = format!("{}", t);
-//     assert_eq!(result, "Omit<Obj, \"b\" | \"c\">");
+    let result = checker.print_scheme(&scheme);
+    assert_eq!(result, "Omit<Obj, \"b\" | \"c\">");
 
-//     let t = checker.expand_type(&t).unwrap();
-//     let result = format!("{}", t);
+    let t = checker.expand_type(&ctx, scheme.t).unwrap();
+    let result = checker.print_type(&t);
 
-//     assert_eq!(result, "{a: number, mut d?: number}");
-// }
+    assert_eq!(result, "{a: number, mut d?: number}");
+}
 
 // #[test]
 // fn infer_omit_string() {
@@ -633,20 +625,19 @@ fn tuple_mapping() {
 //     assert!(!result.contains("length: number"));
 // }
 
-// #[test]
-// fn infer_method_type_with_indexed_access() {
-//     let src = r#"
-//     type T1 = String["charAt"];
-//     "#;
-//     let (_, ctx) = infer_prog(src);
-//     let (mut checker, mut ctx) = Checker::from(ctx);
-//     let t = checker.lookup_type("T1").unwrap();
+#[test]
+fn infer_method_type_with_indexed_access() {
+    let src = r#"
+    type T1 = String["charAt"]
+    "#;
+    let (mut checker, ctx) = infer_prog(src);
 
-//     let t = checker.expand_type(&t).unwrap();
-//     let result = format!("{}", t);
+    let scheme = ctx.get_scheme("T1").unwrap();
+    let t = checker.expand_type(&ctx, scheme.t).unwrap();
+    let result = checker.print_type(&t);
 
-//     assert_eq!(result, "(pos: number) -> string");
-// }
+    assert_eq!(result, "(self: Self, pos: number) -> string");
+}
 
 // #[test]
 // fn infer_getter_setter_types_with_indexed_access() {
@@ -679,78 +670,87 @@ fn tuple_mapping() {
 //     assert_eq!(result, "() -> boolean");
 // }
 
-// #[test]
-// fn new_expressions() {
-//     let src = r#"
-//     let array = new Array(1, 2, 3);
-//     "#;
+// TODO: add support for `new` expressions
+#[test]
+#[ignore]
+fn new_expressions() {
+    let src = r#"
+    let array = new Array(1, 2, 3);
+    "#;
 
-//     let (_, ctx) = infer_prog(src);
+    let (checker, ctx) = infer_prog(src);
 
-//     let t = ctx.lookup_value("array").unwrap();
-//     let result = format!("{}", t);
-//     assert_eq!(result, "1 | 2 | 3[]");
-// }
+    let binding = ctx.values.get("array").unwrap();
+    let result = checker.print_type(&binding.index);
+    assert_eq!(result, "1 | 2 | 3[]");
+}
 
-// #[test]
-// fn new_expressions_instantiation_check() {
-//     let src = r#"
-//     let numbers = new Array(1, 2, 3);
-//     let letters = new Array("a", "b", "c");
-//     "#;
+// TODO: add support for `new` expressions
+#[test]
+#[ignore]
+fn new_expressions_instantiation_check() {
+    let src = r#"
+    let numbers = new Array(1, 2, 3)
+    let letters = new Array("a", "b", "c")
+    "#;
 
-//     let (_, ctx) = infer_prog(src);
+    let (checker, ctx) = infer_prog(src);
 
-//     let t = ctx.lookup_value("numbers").unwrap();
-//     let result = format!("{}", t);
-//     assert_eq!(result, "1 | 2 | 3[]");
+    let binding = ctx.values.get("numbers").unwrap();
+    let result = checker.print_type(&binding.index);
+    assert_eq!(result, "1 | 2 | 3[]");
 
-//     let t = ctx.lookup_value("letters").unwrap();
-//     let result = format!("{}", t);
-//     assert_eq!(result, r#""a" | "b" | "c"[]"#);
-// }
+    let binding = ctx.values.get("letters").unwrap();
+    let result = checker.print_type(&binding.index);
+    assert_eq!(result, r#""a" | "b" | "c"[]"#);
+}
 
-// #[test]
-// fn rest_fn() {
-//     let src = r#"
-//     declare let foo: <T>(...items: mut T[]) -> string;
-//     let result = foo(1, 2, 3);
-//     "#;
+#[test]
+fn rest_fn() {
+    // TODO: Support unifying type params with multiple different
+    // types to produce a union type.  Verify that this works by
+    // remove `<number>` from this test case.
+    let src = r#"
+    declare let foo: fn <T>(...items: T[]) -> string
+    let result = foo<number>(1, 2, 3)
+    "#;
 
-//     let (_, ctx) = infer_prog(src);
+    let (checker, ctx) = infer_prog(src);
 
-//     let t = ctx.lookup_value("result").unwrap();
-//     let result = format!("{}", t);
-//     assert_eq!(result, "string");
-// }
+    let binding = ctx.values.get("result").unwrap();
+    let result = checker.print_type(&binding.index);
+    assert_eq!(result, "string");
+}
 
-// #[test]
-// fn infer_infer_type() {
-//     let src = r#"
-//     type Flatten<Type> = Type extends Array<infer Item> ? Item : Type;
+#[test]
+fn infer_infer_type() {
+    let src = r#"
+    type Flatten<Type> = if (Type : Array<infer Item>) { Item } else { Type }
 
-//     let num1: Flatten<Array<number>> = 5;
-//     let num2: Flatten<number> = 10;
+    let num1: Flatten<Array<number>> = 5
+    let num2: Flatten<number> = 10
 
-//     type StringArray = Array<string>;
-//     type StringItem = Flatten<StringArray>;
-//     let str: StringItem = "hello";
+    type StringArray = Array<string>
+    type StringItem = Flatten<StringArray>
+    let str: StringItem = "hello"
 
-//     type GetReturnType<Type> = Type extends (...args: never[]) -> infer Return
-//         ? Return
-//         : never;
+    type GetReturnType<Type> = if (Type : fn (...args: never[]) -> infer Return) {
+        Return
+    } else {
+        never
+    }
 
-//     let foo = () => 5;
-//     type RetType = GetReturnType<typeof foo>;
-//     let retVal: RetType = 5;
+    let foo = fn () => 5
+    type FooRetType = GetReturnType<typeof foo>
+    let fooRetVal: FooRetType = 5
 
-//     let bar = () => "hello";
-//     type RetType = GetReturnType<typeof bar>;
-//     let retVal: RetType = "hello";
-//     "#;
+    let bar = fn () => "hello"
+    type BarRetType = GetReturnType<typeof bar>
+    let barRetVal: BarRetType = "hello"
+    "#;
 
-//     infer_prog(src);
-// }
+    infer_prog(src);
+}
 
 // #[test]
 // fn regex_with_named_capture_groups() {

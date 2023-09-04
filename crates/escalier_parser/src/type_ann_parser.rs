@@ -396,9 +396,19 @@ impl<'a> Parser<'a> {
             TokenKind::TypeOf => {
                 self.next(); // consumes 'typeof'
 
-                let expr = self.parse_expr()?;
+                // TODO: support qualified identifiers, e.g. Foo.Bar.Baz
+                let arg = self.next().unwrap_or(EOF.clone());
 
-                TypeAnnKind::TypeOf(Box::new(expr))
+                if let TokenKind::Identifier(name) = arg.kind {
+                    TypeAnnKind::TypeOf(Ident {
+                        name,
+                        span: arg.span,
+                    })
+                } else {
+                    return Err(ParseError {
+                        message: "expected identifier".to_string(),
+                    });
+                }
             }
             TokenKind::Infer => {
                 self.next(); // consumes 'infer'

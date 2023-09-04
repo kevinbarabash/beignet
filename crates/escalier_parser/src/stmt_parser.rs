@@ -346,4 +346,9 @@ mod tests {
             "#
         ));
     }
+
+    #[test]
+    fn parse_typeof() {
+        insta::assert_debug_snapshot!(parse("type RetType = GetReturnType<typeof foo>"));
+    }
 }
