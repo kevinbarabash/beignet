@@ -230,16 +230,30 @@ impl Checker {
                     }
                 }
 
+                // Contraints can reference other type params so we need make
+                // sure that definitions for each type param are in scope where
+                // each type param is defined to be the corresponding type arg.
+                let mut sig_ctx = ctx.clone();
+                for (param, arg) in type_params.iter().zip(type_args.iter()) {
+                    sig_ctx.schemes.insert(
+                        param.name.clone(),
+                        Scheme {
+                            type_params: None,
+                            t: *arg,
+                        },
+                    );
+                }
+
                 let mut mapping: HashMap<String, Index> = HashMap::new();
                 for (param, arg) in type_params.iter().zip(type_args.iter()) {
                     if let Some(constraint) = param.constraint {
-                        self.unify(ctx, *arg, constraint)?;
+                        self.unify(&sig_ctx, *arg, constraint)?;
                     }
                     mapping.insert(param.name.clone(), arg.to_owned());
                 }
 
                 let t = self.instantiate_type(&scheme.t, &mapping);
-                self.expand_type(ctx, t)
+                self.expand_type(&sig_ctx, t)
             }
             None => {
                 if type_args.is_empty() {

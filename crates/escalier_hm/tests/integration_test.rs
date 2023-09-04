@@ -3332,8 +3332,9 @@ fn test_index_access_type_number_mapped() -> Result<(), TypeError> {
 fn test_mapped_type_pick() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
+    // TODO: replace `T` in type variable constraints as well
     let src = r#"   
-    type Pick<T, K> = {[P]: T[P] for P in K}
+    type Pick<T, K : keyof T> = {[P]: T[P] for P in K}
     type Obj = {a: string, b: number, c: boolean}
     type Result = Pick<Obj, "a" | "b">
     "#;

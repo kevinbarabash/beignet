@@ -1,0 +1,99 @@
+---
+source: crates/escalier_parser/src/stmt_parser.rs
+expression: "parse(\"type Pick<T, K : keyof T> = {[P]: T[P] for P in K}\")"
+---
+[
+    Stmt {
+        kind: TypeDecl(
+            TypeDecl {
+                name: "Pick",
+                type_ann: TypeAnn {
+                    kind: Object(
+                        [
+                            Mapped(
+                                Mapped {
+                                    key: TypeAnn {
+                                        kind: TypeRef(
+                                            "P",
+                                            None,
+                                        ),
+                                        span: 30..31,
+                                        inferred_type: None,
+                                    },
+                                    value: TypeAnn {
+                                        kind: IndexedAccess(
+                                            TypeAnn {
+                                                kind: TypeRef(
+                                                    "T",
+                                                    None,
+                                                ),
+                                                span: 34..35,
+                                                inferred_type: None,
+                                            },
+                                            TypeAnn {
+                                                kind: TypeRef(
+                                                    "P",
+                                                    None,
+                                                ),
+                                                span: 36..37,
+                                                inferred_type: None,
+                                            },
+                                        ),
+                                        span: 34..37,
+                                        inferred_type: None,
+                                    },
+                                    target: "P",
+                                    source: TypeAnn {
+                                        kind: TypeRef(
+                                            "K",
+                                            None,
+                                        ),
+                                        span: 48..49,
+                                        inferred_type: None,
+                                    },
+                                    check: None,
+                                    extends: None,
+                                },
+                            ),
+                        ],
+                    ),
+                    span: 27..50,
+                    inferred_type: None,
+                },
+                type_params: Some(
+                    [
+                        TypeParam {
+                            span: 11..12,
+                            name: "T",
+                            bound: None,
+                            default: None,
+                        },
+                        TypeParam {
+                            span: 14..25,
+                            name: "K",
+                            bound: Some(
+                                TypeAnn {
+                                    kind: KeyOf(
+                                        TypeAnn {
+                                            kind: TypeRef(
+                                                "T",
+                                                None,
+                                            ),
+                                            span: 23..24,
+                                            inferred_type: None,
+                                        },
+                                    ),
+                                    span: 17..22,
+                                    inferred_type: None,
+                                },
+                            ),
+                            default: None,
+                        },
+                    ],
+                ),
+            },
+        ),
+        span: 0..50,
+        inferred_type: None,
+    },
+]
