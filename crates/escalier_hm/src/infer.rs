@@ -347,7 +347,7 @@ impl Checker {
                     opt_chain,
                 }) => {
                     let mut obj_idx = checker.infer_expression(obj, ctx)?;
-                    let is_mut = lvalue_mutability(ctx, obj)?;
+                    let is_mut = is_expr_mutable(ctx, obj)?;
                     let mut has_undefined = false;
                     if *opt_chain {
                         if let TypeKind::Union(union) = &checker.arena[obj_idx].kind {
@@ -393,7 +393,7 @@ impl Checker {
                 }
                 ExprKind::JSXElement(_) => todo!(),
                 ExprKind::Assign(Assign { left, op: _, right }) => {
-                    if !lvalue_mutability(ctx, left)? {
+                    if !is_expr_mutable(ctx, left)? {
                         return Err(TypeError {
                             message: "Cannot assign to immutable lvalue".to_string(),
                         });
@@ -1517,16 +1517,17 @@ fn find_identifiers(expr: &Expr) -> Result<Vec<Ident>, TypeError> {
     Ok(idents)
 }
 
-fn lvalue_mutability(ctx: &Context, expr: &Expr) -> Result<bool, TypeError> {
+// TODO: separate mutability checks from lvalue checks
+fn is_expr_mutable(ctx: &Context, expr: &Expr) -> Result<bool, TypeError> {
     match &expr.kind {
         ExprKind::Ident(ident) => {
             let binding = ctx.values.get(&ident.name).unwrap();
             Ok(binding.is_mut)
         }
-        ExprKind::Member(member) => lvalue_mutability(ctx, &member.object),
-        _ => Err(TypeError {
-            message: "Can't assign to non-lvalue".to_string(),
-        }),
+        ExprKind::Member(member) => is_expr_mutable(ctx, &member.object),
+        ExprKind::Tuple(_) => Ok(true),
+        ExprKind::Object(_) => Ok(true),
+        _ => Ok(false),
     }
 }
 

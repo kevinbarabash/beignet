@@ -38,23 +38,27 @@ fn infer_prog(src: &str) -> (Checker, Context) {
     }
 }
 
-// fn infer_prog_with_type_error(lib: &str, src: &str) -> Vec<String> {
-//     let mut checker = parse_dts(lib).unwrap();
-//     let mut ctx = Context::default();
-
-//     let result = parse(src);
-//     let mut prog = match result {
-//         Ok(prog) => prog,
-//         Err(err) => {
-//             println!("err = {:?}", err);
-//             panic!("Error parsing expression");
-//         }
-//     };
-//     match checker.infer_program(&mut prog) {
-//         Ok(_) => panic!("was expect infer_prog() to return an error"),
-//         Err(report) => messages(&report),
-//     }
-// }
+fn infer_prog_with_checker(
+    src: &str,
+    checker: &mut Checker,
+    ctx: &mut Context,
+) -> Result<(), String> {
+    let result = parse(src);
+    let mut prog = match result {
+        Ok(prog) => prog,
+        Err(_) => return Err("Error parsing expression".to_string()),
+    };
+    match checker.infer_program(&mut prog, ctx) {
+        Ok(_) => {
+            if !checker.current_report.diagnostics.is_empty() {
+                Err("was expecting infer_prog() to return no errors".to_string())
+            } else {
+                Ok(())
+            }
+        }
+        Err(error) => Err(error.to_string()),
+    }
+}
 
 #[test]
 fn infer_adding_variables() {
@@ -188,7 +192,7 @@ fn infer_static_properties() {
 //         bar: boolean;
 //     }
 //     "#;
-//     let mut checker = parse_dts(lib).unwrap();
+//     let (mut checker, mut ctx) = parse_dts(lib).unwrap();
 
 //     let src = r#"
 //     declare let foo: Foo;
@@ -216,220 +220,207 @@ fn infer_static_properties() {
 
 // // TODO: Write a test for parametric callables
 
-// #[test]
-// fn infer_index_value_on_interface() {
-//     let lib = r#"
-//     interface Foo {
-//         [x: number]: number;
-//         bar: boolean;
-//     }
-//     "#;
-//     let mut checker = parse_dts(lib).unwrap();
+#[test]
+fn infer_index_value_on_interface() -> Result<(), String> {
+    let lib = r#"
+    interface Foo {
+        [x: number]: number;
+        bar: boolean;
+    }
+    "#;
+    let (mut checker, mut ctx) = parse_dts(lib).unwrap();
 
-//     let src = r#"
-//     declare let foo: Foo;
-//     let num = foo[5];
-//     let bool = foo.bar;
-//     "#;
-//     let result = parse(src);
-//     let mut prog = match result {
-//         Ok(prog) => prog,
-//         Err(err) => {
-//             println!("err = {:?}", err);
-//             panic!("Error parsing expression");
-//         }
-//     };
+    let src = r#"
+    declare let foo: Foo
+    let num = foo[5]
+    let bool = foo.bar
+    "#;
 
-//     escalier_old_infer::infer_prog(&mut prog, &mut checker).unwrap();
+    infer_prog_with_checker(src, &mut checker, &mut ctx)?;
 
-//     let result = format!("{}", checker.lookup_value("num").unwrap());
-//     assert_eq!(result, "number | undefined");
-//     let result = format!("{}", checker.lookup_value("bool").unwrap());
-//     assert_eq!(result, "boolean");
-// }
+    let binding = ctx.values.get("num").unwrap();
+    let result = checker.print_type(&binding.index);
+    assert_eq!(result, "number | undefined");
 
-// #[test]
-// fn infer_generic_index_value_on_interface() {
-//     let lib = r#"
-//     interface Foo {
-//         [x: number]: <T>(arg: T) => T;
-//         bar: boolean;
-//     }
-//     "#;
-//     let mut checker = parse_dts(lib).unwrap();
+    let binding = ctx.values.get("bool").unwrap();
+    let result = checker.print_type(&binding.index);
+    assert_eq!(result, "boolean");
 
-//     let src = r#"
-//     declare let foo: Foo;
-//     let id = foo[5];
-//     "#;
-//     let result = parse(src);
-//     let mut prog = match result {
-//         Ok(prog) => prog,
-//         Err(err) => {
-//             println!("err = {:?}", err);
-//             panic!("Error parsing expression");
-//         }
-//     };
+    Ok(())
+}
 
-//     escalier_old_infer::infer_prog(&mut prog, &mut checker).unwrap();
+#[test]
+fn infer_generic_index_value_on_interface() -> Result<(), String> {
+    let lib = r#"
+    interface Foo {
+        [x: number]: <T>(arg: T) => T;
+        bar: boolean;
+    }
+    "#;
+    let (mut checker, mut ctx) = parse_dts(lib).unwrap();
 
-//     let result = format!("{}", checker.lookup_value("id").unwrap());
-//     // NOTE: The type variables aren't normalized.  See comment inside
-//     // norm_type() in escalier_old_infer/src/util.rs.
-//     assert_eq!(result, "<T>(arg: T) => T | undefined");
-// }
+    let src = r#"
+    declare let foo: Foo
+    let id = foo[5]
+    "#;
+    infer_prog_with_checker(src, &mut checker, &mut ctx)?;
 
-// #[test]
-// // #[should_panic = "\\\"hello\\\" is an invalid key for object types"]
-// fn infer_index_with_incorrect_key_type_on_interface() {
-//     let lib = r#"
-//     interface Foo {
-//         [x: number]: number;
-//         bar: boolean;
-//     }
-//     "#;
+    let binding = ctx.values.get("id").unwrap();
+    let result = checker.print_type(&binding.index);
+    // NOTE: The type variables aren't normalized.  See comment inside
+    // norm_type() in escalier_old_infer/src/util.rs.
+    assert_eq!(result, "<T>(arg: T) -> T | undefined");
 
-//     let src = r#"
-//     declare let foo: Foo;
-//     let num = foo["hello"];
-//     let bool = foo.bar;
-//     "#;
+    Ok(())
+}
 
-//     let error_messages = infer_prog_with_type_error(lib, src);
+#[test]
+fn infer_index_with_incorrect_key_type_on_interface() -> Result<(), String> {
+    let lib = r#"
+    interface Foo {
+        [x: number]: number;
+        bar: boolean;
+    }
+    "#;
+    let (mut checker, mut ctx) = parse_dts(lib).unwrap();
 
-//     assert_eq!(
-//         error_messages,
-//         vec!["TypeError::InvalidKey: \"hello\" is not a valid key"]
-//     );
-// }
+    let src = r#"
+    declare let foo: Foo
+    let num = foo["hello"]
+    let bool = foo.bar
+    "#;
 
-// #[test]
-// fn instantiating_generic_interfaces() {
-//     let lib = r#"
-//     interface Foo<T> {
-//         bar(x: T): any;
-//         baz(x: T): any;
-//     }
-//     "#;
-//     let mut checker = parse_dts(lib).unwrap();
+    let error = infer_prog_with_checker(src, &mut checker, &mut ctx);
 
-//     let src = r#"
-//     declare let foo: Foo<number>;
-//     let bar = foo.bar;
-//     "#;
-//     let result = parse(src);
-//     let mut prog = match result {
-//         Ok(prog) => prog,
-//         Err(err) => {
-//             println!("err = {:?}", err);
-//             panic!("Error parsing expression");
-//         }
-//     };
+    assert_eq!(
+        error,
+        Err("TypeError: Couldn't find property hello in object".to_string()),
+    );
 
-//     escalier_old_infer::infer_prog(&mut prog, &mut checker).unwrap();
+    Ok(())
+}
 
-//     let result = format!("{}", checker.lookup_value("bar").unwrap());
-//     assert_eq!(result, "<A>(x: number) => A");
-// }
+#[test]
+fn instantiating_generic_interfaces() -> Result<(), String> {
+    let lib = r#"
+    interface Foo<T> {
+        bar(x: T): any;
+        baz(x: T): any;
+    }
+    "#;
+    let (mut checker, mut ctx) = parse_dts(lib).unwrap();
 
-// #[test]
-// fn interface_with_generic_method() {
-//     let lib = r#"
-//     interface Foo<T> {
-//         bar<U>(x: U): U;
-//         baz: T;
-//     }
-//     "#;
-//     let mut checker = parse_dts(lib).unwrap();
+    let src = r#"
+    declare let foo: Foo<number>
+    let bar = foo.bar
+    "#;
 
-//     let src = r#"
-//     declare let foo: Foo<number>;
-//     let bar = foo.bar;
-//     "#;
-//     let result = parse(src);
-//     let mut prog = match result {
-//         Ok(prog) => prog,
-//         Err(err) => {
-//             println!("err = {:?}", err);
-//             panic!("Error parsing expression");
-//         }
-//     };
+    infer_prog_with_checker(src, &mut checker, &mut ctx)?;
 
-//     escalier_old_infer::infer_prog(&mut prog, &mut checker).unwrap();
+    let binding = ctx.values.get("bar").unwrap();
+    let result = checker.print_type(&binding.index);
+    assert_eq!(result, "<A>(self: Self, x: number) -> A");
 
-//     let result = format!("{}", checker.lookup_value("bar").unwrap());
-//     assert_eq!(result, "<U>(x: U) => U");
-// }
+    Ok(())
+}
 
-// #[test]
-// fn merging_generic_interfaces() {
-//     let lib = r#"
-//     interface Foo<T> {
-//         bar(x: T): number;
-//     }
+#[test]
+fn interface_with_generic_method() -> Result<(), String> {
+    let lib = r#"
+    interface Foo<T> {
+        bar<U>(x: U): U;
+        baz: T;
+    }
+    "#;
+    let (mut checker, mut ctx) = parse_dts(lib).unwrap();
 
-//     interface Foo<T> {
-//         baz(x: T): string;
-//     }
-//     "#;
-//     let mut checker = parse_dts(lib).unwrap();
+    let src = r#"
+    declare let foo: Foo<number>
+    let bar = foo.bar
+    "#;
 
-//     let src = r#"
-//     declare let foo: Foo<number>;
-//     "#;
-//     let result = parse(src);
-//     let mut prog = match result {
-//         Ok(prog) => prog,
-//         Err(err) => {
-//             println!("err = {:?}", err);
-//             panic!("Error parsing expression");
-//         }
-//     };
+    infer_prog_with_checker(src, &mut checker, &mut ctx)?;
 
-//     escalier_old_infer::infer_prog(&mut prog, &mut checker).unwrap();
+    let binding = ctx.values.get("bar").unwrap();
+    let result = checker.print_type(&binding.index);
+    assert_eq!(result, "<U>(self: Self, x: U) -> U");
 
-//     let result = format!("{}", checker.lookup_scheme("Foo").unwrap());
-//     assert_eq!(
-//         result,
-//         "<T>{bar(self, x: T): number, baz(self, x: T): string}"
-//     );
-// }
+    Ok(())
+}
 
-// #[test]
-// fn infer_partial() {
-//     let src = r#"
-//     type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
-//     type PartialObj = Partial<Obj>;
-//     "#;
-//     let (_, ctx) = infer_prog(src);
-//     let mut checker = Checker::from(ctx);
-//     let t = checker.lookup_type("PartialObj").unwrap();
-//     let t = checker.expand_type(&t).unwrap();
+#[test]
+fn merging_generic_interfaces() -> Result<(), String> {
+    let lib = r#"
+    interface Foo<T> {
+        bar(x: T): number;
+    }
 
-//     let result = format!("{}", t);
-//     assert_eq!(
-//         result,
-//         "{a?: number, b?: string, mut c?: boolean, mut d?: number}"
-//     );
-// }
+    interface Foo<T> {
+        baz(x: T): string;
+    }
+    "#;
+    let (mut checker, mut ctx) = parse_dts(lib).unwrap();
 
-// #[test]
-// fn infer_required() {
-//     let src = r#"
-//     type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
-//     type RequiredObj = Required<Obj>;
-//     "#;
-//     let (_, ctx) = infer_prog(src);
-//     let mut checker = Checker::from(ctx);
-//     let t = checker.lookup_type("RequiredObj").unwrap();
-//     let t = checker.expand_type(&t).unwrap();
+    let src = r#"
+    declare let foo: Foo<number>
+    "#;
 
-//     let result = format!("{}", t);
-//     assert_eq!(
-//         result,
-//         "{a: number, b: string, mut c: boolean, mut d: number}"
-//     );
-// }
+    infer_prog_with_checker(src, &mut checker, &mut ctx)?;
+
+    let scheme = ctx.schemes.get("Foo").unwrap();
+    let result = checker.print_scheme(scheme);
+    assert_eq!(
+        result,
+        "<T>{bar: (self: Self, x: T) -> number, baz: (self: Self, x: T) -> string}"
+    );
+
+    Ok(())
+}
+
+// TODO: Fix Partial<T>
+#[test]
+#[ignore]
+fn infer_partial() {
+    let src = r#"
+    type Obj = {a: number, b?: string, c: boolean, d?: number}
+    type PartialObj = Partial<Obj>
+    "#;
+    let (mut checker, ctx) = infer_prog(src);
+
+    let scheme = ctx.schemes.get("PartialObj").unwrap();
+    let t = checker.expand_type(&ctx, scheme.t).unwrap();
+
+    let result = checker.print_type(&t);
+    assert_eq!(
+        result,
+        // actual:
+        // {a: number, b: string | undefined, c: boolean, d: number | undefined}
+        // expected:
+        "{a?: number, b?: string, mut c?: boolean, mut d?: number}"
+    );
+}
+
+// TODO: Fix Required<T>
+#[test]
+#[ignore]
+fn infer_required() {
+    let src = r#"
+    type Obj = {a: number, b?: string, c: boolean, d?: number}
+    type RequiredObj = Required<Obj>
+    "#;
+    let (mut checker, ctx) = infer_prog(src);
+    let scheme = ctx.schemes.get("RequiredObj").unwrap();
+    let t = checker.expand_type(&ctx, scheme.t).unwrap();
+
+    let result = checker.print_type(&t);
+    assert_eq!(
+        result,
+        // actual:
+        // {a: number, b: string | undefined, c: boolean, d: number | undefined}
+        // expected:
+        "{a: number, b: string, mut c: boolean, mut d: number}"
+    );
+}
 
 // #[test]
 // fn infer_readonly() {
@@ -438,7 +429,7 @@ fn infer_static_properties() {
 //     type ReadonlyObj = Readonly<Obj>;
 //     "#;
 //     let (_, ctx) = infer_prog(src);
-//     let mut checker = Checker::from(ctx);
+//     let (mut checker, mut ctx) = Checker::from(ctx);
 //     let t = checker.lookup_type("ReadonlyObj").unwrap();
 //     let t = checker.expand_type(&t).unwrap();
 
@@ -453,7 +444,7 @@ fn infer_static_properties() {
 //     type ReadonlyObj = Readonly<Obj>;
 //     "#;
 //     let (_, ctx) = infer_prog(src);
-//     let mut checker = Checker::from(ctx);
+//     let (mut checker, mut ctx) = Checker::from(ctx);
 //     let t = checker.lookup_type("ReadonlyObj").unwrap();
 //     let t = checker.expand_type(&t).unwrap();
 
@@ -468,7 +459,7 @@ fn infer_static_properties() {
 //     type ReadonlyObj = Readonly<Obj>;
 //     "#;
 //     let (_, ctx) = infer_prog(src);
-//     let mut checker = Checker::from(ctx);
+//     let (mut checker, mut ctx) = Checker::from(ctx);
 //     let t = checker.lookup_type("ReadonlyObj").unwrap();
 //     let t = checker.expand_type(&t).unwrap();
 
@@ -479,20 +470,22 @@ fn infer_static_properties() {
 //     );
 // }
 
-// #[test]
-// fn infer_pick() {
-//     let src = r#"
-//     type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
-//     type PickObj = Pick<Obj, "a" | "b">;
-//     "#;
-//     let (_, ctx) = infer_prog(src);
-//     let mut checker = Checker::from(ctx);
-//     let t = checker.lookup_type("PickObj").unwrap();
-//     let t = checker.expand_type(&t).unwrap();
+// TODO: fix Pick<T, K> ... 'T is not in scope'
+#[test]
+#[ignore]
+fn infer_pick() {
+    let src = r#"
+    type Obj = {a: number, b?: string, c: boolean, d?: number}
+    type PickObj = Pick<Obj, "a" | "b">
+    "#;
+    let (mut checker, ctx) = infer_prog(src);
 
-//     let result = format!("{}", t);
-//     assert_eq!(result, "{a: number, b?: string}");
-// }
+    let scheme = ctx.get_scheme("PickObj").unwrap();
+    let t = checker.expand_type(&ctx, scheme.t).unwrap();
+
+    let result = checker.print_type(&t);
+    assert_eq!(result, "{a: number, b?: string}");
+}
 
 // #[test]
 // fn infer_prog_using_partial() {
@@ -522,7 +515,7 @@ fn infer_static_properties() {
 //     "#;
 
 //     let (_, ctx) = infer_prog(src);
-//     let mut checker = Checker::from(ctx);
+//     let (mut checker, mut ctx) = Checker::from(ctx);
 
 //     let t = checker.lookup_type("T1").unwrap();
 //     let t = checker.expand_type(&t).unwrap();
@@ -537,27 +530,27 @@ fn infer_static_properties() {
 //     let t = checker.lookup_type("T3").unwrap();
 //     let t = checker.expand_type(&t).unwrap();
 //     let result = format!("{}", t);
-//     assert_eq!(result, "() => boolean | undefined"); // should be (() => boolean) | undefined
+//     assert_eq!(result, "() -> boolean | undefined"); // should be (() -> boolean) | undefined
 // }
 
-// #[test]
-// fn tuple_mapping() {
-//     let src = r#"
-//     let tuple = [1, 2, 3];
-//     let squares = tuple.map((x) => x * x);
-//     let sqr_fn = (x) => x * x;
-//     let squares2 = [1, 2, 3].map(sqr_fn);
-//     let squares3 = [1, 2, 3].map((x) => x * x);
-//     let strings = [1, 2, 3].map((x) => `x = ${x}`);
-//     "#;
+#[test]
+fn tuple_mapping() {
+    let src = r#"
+    let tuple = [1, 2, 3]
+    let squares = tuple.map(fn (x) => x * x)
+    let sqr_fn = fn (x) => x * x
+    let squares2 = [1, 2, 3].map(sqr_fn)
+    let squares3 = [1, 2, 3].map(fn (x) => x * x)
+    let strings = [1, 2, 3].map(fn (x) => `x = ${x}`)
+    "#;
 
-//     let (_, ctx) = infer_prog(src);
+    let (checker, ctx) = infer_prog(src);
 
-//     let t = ctx.lookup_value("squares").unwrap();
-//     assert_eq!(t.to_string(), "mut number[]");
-//     let t = ctx.lookup_value("strings").unwrap();
-//     assert_eq!(t.to_string(), "mut string[]");
-// }
+    let binding = ctx.get_binding("squares").unwrap();
+    assert_eq!(checker.print_type(&binding.index), "number[]");
+    let binding = ctx.get_binding("strings").unwrap();
+    assert_eq!(checker.print_type(&binding.index), "string[]");
+}
 
 // #[test]
 // fn infer_exclude() {
@@ -565,7 +558,7 @@ fn infer_static_properties() {
 //     type T1 = Exclude<"a" | "b" | "c", "a" | "b">;
 //     "#;
 //     let (_, ctx) = infer_prog(src);
-//     let mut checker = Checker::from(ctx);
+//     let (mut checker, mut ctx) = Checker::from(ctx);
 //     let t = checker.lookup_type("T1").unwrap();
 
 //     let result = format!("{}", t);
@@ -582,15 +575,15 @@ fn infer_static_properties() {
 //     let lib = r#"
 //     type Exclude<U, T> = T extends U ? never : T;
 //     "#;
-//     let mut checker = parse_dts(lib).unwrap();
+//     let (mut checker, mut ctx) = parse_dts(lib).unwrap();
 
 //     let src = r#"
 //     type T1 = Exclude<"a" | "b", "a" | "b" | "c">;
 //     "#;
 //     let result = parse(src);
 //     let mut prog = match result {
-//         Ok(prog) => prog,
-//         Err(err) => {
+//         Ok(prog) -> prog,
+//         Err(err) -> {
 //             println!("err = {:?}", err);
 //             panic!("Error parsing expression");
 //         }
@@ -610,7 +603,7 @@ fn infer_static_properties() {
 //     type T1 = Omit<Obj, "b" | "c">;
 //     "#;
 //     let (_, ctx) = infer_prog(src);
-//     let mut checker = Checker::from(ctx);
+//     let (mut checker, mut ctx) = Checker::from(ctx);
 //     let t = checker.lookup_type("T1").unwrap();
 
 //     let result = format!("{}", t);
@@ -628,7 +621,7 @@ fn infer_static_properties() {
 //     type T1 = Omit<String, "length">;
 //     "#;
 //     let (_, ctx) = infer_prog(src);
-//     let mut checker = Checker::from(ctx);
+//     let (mut checker, mut ctx) = Checker::from(ctx);
 //     let t = checker.lookup_type("T1").unwrap();
 
 //     let result = format!("{}", t);
@@ -646,13 +639,13 @@ fn infer_static_properties() {
 //     type T1 = String["charAt"];
 //     "#;
 //     let (_, ctx) = infer_prog(src);
-//     let mut checker = Checker::from(ctx);
+//     let (mut checker, mut ctx) = Checker::from(ctx);
 //     let t = checker.lookup_type("T1").unwrap();
 
 //     let t = checker.expand_type(&t).unwrap();
 //     let result = format!("{}", t);
 
-//     assert_eq!(result, "(pos: number) => string");
+//     assert_eq!(result, "(pos: number) -> string");
 // }
 
 // #[test]
@@ -668,7 +661,7 @@ fn infer_static_properties() {
 //     type T3 = Foo["qux"];
 //     "#;
 //     let (_, ctx) = infer_prog(src);
-//     let mut checker = Checker::from(ctx);
+//     let (mut checker, mut ctx) = Checker::from(ctx);
 
 //     let t = checker.lookup_type("T1").unwrap();
 //     let t = checker.expand_type(&t).unwrap();
@@ -683,7 +676,7 @@ fn infer_static_properties() {
 //     let t = checker.lookup_type("T3").unwrap();
 //     let t = checker.expand_type(&t).unwrap();
 //     let result = format!("{}", t);
-//     assert_eq!(result, "() => boolean");
+//     assert_eq!(result, "() -> boolean");
 // }
 
 // #[test]
@@ -720,7 +713,7 @@ fn infer_static_properties() {
 // #[test]
 // fn rest_fn() {
 //     let src = r#"
-//     declare let foo: <T>(...items: mut T[]) => string;
+//     declare let foo: <T>(...items: mut T[]) -> string;
 //     let result = foo(1, 2, 3);
 //     "#;
 
@@ -743,7 +736,7 @@ fn infer_static_properties() {
 //     type StringItem = Flatten<StringArray>;
 //     let str: StringItem = "hello";
 
-//     type GetReturnType<Type> = Type extends (...args: never[]) => infer Return
+//     type GetReturnType<Type> = Type extends (...args: never[]) -> infer Return
 //         ? Return
 //         : never;
 

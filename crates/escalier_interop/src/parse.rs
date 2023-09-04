@@ -909,11 +909,13 @@ pub fn parse_dts(d_ts_source: &str) -> Result<(Checker, Context), Error> {
         collector.ctx.schemes.insert(name.to_owned(), scheme);
     }
 
-    let array = collector.ctx.schemes.get("Array").unwrap();
-    let readonly_array = collector.ctx.schemes.get("ReadonlyArray").unwrap();
-
-    let array = merge_readonly_and_mutable_schemes(readonly_array, array, &mut collector.checker);
-    collector.ctx.schemes.insert("Array".to_string(), array);
+    if let Some(array) = collector.ctx.schemes.get("Array") {
+        if let Some(readonly_array) = collector.ctx.schemes.get("ReadonlyArray") {
+            let array =
+                merge_readonly_and_mutable_schemes(readonly_array, array, &mut collector.checker);
+            collector.ctx.schemes.insert("Array".to_string(), array);
+        }
+    }
 
     // TODO: maintain a list of standard library methods that mutate and update
     // those methods here.
