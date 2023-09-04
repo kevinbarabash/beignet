@@ -1,0 +1,20 @@
+[package]
+name = "escalier_interop"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+defaultmap = "0.5.0"
+derive-visitor = "0.3.0"
+generational-arena = "0.2.8"
+swc_atoms = "0.5.6"
+swc_ecma_ast = "0.108.0"
+swc_ecma_parser = "0.138.0"
+swc_common = "0.32.0"
+swc_ecma_visit = "0.94.0"
+memoize = "0.4.0"
+escalier_ast = { version = "0.1.0", path = "../escalier_ast" }
+escalier_hm = { version = "0.1.0", path = "../escalier_hm" }
+escalier_parser = { version = "0.1.0", path = "../escalier_parser" }

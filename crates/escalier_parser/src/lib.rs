@@ -11,4 +11,6 @@ mod stmt_parser;
 mod token;
 mod type_ann_parser;
 
+pub use parse_error::ParseError;
+pub use parser::Parser;
 pub use stmt_parser::parse;

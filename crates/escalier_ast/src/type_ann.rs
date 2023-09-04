@@ -1,7 +1,8 @@
 use generational_arena::Index;
 
-use crate::expr::{BinaryOp, Expr};
+use crate::expr::BinaryOp;
 use crate::func_param::FuncParam;
+use crate::identifier::Ident;
 use crate::span::*;
 use crate::type_param::TypeParam;
 
@@ -112,7 +113,7 @@ pub enum TypeAnnKind {
     IndexedAccess(Box<TypeAnn>, Box<TypeAnn>),
     KeyOf(Box<TypeAnn>),
     Rest(Box<TypeAnn>),
-    TypeOf(Box<Expr>),
+    TypeOf(Ident),
     Condition(ConditionType),
     Match(MatchType),
     Wildcard,

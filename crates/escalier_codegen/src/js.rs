@@ -1193,7 +1193,7 @@ fn build_class(class: &values::Class, stmts: &mut Vec<Stmt>, ctx: &mut Context) 
                 // In Escalier, `self` is always the first param in non-static
                 // methods, but it represents `this` in JavaScript which is
                 // implicit so we ignore it here.
-                let mut iter = method.params.iter();
+                let iter = method.params.iter();
                 // TODO: Check if the first param is `self` and skip over it if it is
                 // if !method.is_static {
                 //     iter.next();

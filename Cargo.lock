@@ -416,6 +416,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "escalier_interop"
+version = "0.1.0"
+dependencies = [
+ "defaultmap",
+ "derive-visitor",
+ "escalier_ast",
+ "escalier_hm",
+ "escalier_parser",
+ "generational-arena",
+ "memoize",
+ "swc_atoms",
+ "swc_common",
+ "swc_ecma_ast",
+ "swc_ecma_parser",
+ "swc_ecma_visit",
+]
+
+[[package]]
 name = "escalier_lsp"
 version = "0.1.0"
 dependencies = [

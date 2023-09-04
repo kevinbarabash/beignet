@@ -1,0 +1,37 @@
+---
+source: crates/escalier_parser/src/stmt_parser.rs
+expression: "parse(\"type RetType = GetReturnType<typeof foo>\")"
+---
+[
+    Stmt {
+        kind: TypeDecl(
+            TypeDecl {
+                name: "RetType",
+                type_ann: TypeAnn {
+                    kind: TypeRef(
+                        "GetReturnType",
+                        Some(
+                            [
+                                TypeAnn {
+                                    kind: TypeOf(
+                                        Ident {
+                                            name: "foo",
+                                            span: 36..39,
+                                        },
+                                    ),
+                                    span: 29..35,
+                                    inferred_type: None,
+                                },
+                            ],
+                        ),
+                    ),
+                    span: 15..40,
+                    inferred_type: None,
+                },
+                type_params: None,
+            },
+        ),
+        span: 0..40,
+        inferred_type: None,
+    },
+]

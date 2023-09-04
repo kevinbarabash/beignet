@@ -6,6 +6,7 @@ members = [
     "crates/escalier_cli",
     "crates/escalier_codegen",
     "crates/escalier_hm",
+    "crates/escalier_interop",
     "crates/escalier_lsp",
     "crates/escalier_old_infer",
     "crates/escalier_old_ast",

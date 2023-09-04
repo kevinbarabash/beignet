@@ -27,19 +27,21 @@ pub struct TypeRef {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Keyword {
+    Never,
     Null,
+    Object,
     Undefined,
     Unknown,
-    Never,
 }
 
 impl fmt::Display for Keyword {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let result = match self {
+            Self::Never => "never",
             Self::Null => "null",
+            Self::Object => "object",
             Self::Undefined => "undefined",
             Self::Unknown => "unknown",
-            Self::Never => "never",
         };
         write!(f, "{result}")
     }
@@ -95,6 +97,13 @@ impl FuncParam {
     pub fn is_self(&self) -> bool {
         match &self.pattern {
             TPat::Ident(BindingIdent { name, .. }) => name == "self",
+            _ => false,
+        }
+    }
+
+    pub fn is_mut_self(&self) -> bool {
+        match &self.pattern {
+            TPat::Ident(BindingIdent { name, mutable, .. }) => name == "self" && *mutable,
             _ => false,
         }
     }
@@ -170,14 +179,14 @@ pub struct Call {
     pub ret: Index,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TMethod {
-    pub name: TPropKey,
-    pub params: Vec<FuncParam>,
-    pub ret: Index,
-    pub type_params: Option<Vec<TypeParam>>,
-    pub is_mutating: bool,
-}
+// #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+// pub struct TMethod {
+//     pub name: TPropKey,
+//     pub params: Vec<FuncParam>,
+//     pub ret: Index,
+//     pub type_params: Option<Vec<TypeParam>>,
+//     pub is_mutating: bool,
+// }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TIndexKey {
@@ -417,6 +426,24 @@ pub struct Scheme {
 /// only assigned lazily, when required.
 
 impl Checker {
+    pub fn print_scheme(&self, scheme: &Scheme) -> String {
+        let mut result = String::default();
+        if let Some(type_params) = &scheme.type_params {
+            let type_params = type_params
+                .iter()
+                .map(|tp| match &tp.constraint {
+                    Some(constraint) => {
+                        format!("{}:{}", tp.name.clone(), self.print_type(constraint))
+                    }
+                    None => tp.name.clone(),
+                })
+                .collect::<Vec<_>>();
+            result.push_str(&format!("<{}>", type_params.join(", ")))
+        }
+        result.push_str(&self.print_type(&scheme.t));
+        result
+    }
+
     pub fn print_type(&self, index: &Index) -> String {
         match &self.arena[*index].kind {
             TypeKind::TypeVar(TypeVar {
@@ -649,9 +676,10 @@ impl Checker {
 
     fn tpat_to_string(pattern: &TPat) -> String {
         match pattern {
-            TPat::Ident(BindingIdent {
-                name, mutable: _, ..
-            }) => name.to_owned(),
+            TPat::Ident(BindingIdent { name, mutable, .. }) => match mutable {
+                true => format!("mut {}", name),
+                false => name.to_owned(),
+            },
             TPat::Rest(RestPat { arg }) => format!("...{}", Self::tpat_to_string(arg.as_ref())),
             TPat::Tuple(TuplePat { elems }) => format!(
                 "[{}]",
@@ -886,5 +914,9 @@ impl Checker {
 
     pub fn new_wildcard_type(&mut self) -> Index {
         self.arena.insert(Type::from(TypeKind::Wildcard))
+    }
+
+    pub fn from_type_kind(&mut self, kind: TypeKind) -> Index {
+        self.arena.insert(Type::from(kind))
     }
 }

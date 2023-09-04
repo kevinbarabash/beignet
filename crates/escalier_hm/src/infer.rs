@@ -347,6 +347,7 @@ impl Checker {
                     opt_chain,
                 }) => {
                     let mut obj_idx = checker.infer_expression(obj, ctx)?;
+                    let is_mut = is_expr_mutable(ctx, obj)?;
                     let mut has_undefined = false;
                     if *opt_chain {
                         if let TypeKind::Union(union) = &checker.arena[obj_idx].kind {
@@ -359,11 +360,11 @@ impl Checker {
                     let result = match prop {
                         MemberProp::Ident(Ident { name, .. }) => {
                             let key_idx = checker.new_lit_type(&Literal::String(name.to_owned()));
-                            checker.get_ident_member(ctx, obj_idx, key_idx)?
+                            checker.get_ident_member(ctx, obj_idx, key_idx, is_mut)?
                         }
                         MemberProp::Computed(ComputedPropName { expr, .. }) => {
                             let prop_type = checker.infer_expression(expr, ctx)?;
-                            checker.get_computed_member(ctx, obj_idx, prop_type)?
+                            checker.get_computed_member(ctx, obj_idx, prop_type, is_mut)?
                         }
                     };
 
@@ -392,7 +393,7 @@ impl Checker {
                 }
                 ExprKind::JSXElement(_) => todo!(),
                 ExprKind::Assign(Assign { left, op: _, right }) => {
-                    if !lvalue_mutability(ctx, left)? {
+                    if !is_expr_mutable(ctx, left)? {
                         return Err(TypeError {
                             message: "Cannot assign to immutable lvalue".to_string(),
                         });
@@ -716,7 +717,16 @@ impl Checker {
                     .map(|param| {
                         let t = match &mut param.type_ann {
                             Some(type_ann) => self.infer_type_ann(type_ann, &mut sig_ctx)?,
-                            None => self.new_var_type(None),
+                            None => {
+                                match &param.pattern.kind {
+                                    // TODO: add a check that `self` is only allowed 
+                                    // as the first param in a method signature.
+                                    PatternKind::Ident(ident) if ident.name == "self" => {
+                                        self.new_constructor("Self", &[])
+                                    },
+                                    _ => self.new_var_type(None),
+                                }
+                            },
                         };
 
                         Ok(types::FuncParam {
@@ -774,6 +784,15 @@ impl Checker {
 
             TypeAnnKind::Object(obj) => {
                 let mut props: Vec<types::TObjElem> = Vec::new();
+                let mut obj_ctx = ctx.clone();
+                let self_idx = self.new_var_type(None);
+                obj_ctx.schemes.insert(
+                    "Self".to_string(),
+                    Scheme {
+                        type_params: None,
+                        t: self_idx,
+                    },
+                );
                 for elem in obj.iter_mut() {
                     match elem {
                         ObjectProp::Mapped(Mapped {
@@ -822,7 +841,7 @@ impl Checker {
                             props.push(types::TObjElem::Prop(types::TProp {
                                 name: TPropKey::StringKey(prop.name.to_owned()),
                                 modifier,
-                                t: self.infer_type_ann(&mut prop.type_ann, ctx)?,
+                                t: self.infer_type_ann(&mut prop.type_ann, &mut obj_ctx)?,
                                 mutable: prop.mutable,
                                 optional: prop.optional,
                             }));
@@ -997,8 +1016,10 @@ impl Checker {
                 let index_idx = self.infer_type_ann(index_type, ctx)?;
                 self.new_indexed_access_type(obj_idx, index_idx)
             }
-            TypeAnnKind::TypeOf(expr) => self.infer_expression(expr, ctx)?,
-
+            TypeAnnKind::TypeOf(arg) => {
+                let arg = ctx.values.get(&arg.name).unwrap();
+                arg.index
+            }
             // TODO: Create types for all of these
             TypeAnnKind::KeyOf(type_ann) => {
                 let t = self.infer_type_ann(type_ann, ctx)?;
@@ -1314,18 +1335,19 @@ impl Checker {
         ctx: &mut Context,
         obj_idx: Index,
         key_idx: Index,
+        is_mut: bool,
     ) -> Result<Index, TypeError> {
         // We're not mutating `kind` so this should be safe.
         let kind: &TypeKind = unsafe { transmute(&self.arena[obj_idx].kind) };
         match kind {
-            TypeKind::Object(_) => self.get_prop(ctx, obj_idx, key_idx),
+            TypeKind::Object(_) => self.get_prop(ctx, obj_idx, key_idx, is_mut),
             // declare let obj: {x: number} | {x: string}
             // obj.x; // number | string
             TypeKind::Union(union) => {
                 let mut result_types = vec![];
                 let mut undefined_count = 0;
                 for idx in &union.types {
-                    match self.get_prop(ctx, *idx, key_idx) {
+                    match self.get_prop(ctx, *idx, key_idx, is_mut) {
                         Ok(t) => result_types.push(t),
                         Err(_) => {
                             // TODO: check what the error is, we may want to propagate
@@ -1351,16 +1373,32 @@ impl Checker {
             }
             TypeKind::TypeRef(types::TypeRef { name, types, .. }) => {
                 let obj_idx = self.expand_alias(ctx, name, types)?;
-                self.get_ident_member(ctx, obj_idx, key_idx)
+                self.get_ident_member(ctx, obj_idx, key_idx, is_mut)
             }
             TypeKind::Array(types::Array { t }) => {
                 let obj_idx = self.expand_alias(ctx, "Array", &[*t])?;
-                self.get_ident_member(ctx, obj_idx, key_idx)
+                self.get_ident_member(ctx, obj_idx, key_idx, is_mut)
             }
             TypeKind::Tuple(types::Tuple { types }) => {
                 let t = self.new_union_type(types);
                 let obj_idx = self.expand_alias(ctx, "Array", &[t])?;
-                self.get_ident_member(ctx, obj_idx, key_idx)
+                self.get_ident_member(ctx, obj_idx, key_idx, is_mut)
+            }
+            TypeKind::Literal(Literal::String(_)) => {
+                let obj_idx = self.expand_alias(ctx, "String", &[])?;
+                self.get_ident_member(ctx, obj_idx, key_idx, is_mut)
+            }
+            TypeKind::Literal(Literal::Number(_)) => {
+                let obj_idx = self.expand_alias(ctx, "Number", &[])?;
+                self.get_ident_member(ctx, obj_idx, key_idx, is_mut)
+            }
+            TypeKind::Primitive(Primitive::String) => {
+                let obj_idx = self.expand_alias(ctx, "String", &[])?;
+                self.get_ident_member(ctx, obj_idx, key_idx, is_mut)
+            }
+            TypeKind::Primitive(Primitive::Number) => {
+                let obj_idx = self.expand_alias(ctx, "Number", &[])?;
+                self.get_ident_member(ctx, obj_idx, key_idx, is_mut)
             }
             _ => Err(TypeError {
                 message: format!("Can't access properties on {}", self.print_type(&obj_idx)),
@@ -1481,16 +1519,17 @@ fn find_identifiers(expr: &Expr) -> Result<Vec<Ident>, TypeError> {
     Ok(idents)
 }
 
-fn lvalue_mutability(ctx: &Context, expr: &Expr) -> Result<bool, TypeError> {
+// TODO: separate mutability checks from lvalue checks
+fn is_expr_mutable(ctx: &Context, expr: &Expr) -> Result<bool, TypeError> {
     match &expr.kind {
         ExprKind::Ident(ident) => {
             let binding = ctx.values.get(&ident.name).unwrap();
             Ok(binding.is_mut)
         }
-        ExprKind::Member(member) => lvalue_mutability(ctx, &member.object),
-        _ => Err(TypeError {
-            message: "Can't assign to non-lvalue".to_string(),
-        }),
+        ExprKind::Member(member) => is_expr_mutable(ctx, &member.object),
+        ExprKind::Tuple(_) => Ok(true),
+        ExprKind::Object(_) => Ok(true),
+        _ => Ok(false),
     }
 }
 

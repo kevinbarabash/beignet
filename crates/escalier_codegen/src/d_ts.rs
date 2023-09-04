@@ -357,8 +357,9 @@ pub fn build_type(
         types::TypeKind::Keyword(keyword) => {
             let kind = match keyword {
                 types::Keyword::Null => TsKeywordTypeKind::TsNullKeyword,
-                types::Keyword::Undefined => TsKeywordTypeKind::TsUndefinedKeyword,
                 types::Keyword::Never => TsKeywordTypeKind::TsNeverKeyword,
+                types::Keyword::Object => TsKeywordTypeKind::TsObjectKeyword,
+                types::Keyword::Undefined => TsKeywordTypeKind::TsUndefinedKeyword,
                 types::Keyword::Unknown => TsKeywordTypeKind::TsUnknownKeyword,
                 // TODO:
                 // types::Keyword::Object => TsKeywordTypeKind::TsObjectKeyword,

@@ -793,19 +793,32 @@ impl Checker {
                     func
                 };
 
-                let (params, rest_param) = match func.params.last() {
-                    Some(param) => match &param.pattern {
-                        TPat::Rest(_) => (&func.params[..func.params.len() - 1], Some(param)),
-                        _ => (&func.params[..], None),
-                    },
-                    None => (&func.params[..], None),
+                let func_params = match func.params.get(0) {
+                    Some(param) => {
+                        if param.is_self() {
+                            &func.params[1..]
+                        } else {
+                            &func.params[..]
+                        }
+                    }
+                    None => &[],
                 };
 
-                if args.len() < params.len() {
+                let (params, rest_param) = match func_params.last() {
+                    Some(param) => match &param.pattern {
+                        TPat::Rest(_) => (&func_params[..func_params.len() - 1], Some(param)),
+                        _ => (func_params, None),
+                    },
+                    None => (func_params, None),
+                };
+
+                let required_params = params.iter().filter(|param| !param.optional).collect_vec();
+
+                if args.len() < required_params.len() {
                     return Err(TypeError {
                         message: format!(
                             "too few arguments to function: expected {}, got {}",
-                            params.len(),
+                            required_params.len(),
                             args.len()
                         ),
                     });
@@ -902,7 +915,8 @@ impl Checker {
                 });
             }
             TypeKind::IndexedAccess(IndexedAccess { obj, index }) => {
-                let t = self.get_prop(ctx, obj, index)?;
+                let is_mut = true;
+                let t = self.get_prop(ctx, obj, index, is_mut)?;
                 self.unify_call(ctx, args, type_args, t)?;
             }
             TypeKind::Conditional(Conditional {

@@ -19,7 +19,7 @@ impl fmt::Display for Report {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Checker {
     pub arena: Arena<Type>,
     pub current_report: Report,
