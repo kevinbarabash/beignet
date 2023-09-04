@@ -3335,7 +3335,7 @@ fn test_mapped_type_pick() -> Result<(), TypeError> {
     // TODO: replace `T` in type variable constraints as well
     let src = r#"   
     type Pick<T, K : keyof T> = {[P]: T[P] for P in K}
-    type Obj = {a: string, b: number, c: boolean}
+    type Obj = {a?: string, b: number, c: boolean}
     type Result = Pick<Obj, "a" | "b">
     "#;
     let mut program = parse(src).unwrap();
@@ -3344,7 +3344,10 @@ fn test_mapped_type_pick() -> Result<(), TypeError> {
 
     let scheme = my_ctx.schemes.get("Result").unwrap();
     let t = checker.expand_type(&my_ctx, scheme.t)?;
-    assert_eq!(checker.print_type(&t), r#"{a: string, b: number}"#);
+    assert_eq!(
+        checker.print_type(&t),
+        r#"{a?: string | undefined, b: number}"#
+    );
 
     assert_no_errors(&checker)
 }

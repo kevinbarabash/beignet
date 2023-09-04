@@ -586,6 +586,9 @@ impl Checker {
                                 let mut mapping: HashMap<String, Index> = HashMap::new();
                                 mapping.insert(mapped.target.to_owned(), *t);
                                 let key = self.instantiate_type(&mapped.key, &mapping);
+
+                                eprintln!("value = {:?}", self.print_type(&mapped.value));
+
                                 let value = self.instantiate_type(&mapped.value, &mapping);
 
                                 let name = match &self.arena[key].kind {
@@ -601,25 +604,65 @@ impl Checker {
                                     }
                                 };
 
+                                let mut optional = false;
+
+                                // The mapped type's `value` is looks like T[P]
+                                // and `P` is the key type we need to copy the
+                                // optionality and readonlyness from from the
+                                // object type.
+                                if let TypeKind::IndexedAccess(IndexedAccess { obj, index }) =
+                                    &self.arena[mapped.value].kind
+                                {
+                                    if !self.equals(index, &mapped.key) {
+                                        continue;
+                                    }
+
+                                    let obj = self.expand_type(ctx, *obj)?;
+
+                                    if let TypeKind::Object(Object { elems }) =
+                                        &self.arena[obj].kind
+                                    {
+                                        for elem in elems {
+                                            if let TObjElem::Prop(prop) = elem {
+                                                if prop.name == name {
+                                                    optional = prop.optional;
+                                                    eprintln!("prop = {prop:#?}");
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // TODO: we really need to rethink where we
+                                    // actually need to track mutability.  For
+                                    // example when we call `typeof foo` we should
+                                    // get back different types depending on whether
+                                    // or not `foo` is mutable.  This also means
+                                    // that Readonly<Instance> should return a type
+                                    // with all of the mutating methods removed.
+                                    // Or maybe we do the reverse where `Instance`
+                                    // has the mutating methods filtered and then
+                                    // `Mutable<Instance>` has all of the methods.
+                                }
+
                                 new_elems.push(TObjElem::Prop(TProp {
                                     name,
                                     modifier: None,
-                                    optional: false, // TODO
-                                    mutable: false,  // TODO
+                                    optional,
+                                    mutable: false, // TODO
                                     t: self.expand_type(ctx, value)?,
                                 }));
+                            }
 
-                                if !non_literal_keys.is_empty() {
-                                    let union = self.new_union_type(&non_literal_keys);
-                                    new_elems.push(TObjElem::Mapped(MappedType {
-                                        target: mapped.target.to_owned(),
-                                        key: union,
-                                        value: mapped.value,
-                                        source: mapped.source,
-                                        check: mapped.check,
-                                        extends: mapped.extends,
-                                    }));
-                                }
+                            if !non_literal_keys.is_empty() {
+                                let union = self.new_union_type(&non_literal_keys);
+                                new_elems.push(TObjElem::Mapped(MappedType {
+                                    target: mapped.target.to_owned(),
+                                    key: union,
+                                    value: mapped.value,
+                                    source: mapped.source,
+                                    check: mapped.check,
+                                    extends: mapped.extends,
+                                }));
                             }
                         }
                         _ => {
@@ -650,7 +693,7 @@ impl Checker {
         let key_type = self.arena[key_idx].clone();
 
         match &obj_type.kind {
-            TypeKind::Object(_) => self.get_prop(ctx, obj_idx, key_idx, is_mut),
+            TypeKind::Object(_) => self.get_prop_value(ctx, obj_idx, key_idx, is_mut),
             TypeKind::Array(array) => {
                 match &key_type.kind {
                     TypeKind::Literal(Literal::Number(_)) => {
@@ -662,7 +705,7 @@ impl Checker {
                         // TODO: look up methods on the `Array` interface
                         // we need to instantiate the scheme such that `T` is equal
                         // to the union of all types in the tuple
-                        self.get_prop(ctx, obj_idx, key_idx, is_mut)
+                        self.get_prop_value(ctx, obj_idx, key_idx, is_mut)
                     }
                     TypeKind::Primitive(Primitive::Number) => {
                         let types = vec![array.t, self.new_keyword(Keyword::Undefined)];
@@ -694,7 +737,7 @@ impl Checker {
                         // TODO: look up methods on the `Array` interface
                         // we need to instantiate the scheme such that `T` is equal
                         // to the union of all types in the tuple
-                        self.get_prop(ctx, obj_idx, key_idx, is_mut)
+                        self.get_prop_value(ctx, obj_idx, key_idx, is_mut)
                     }
                     TypeKind::Primitive(Primitive::Number) => {
                         let mut types = tuple.types.clone();
@@ -748,9 +791,7 @@ impl Checker {
     }
 
     // TODO(#624) - to behave differently when used to look up an lvalue vs a rvalue
-    // TODO: add a param which indiciates whether the object we're getting the property
-    // on is a mutable reference or not
-    pub fn get_prop(
+    pub fn get_prop_value(
         &mut self,
         ctx: &Context,
         obj_idx: Index,
