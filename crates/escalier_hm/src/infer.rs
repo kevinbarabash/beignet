@@ -1,6 +1,6 @@
 use generational_arena::Index;
 use itertools::Itertools;
-use std::collections::{BTreeMap, HashSet, HashMap};
+use std::collections::{BTreeMap, HashSet};
 use std::mem::transmute;
 
 use escalier_ast::{self as syntax, *};
@@ -974,17 +974,23 @@ impl Checker {
                     });
                 }
 
-                // Contraints can reference other type params so we need to
-                // replace references in them with the type args themselves.
-                let mut type_param_mapping: HashMap<String, Index> = HashMap::new();
+                // Contraints can reference other type params so we need make
+                // sure that definitions for each type param are in scope where
+                // each type param is defined to be the corresponding type arg.
+                let mut sig_ctx = ctx.clone();
                 for (param, arg) in type_params.iter().zip(type_args.iter()) {
-                    type_param_mapping.insert(param.name.clone(), *arg);
+                    sig_ctx.schemes.insert(
+                        param.name.clone(),
+                        Scheme {
+                            type_params: None,
+                            t: *arg,
+                        },
+                    );
                 }
 
                 for (param, arg) in type_params.iter().zip(type_args.iter()) {
                     if let Some(constraint) = param.constraint {
-                        let constraint = self.instantiate_type(&constraint, &type_param_mapping);
-                        self.unify(ctx, *arg, constraint)?;
+                        self.unify(&sig_ctx, *arg, constraint)?;
                     }
                 }
 
