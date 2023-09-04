@@ -351,4 +351,9 @@ mod tests {
     fn parse_typeof() {
         insta::assert_debug_snapshot!(parse("type RetType = GetReturnType<typeof foo>"));
     }
+
+    #[test]
+    fn parse_keyof() {
+        insta::assert_debug_snapshot!(parse("type Pick<T, K : keyof T> = {[P]: T[P] for P in K}"));
+    }
 }

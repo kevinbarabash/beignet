@@ -230,9 +230,17 @@ impl Checker {
                     }
                 }
 
+                // Contraints can reference other type params so we need to
+                // replace references in them with the type args themselves.
+                let mut type_param_mapping: HashMap<String, Index> = HashMap::new();
+                for (param, arg) in type_params.iter().zip(type_args.iter()) {
+                    type_param_mapping.insert(param.name.clone(), *arg);
+                }
+
                 let mut mapping: HashMap<String, Index> = HashMap::new();
                 for (param, arg) in type_params.iter().zip(type_args.iter()) {
                     if let Some(constraint) = param.constraint {
+                        let constraint = self.instantiate_type(&constraint, &type_param_mapping);
                         self.unify(ctx, *arg, constraint)?;
                     }
                     mapping.insert(param.name.clone(), arg.to_owned());
