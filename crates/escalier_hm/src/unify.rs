@@ -916,7 +916,7 @@ impl Checker {
             }
             TypeKind::IndexedAccess(IndexedAccess { obj, index }) => {
                 let is_mut = true;
-                let t = self.get_prop(ctx, obj, index, is_mut)?;
+                let t = self.get_prop_value(ctx, obj, index, is_mut)?;
                 self.unify_call(ctx, args, type_args, t)?;
             }
             TypeKind::Conditional(Conditional {

@@ -483,7 +483,7 @@ fn infer_pick() {
 
     let result = checker.print_type(&t);
     // TODO: maintain the optionality of properties across mapped types
-    assert_eq!(result, "{a: number, b: string | undefined}");
+    assert_eq!(result, "{a: number, b?: string | undefined}");
 }
 
 // #[test]
@@ -602,7 +602,7 @@ fn infer_omit() {
     let result = checker.print_type(&t);
 
     // TODO: maintain the optionality of props across mapped types
-    assert_eq!(result, "{a: number, d: number | undefined}");
+    assert_eq!(result, "{a: number, d?: number | undefined}");
 }
 
 #[test]

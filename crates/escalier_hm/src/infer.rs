@@ -1354,14 +1354,14 @@ impl Checker {
         // We're not mutating `kind` so this should be safe.
         let kind: &TypeKind = unsafe { transmute(&self.arena[obj_idx].kind) };
         match kind {
-            TypeKind::Object(_) => self.get_prop(ctx, obj_idx, key_idx, is_mut),
+            TypeKind::Object(_) => self.get_prop_value(ctx, obj_idx, key_idx, is_mut),
             // declare let obj: {x: number} | {x: string}
             // obj.x; // number | string
             TypeKind::Union(union) => {
                 let mut result_types = vec![];
                 let mut undefined_count = 0;
                 for idx in &union.types {
-                    match self.get_prop(ctx, *idx, key_idx, is_mut) {
+                    match self.get_prop_value(ctx, *idx, key_idx, is_mut) {
                         Ok(t) => result_types.push(t),
                         Err(_) => {
                             // TODO: check what the error is, we may want to propagate
