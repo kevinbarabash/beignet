@@ -1057,3 +1057,76 @@ fn multiple_returns_stress_test() -> Result<(), TypeError> {
 
     Ok(())
 }
+
+#[test]
+fn partial_type() -> Result<(), TypeError> {
+    let src = r#"
+    type Partial<T> = { [P]+?: T[P] for P in keyof T }
+    type Obj = {a?: string, b: number}
+    type PartialObj = Partial<Obj>
+    "#;
+
+    let (js, _) = compile(src);
+    insta::assert_snapshot!(js, @r###"
+    ;
+    ;
+    ;
+    "###);
+
+    let mut program = parse(src).unwrap();
+    let mut checker = Checker::default();
+    let mut ctx = Context::default();
+    checker.infer_program(&mut program, &mut ctx)?;
+    let result = codegen_d_ts(&program, &ctx, &checker)?;
+
+    // TODO: How do we ensure that types defined within a block can't escape?
+    insta::assert_snapshot!(result, @r###"
+    declare type Obj = {
+        a?: number;
+        b: number;
+    };
+    declare type Partial<T> = {
+        [P in keyof T]: T[P];
+    };
+    declare type PartialObj = Partial<Obj>;
+    "###);
+
+    Ok(())
+}
+
+#[test]
+fn mapped_type_with_additional_props() -> Result<(), TypeError> {
+    let src = r#"
+    type Direction = "up" | "down" | "left" | "right"
+    type Style = {
+        background: string,
+        color: string,
+        [P]: boolean for P in Direction
+    }
+    "#;
+
+    let (js, _) = compile(src);
+    insta::assert_snapshot!(js, @r###"
+    ;
+    ;
+    "###);
+
+    let mut program = parse(src).unwrap();
+    let mut checker = Checker::default();
+    let mut ctx = Context::default();
+    checker.infer_program(&mut program, &mut ctx)?;
+    let result = codegen_d_ts(&program, &ctx, &checker)?;
+
+    // TODO: How do we ensure that types defined within a block can't escape?
+    insta::assert_snapshot!(result, @r###"
+    declare type Direction = "up" | "down" | "left" | "right";
+    declare type Style = {
+        background: number;
+        color: number;
+    } & {
+        [P in Direction]: boolean;
+    };
+    "###);
+
+    Ok(())
+}

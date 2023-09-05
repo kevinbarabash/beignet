@@ -608,6 +608,7 @@ impl Checker {
                                 // and `P` is the key type we need to copy the
                                 // optionality and readonlyness from from the
                                 // object type.
+                                // TODO: check for `T[P]` anywhere within mapped.value
                                 if let TypeKind::IndexedAccess(IndexedAccess { obj, index }) =
                                     &self.arena[mapped.value].kind
                                 {
