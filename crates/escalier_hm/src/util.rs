@@ -587,9 +587,7 @@ impl Checker {
                                 mapping.insert(mapped.target.to_owned(), *t);
                                 let key = self.instantiate_type(&mapped.key, &mapping);
 
-                                eprintln!("value = {:?}", self.print_type(&mapped.value));
-
-                                let value = self.instantiate_type(&mapped.value, &mapping);
+                                let mut value = self.instantiate_type(&mapped.value, &mapping);
 
                                 let name = match &self.arena[key].kind {
                                     TypeKind::Literal(Literal::String(name)) => {
@@ -626,6 +624,11 @@ impl Checker {
                                             if let TObjElem::Prop(prop) = elem {
                                                 if prop.name == name {
                                                     optional = prop.optional;
+                                                    // TODO: use mapped.optional to
+                                                    // mimic TypeScript's behavior
+                                                    // where optional fields are
+                                                    // given type `T | undefined`
+                                                    value = prop.t;
                                                     eprintln!("prop = {prop:#?}");
                                                 }
                                             }

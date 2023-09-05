@@ -389,11 +389,7 @@ fn infer_partial() {
     let t = checker.expand_type(&ctx, scheme.t).unwrap();
 
     let result = checker.print_type(&t);
-    assert_eq!(
-        result,
-        // TODO: all values should be `T | undefined`
-        "{a?: number, b?: string | undefined, c?: boolean, d?: number | undefined}"
-    );
+    assert_eq!(result, "{a?: number, b?: string, c?: boolean, d?: number}");
 }
 
 #[test]
@@ -407,11 +403,7 @@ fn infer_required() {
     let t = checker.expand_type(&ctx, scheme.t).unwrap();
 
     let result = checker.print_type(&t);
-    assert_eq!(
-        result,
-        // TODO: all values should be just `T` without the ` | undefined`
-        "{a: number, b: string | undefined, c: boolean, d: number | undefined}"
-    );
+    assert_eq!(result, "{a: number, b: string, c: boolean, d: number}");
 }
 
 // #[test]
@@ -474,21 +466,8 @@ fn infer_pick() {
     let t = checker.expand_type(&ctx, scheme.t).unwrap();
 
     let result = checker.print_type(&t);
-    // TODO: maintain the optionality of properties across mapped types
-    assert_eq!(result, "{a: number, b?: string | undefined}");
+    assert_eq!(result, "{a: number, b?: string}");
 }
-
-// #[test]
-// fn infer_prog_using_partial() {
-//     let src = r#"
-//     type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
-//     type PartialObj = Partial<Obj>;
-
-//     let partial_obj: PartialObj = {b: "hello"};
-//     "#;
-
-//     infer_prog(src);
-// }
 
 // #[test]
 // fn infer_partial_with_getters_and_setters_on_class_instance() {
@@ -593,8 +572,7 @@ fn infer_omit() {
     let t = checker.expand_type(&ctx, scheme.t).unwrap();
     let result = checker.print_type(&t);
 
-    // TODO: maintain the optionality of props across mapped types
-    assert_eq!(result, "{a: number, d?: number | undefined}");
+    assert_eq!(result, "{a: number, d?: number}");
 }
 
 #[test]

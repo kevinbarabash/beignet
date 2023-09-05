@@ -3345,10 +3345,7 @@ fn test_mapped_type_pick() -> Result<(), TypeError> {
 
     let scheme = my_ctx.schemes.get("Result").unwrap();
     let t = checker.expand_type(&my_ctx, scheme.t)?;
-    assert_eq!(
-        checker.print_type(&t),
-        r#"{a?: string | undefined, b: number}"#
-    );
+    assert_eq!(checker.print_type(&t), r#"{a?: string, b: number}"#);
 
     assert_no_errors(&checker)
 }
