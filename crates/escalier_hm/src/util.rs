@@ -644,6 +644,13 @@ impl Checker {
                                     // `Mutable<Instance>` has all of the methods.
                                 }
 
+                                if let Some(mode) = &mapped.optional {
+                                    match mode {
+                                        MappedModifier::Add => optional = true,
+                                        MappedModifier::Remove => optional = false,
+                                    }
+                                }
+
                                 new_elems.push(TObjElem::Prop(TProp {
                                     name,
                                     modifier: None,
@@ -660,6 +667,7 @@ impl Checker {
                                     key: union,
                                     value: mapped.value,
                                     source: mapped.source,
+                                    optional: mapped.optional.to_owned(),
                                     check: mapped.check,
                                     extends: mapped.extends,
                                 }));

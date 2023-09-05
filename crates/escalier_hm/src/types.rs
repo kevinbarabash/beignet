@@ -258,11 +258,18 @@ pub struct TCallable {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum MappedModifier {
+    Add,
+    Remove,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct MappedType {
     pub key: Index,
     pub value: Index,
     pub target: String,
     pub source: Index,
+    pub optional: Option<MappedModifier>,
 
     // First half of a Conditional
     pub check: Option<Index>,
@@ -539,6 +546,7 @@ impl Checker {
                             value,
                             target,
                             source,
+                            optional: _, // TODO
                             // TODO: handle `if`-clause
                             check: _,
                             extends: _,

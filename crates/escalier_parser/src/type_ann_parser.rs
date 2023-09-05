@@ -196,6 +196,24 @@ impl<'a> Parser<'a> {
                                 self.next().unwrap_or_else(|| EOF.clone()).kind,
                                 TokenKind::RightBracket
                             );
+
+                            let mut optional: Option<MappedModifier> = None;
+                            if self.peek().unwrap_or(&EOF).kind == TokenKind::Plus {
+                                self.next(); // consume '+'
+                                assert_eq!(
+                                    self.next().unwrap_or(EOF.clone()).kind,
+                                    TokenKind::Question
+                                );
+                                optional = Some(MappedModifier::Add);
+                            } else if self.peek().unwrap_or(&EOF).kind == TokenKind::Minus {
+                                self.next(); // consume '-'
+                                assert_eq!(
+                                    self.next().unwrap_or(EOF.clone()).kind,
+                                    TokenKind::Question
+                                );
+                                optional = Some(MappedModifier::Remove);
+                            }
+
                             assert_eq!(
                                 self.next().unwrap_or_else(|| EOF.clone()).kind,
                                 TokenKind::Colon
@@ -229,6 +247,7 @@ impl<'a> Parser<'a> {
                                 value: Box::new(value),
                                 target,
                                 source: Box::new(source),
+                                optional,
                                 // TODO: handle 'if' clause
                                 check: None,
                                 extends: None,
@@ -871,6 +890,8 @@ mod tests {
         insta::assert_debug_snapshot!(parse(
             "{[P]: number for P in string, [Q]: string for Q in numbber}"
         ));
+        insta::assert_debug_snapshot!(parse("{[P]+?: T[P] for P in keyof T}"));
+        insta::assert_debug_snapshot!(parse("{[P]-?: T[P] for P in keyof T}"));
     }
 
     #[test]

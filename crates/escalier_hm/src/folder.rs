@@ -137,6 +137,7 @@ pub fn walk_index<F: Folder>(folder: &mut F, index: &Index) -> Index {
                         value,
                         target,
                         source,
+                        optional,
                         check,
                         extends,
                     }) => {
@@ -152,6 +153,7 @@ pub fn walk_index<F: Folder>(folder: &mut F, index: &Index) -> Index {
                             value: new_value,
                             target: target.to_owned(),
                             source: new_source,
+                            optional: optional.to_owned(),
                             check: new_check,
                             extends: new_extends,
                         })

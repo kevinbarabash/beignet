@@ -342,7 +342,7 @@ pub fn build_type(
             let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
                 .chars()
                 .collect();
-            let id = chars.get(id.to_owned() as usize).unwrap();
+            let id = chars.get(*id).unwrap();
 
             TsType::TsTypeRef(TsTypeRef {
                 span: DUMMY_SP,
@@ -676,6 +676,7 @@ fn build_obj_type(obj: &types::Object, ctx: &Context, checker: &Checker) -> TsTy
                 value,
                 target, // TODO: make this an Ident
                 source,
+                optional: _, // TODO
                 // TODO:
                 check: _,
                 extends: _,

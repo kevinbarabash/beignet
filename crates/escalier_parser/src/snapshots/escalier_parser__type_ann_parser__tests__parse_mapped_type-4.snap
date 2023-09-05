@@ -1,0 +1,66 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: "parse(\"{[P]-?: T[P] for P in keyof T}\")"
+---
+TypeAnn {
+    kind: Object(
+        [
+            Mapped(
+                Mapped {
+                    key: TypeAnn {
+                        kind: TypeRef(
+                            "P",
+                            None,
+                        ),
+                        span: 2..3,
+                        inferred_type: None,
+                    },
+                    value: TypeAnn {
+                        kind: IndexedAccess(
+                            TypeAnn {
+                                kind: TypeRef(
+                                    "T",
+                                    None,
+                                ),
+                                span: 8..9,
+                                inferred_type: None,
+                            },
+                            TypeAnn {
+                                kind: TypeRef(
+                                    "P",
+                                    None,
+                                ),
+                                span: 10..11,
+                                inferred_type: None,
+                            },
+                        ),
+                        span: 8..11,
+                        inferred_type: None,
+                    },
+                    target: "P",
+                    source: TypeAnn {
+                        kind: KeyOf(
+                            TypeAnn {
+                                kind: TypeRef(
+                                    "T",
+                                    None,
+                                ),
+                                span: 28..29,
+                                inferred_type: None,
+                            },
+                        ),
+                        span: 22..27,
+                        inferred_type: None,
+                    },
+                    optional: Some(
+                        Remove,
+                    ),
+                    check: None,
+                    extends: None,
+                },
+            ),
+        ],
+    ),
+    span: 0..30,
+    inferred_type: None,
+}

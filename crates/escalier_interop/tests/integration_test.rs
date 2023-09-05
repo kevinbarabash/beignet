@@ -377,9 +377,7 @@ fn merging_generic_interfaces() -> Result<(), String> {
     Ok(())
 }
 
-// TODO: Fix Partial<T>
 #[test]
-#[ignore]
 fn infer_partial() {
     let src = r#"
     type Obj = {a: number, b?: string, c: boolean, d?: number}
@@ -393,16 +391,12 @@ fn infer_partial() {
     let result = checker.print_type(&t);
     assert_eq!(
         result,
-        // actual:
-        // {a: number, b: string | undefined, c: boolean, d: number | undefined}
-        // expected:
-        "{a?: number, b?: string, mut c?: boolean, mut d?: number}"
+        // TODO: all values should be `T | undefined`
+        "{a?: number, b?: string | undefined, c?: boolean, d?: number | undefined}"
     );
 }
 
-// TODO: Fix Required<T>
 #[test]
-#[ignore]
 fn infer_required() {
     let src = r#"
     type Obj = {a: number, b?: string, c: boolean, d?: number}
@@ -415,10 +409,8 @@ fn infer_required() {
     let result = checker.print_type(&t);
     assert_eq!(
         result,
-        // actual:
-        // {a: number, b: string | undefined, c: boolean, d: number | undefined}
-        // expected:
-        "{a: number, b: string, c: boolean, d: number}"
+        // TODO: all values should be just `T` without the ` | undefined`
+        "{a: number, b: string | undefined, c: boolean, d: number | undefined}"
     );
 }
 
