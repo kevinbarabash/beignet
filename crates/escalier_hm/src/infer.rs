@@ -800,6 +800,7 @@ impl Checker {
                             value,
                             target,
                             source,
+                            optional,
                             check,
                             extends,
                         }) => {
@@ -815,6 +816,13 @@ impl Checker {
                             let key = self.infer_type_ann(key, &mut type_ctx)?;
                             let value = self.infer_type_ann(value, &mut type_ctx)?;
 
+                            let optional = optional.as_ref().map(|modifier| {
+                                match modifier {
+                                    syntax::MappedModifier::Add => types::MappedModifier::Add,
+                                    syntax::MappedModifier::Remove => types::MappedModifier::Remove,
+                                }
+                            });
+
                             let check = match check {
                                 Some(check) => Some(self.infer_type_ann(check, &mut type_ctx)?),
                                 None => None,
@@ -829,6 +837,7 @@ impl Checker {
                                 value,
                                 target: target.to_owned(),
                                 source,
+                                optional,
                                 check,
                                 extends,
                             }));

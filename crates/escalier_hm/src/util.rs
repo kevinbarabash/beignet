@@ -587,9 +587,7 @@ impl Checker {
                                 mapping.insert(mapped.target.to_owned(), *t);
                                 let key = self.instantiate_type(&mapped.key, &mapping);
 
-                                eprintln!("value = {:?}", self.print_type(&mapped.value));
-
-                                let value = self.instantiate_type(&mapped.value, &mapping);
+                                let mut value = self.instantiate_type(&mapped.value, &mapping);
 
                                 let name = match &self.arena[key].kind {
                                     TypeKind::Literal(Literal::String(name)) => {
@@ -610,6 +608,7 @@ impl Checker {
                                 // and `P` is the key type we need to copy the
                                 // optionality and readonlyness from from the
                                 // object type.
+                                // TODO: check for `T[P]` anywhere within mapped.value
                                 if let TypeKind::IndexedAccess(IndexedAccess { obj, index }) =
                                     &self.arena[mapped.value].kind
                                 {
@@ -626,6 +625,11 @@ impl Checker {
                                             if let TObjElem::Prop(prop) = elem {
                                                 if prop.name == name {
                                                     optional = prop.optional;
+                                                    // TODO: use mapped.optional to
+                                                    // mimic TypeScript's behavior
+                                                    // where optional fields are
+                                                    // given type `T | undefined`
+                                                    value = prop.t;
                                                     eprintln!("prop = {prop:#?}");
                                                 }
                                             }
@@ -644,6 +648,13 @@ impl Checker {
                                     // `Mutable<Instance>` has all of the methods.
                                 }
 
+                                if let Some(mode) = &mapped.optional {
+                                    match mode {
+                                        MappedModifier::Add => optional = true,
+                                        MappedModifier::Remove => optional = false,
+                                    }
+                                }
+
                                 new_elems.push(TObjElem::Prop(TProp {
                                     name,
                                     modifier: None,
@@ -660,6 +671,7 @@ impl Checker {
                                     key: union,
                                     value: mapped.value,
                                     source: mapped.source,
+                                    optional: mapped.optional.to_owned(),
                                     check: mapped.check,
                                     extends: mapped.extends,
                                 }));

@@ -57,6 +57,7 @@ fn test_env() -> (Checker, Context) {
         value: checker.new_type_ref("T", &[]),
         target: "P".to_string(),
         source: checker.new_primitive(Primitive::Number),
+        optional: None,
         check: None,
         extends: None,
     });
@@ -3344,10 +3345,7 @@ fn test_mapped_type_pick() -> Result<(), TypeError> {
 
     let scheme = my_ctx.schemes.get("Result").unwrap();
     let t = checker.expand_type(&my_ctx, scheme.t)?;
-    assert_eq!(
-        checker.print_type(&t),
-        r#"{a?: string | undefined, b: number}"#
-    );
+    assert_eq!(checker.print_type(&t), r#"{a?: string, b: number}"#);
 
     assert_no_errors(&checker)
 }

@@ -283,7 +283,7 @@ pub fn infer_ts_type_ann(
             type_param,
             type_ann,
             readonly: _,
-            optional: _,
+            optional,
             ..
         }) => {
             let type_ann = infer_ts_type_ann(checker, ctx, type_ann.as_ref().unwrap())?;
@@ -296,8 +296,16 @@ pub fn infer_ts_type_ann(
                 }
             };
 
+            let optional = match optional {
+                Some(mode) => match mode {
+                    TruePlusMinus::True => Some(types::MappedModifier::Add),
+                    TruePlusMinus::Plus => Some(types::MappedModifier::Add),
+                    TruePlusMinus::Minus => Some(types::MappedModifier::Remove),
+                },
+                None => None,
+            };
+
             // TODO: handle readonly modifier
-            // TODO: handle optional modifier
 
             let name = type_param.name.sym.to_string();
 
@@ -306,6 +314,7 @@ pub fn infer_ts_type_ann(
                 target: name,
                 source: constraint,
                 value: type_ann,
+                optional,
                 check: None,
                 extends: None,
             })];
@@ -596,6 +605,7 @@ fn infer_ts_type_element(
                         target: name.to_owned(),
                         value: t,
                         source: key.t,
+                        optional: None,
                         check: None,
                         extends: None,
                     }))

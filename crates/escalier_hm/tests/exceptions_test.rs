@@ -34,6 +34,7 @@ fn test_env() -> (Checker, Context) {
         value: checker.new_type_ref("T", &[]),
         target: "P".to_string(),
         source: checker.new_primitive(Primitive::Number),
+        optional: None,
         check: None,
         extends: None,
     });

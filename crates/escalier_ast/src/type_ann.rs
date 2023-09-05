@@ -41,12 +41,19 @@ pub struct Prop {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub enum MappedModifier {
+    Add,
+    Remove,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Mapped {
     pub key: Box<TypeAnn>,
     pub value: Box<TypeAnn>,
 
     pub target: String,
     pub source: Box<TypeAnn>,
+    pub optional: Option<MappedModifier>,
 
     // First half of a Conditional
     pub check: Option<Box<TypeAnn>>,

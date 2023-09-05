@@ -342,7 +342,7 @@ pub fn build_type(
             let chars: Vec<_> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
                 .chars()
                 .collect();
-            let id = chars.get(id.to_owned() as usize).unwrap();
+            let id = chars.get(*id).unwrap();
 
             TsType::TsTypeRef(TsTypeRef {
                 span: DUMMY_SP,
@@ -676,6 +676,7 @@ fn build_obj_type(obj: &types::Object, ctx: &Context, checker: &Checker) -> TsTy
                 value,
                 target, // TODO: make this an Ident
                 source,
+                optional: _, // TODO
                 // TODO:
                 check: _,
                 extends: _,
@@ -706,103 +707,23 @@ fn build_obj_type(obj: &types::Object, ctx: &Context, checker: &Checker) -> TsTy
         }
     }
 
-    // types::TObjElem::Method(types::TMethod {
-    //     name,
-    //     params,
-    //     ret,
-    //     type_params,
-    //     is_mutating: _, // TODO
-    // }) => {
-    //     let key = match name {
-    //         TPropKey::StringKey(key) => key.to_owned(),
-    //         TPropKey::NumberKey(key) => key.to_owned(),
-    //     };
-    //     // TODO: dedupe with build_ts_fn_type_with_params
-    //     let type_params =
-    //         build_type_params_from_type_params(type_params.as_ref(), ctx, checker);
-    //     let params: Vec<TsFnParam> = params
-    //         .iter()
-    //         .map(|param| {
-    //             let type_ann = Some(Box::from(build_type_ann(&param.t, ctx, checker)));
-    //             let pat = tpat_to_pat(&param.pattern, type_ann);
-    //             pat_to_fn_param(param, pat)
-    //         })
-    //         .collect();
-
-    //     Some(TsTypeElement::TsMethodSignature(TsMethodSignature {
-    //         span: DUMMY_SP,
-    //         readonly: false, // `readonly` modifier can't appear on methods
-    //         key: Box::from(Ident {
-    //             span: DUMMY_SP,
-    //             sym: JsWord::from(key),
-    //             optional: false,
-    //         }),
-    //         computed: false,
-    //         optional: false,
-    //         params,
-    //         type_ann: Some(Box::from(build_type_ann(ret, ctx, checker))),
-    //         type_params,
-    //     }))
-    // }
-    // types::TObjElem::Getter(TGetter { name, ret }) => {
-    //     let key = match name {
-    //         TPropKey::StringKey(key) => key.to_owned(),
-    //         TPropKey::NumberKey(key) => key.to_owned(),
-    //     };
-    //     Some(TsTypeElement::TsGetterSignature(TsGetterSignature {
-    //         span: DUMMY_SP,
-    //         readonly: false,
-    //         key: Box::from(Ident {
-    //             span: DUMMY_SP,
-    //             sym: JsWord::from(key),
-    //             optional: false,
-    //         }),
-    //         computed: false,
-    //         optional: false,
-    //         type_ann: Some(Box::from(build_type_ann(ret, ctx, checker))),
-    //     }))
-    // }
-    // types::TObjElem::Setter(TSetter { name, param }) => {
-    //     let key = match name {
-    //         TPropKey::StringKey(key) => key.to_owned(),
-    //         TPropKey::NumberKey(key) => key.to_owned(),
-    //     };
-
-    //     let type_ann = Some(Box::from(build_type_ann(&param.t, ctx, checker)));
-    //     let pat = tpat_to_pat(&param.pattern, type_ann);
-    //     let param = pat_to_fn_param(param, pat);
-
-    //     Some(TsTypeElement::TsSetterSignature(TsSetterSignature {
-    //         span: DUMMY_SP,
-    //         readonly: false,
-    //         key: Box::from(Ident {
-    //             span: DUMMY_SP,
-    //             sym: JsWord::from(key),
-    //             optional: false,
-    //         }),
-    //         param,
-    //         computed: false,
-    //         optional: false,
-    //     }))
-    // }
-    // types::TObjElem::Index(index) => {
-    //     Some(TsTypeElement::TsIndexSignature(TsIndexSignature {
-    //         span: DUMMY_SP,
-    //         readonly: !index.mutable,
-    //         params: vec![TsFnParam::Ident(BindingIdent {
-    //             id: build_ident(&index.key.name),
-    //             type_ann: Some(Box::from(build_type_ann(&index.key.t, ctx, checker))),
-    //         })],
-    //         type_ann: Some(Box::from(build_type_ann(&index.t, ctx, checker))),
-    //         is_static: false,
-    //     }))
-    // }
-
     if mapped_types.is_empty() {
         TsType::TsTypeLit(TsTypeLit {
             span: DUMMY_SP,
             members,
         })
+    } else if members.is_empty() {
+        if mapped_types.len() == 1 {
+            mapped_types.pop().unwrap()
+        } else {
+            TsType::TsUnionOrIntersectionType(TsUnionOrIntersectionType::TsUnionType(TsUnionType {
+                span: DUMMY_SP,
+                types: mapped_types
+                    .iter()
+                    .map(|t| Box::new(t.to_owned()))
+                    .collect(),
+            }))
+        }
     } else {
         let mut types = vec![Box::new(TsType::TsTypeLit(TsTypeLit {
             span: DUMMY_SP,
@@ -842,45 +763,19 @@ pub fn immutable_obj_type(obj: &types::Object) -> Option<types::Object> {
     let elems: Vec<types::TObjElem> = obj
         .elems
         .iter()
-        .filter_map(|elem| match elem {
-            types::TObjElem::Call(_) => Some(elem.to_owned()),
-            types::TObjElem::Constructor(_) => Some(elem.to_owned()),
-            // types::TObjElem::Method(method) => {
-            //     if method.is_mutating {
-            //         changed = true;
-            //         None
-            //     } else {
-            //         Some(elem.to_owned())
-            //     }
-            //     // TODO: Convert any `mut Self` to `Self`.  This is going to be
-            //     // a little tricky b/c we need to know the name of the type and
-            //     // in the case of arrays, that it's an array and what its type
-            //     // argument is.
-            // }
-            // types::TObjElem::Getter(_) => Some(elem.to_owned()),
-            // types::TObjElem::Setter(_) => {
-            //     changed = true;
-            //     None
-            // }
-            // types::TObjElem::Index(index) => {
-            //     if index.mutable {
-            //         changed = true;
-            //     }
-            //     Some(types::TObjElem::Index(TIndex {
-            //         mutable: false,
-            //         ..index.to_owned()
-            //     }))
-            // }
+        .map(|elem| match elem {
+            types::TObjElem::Call(_) => elem.to_owned(),
+            types::TObjElem::Constructor(_) => elem.to_owned(),
+            types::TObjElem::Mapped(_) => elem.to_owned(),
             types::TObjElem::Prop(prop) => {
                 if prop.mutable {
                     changed = true;
                 }
-                Some(types::TObjElem::Prop(types::TProp {
+                types::TObjElem::Prop(types::TProp {
                     mutable: false,
                     ..prop.to_owned()
-                }))
+                })
             }
-            types::TObjElem::Mapped(_) => todo!(),
         })
         .collect();
 

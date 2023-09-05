@@ -290,6 +290,7 @@ TypeAnn {
                         span: 331..337,
                         inferred_type: None,
                     },
+                    optional: None,
                     check: None,
                     extends: None,
                 },

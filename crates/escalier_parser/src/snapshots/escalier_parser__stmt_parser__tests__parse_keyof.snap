@@ -51,6 +51,7 @@ expression: "parse(\"type Pick<T, K : keyof T> = {[P]: T[P] for P in K}\")"
                                         span: 48..49,
                                         inferred_type: None,
                                     },
+                                    optional: None,
                                     check: None,
                                     extends: None,
                                 },
