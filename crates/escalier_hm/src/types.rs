@@ -221,7 +221,7 @@ pub struct TProp {
     pub name: TPropKey,
     pub modifier: Option<TPropModifier>,
     pub optional: bool,
-    pub mutable: bool,
+    pub readonly: bool,
     pub t: Index,
 }
 
@@ -562,7 +562,7 @@ impl Checker {
                             name,
                             modifier, // TODO
                             optional,
-                            mutable: _,
+                            readonly,
                             t,
                         }) => {
                             let name = match name {
@@ -571,6 +571,9 @@ impl Checker {
                             };
                             let t = self.print_type(t);
                             let mut str = "".to_string();
+                            if *readonly {
+                                str += "readonly ";
+                            }
 
                             if let Some(modifier) = modifier {
                                 match modifier {

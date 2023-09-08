@@ -46,14 +46,14 @@ fn test_env() -> (Checker, Context) {
             modifier: None,
             t: push_t,
             optional: false,
-            mutable: false,
+            readonly: false,
         }),
         // .length: number;
         types::TObjElem::Prop(types::TProp {
             name: types::TPropKey::StringKey("length".to_string()),
             modifier: None,
             optional: false,
-            mutable: false,
+            readonly: false,
             t: number,
         }),
         mapped,

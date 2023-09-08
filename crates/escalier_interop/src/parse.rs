@@ -472,7 +472,7 @@ fn infer_method_sig(
         name: TPropKey::StringKey(name),
         modifier: None,
         optional: false,
-        mutable: false,
+        readonly: false,
         t,
     });
 
@@ -575,8 +575,7 @@ fn infer_ts_type_element(
                 Ok(TObjElem::Prop(TProp {
                     name: TPropKey::StringKey(name),
                     optional: sig.optional,
-                    // TODO: warn about mutable props inside of a readonly object
-                    mutable: !sig.readonly,
+                    readonly: sig.readonly,
                     t,
                     modifier: None,
                 }))

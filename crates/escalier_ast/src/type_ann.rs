@@ -36,7 +36,7 @@ pub struct Prop {
     pub name: String,
     pub modifier: Option<PropModifier>,
     pub optional: bool,
-    pub mutable: bool,
+    pub readonly: bool,
     pub type_ann: Box<TypeAnn>,
 }
 

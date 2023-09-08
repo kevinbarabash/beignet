@@ -97,7 +97,7 @@ impl Checker {
                                         name: TPropKey::StringKey(name.to_owned()),
                                         modifier: None,
                                         t: checker.get_type(name, ctx)?,
-                                        mutable: false,
+                                        readonly: false,
                                         optional: false,
                                     }));
                                 }
@@ -107,21 +107,21 @@ impl Checker {
                                             name: TPropKey::StringKey(ident.name.to_owned()),
                                             modifier: None,
                                             t: checker.infer_expression(value, ctx)?,
-                                            mutable: false,
+                                            readonly: false,
                                             optional: false,
                                         },
                                         ObjectKey::String(name) => types::TProp {
                                             name: TPropKey::StringKey(name.to_owned()),
                                             modifier: None,
                                             t: checker.infer_expression(value, ctx)?,
-                                            mutable: false,
+                                            readonly: false,
                                             optional: false,
                                         },
                                         ObjectKey::Number(name) => types::TProp {
                                             name: TPropKey::StringKey(name.to_owned()),
                                             modifier: None,
                                             t: checker.infer_expression(value, ctx)?,
-                                            mutable: false,
+                                            readonly: false,
                                             optional: false,
                                         },
                                         ObjectKey::Computed(_) => todo!(),
@@ -851,7 +851,7 @@ impl Checker {
                                 name: TPropKey::StringKey(prop.name.to_owned()),
                                 modifier,
                                 t: self.infer_type_ann(&mut prop.type_ann, &mut obj_ctx)?,
-                                mutable: prop.mutable,
+                                readonly: prop.readonly,
                                 optional: prop.optional,
                             }));
                         }

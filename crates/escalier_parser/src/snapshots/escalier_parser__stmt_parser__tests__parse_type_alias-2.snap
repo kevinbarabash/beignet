@@ -16,7 +16,7 @@ expression: "parse(r#\"type Point<T> = {x: T, y: T}\"#)"
                                     name: "x",
                                     modifier: None,
                                     optional: false,
-                                    mutable: false,
+                                    readonly: false,
                                     type_ann: TypeAnn {
                                         kind: TypeRef(
                                             "T",
@@ -33,7 +33,7 @@ expression: "parse(r#\"type Point<T> = {x: T, y: T}\"#)"
                                     name: "y",
                                     modifier: None,
                                     optional: false,
-                                    mutable: false,
+                                    readonly: false,
                                     type_ann: TypeAnn {
                                         kind: TypeRef(
                                             "T",

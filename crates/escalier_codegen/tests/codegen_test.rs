@@ -740,6 +740,10 @@ fn mutable_obj() -> Result<(), TypeError> {
         x: number;
         y: number;
     };
+    declare type ReadonlyPoint = {
+        readonly x: number;
+        readonly y: number;
+    };
     "###);
 
     Ok(())
@@ -1085,10 +1089,14 @@ fn partial_type() -> Result<(), TypeError> {
         a?: number;
         b: number;
     };
+    declare type ReadonlyObj = {
+        readonly a?: number;
+        readonly b: number;
+    };
     declare type Partial<T> = {
         [P in keyof T]: T[P];
     };
-    declare type PartialObj = Partial<Obj>;
+    declare type PartialObj = Partial<ReadonlyObj>;
     "###);
 
     Ok(())
@@ -1123,6 +1131,12 @@ fn mapped_type_with_additional_props() -> Result<(), TypeError> {
     declare type Style = {
         background: number;
         color: number;
+    } & {
+        [P in Direction]: boolean;
+    };
+    declare type ReadonlyStyle = {
+        readonly background: number;
+        readonly color: number;
     } & {
         [P in Direction]: boolean;
     };

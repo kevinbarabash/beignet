@@ -658,7 +658,7 @@ fn build_obj_type(obj: &types::Object, ctx: &Context, checker: &Checker) -> TsTy
                     None => {
                         let type_elem = TsTypeElement::TsPropertySignature(TsPropertySignature {
                             span: DUMMY_SP,
-                            readonly: false,
+                            readonly: prop.readonly,
                             key: Box::from(Expr::from(build_ident(&key))),
                             computed: false,
                             optional: prop.optional,
@@ -767,12 +767,13 @@ pub fn immutable_obj_type(obj: &types::Object) -> Option<types::Object> {
             types::TObjElem::Call(_) => elem.to_owned(),
             types::TObjElem::Constructor(_) => elem.to_owned(),
             types::TObjElem::Mapped(_) => elem.to_owned(),
+            // TODO: Remove mutating methods.
             types::TObjElem::Prop(prop) => {
-                if prop.mutable {
+                if !prop.readonly {
                     changed = true;
                 }
                 types::TObjElem::Prop(types::TProp {
-                    mutable: false,
+                    readonly: true,
                     ..prop.to_owned()
                 })
             }

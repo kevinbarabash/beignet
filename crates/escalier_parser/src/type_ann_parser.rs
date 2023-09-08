@@ -134,7 +134,7 @@ impl<'a> Parser<'a> {
                                         name,
                                         modifier: Some(PropModifier::Getter),
                                         optional,
-                                        mutable: false, // TODO
+                                        readonly: false, // TODO
                                         type_ann: Box::new(type_ann),
                                         // TODO(#642): compute correct spans for type annotations
                                         span: Span { start: 0, end: 0 },
@@ -166,7 +166,7 @@ impl<'a> Parser<'a> {
                                         name,
                                         modifier: Some(PropModifier::Setter),
                                         optional,
-                                        mutable: false, // TODO
+                                        readonly: false, // TODO
                                         type_ann: Box::new(type_ann),
                                         // TODO(#642): compute correct spans for type annotations
                                         span: Span { start: 0, end: 0 },
@@ -180,7 +180,7 @@ impl<'a> Parser<'a> {
                                         name,
                                         modifier: None,
                                         optional,
-                                        mutable: false, // TODO
+                                        readonly: false, // TODO
                                         type_ann: Box::new(type_ann),
                                         // TODO(#642): compute correct spans for type annotations
                                         span: Span { start: 0, end: 0 },
