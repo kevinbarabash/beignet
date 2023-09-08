@@ -659,7 +659,7 @@ impl Checker {
                                     name,
                                     modifier: None,
                                     optional,
-                                    mutable: false, // TODO
+                                    readonly: false, // TODO
                                     t: self.expand_type(ctx, value)?,
                                 }));
                             }

@@ -72,7 +72,7 @@ impl Checker {
                                     name: TPropKey::StringKey(key.name.to_owned()),
                                     modifier: None,
                                     optional: false,
-                                    mutable: false,
+                                    readonly: false,
                                     t: value_type,
                                 }))
                             }
@@ -99,7 +99,7 @@ impl Checker {
                                     name: TPropKey::StringKey(ident.name.to_owned()),
                                     modifier: None,
                                     optional: false,
-                                    mutable: false,
+                                    readonly: false,
                                     t,
                                 }))
                             }

@@ -1050,7 +1050,7 @@ pub fn simplify_intersection(checker: &mut Checker, in_types: &[Index]) -> Index
                 // the same name.  This should only be optional if all of
                 // the TProps with the current name are optional.
                 optional: false,
-                mutable: false,
+                readonly: false,
                 t,
             })
         })

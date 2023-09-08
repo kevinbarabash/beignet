@@ -13,7 +13,7 @@ TypeAnn {
                             name: "x",
                             modifier: None,
                             optional: false,
-                            mutable: false,
+                            readonly: false,
                             type_ann: TypeAnn {
                                 kind: Number,
                                 span: 4..10,
@@ -27,7 +27,7 @@ TypeAnn {
                             name: "y",
                             modifier: None,
                             optional: false,
-                            mutable: false,
+                            readonly: false,
                             type_ann: TypeAnn {
                                 kind: Number,
                                 span: 15..21,

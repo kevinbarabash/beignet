@@ -45,7 +45,7 @@ TypeAnn {
                     name: "foo",
                     modifier: None,
                     optional: false,
-                    mutable: false,
+                    readonly: false,
                     type_ann: TypeAnn {
                         kind: Function(
                             FunctionType {
@@ -92,7 +92,7 @@ TypeAnn {
                     name: "bar",
                     modifier: None,
                     optional: false,
-                    mutable: false,
+                    readonly: false,
                     type_ann: TypeAnn {
                         kind: Function(
                             FunctionType {
@@ -156,7 +156,7 @@ TypeAnn {
                         Getter,
                     ),
                     optional: false,
-                    mutable: false,
+                    readonly: false,
                     type_ann: TypeAnn {
                         kind: Function(
                             FunctionType {
@@ -199,7 +199,7 @@ TypeAnn {
                         Setter,
                     ),
                     optional: false,
-                    mutable: false,
+                    readonly: false,
                     type_ann: TypeAnn {
                         kind: Function(
                             FunctionType {
@@ -261,7 +261,7 @@ TypeAnn {
                     name: "qux",
                     modifier: None,
                     optional: false,
-                    mutable: false,
+                    readonly: false,
                     type_ann: TypeAnn {
                         kind: String,
                         span: 286..292,

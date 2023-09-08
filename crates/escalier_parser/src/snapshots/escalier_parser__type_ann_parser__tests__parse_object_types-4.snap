@@ -14,7 +14,7 @@ TypeAnn {
                                 name: "type",
                                 modifier: None,
                                 optional: false,
-                                mutable: false,
+                                readonly: false,
                                 type_ann: TypeAnn {
                                     kind: StrLit(
                                         "mousedown",
@@ -30,7 +30,7 @@ TypeAnn {
                                 name: "x",
                                 modifier: None,
                                 optional: false,
-                                mutable: false,
+                                readonly: false,
                                 type_ann: TypeAnn {
                                     kind: Number,
                                     span: 23..29,
@@ -44,7 +44,7 @@ TypeAnn {
                                 name: "y",
                                 modifier: None,
                                 optional: false,
-                                mutable: false,
+                                readonly: false,
                                 type_ann: TypeAnn {
                                     kind: Number,
                                     span: 34..40,
@@ -66,7 +66,7 @@ TypeAnn {
                                 name: "type",
                                 modifier: None,
                                 optional: false,
-                                mutable: false,
+                                readonly: false,
                                 type_ann: TypeAnn {
                                     kind: StrLit(
                                         "keydown",
@@ -82,7 +82,7 @@ TypeAnn {
                                 name: "key",
                                 modifier: None,
                                 optional: false,
-                                mutable: false,
+                                readonly: false,
                                 type_ann: TypeAnn {
                                     kind: String,
                                     span: 67..73,

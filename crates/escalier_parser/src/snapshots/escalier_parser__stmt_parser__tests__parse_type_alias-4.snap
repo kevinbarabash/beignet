@@ -19,7 +19,7 @@ expression: "parse(r#\"type Event = {type: \"mousedown\", x: number, y: number} 
                                                 name: "type",
                                                 modifier: None,
                                                 optional: false,
-                                                mutable: false,
+                                                readonly: false,
                                                 type_ann: TypeAnn {
                                                     kind: StrLit(
                                                         "mousedown",
@@ -35,7 +35,7 @@ expression: "parse(r#\"type Event = {type: \"mousedown\", x: number, y: number} 
                                                 name: "x",
                                                 modifier: None,
                                                 optional: false,
-                                                mutable: false,
+                                                readonly: false,
                                                 type_ann: TypeAnn {
                                                     kind: Number,
                                                     span: 36..42,
@@ -49,7 +49,7 @@ expression: "parse(r#\"type Event = {type: \"mousedown\", x: number, y: number} 
                                                 name: "y",
                                                 modifier: None,
                                                 optional: false,
-                                                mutable: false,
+                                                readonly: false,
                                                 type_ann: TypeAnn {
                                                     kind: Number,
                                                     span: 47..53,
@@ -71,7 +71,7 @@ expression: "parse(r#\"type Event = {type: \"mousedown\", x: number, y: number} 
                                                 name: "type",
                                                 modifier: None,
                                                 optional: false,
-                                                mutable: false,
+                                                readonly: false,
                                                 type_ann: TypeAnn {
                                                     kind: StrLit(
                                                         "keydown",
@@ -87,7 +87,7 @@ expression: "parse(r#\"type Event = {type: \"mousedown\", x: number, y: number} 
                                                 name: "key",
                                                 modifier: None,
                                                 optional: false,
-                                                mutable: false,
+                                                readonly: false,
                                                 type_ann: TypeAnn {
                                                     kind: String,
                                                     span: 80..86,

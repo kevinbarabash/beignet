@@ -11,7 +11,7 @@ TypeAnn {
                     name: "a",
                     modifier: None,
                     optional: false,
-                    mutable: false,
+                    readonly: false,
                     type_ann: TypeAnn {
                         kind: Object(
                             [
@@ -21,7 +21,7 @@ TypeAnn {
                                         name: "b",
                                         modifier: None,
                                         optional: false,
-                                        mutable: false,
+                                        readonly: false,
                                         type_ann: TypeAnn {
                                             kind: Object(
                                                 [
@@ -31,7 +31,7 @@ TypeAnn {
                                                             name: "c",
                                                             modifier: None,
                                                             optional: false,
-                                                            mutable: false,
+                                                            readonly: false,
                                                             type_ann: TypeAnn {
                                                                 kind: Boolean,
                                                                 span: 12..19,
