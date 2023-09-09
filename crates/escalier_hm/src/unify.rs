@@ -152,7 +152,7 @@ impl Checker {
             (TypeKind::Array(array), TypeKind::Tuple(tuple)) => {
                 let p = array.t;
                 for q in &tuple.types {
-                    let undefined = self.new_keyword(Keyword::Undefined);
+                    let undefined = self.new_lit_type(&Lit::Undefined);
                     let p_or_undefined = self.new_union_type(&[p, undefined]);
 
                     match &self.arena[*q].kind {
@@ -335,6 +335,8 @@ impl Checker {
                     (Lit::Boolean(value1), Lit::Boolean(value2)) => value1 == value2,
                     (Lit::Number(value1), Lit::Number(value2)) => value1 == value2,
                     (Lit::String(value1), Lit::String(value2)) => value1 == value2,
+                    (Lit::Undefined, Lit::Undefined) => true,
+                    (Lit::Null, Lit::Null) => true,
                     _ => false,
                 };
                 if !equal {
@@ -430,6 +432,10 @@ impl Checker {
                             self.unify(ctx, t1, t2)?;
                         }
                         None => {
+                            if prop_2.optional {
+                                continue;
+                            }
+
                             return Err(TypeError {
                                 message: format!(
                                     "'{}' is missing in {}",
@@ -465,7 +471,7 @@ impl Checker {
                         match mapped_1.len() {
                             0 => {
                                 for (_, prop_1) in named_props_1 {
-                                    let undefined = self.new_keyword(Keyword::Undefined);
+                                    let undefined = self.new_lit_type(&Lit::Undefined);
                                     let t1 = prop_1.get_type(self);
                                     let t2 = self.new_union_type(&[mapped_2[0].value, undefined]);
                                     self.unify(ctx, t1, t2)?;
@@ -835,6 +841,14 @@ impl Checker {
 
                 let mut reasons: Vec<TypeError> = vec![];
                 for ((arg, p), param) in arg_types.iter().zip(params.iter()) {
+                    if param.optional {
+                        if let Some(index) = arg.inferred_type {
+                            if let TypeKind::Literal(Lit::Undefined) = &self.arena[index].kind {
+                                continue;
+                            }
+                        }
+                    }
+
                     match check_mutability(ctx, &param.pattern, arg)? {
                         true => self.unify_mut(ctx, *p, param.t)?,
                         false => match self.unify(ctx, *p, param.t) {
@@ -849,12 +863,14 @@ impl Checker {
                     let kind: &TypeKind = unsafe { transmute(&self.arena[rest_param.t].kind) };
                     match kind {
                         TypeKind::Array(array) => {
-                            let remaining_arg_types = &arg_types[params.len()..];
-                            let t = array.t;
-                            for (_, p) in remaining_arg_types.iter() {
-                                match self.unify(ctx, *p, t) {
-                                    Ok(_) => {}
-                                    Err(error) => reasons.push(error),
+                            if arg_types.len() >= params.len() {
+                                let remaining_arg_types = &arg_types[params.len()..];
+                                let t = array.t;
+                                for (_, p) in remaining_arg_types.iter() {
+                                    match self.unify(ctx, *p, t) {
+                                        Ok(_) => {}
+                                        Err(error) => reasons.push(error),
+                                    }
                                 }
                             }
                         }

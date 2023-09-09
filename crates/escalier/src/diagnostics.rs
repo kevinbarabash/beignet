@@ -1,10 +1,8 @@
 use ariadne::{Config, Label, Report as AriadneReport, ReportKind, Source};
 
-use escalier_old_ast::{
-    types::{Type, TypeKind},
-    values::{ExprKind, Span},
-};
-use escalier_old_infer::TypeError;
+use escalier_ast::Span;
+use escalier_hm::type_error::TypeError;
+use escalier_hm::types::Type;
 
 use crate::compile_error::CompileError;
 
@@ -31,8 +29,8 @@ fn get_diagnostic_string(
         AriadneReport::build(ReportKind::Error, (), span1.start)
             .with_config(Config::default().with_color(false))
             .with_message(message)
-            .with_label(Label::new(span1).with_message(label1))
-            .with_label(Label::new(span2).with_message(label2))
+            .with_label(Label::new(span1.start..span1.end).with_message(label1))
+            .with_label(Label::new(span2.start..span2.end).with_message(label2))
             .finish()
             .write(Source::from(src), &mut vec)
             .unwrap();
@@ -44,79 +42,14 @@ fn get_diagnostic_string(
 pub fn type_errors_to_string(errors: &[TypeError], src: &str) -> String {
     errors
         .iter()
-        .filter_map(|error| {
-            match error {
-                TypeError::UnificationError(t1, t2) => get_diagnostic_string(
-                    t1,
-                    t2,
-                    src,
-                    "Incompatible types",
-                    &format!("{t1}"),
-                    &format!("{t2}"),
-                ),
-                TypeError::TooFewArguments(app_t, lam_t) => {
-                    let provided = if let TypeKind::App(app) = &app_t.kind {
-                        app.args.len()
-                    } else {
-                        0
-                    };
-                    let expected = if let TypeKind::Lam(lam) = &lam_t.kind {
-                        lam.params.len()
-                    } else {
-                        0
-                    };
-                    let expr = if let Some(prov) = &lam_t.provenance {
-                        prov.get_expr()
-                    } else {
-                        None
-                    };
-                    if let Some(expr) = expr {
-                        if let ExprKind::Lambda(_) = &expr.kind {
-                            // TODO: Add a span to lam.params so that we don't
-                            // have to compute it here.
-                            // eprintln!("params = {:#?}", lam.params)
-                        }
-                    }
-                    // TODO: figure out how to get a span for just the function
-                    // signature or just the param list.
-                    get_diagnostic_string(
-                        app_t,
-                        lam_t,
-                        src,
-                        "Not enough args provided",
-                        &format!("was passed {provided} args"),
-                        &format!("expected {expected} args"),
-                    )
-                }
-                TypeError::IndexOutOfBounds(obj_t, prop_t) => get_diagnostic_string(
-                    obj_t,
-                    prop_t,
-                    src,
-                    "Index out of bounds",
-                    "for this tuple",
-                    &format!("{prop_t} is out of bounds"),
-                ),
-                TypeError::InvalidIndex(obj_t, prop_t) => get_diagnostic_string(
-                    obj_t,
-                    prop_t,
-                    src,
-                    "Invalid Index",
-                    "for tuples",
-                    &format!("{prop_t} is not a valid index"),
-                ),
-                error => {
-                    eprintln!("TODO: handle {error}");
-                    None
-                }
-            }
-        })
+        .map(|error| error.message.to_owned())
         .collect::<Vec<String>>()
         .join("\n")
 }
 
 pub fn get_diagnostics_from_compile_error(report: CompileError, src: &str) -> String {
     let diagnostics = match report {
-        CompileError::TypeError(errors) => type_errors_to_string(&errors, src),
+        CompileError::TypeError(error) => error.message.to_owned(),
         CompileError::Diagnostic(diagnostics) => diagnostics
             .iter()
             .map(|diagnostic| {
@@ -128,7 +61,7 @@ pub fn get_diagnostics_from_compile_error(report: CompileError, src: &str) -> St
             })
             .collect::<Vec<String>>()
             .join("\n"),
-        CompileError::ParseError(error) => error.to_string(),
+        CompileError::ParseError(error) => error.message.to_owned(),
     };
 
     diagnostics

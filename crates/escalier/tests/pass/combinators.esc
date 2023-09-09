@@ -1,5 +1,5 @@
-let i = (x) => x;
-let k = (x) => (y) => x;
-let s = (f) => (g) => (x) => f(x)(g(x));
+let i = fn (x) => x
+let k = fn (x) => fn (y) => x
+let s = fn (f) => fn (g) => fn (x) => f(x)(g(x))
 
-let skk = s(k)(k);
+let skk = s(k)(k)

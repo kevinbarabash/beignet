@@ -1,1 +1,1 @@
-{"version":3,"sources":["<anon>"],"sourcesContent":["let numbers = new Array(1, 2, 3);\nlet letters = new Array(\"a\", \"b\", \"c\");\n"],"names":[],"mappings":"aAAI,UAAU,IAAI,MAAM,GAAG,GAAG;aAC1B,UAAU,IAAI,MAAM,KAAK,KAAK"}
+{"version":3,"sources":[],"names":[],"mappings":""}

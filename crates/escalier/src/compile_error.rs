@@ -1,11 +1,12 @@
 use std::fmt;
 
-use escalier_old_infer::{Diagnostic, TypeError};
-use escalier_old_parser::ParseError;
+use escalier_hm::diagnostic::Diagnostic;
+use escalier_hm::type_error::TypeError;
+use escalier_parser::ParseError;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum CompileError {
-    TypeError(Vec<TypeError>),
+    TypeError(TypeError),
     Diagnostic(Vec<Diagnostic>),
     ParseError(ParseError),
 }
@@ -22,8 +23,14 @@ impl From<ParseError> for CompileError {
     }
 }
 
-impl From<Vec<TypeError>> for CompileError {
-    fn from(errors: Vec<TypeError>) -> Self {
-        CompileError::TypeError(errors)
+// impl From<Vec<TypeError>> for CompileError {
+//     fn from(errors: Vec<TypeError>) -> Self {
+//         CompileError::TypeError(errors)
+//     }
+// }
+
+impl From<TypeError> for CompileError {
+    fn from(error: TypeError) -> Self {
+        CompileError::TypeError(error)
     }
 }

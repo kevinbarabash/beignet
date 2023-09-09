@@ -168,7 +168,7 @@ impl Checker {
 
                     match *opt_chain && has_undefined {
                         true => {
-                            let undefined = checker.new_keyword(Keyword::Undefined);
+                            let undefined = checker.new_lit_type(&Literal::Undefined);
                             if let TypeKind::Union(union) = &checker.arena[result].kind {
                                 let mut types = filter_nullables(&checker.arena, &union.types);
 
@@ -251,7 +251,7 @@ impl Checker {
 
                                 // If we don't encounter a return statement, we assume
                                 // the return type is `undefined`.
-                                checker.new_keyword(Keyword::Undefined)
+                                checker.new_lit_type(&Literal::Undefined)
                             }
                             BlockOrExpr::Expr(expr) => {
                                 // TODO: use `find_returns` here as well
@@ -337,7 +337,7 @@ impl Checker {
                             BlockOrExpr::Block(block) => checker.infer_block(block, ctx)?,
                             BlockOrExpr::Expr(expr) => checker.infer_expression(expr, ctx)?,
                         },
-                        None => checker.new_keyword(Keyword::Undefined),
+                        None => checker.new_lit_type(&Literal::Undefined),
                     };
                     checker.new_union_type(&[consequent_type, alternate_type])
                 }
@@ -370,7 +370,7 @@ impl Checker {
 
                     match *opt_chain && has_undefined {
                         true => {
-                            let undefined = checker.new_keyword(Keyword::Undefined);
+                            let undefined = checker.new_lit_type(&Literal::Undefined);
 
                             if let TypeKind::Union(union) = &checker.arena[result].kind {
                                 let mut types = filter_nullables(&checker.arena, &union.types);
@@ -686,7 +686,7 @@ impl Checker {
         ctx: &mut Context,
     ) -> Result<Index, TypeError> {
         let mut new_ctx = ctx.clone();
-        let mut result_t = self.new_keyword(Keyword::Undefined);
+        let mut result_t = self.new_lit_type(&Literal::Undefined);
 
         for stmt in &mut block.stmts.iter_mut() {
             result_t = self.infer_statement(stmt, &mut new_ctx, false)?;
@@ -771,8 +771,9 @@ impl Checker {
             TypeAnnKind::String => self.new_primitive(Primitive::String),
             TypeAnnKind::Symbol => self.new_primitive(Primitive::Symbol),
 
-            TypeAnnKind::Null => self.new_keyword(Keyword::Null),
-            TypeAnnKind::Undefined => self.new_keyword(Keyword::Undefined),
+            TypeAnnKind::Null => self.new_lit_type(&Literal::Null),
+            TypeAnnKind::Undefined => self.new_lit_type(&Literal::Undefined),
+
             TypeAnnKind::Unknown => self.new_keyword(Keyword::Unknown),
             TypeAnnKind::Never => self.new_keyword(Keyword::Never),
 
@@ -1376,7 +1377,7 @@ impl Checker {
                             // TODO: check what the error is, we may want to propagate
                             // certain errors
                             if undefined_count == 0 {
-                                let undefined = self.new_keyword(Keyword::Undefined);
+                                let undefined = self.new_lit_type(&Literal::Undefined);
                                 result_types.push(undefined);
                             }
                             undefined_count += 1;

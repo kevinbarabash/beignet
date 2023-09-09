@@ -1990,6 +1990,32 @@ fn member_access_optional_property() -> Result<(), TypeError> {
 }
 
 #[test]
+fn unifying_object_with_optional_properties() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Obj = {a?: number, b: string}
+    let obj: Obj = {b: "hello"}
+    "#;
+    let mut program = parse(src).unwrap();
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn unifying_null_literals() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = "let d: null = null";
+
+    let mut program = parse(src).unwrap();
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    assert_no_errors(&checker)
+}
+
+#[test]
 fn member_access_on_unknown_type() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
@@ -3082,6 +3108,66 @@ fn test_optional_function_params() -> Result<(), TypeError> {
         checker.print_type(&binding.index),
         r#"(a: number, b?: number) -> number"#
     );
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn passing_undefined_to_an_optional_param() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let foo: fn (a: number, b?: number) -> number
+    foo(5, undefined)
+    "#;
+    let mut program = parse(src).unwrap();
+
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn passing_undefined_to_an_optional_param_with_rest_param() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let foo: fn (a: number, b?: number, ...c: number[]) -> number
+    foo(5, undefined)
+    "#;
+    let mut program = parse(src).unwrap();
+
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn args_for_optional_params_can_be_omitted() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let foo: fn (a: number, b?: number) -> number
+    foo(5)
+    "#;
+    let mut program = parse(src).unwrap();
+
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn args_for_optional_params_can_be_omitted_with_rest_param() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let foo: fn (a: number, b?: number, ...c: number[]) -> number
+    foo(5)
+    "#;
+    let mut program = parse(src).unwrap();
+
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }

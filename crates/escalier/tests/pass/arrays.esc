@@ -1,8 +1,8 @@
-let a1: number[] = [1, 2, 3];
-let a1_squared = a1.map((x) => x * x);
-let len1 = a1.length;
+let a1: number[] = [1, 2, 3]
+let a1_squared = a1.map(fn (x) => x * x)
+let len1 = a1.length
 
-let a2: mut number[] = [3, 2, 1];
-a2.push(5);
-a2.sort();
-let len2 = a2.length;
+let mut a2: number[] = [3, 2, 1]
+a2.push(5)
+a2.sort()
+let len2 = a2.length

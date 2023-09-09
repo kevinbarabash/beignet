@@ -455,8 +455,6 @@ impl Checker {
             }
             TypeKind::Union(_) => Ok(self.new_keyword(Keyword::Never)),
             TypeKind::Keyword(keyword) => match keyword {
-                // TODO: update get_property to handle these cases as well
-                Keyword::Null => Ok(self.new_keyword(Keyword::Never)),
                 Keyword::Never => {
                     let string = self.new_primitive(Primitive::String);
                     let number = self.new_primitive(Primitive::Number);
@@ -464,7 +462,6 @@ impl Checker {
                     Ok(self.new_union_type(&[string, number, symbol]))
                 }
                 Keyword::Object => Ok(self.new_keyword(Keyword::Object)),
-                Keyword::Undefined => Ok(self.new_keyword(Keyword::Never)),
                 Keyword::Unknown => Ok(self.new_keyword(Keyword::Never)),
             },
             TypeKind::Primitive(primitive) => {
@@ -472,12 +469,17 @@ impl Checker {
                 let idx = self.expand_alias(ctx, name, &[])?;
                 self.expand_keyof(ctx, idx)
             }
-            TypeKind::Literal(literal) => match literal.get_scheme_name() {
-                Some(name) => {
-                    let idx = self.expand_alias(ctx, name, &[])?;
-                    self.expand_keyof(ctx, idx)
-                }
-                None => todo!(),
+            TypeKind::Literal(literal) => match literal {
+                // TODO: update get_property to handle these cases as well
+                Literal::Null => Ok(self.new_keyword(Keyword::Never)),
+                Literal::Undefined => Ok(self.new_keyword(Keyword::Never)),
+                _ => match literal.get_scheme_name() {
+                    Some(name) => {
+                        let idx = self.expand_alias(ctx, name, &[])?;
+                        self.expand_keyof(ctx, idx)
+                    }
+                    None => todo!(),
+                },
             },
             _ => {
                 let expanded_t = self.expand_type(ctx, t)?;
@@ -710,7 +712,7 @@ impl Checker {
                 match &key_type.kind {
                     TypeKind::Literal(Literal::Number(_)) => {
                         // TODO: update AST with the inferred type
-                        let types = vec![array.t, self.new_keyword(Keyword::Undefined)];
+                        let types = vec![array.t, self.new_lit_type(&Literal::Undefined)];
                         Ok(self.new_union_type(&types))
                     }
                     TypeKind::Literal(Literal::String(_)) => {
@@ -720,7 +722,7 @@ impl Checker {
                         self.get_prop_value(ctx, obj_idx, key_idx, is_mut)
                     }
                     TypeKind::Primitive(Primitive::Number) => {
-                        let types = vec![array.t, self.new_keyword(Keyword::Undefined)];
+                        let types = vec![array.t, self.new_lit_type(&Literal::Undefined)];
                         Ok(self.new_union_type(&types))
                     }
                     _ => Err(TypeError {
@@ -753,7 +755,7 @@ impl Checker {
                     }
                     TypeKind::Primitive(Primitive::Number) => {
                         let mut types = tuple.types.clone();
-                        types.push(self.new_keyword(Keyword::Undefined));
+                        types.push(self.new_lit_type(&Literal::Undefined));
                         Ok(self.new_union_type(&types))
                     }
                     _ => Err(TypeError {
@@ -773,7 +775,7 @@ impl Checker {
                             // TODO: check what the error is, we may want to propagate
                             // certain errors
                             if undefined_count == 0 {
-                                let undefined = self.new_keyword(Keyword::Undefined);
+                                let undefined = self.new_lit_type(&Literal::Undefined);
                                 result_types.push(undefined);
                             }
                             undefined_count += 1;
@@ -810,7 +812,7 @@ impl Checker {
         key_idx: Index,
         is_mut: bool,
     ) -> Result<Index, TypeError> {
-        let undefined = self.new_keyword(Keyword::Undefined);
+        let undefined = self.new_lit_type(&Literal::Undefined);
         // It's fine to clone here because we aren't mutating
         let obj_type = self.arena[obj_idx].clone();
         let key_type = self.arena[key_idx].clone();
@@ -862,7 +864,7 @@ impl Checker {
 
                         match self.unify(ctx, key_idx, mapped_key) {
                             Ok(_) => {
-                                let undefined = self.new_keyword(Keyword::Undefined);
+                                let undefined = self.new_lit_type(&Literal::Undefined);
                                 Ok(self.new_union_type(&[mapped.value, undefined]))
                             }
                             Err(_) => Err(TypeError {
@@ -935,7 +937,7 @@ impl Checker {
 
                         match self.unify(ctx, key_idx, mapped_key) {
                             Ok(_) => {
-                                let undefined = self.new_keyword(Keyword::Undefined);
+                                let undefined = self.new_lit_type(&Literal::Undefined);
                                 Ok(self.new_union_type(&[mapped.value, undefined]))
                             }
                             Err(_) => Err(TypeError {
@@ -968,7 +970,7 @@ impl Checker {
                         let mapped_key = get_mapped_key(self, mapped);
                         match self.unify(ctx, key_idx, mapped_key) {
                             Ok(_) => {
-                                let undefined = self.new_keyword(Keyword::Undefined);
+                                let undefined = self.new_lit_type(&Literal::Undefined);
                                 Ok(self.new_union_type(&[mapped.value, undefined]))
                             }
                             Err(_) => Err(TypeError {
@@ -997,8 +999,8 @@ pub fn filter_nullables(arena: &Arena<Type>, types: &[Index]) -> Vec<Index> {
     types
         .iter()
         .filter(|t| {
-            !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Undefined))
-                && !matches!(&arena[**t].kind, TypeKind::Keyword(Keyword::Null))
+            !matches!(&arena[**t].kind, TypeKind::Literal(Literal::Undefined))
+                && !matches!(&arena[**t].kind, TypeKind::Literal(Literal::Null))
         })
         .cloned()
         .collect()

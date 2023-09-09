@@ -2,8 +2,7 @@ use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_void};
 use std::str;
 
-use escalier_old_infer::*;
-use escalier_old_interop::parse::parse_dts;
+use escalier_interop::parse::parse_dts;
 
 pub mod compile_error;
 pub mod diagnostics;
@@ -49,15 +48,27 @@ pub unsafe extern "C" fn deallocate(ptr: *mut c_void, length: usize) {
 }
 
 fn _compile(input: &str, lib: &str) -> Result<(String, String, String, String), CompileError> {
-    let mut program = escalier_old_parser::parse(input)?;
+    let mut program = escalier_parser::parse(input)?;
     let ast = format!("{program:#?}");
 
-    let (js, srcmap) = escalier_old_codegen::js::codegen_js(input, &program);
+    let (js, srcmap) = escalier_codegen::js::codegen_js(input, &program);
 
     // TODO: return errors as part of CompileResult
-    let mut checker = parse_dts(lib).unwrap();
-    infer_prog(&mut program, &mut checker)?;
-    let dts = escalier_old_codegen::d_ts::codegen_d_ts(&program, &checker.current_scope)?;
+    let (mut checker, mut ctx) = parse_dts(lib).unwrap();
+
+    match checker.infer_program(&mut program, &mut ctx) {
+        Ok(_) => {
+            if !checker.current_report.diagnostics.is_empty() {
+                panic!("was expecting infer_prog() to return no errors");
+            }
+        }
+        Err(error) => {
+            let message = error.to_string();
+            panic!("{message}");
+        }
+    }
+
+    let dts = escalier_codegen::d_ts::codegen_d_ts(&program, &ctx, &checker)?;
 
     Ok((js, srcmap, dts, ast))
 }

@@ -1,17 +1,17 @@
-let a = 5;
-let b = (x) => x;
-let c = () => {
-    let x = 5;
-    return x;
-};
-let d = 5 + 10;
-let e = (f, x) => f(x) + x;
-let g = (a: 5, b: 10) => a + b;
-let h = (f, x, y) => f(x) + f(y);
+let a = 5
+let b = fn (x) => x
+let c = fn () {
+    let x = 5
+    return x
+}
+let d = 5 + 10
+let e = fn (f, x) => f(x) + x
+let g = fn (a: 5, b: 10) => a + b
+let h = fn (f, x, y) => f(x) + f(y)
 
-let x: number = 5;
-let y: number = 10;
-let z = x + y;
+let x: number = 5
+let y: number = 10
+let z = x + y
 
-let foo = (a, b) => a + b;
-let bar = foo(5, 10);
+let foo = fn (a, b) => a + b
+let bar = foo(5, 10)

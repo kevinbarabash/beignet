@@ -1,10 +1,10 @@
-type Obj = {a: number, b?: string, mut c: boolean, mut d?: number};
-type PartialObj = Partial<Obj>;
+type Obj = {a: number, b?: string, c: boolean, d?: number}
+type PartialObj = Partial<Obj>
 
-let partial_obj: PartialObj = {b: "hello"};
+let partial_obj: PartialObj = {b: "hello"}
 
 type Custom<T> = {
-    +mut [P in keyof T]+?: T[P];
-};
-let custom_obj: mut Custom<Obj> = {b: "hello"};
-custom_obj.b = "world";
+    [P]+?: T[P] for P in keyof T
+}
+let mut custom_obj: Custom<Obj> = {b: "hello"}
+custom_obj.b = "world"
