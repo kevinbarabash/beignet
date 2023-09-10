@@ -53,7 +53,7 @@ const Dropdown = () => {
         <a href={getPermalinkHref(examples.functionOverloading)}>
           Function Overloading
         </a>
-        <a href={getPermalinkHref(examples.ifLetElse)}>If Let (with Else)</a>
+        {/* <a href={getPermalinkHref(examples.ifLetElse)}>If Let (with Else)</a> */}
         <a href={getPermalinkHref(examples.basicPatternMatching)}>
           Basic Pattern Matching
         </a>

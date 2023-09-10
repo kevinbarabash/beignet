@@ -1,6 +1,5 @@
-use std::ffi::{CStr, CString};
-use std::os::raw::{c_char, c_void};
-use std::str;
+use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
 
 use escalier_interop::parse::parse_dts;
 
@@ -10,44 +9,25 @@ pub mod diagnostics;
 use crate::compile_error::CompileError;
 use crate::diagnostics::get_diagnostics_from_compile_error;
 
-#[repr(C)]
-pub struct WasmString {
-    pub offset: *const c_char,
-    pub length: u32,
-}
-
-#[repr(C)]
+#[derive(Serialize, Deserialize)]
 pub struct CompileResult {
-    js: WasmString,
-    srcmap: WasmString,
-    dts: WasmString,
-    ast: WasmString,
-    error: WasmString,
+    js: String,
+    srcmap: String,
+    dts: String,
+    ast: String,
+    error: String,
 }
 
-// A hacky way to allocate / deallocate memory in rust stable.
-//
-// Another way to do this would be to use heap::alloc, but that's still unstable
-// You can check the progress on RFC #1974
-// @ https://github.com/rust-lang/rust/issues/27389
-//
-#[no_mangle]
-pub extern "C" fn allocate(length: usize) -> *mut c_void {
-    let mut v = Vec::with_capacity(length);
-    let ptr = v.as_mut_ptr();
-    std::mem::forget(v);
-    ptr
-}
-
-///
-/// # Safety
-///
-#[no_mangle]
-pub unsafe extern "C" fn deallocate(ptr: *mut c_void, length: usize) {
-    std::mem::drop(Vec::from_raw_parts(ptr, 0, length));
+#[wasm_bindgen]
+extern "C" {
+    // Use `js_namespace` here to bind `console.log(..)` instead of just
+    // `log(..)`
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
 }
 
 fn _compile(input: &str, lib: &str) -> Result<(String, String, String, String), CompileError> {
+    log(&format!("parsing input: {input}"));
     let mut program = escalier_parser::parse(input)?;
     let ast = format!("{program:#?}");
 
@@ -56,6 +36,7 @@ fn _compile(input: &str, lib: &str) -> Result<(String, String, String, String), 
     // TODO: return errors as part of CompileResult
     let (mut checker, mut ctx) = parse_dts(lib).unwrap();
 
+    // TODO: get rid of panics and return errors instead
     match checker.infer_program(&mut program, &mut ctx) {
         Ok(_) => {
             if !checker.current_report.diagnostics.is_empty() {
@@ -73,66 +54,35 @@ fn _compile(input: &str, lib: &str) -> Result<(String, String, String, String), 
     Ok((js, srcmap, dts, ast))
 }
 
-unsafe fn string_to_wasm_string(input: &str) -> WasmString {
-    let length = input.len() as u32;
-    let offset = CString::new(input).unwrap().into_raw();
-    WasmString { offset, length }
-}
-
-///
-/// # Safety
-///
-#[no_mangle]
-pub unsafe extern "C" fn compile(input: *const c_char, lib: *const c_char) -> *const CompileResult {
-    let input = CStr::from_ptr(input).to_str().unwrap();
-    let lib = CStr::from_ptr(lib).to_str().unwrap();
-
+#[wasm_bindgen]
+pub fn compile(input: &str, lib: &str) -> Result<JsValue, JsValue> {
     match _compile(input, lib) {
         Ok((js, srcmap, dts, ast)) => {
             let result = CompileResult {
-                js: string_to_wasm_string(&js),
-                srcmap: string_to_wasm_string(&srcmap),
-                dts: string_to_wasm_string(&dts),
-                ast: string_to_wasm_string(&ast),
-                error: string_to_wasm_string(""),
+                js,
+                srcmap,
+                dts,
+                ast,
+                error: "".to_string(),
             };
-            Box::into_raw(Box::new(result))
+            Ok(serde_wasm_bindgen::to_value(&result)?)
         }
         Err(e) => {
-            let diagnostics = get_diagnostics_from_compile_error(e, input);
-            let result = CompileResult {
-                js: string_to_wasm_string(""),
-                srcmap: string_to_wasm_string(""),
-                dts: string_to_wasm_string(""),
-                ast: string_to_wasm_string(""),
-                // TODO: update report to exclude Escalier source code locations
-                error: string_to_wasm_string(&diagnostics),
-            };
-            Box::into_raw(Box::new(result))
+            log("compile error");
+            let diags = get_diagnostics_from_compile_error(e, input);
+            Err(serde_wasm_bindgen::to_value(&diags)?)
         }
     }
 }
 
-#[no_mangle]
-///
-/// # Safety
-///
-pub unsafe extern "C" fn parse(c_buf: *const c_char) -> *const WasmString {
-    let mut parser = tree_sitter::Parser::new();
-    parser
-        .set_language(tree_sitter_escalier::language())
-        .expect("Error loading escalier language");
-
-    let str_slice: &str = CStr::from_ptr(c_buf).to_str().unwrap();
-    eprintln!("str_slice = {str_slice}");
-    let tree = parser.parse(str_slice, None).unwrap();
-
-    let root = tree.root_node();
-    let result = format!("{root:#?}");
-
-    Box::into_raw(Box::new(string_to_wasm_string(&result)))
+#[wasm_bindgen]
+pub fn parse(input: &str) -> Result<JsValue, JsValue> {
+    match escalier_parser::parse(input) {
+        Ok(program) => {
+            // TODO: update the AST to implement Serialize/Deserialize
+            let ast = format!("{program:#?}");
+            Ok(serde_wasm_bindgen::to_value(&ast)?)
+        }
+        Err(e) => Err(serde_wasm_bindgen::to_value(&e.message)?),
+    }
 }
-
-#[no_mangle]
-#[cfg(target_family = "wasm")]
-pub extern "C" fn _start() {}

@@ -1144,3 +1144,73 @@ fn mapped_type_with_additional_props() -> Result<(), TypeError> {
 
     Ok(())
 }
+
+#[test]
+fn compile_fib() -> Result<(), TypeError> {
+    let src = r#"
+    // only self-recursive functions are supported, but support for
+    // mutual recursion will be added in the future
+    let fib = fn (n) => if (n == 0) {
+        0
+    } else if (n == 1) {
+        1
+    } else {
+        fib(n - 1) + fib(n - 2)
+    }
+    "#;
+
+    let (js, _) = compile(src);
+
+    insta::assert_snapshot!(js, @r###"
+    let $temp_0;
+    if (n === 0) {
+        $temp_0 = 0;
+    } else if (n === 1) {
+        $temp_0 = 1;
+    } else {
+        $temp_0 = fib(n - 1) + fib(n - 2);
+    }
+    export const fib = (n)=>$temp_0;
+    "###);
+
+    let mut program = parse(src).unwrap();
+    let mut checker = Checker::default();
+    let mut ctx = Context::default();
+    checker.infer_program(&mut program, &mut ctx)?;
+    let result = codegen_d_ts(&program, &ctx, &checker)?;
+
+    insta::assert_snapshot!(result, @r###"
+    export declare const fib: (n: number) => 0 | 1 | number;
+    "###);
+
+    Ok(())
+}
+
+// TODO: infer JSX
+#[test]
+#[ignore]
+fn compile_jsx() -> Result<(), TypeError> {
+    let src = r#"
+    let button = <Button count={5} foo="bar" />
+    "#;
+
+    let (js, _) = compile(src);
+
+    insta::assert_snapshot!(js, @r###"
+    import { jsx as _jsx } from "react/jsx-runtime";
+    export const button = _jsx(Button, {
+        count: 5,
+        foo: "bar"
+    });
+    "###);
+
+    let mut program = parse(src).unwrap();
+    let mut checker = Checker::default();
+    let mut ctx = Context::default();
+    checker.infer_program(&mut program, &mut ctx)?;
+    let result = codegen_d_ts(&program, &ctx, &checker)?;
+
+    insta::assert_snapshot!(result, @r###"TODO"###);
+
+    Ok(())
+}

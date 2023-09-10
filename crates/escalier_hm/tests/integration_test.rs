@@ -384,6 +384,32 @@ fn test_recursive() {
 }
 
 #[test]
+fn test_fib() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+        let fib = fn (n) => if (n == 0) {
+            0
+        } else if (n == 1) {
+            1
+        } else {
+            fib(n - 1) + fib(n - 2)
+        }
+    "#;
+
+    let mut program = parse(src).unwrap();
+    checker.infer_program(&mut program, &mut my_ctx).unwrap();
+
+    let binding = my_ctx.values.get("fib").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"(n: number) -> 0 | 1 | number"#
+    );
+
+    assert_no_errors(&checker)
+}
+
+#[test]
 fn test_number_literal() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
@@ -5154,6 +5180,66 @@ fn test_generalization_inside_function() -> Result<(), TypeError> {
         checker.print_type(&binding.index),
         r#"[5, "hello", (x: t33) -> t33]"#
     );
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn higher_rank_type_1() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    let f = fn (g: fn<A>(x: A) -> A) => [g(5), g("hello")]
+    "#;
+    let mut program = parse(src).unwrap();
+
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("f").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"(g: <A>(x: A) -> A) -> [5, "hello"]"#
+    );
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn higher_rank_type_2() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    let identity = fn <T>(item: T) -> T => item     // generic
+    let plusOne = fn (x: number) -> number => x + 1 // concrete
+
+    type Id<T> = fn (item: T) -> T
+    let x: Id<number> = identity   // fine
+    let y: Id<number> = plusOne    // fine
+
+    type IdHigherRank = fn <T>(item: T) -> T
+    let z: IdHigherRank = identity // fine
+    "#;
+    let mut program = parse(src).unwrap();
+
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    assert_no_errors(&checker)
+}
+
+// TODO: this should error but doesn't
+#[test]
+#[ignore]
+fn higher_rank_type_expected_error() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    let plusOne = fn (x: number) -> number => x + 1 // concrete
+    type IdHigherRank = fn <T>(item: T) -> T
+    let zz: IdHigherRank = plusOne // error
+    "#;
+    let mut program = parse(src).unwrap();
+
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }

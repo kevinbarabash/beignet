@@ -529,13 +529,6 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                 arg: Box::from(build_expr(arg, stmts, ctx)),
             })
         }
-        // values::ExprKind::Fix(values::Fix { expr, .. }) => match &expr.kind {
-        //     values::ExprKind::Lambda(values::Lambda { body, .. }) => match body {
-        //         values::BlockOrExpr::Expr(expr) => build_expr(expr, stmts, ctx),
-        //         values::BlockOrExpr::Block(_) => panic!("Invalid recursive function"),
-        //     },
-        //     _ => panic!("Fix should only wrap a lambda"),
-        // },
         values::ExprKind::IfElse(values::IfElse {
             cond,
             consequent,
@@ -554,15 +547,9 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
             let cons = Box::from(Stmt::Block(build_body_block_stmt(
                 consequent, &finalizer, ctx,
             )));
-            let alt = alternate.as_ref().map(|alt| {
-                let block = match alt {
-                    values::BlockOrExpr::Block(alt) => {
-                        Stmt::Block(build_body_block_stmt(alt, &finalizer, ctx))
-                    }
-                    values::BlockOrExpr::Expr(_) => todo!(),
-                };
-                Box::from(block)
-            });
+            let alt = alternate
+                .as_ref()
+                .map(|alt| Box::from(build_alt(alt, &finalizer, stmts, ctx)));
             stmts.push(Stmt::If(IfStmt {
                 span,
                 test,
@@ -756,6 +743,58 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
         values::ExprKind::Try(_) => todo!(),
         values::ExprKind::Yield(_) => todo!(),
         values::ExprKind::Throw(_) => todo!(),
+    }
+}
+
+fn build_alt(
+    block_or_expr: &values::BlockOrExpr,
+    finalizer: &BlockFinalizer,
+    stmts: &mut Vec<Stmt>,
+    ctx: &mut Context,
+) -> Stmt {
+    match block_or_expr {
+        values::BlockOrExpr::Block(alt) => Stmt::Block(build_body_block_stmt(alt, finalizer, ctx)),
+        values::BlockOrExpr::Expr(expr) => {
+            let span = swc_common::Span {
+                lo: BytePos(expr.span.start as u32 + 1),
+                hi: BytePos(expr.span.end as u32 + 1),
+                ctxt: SyntaxContext::empty(),
+            };
+
+            match &expr.kind {
+                values::ExprKind::IfElse(values::IfElse {
+                    cond,
+                    consequent,
+                    alternate,
+                }) => {
+                    let test = Box::from(build_expr(cond.as_ref(), stmts, ctx));
+                    let cons = Box::from(Stmt::Block(build_body_block_stmt(
+                        consequent, finalizer, ctx,
+                    )));
+
+                    let alt = alternate.as_ref().map(|alt| {
+                        let block = match alt {
+                            values::BlockOrExpr::Block(alt) => {
+                                Stmt::Block(build_body_block_stmt(alt, finalizer, ctx))
+                            }
+                            values::BlockOrExpr::Expr(expr) => match expr.kind {
+                                values::ExprKind::IfElse(_) => todo!(),
+                                _ => panic!("Invalid alternate expression"),
+                            },
+                        };
+                        Box::from(block)
+                    });
+
+                    Stmt::If(IfStmt {
+                        span,
+                        test,
+                        cons,
+                        alt,
+                    })
+                }
+                _ => panic!("Invalid alternate expression"),
+            }
+        }
     }
 }
 
