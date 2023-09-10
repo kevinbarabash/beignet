@@ -3,26 +3,26 @@ declare type Custom<T> = {
 };
 declare type Obj = {
     a: number;
-    b?: number;
+    b?: string;
     c: boolean;
     d?: number;
 };
 declare type ReadonlyObj = {
     readonly a: number;
-    readonly b?: number;
+    readonly b?: string;
     readonly c: boolean;
     readonly d?: number;
 };
 declare type PartialObj = Partial<ReadonlyObj>;
 export declare const custom_obj: {
     a?: number;
-    b?: number;
+    b?: string;
     c?: boolean;
     d?: number;
 };
 export declare const partial_obj: {
     a?: number;
-    b?: number;
+    b?: string;
     c?: boolean;
     d?: number;
 };
