@@ -1669,7 +1669,7 @@ fn test_await_non_promise() -> Result<(), TypeError> {
     assert_eq!(
         result,
         Err(TypeError {
-            message: "type mismatch: unify(5, Promise<t10, t11>) failed".to_string()
+            message: "type mismatch: unify(5, Promise<t11, t12>) failed".to_string()
         })
     );
 
@@ -2100,7 +2100,7 @@ fn member_access_on_type_variable() -> Result<(), TypeError> {
     assert_eq!(
         result,
         Err(TypeError {
-            message: "Can't access properties on t9".to_string()
+            message: "Can't access properties on t10".to_string()
         })
     );
 
@@ -5201,7 +5201,7 @@ fn test_generalization_inside_function() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("bar").unwrap();
     assert_eq!(
         checker.print_type(&binding.index),
-        r#"[5, "hello", (x: t33) -> t33]"#
+        r#"[5, "hello", (x: t36) -> t36]"#
     );
 
     assert_no_errors(&checker)
