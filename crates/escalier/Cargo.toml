@@ -13,13 +13,15 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 ariadne = "0.1.5"
-tree-sitter = "0.20.8"
-escalier_old_ast = { version = "0.1.0", path = "../escalier_old_ast" }
-escalier_old_codegen = { version = "0.1.0", path = "../escalier_old_codegen" }
-escalier_old_interop = { version = "0.1.0", path = "../escalier_old_interop" }
-escalier_old_infer = { version = "0.1.0", path = "../escalier_old_infer" }
-escalier_old_parser = { version = "0.1.0", path = "../escalier_old_parser" }
-tree_sitter_escalier = { version = "0.1.0", path = "../tree_sitter_escalier" }
+escalier_ast = { version = "0.1.0", path = "../escalier_ast" }
+escalier_codegen = { version = "0.1.0", path = "../escalier_codegen" }
+escalier_interop = { version = "0.1.0", path = "../escalier_interop" }
+escalier_hm = { version = "0.1.0", path = "../escalier_hm" }
+escalier_parser = { version = "0.1.0", path = "../escalier_parser" }
+serde = "1.0.152"
+serde-wasm-bindgen = "0.5.0"
+wasm-bindgen = { version = "0.2.87", features = ["serde-serialize"] }
+getrandom = { version = "0.2.8", features = ["js"] }
 
 [dev-dependencies]
 insta = "1.13.0"

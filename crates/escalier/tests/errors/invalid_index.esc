@@ -1,5 +1,5 @@
-let tuple = [5, "hello", true];
-tuple["2"];
+let tuple = [5, "hello", true]
+tuple["2"]
 
-// declare let array: string[];
-// array["2"];
+// declare let array: string[]
+// array["2"]

@@ -1,11 +1,1 @@
-Error: Index out of bounds
-   ╭─[<unknown>:1:13]
-   │
- 1 │ let tuple = [5, "hello", true];
-   ·             ─────────┬────────  
-   ·                      ╰────────── for this tuple
-   · 
- 3 │ let out_of_bounds = tuple[3];
-   ·                           ┬  
-   ·                           ╰── 3 is out of bounds
-───╯
+3 was outside the bounds 0..3 of the tuple

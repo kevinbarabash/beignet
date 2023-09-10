@@ -5,8 +5,8 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::str;
 
-use escalier_old_infer::*;
-use escalier_old_interop::parse::parse_dts;
+use escalier_hm::checker::{Checker, Report};
+use escalier_interop::parse::parse_dts;
 
 use escalier::diagnostics::type_errors_to_string;
 
@@ -91,6 +91,7 @@ fn fail(in_path: PathBuf) {
 
 pub fn report_to_string(src: &str, report: &Report) -> String {
     report
+        .diagnostics
         .iter()
         .map(|d| {
             let reasons = type_errors_to_string(&d.reasons, src);
@@ -102,11 +103,11 @@ pub fn report_to_string(src: &str, report: &Report) -> String {
 
 pub fn all_reports_to_string(src: &str, checker: &Checker) -> String {
     let mut reports = vec![];
-    if !checker.current_report.is_empty() {
+    if !checker.current_report.diagnostics.is_empty() {
         reports.push(report_to_string(src, &checker.current_report));
     }
     for report in &checker.parent_reports {
-        if !report.is_empty() {
+        if !report.diagnostics.is_empty() {
             reports.push(report_to_string(src, report));
         }
     }
@@ -114,7 +115,7 @@ pub fn all_reports_to_string(src: &str, checker: &Checker) -> String {
 }
 
 fn compile(input: &str, lib: &str) -> (String, String, String, String) {
-    let mut program = match escalier_old_parser::parse(input) {
+    let mut program = match escalier_parser::parse(input) {
         Ok(program) => program,
         Err(error) => {
             return (
@@ -126,14 +127,14 @@ fn compile(input: &str, lib: &str) -> (String, String, String, String) {
         }
     };
 
-    let (js, srcmap) = escalier_old_codegen::js::codegen_js(input, &program);
+    let (js, srcmap) = escalier_codegen::js::codegen_js(input, &program);
 
     // TODO: return errors as part of CompileResult
-    let mut checker = parse_dts(lib).unwrap();
+    let (mut checker, mut ctx) = parse_dts(lib).unwrap();
 
-    match infer_prog(&mut program, &mut checker) {
+    match checker.infer_program(&mut program, &mut ctx) {
         Ok(_) => (),
-        Err(errors) => {
+        Err(error) => {
             return (
                 js,
                 srcmap,
@@ -141,15 +142,15 @@ fn compile(input: &str, lib: &str) -> (String, String, String, String) {
                 format!(
                     "{}{}",
                     all_reports_to_string(input, &checker),
-                    type_errors_to_string(&errors, input),
+                    error.message,
                 ),
             );
         }
     };
 
-    let dts = match escalier_old_codegen::d_ts::codegen_d_ts(&program, &checker.current_scope) {
+    let dts = match escalier_codegen::d_ts::codegen_d_ts(&program, &ctx, &checker) {
         Ok(value) => value,
-        Err(errors) => {
+        Err(error) => {
             return (
                 js,
                 srcmap,
@@ -157,7 +158,7 @@ fn compile(input: &str, lib: &str) -> (String, String, String, String) {
                 format!(
                     "{}{}",
                     report_to_string(input, &checker.current_report),
-                    type_errors_to_string(&errors, input),
+                    error.message,
                 ),
             );
         }

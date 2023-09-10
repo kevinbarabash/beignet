@@ -1,18 +1,18 @@
-class Foo {
-    msg: string;
-    static tag = "Foo";
-
-    constructor(self) {}
-
-    bar(self): string { return "hello"; }
-    static add(x: number, y: number): number { return x + y; }
-    get baz(self): string { return "world!"; }
-    set qux(mut self, msg: string) {}
-}
-
-let f1: Foo = new Foo();
-let msg1 = f1.bar();
-
-let f2: mut Foo = new Foo();
-f2.qux = "goodbye";
-let msg2 = f2.bar();
+// class Foo {
+//     msg: string;
+//     static tag = "Foo";
+// 
+//     constructor(self) {}
+// 
+//     bar(self): string { return "hello"; }
+//     static add(x: number, y: number): number { return x + y; }
+//     get baz(self): string { return "world!"; }
+//     set qux(mut self, msg: string) {}
+// }
+// 
+// let f1: Foo = new Foo();
+// let msg1 = f1.bar();
+// 
+// let f2: mut Foo = new Foo();
+// f2.qux = "goodbye";
+// let msg2 = f2.bar();

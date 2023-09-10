@@ -1,0 +1,55 @@
+---
+source: crates/escalier_parser/src/jsx_parser.rs
+expression: jsx_elem
+---
+JSXElement {
+    span: 0..37,
+    opening: JSXOpeningElement {
+        name: Ident(
+            Ident {
+                name: "Button",
+                span: 1..7,
+            },
+        ),
+        attrs: [
+            JSXAttr {
+                name: "count",
+                value: Some(
+                    ExprContainer(
+                        JSXExprContainer {
+                            expr: Expr {
+                                kind: Num(
+                                    Num {
+                                        value: "5",
+                                    },
+                                ),
+                                span: 15..16,
+                                inferred_type: None,
+                            },
+                        },
+                    ),
+                ),
+            },
+            JSXAttr {
+                name: "foo",
+                value: Some(
+                    Str(
+                        "bar",
+                    ),
+                ),
+            },
+        ],
+        self_closing: false,
+    },
+    children: [],
+    closing: Some(
+        JSXClosingElement {
+            name: Ident(
+                Ident {
+                    name: "Button",
+                    span: 28..37,
+                },
+            ),
+        },
+    ),
+}

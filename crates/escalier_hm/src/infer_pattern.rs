@@ -140,7 +140,7 @@ impl Checker {
                                 // - check for multiple rest patterns
                                 infer_pattern_rec(checker, &mut elem.pattern, assump, ctx)?
                             }
-                            None => checker.new_keyword(Keyword::Undefined),
+                            None => checker.new_lit_type(&Literal::Undefined),
                         };
                         elem_types.push(t);
                     }

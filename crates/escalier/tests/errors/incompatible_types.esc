@@ -1,8 +1,8 @@
-let add = (a: number, b: number): number => a + b;
-let sum: string = add("hello", "world");
+let add = fn (a: number, b: number) -> number => a + b
+let sum: string = add("hello", "world")
 
-let add = (a, b) => a + b;
-add("hello", "world");
+let add = fn (a, b) => a + b
+add("hello", "world")
 
-let a: number = 5;
-let b: number = "5";
+let a: number = 5
+let b: number = "5"

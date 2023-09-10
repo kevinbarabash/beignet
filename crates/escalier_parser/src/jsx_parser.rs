@@ -22,6 +22,7 @@ impl<'a> Parser<'a> {
         let mut self_closing = false;
 
         while !self.scanner.is_done() {
+            eprintln!("peek: {:?}", self.scanner.peek(0));
             match self.scanner.peek(0).unwrap() {
                 '/' => {
                     self.scanner.pop();
@@ -141,11 +142,13 @@ impl<'a> Parser<'a> {
                 }
             }
             '{' => {
-                self.scanner.pop();
+                self.scanner.pop(); // consumes '{'
 
                 self.brace_counts.push(0);
                 let expr = self.parse_expr()?;
                 self.brace_counts.pop();
+
+                self.scanner.pop(); // consumes '}'
 
                 JSXAttr {
                     name,
@@ -156,6 +159,8 @@ impl<'a> Parser<'a> {
             }
             _ => panic!("Unexpected character"),
         };
+
+        eprintln!("attr: {:#?}", attr);
 
         Ok(attr)
     }
@@ -235,6 +240,15 @@ mod tests {
     #[test]
     fn parse_jsx_element() {
         let mut parser = Parser::new(r#"<Foo bar="baz" qux></Foo>"#);
+
+        let jsx_elem = parser.parse_jsx_element().unwrap();
+
+        insta::assert_debug_snapshot!(jsx_elem);
+    }
+
+    #[test]
+    fn parse_jsx_button_element() {
+        let mut parser = Parser::new(r#"<Button count={5} foo="bar"></Button>"#);
 
         let jsx_elem = parser.parse_jsx_element().unwrap();
 

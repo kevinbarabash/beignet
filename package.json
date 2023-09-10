@@ -3,8 +3,6 @@
   "version": "0.0.1",
   "license": "MIT",
   "scripts": {
-    "build-wasm": "cd crates/escalier && cargo build --target wasm32-wasi --release",
-    "watch-wasm": "cargo watch -- cargo build --target wasm32-wasi --release",
     "build": "webpack && cp scarf.png build && cp index.css build",
     "serve": "webpack serve",
     "coverage:test": "CARGO_INCREMENTAL=0 RUSTFLAGS='-Cinstrument-coverage' LLVM_PROFILE_FILE='profiles/cargo-test-%p-%m.profraw' cargo test",
@@ -14,6 +12,7 @@
   "devDependencies": {
     "@types/react": "^18.0.6",
     "@types/react-dom": "^18.0.2",
+    "@wasm-tool/wasm-pack-plugin": "^1.7.0",
     "html-webpack-plugin": "^5.3.2",
     "sloc": "^0.2.1",
     "ts-loader": "^9.2.8",

@@ -356,10 +356,8 @@ pub fn build_type(
         }
         types::TypeKind::Keyword(keyword) => {
             let kind = match keyword {
-                types::Keyword::Null => TsKeywordTypeKind::TsNullKeyword,
                 types::Keyword::Never => TsKeywordTypeKind::TsNeverKeyword,
                 types::Keyword::Object => TsKeywordTypeKind::TsObjectKeyword,
-                types::Keyword::Undefined => TsKeywordTypeKind::TsUndefinedKeyword,
                 types::Keyword::Unknown => TsKeywordTypeKind::TsUnknownKeyword,
                 // TODO:
                 // types::Keyword::Object => TsKeywordTypeKind::TsObjectKeyword,
@@ -375,8 +373,8 @@ pub fn build_type(
             let kind = match primitive {
                 types::Primitive::Number => TsKeywordTypeKind::TsNumberKeyword,
                 types::Primitive::Boolean => TsKeywordTypeKind::TsBooleanKeyword,
-                types::Primitive::String => TsKeywordTypeKind::TsNumberKeyword,
-                types::Primitive::Symbol => TsKeywordTypeKind::TsNumberKeyword,
+                types::Primitive::String => TsKeywordTypeKind::TsStringKeyword,
+                types::Primitive::Symbol => TsKeywordTypeKind::TsSymbolKeyword,
             };
 
             TsType::TsKeywordType(TsKeywordType {
@@ -603,7 +601,10 @@ pub fn build_type(
                 default: None,
             },
         }),
-        types::TypeKind::Wildcard => todo!(),
+        types::TypeKind::Wildcard => TsType::TsKeywordType(TsKeywordType {
+            span: DUMMY_SP,
+            kind: TsKeywordTypeKind::TsAnyKeyword,
+        }),
         types::TypeKind::Binary(_) => {
             // Depending on the operator, we'll need to convert this to either
             // a `number` or `boolean` type.

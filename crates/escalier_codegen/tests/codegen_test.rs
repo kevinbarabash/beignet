@@ -145,7 +145,7 @@ fn pattern_matching() {
 }
 
 #[test]
-fn pattern_matching_with_disjoint_union() {
+fn pattern_matching_with_disjoint_union() -> Result<(), TypeError> {
     let src = r#"
     type Event = {type: "mousedown", x: number, y: number} | {type: "keydown", key: string}
     declare let event: Event
@@ -170,6 +170,34 @@ fn pattern_matching_with_disjoint_union() {
     }
     export const result = $temp_0;
     "###);
+
+    let mut program = parse(src).unwrap();
+    let mut checker = Checker::default();
+    let mut ctx = Context::default();
+    checker.infer_program(&mut program, &mut ctx)?;
+    let result = codegen_d_ts(&program, &ctx, &checker)?;
+
+    insta::assert_snapshot!(result, @r###"
+    declare type Event = {
+        type: "mousedown";
+        x: number;
+        y: number;
+    } | {
+        type: "keydown";
+        key: string;
+    };
+    export declare const event: {
+        type: "mousedown";
+        x: number;
+        y: number;
+    } | {
+        type: "keydown";
+        key: string;
+    };
+    export declare const result: string | string;
+    "###);
+
+    Ok(())
 }
 
 #[test]
@@ -617,7 +645,7 @@ fn constrained_generic_function() -> Result<(), TypeError> {
 
     // TODO: The type bound on `T` should be `number | string`, not `number | number`
     // TODO: The return type should be `T`, not `number | string`
-    insta::assert_snapshot!(result, @"export declare const fst: <T extends number | number>(a: T, b: T) => number | number;
+    insta::assert_snapshot!(result, @"export declare const fst: <T extends number | string>(a: T, b: T) => number | string;
 ");
 
     Ok(())
@@ -1086,11 +1114,11 @@ fn partial_type() -> Result<(), TypeError> {
     // TODO: How do we ensure that types defined within a block can't escape?
     insta::assert_snapshot!(result, @r###"
     declare type Obj = {
-        a?: number;
+        a?: string;
         b: number;
     };
     declare type ReadonlyObj = {
-        readonly a?: number;
+        readonly a?: string;
         readonly b: number;
     };
     declare type Partial<T> = {
@@ -1129,18 +1157,88 @@ fn mapped_type_with_additional_props() -> Result<(), TypeError> {
     insta::assert_snapshot!(result, @r###"
     declare type Direction = "up" | "down" | "left" | "right";
     declare type Style = {
-        background: number;
-        color: number;
+        background: string;
+        color: string;
     } & {
         [P in Direction]: boolean;
     };
     declare type ReadonlyStyle = {
-        readonly background: number;
-        readonly color: number;
+        readonly background: string;
+        readonly color: string;
     } & {
         [P in Direction]: boolean;
     };
     "###);
+
+    Ok(())
+}
+
+#[test]
+fn compile_fib() -> Result<(), TypeError> {
+    let src = r#"
+    // only self-recursive functions are supported, but support for
+    // mutual recursion will be added in the future
+    let fib = fn (n) => if (n == 0) {
+        0
+    } else if (n == 1) {
+        1
+    } else {
+        fib(n - 1) + fib(n - 2)
+    }
+    "#;
+
+    let (js, _) = compile(src);
+
+    insta::assert_snapshot!(js, @r###"
+    let $temp_0;
+    if (n === 0) {
+        $temp_0 = 0;
+    } else if (n === 1) {
+        $temp_0 = 1;
+    } else {
+        $temp_0 = fib(n - 1) + fib(n - 2);
+    }
+    export const fib = (n)=>$temp_0;
+    "###);
+
+    let mut program = parse(src).unwrap();
+    let mut checker = Checker::default();
+    let mut ctx = Context::default();
+    checker.infer_program(&mut program, &mut ctx)?;
+    let result = codegen_d_ts(&program, &ctx, &checker)?;
+
+    insta::assert_snapshot!(result, @r###"
+    export declare const fib: (n: number) => 0 | 1 | number;
+    "###);
+
+    Ok(())
+}
+
+// TODO: infer JSX
+#[test]
+#[ignore]
+fn compile_jsx() -> Result<(), TypeError> {
+    let src = r#"
+    let button = <Button count={5} foo="bar" />
+    "#;
+
+    let (js, _) = compile(src);
+
+    insta::assert_snapshot!(js, @r###"
+    import { jsx as _jsx } from "react/jsx-runtime";
+    export const button = _jsx(Button, {
+        count: 5,
+        foo: "bar"
+    });
+    "###);
+
+    let mut program = parse(src).unwrap();
+    let mut checker = Checker::default();
+    let mut ctx = Context::default();
+    checker.infer_program(&mut program, &mut ctx)?;
+    let result = codegen_d_ts(&program, &ctx, &checker)?;
+
+    insta::assert_snapshot!(result, @r###"TODO"###);
 
     Ok(())
 }

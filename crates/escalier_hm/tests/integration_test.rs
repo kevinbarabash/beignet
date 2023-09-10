@@ -384,6 +384,32 @@ fn test_recursive() {
 }
 
 #[test]
+fn test_fib() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+        let fib = fn (n) => if (n == 0) {
+            0
+        } else if (n == 1) {
+            1
+        } else {
+            fib(n - 1) + fib(n - 2)
+        }
+    "#;
+
+    let mut program = parse(src).unwrap();
+    checker.infer_program(&mut program, &mut my_ctx).unwrap();
+
+    let binding = my_ctx.values.get("fib").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"(n: number) -> 0 | 1 | number"#
+    );
+
+    assert_no_errors(&checker)
+}
+
+#[test]
 fn test_number_literal() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
@@ -1951,6 +1977,29 @@ fn test_pattern_matching_object() -> Result<(), TypeError> {
 }
 
 #[test]
+fn test_pattern_matching_object_event() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    // TODO: allow trailing `,` when doing pattern matching
+    // TODO: add support for omitting fields in object patterns
+    let src = r#"
+    type Event = {type: "mousedown", x: number, y: number} | {type: "keydown", key: string}
+    declare let event: Event
+    let result = match (event) {
+        {type: "mousedown", x, y} => `mousedown: (${x}, ${y})`,
+        {type: "keydown", key} if (key != "Escape") => key
+    }
+    "#;
+    let mut program = parse(src).unwrap();
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("result").unwrap();
+    assert_eq!(checker.print_type(&binding.index), r#"string | string"#);
+
+    assert_no_errors(&checker)
+}
+
+#[test]
 fn member_access_on_union() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
@@ -1985,6 +2034,32 @@ fn member_access_optional_property() -> Result<(), TypeError> {
     assert_eq!(checker.print_type(&binding.index), r#"number | undefined"#);
     let binding = my_ctx.values.get("b").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string"#);
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn unifying_object_with_optional_properties() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    type Obj = {a?: number, b: string}
+    let obj: Obj = {b: "hello"}
+    "#;
+    let mut program = parse(src).unwrap();
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn unifying_null_literals() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = "let d: null = null";
+
+    let mut program = parse(src).unwrap();
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -3082,6 +3157,66 @@ fn test_optional_function_params() -> Result<(), TypeError> {
         checker.print_type(&binding.index),
         r#"(a: number, b?: number) -> number"#
     );
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn passing_undefined_to_an_optional_param() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let foo: fn (a: number, b?: number) -> number
+    foo(5, undefined)
+    "#;
+    let mut program = parse(src).unwrap();
+
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn passing_undefined_to_an_optional_param_with_rest_param() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let foo: fn (a: number, b?: number, ...c: number[]) -> number
+    foo(5, undefined)
+    "#;
+    let mut program = parse(src).unwrap();
+
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn args_for_optional_params_can_be_omitted() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let foo: fn (a: number, b?: number) -> number
+    foo(5)
+    "#;
+    let mut program = parse(src).unwrap();
+
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn args_for_optional_params_can_be_omitted_with_rest_param() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    declare let foo: fn (a: number, b?: number, ...c: number[]) -> number
+    foo(5)
+    "#;
+    let mut program = parse(src).unwrap();
+
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -5068,6 +5203,66 @@ fn test_generalization_inside_function() -> Result<(), TypeError> {
         checker.print_type(&binding.index),
         r#"[5, "hello", (x: t33) -> t33]"#
     );
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn higher_rank_type_1() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    let f = fn (g: fn<A>(x: A) -> A) => [g(5), g("hello")]
+    "#;
+    let mut program = parse(src).unwrap();
+
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("f").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"(g: <A>(x: A) -> A) -> [5, "hello"]"#
+    );
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn higher_rank_type_2() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    let identity = fn <T>(item: T) -> T => item     // generic
+    let plusOne = fn (x: number) -> number => x + 1 // concrete
+
+    type Id<T> = fn (item: T) -> T
+    let x: Id<number> = identity   // fine
+    let y: Id<number> = plusOne    // fine
+
+    type IdHigherRank = fn <T>(item: T) -> T
+    let z: IdHigherRank = identity // fine
+    "#;
+    let mut program = parse(src).unwrap();
+
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    assert_no_errors(&checker)
+}
+
+// TODO: this should error but doesn't
+#[test]
+#[ignore]
+fn higher_rank_type_expected_error() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    let plusOne = fn (x: number) -> number => x + 1 // concrete
+    type IdHigherRank = fn <T>(item: T) -> T
+    let zz: IdHigherRank = plusOne // error
+    "#;
+    let mut program = parse(src).unwrap();
+
+    checker.infer_program(&mut program, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }

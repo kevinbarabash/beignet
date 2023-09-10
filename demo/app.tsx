@@ -1,40 +1,77 @@
 import * as React from "react";
 
 import libPath from "../node_modules/typescript/lib/lib.es5.d.ts";
-import escalierWasmPath from "../target/wasm32-wasi/release/escalier.wasm";
 
 import Dropdown from "./dropdown";
 import { getPermalinkHref } from "./util";
-import { loadWasm, Compiler, CompilerResult } from "./wasm";
 
 const DEFAULT_CODE = `
 // Welcome to the Escalier Playground!
-let add = (a, b) => a + b;
-let add5 = (b) => add(5, b);
-let sum = add5(10);
+let add = fn (a, b) => a + b
+let add5 = fn (b) => add(5, b)
+let sum = add5(10)
 `;
 
+const loadEscalier = async () => {
+  const lib = await fetch(libPath).then((res) => res.text());
+  const pkg = await import("../crates/escalier/pkg");
+  return {
+    compile: (code: string): CompilerResult => {
+      try {
+        const result = pkg.compile(code, lib);
+        return { type: "ok", data: result };
+      } catch (error: any) {
+        return { type: "err", error };
+      }
+    },
+  };
+};
+
+type CompilerResult =
+  | {
+      type: "ok";
+      data: {
+        js: string;
+        dts: string;
+        srcmap: string;
+        ast: string;
+      };
+    }
+  | {
+      type: "err";
+      error: string;
+    };
+
 export const App = () => {
+  let [escalier, setEscalier] = React.useState<{
+    compile: (input: string) => CompilerResult;
+  } | null>(null);
+
+  React.useEffect(() => {
+    loadEscalier().then(setEscalier);
+  }, []);
+
   let [source, setSource] = React.useState(() => {
     const url = new URL(window.location.href);
     const hash = url.hash.slice(1);
     return hash ? window.atob(hash) : DEFAULT_CODE.trim();
   });
-  let [escalier, setEscalier] = React.useState<Compiler | null>(null);
+
+  const updateSource = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setSource(e.target.value);
+  };
+
+  let output = React.useMemo<CompilerResult>((): CompilerResult => {
+    if (escalier) {
+      return escalier.compile(source);
+    } else {
+      return { type: "ok", data: { js: "", dts: "", srcmap: "", ast: "" } };
+    }
+  }, [source, escalier]);
+
   let [outputTab, setOutputTab] = React.useState<
     "js" | "dts" | "srcmap" | "ast"
   >("js");
-
-  React.useEffect(() => {
-    fetch(libPath)
-      .then((res) => res.text())
-      .then((lib) => {
-        // TODO: fetch escalier code in parallel with fetch lib src
-        loadWasm(escalierWasmPath, lib).then((compiler) => {
-          setEscalier(compiler);
-        });
-      });
-  }, []);
 
   React.useEffect(() => {
     const listener = (e: HashChangeEvent) => {
@@ -50,22 +87,6 @@ export const App = () => {
       window.removeEventListener("hashchange", listener);
     };
   }, []);
-
-  let output = React.useMemo<CompilerResult>(() => {
-    try {
-      if (escalier) {
-        return escalier.compile(source);
-      } else {
-        return { type: "ok", data: { js: "", dts: "", srcmap: "", ast: "" } };
-      }
-    } catch (e) {
-      return { type: "err", error: (e as Error).message };
-    }
-  }, [source, escalier]);
-
-  const updateSource = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setSource(e.target.value);
-  };
 
   const styles = {
     grid: {

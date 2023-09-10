@@ -356,4 +356,11 @@ mod tests {
     fn parse_keyof() {
         insta::assert_debug_snapshot!(parse("type Pick<T, K : keyof T> = {[P]: T[P] for P in K}"));
     }
+
+    #[test]
+    fn parse_jsx() {
+        insta::assert_debug_snapshot!(parse(
+            r#"let button = <Button count={5} foo="bar"></Button>"#
+        ));
+    }
 }

@@ -1,6 +1,6 @@
-let products: mut number[] = [];
-for (let x in [1, 2, 3]) {
-    for (let y in [4, 5, 6]) {
-        products.push(x * y);
+let mut products: number[] = []
+for (x in [1, 2, 3]) {
+    for (y in [4, 5, 6]) {
+        products.push(x * y)
     }
 }

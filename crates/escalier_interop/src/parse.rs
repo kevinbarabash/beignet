@@ -47,13 +47,13 @@ pub fn infer_ts_type_ann(
             }
             // NOTE: `void` is treated the same as `undefined` ...for now.
             TsKeywordTypeKind::TsVoidKeyword => {
-                Ok(checker.from_type_kind(TypeKind::Keyword(Keyword::Undefined)))
+                Ok(checker.from_type_kind(TypeKind::Literal(Lit::Undefined)))
             }
             TsKeywordTypeKind::TsUndefinedKeyword => {
-                Ok(checker.from_type_kind(TypeKind::Keyword(Keyword::Undefined)))
+                Ok(checker.from_type_kind(TypeKind::Literal(Lit::Undefined)))
             }
             TsKeywordTypeKind::TsNullKeyword => {
-                Ok(checker.from_type_kind(TypeKind::Keyword(Keyword::Null)))
+                Ok(checker.from_type_kind(TypeKind::Literal(Lit::Null)))
             }
             TsKeywordTypeKind::TsNeverKeyword => {
                 Ok(checker.from_type_kind(TypeKind::Keyword(Keyword::Never)))

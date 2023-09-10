@@ -28,9 +28,7 @@ pub struct TypeRef {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Keyword {
     Never,
-    Null,
     Object,
-    Undefined,
     Unknown,
 }
 
@@ -38,9 +36,7 @@ impl fmt::Display for Keyword {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let result = match self {
             Self::Never => "never",
-            Self::Null => "null",
             Self::Object => "object",
-            Self::Undefined => "undefined",
             Self::Unknown => "unknown",
         };
         write!(f, "{result}")
@@ -241,7 +237,7 @@ impl TProp {
 
         match self.optional {
             true => {
-                let undefined = checker.new_keyword(Keyword::Undefined);
+                let undefined = checker.new_lit_type(&Lit::Undefined);
                 checker.new_union_type(&[t, undefined])
             }
             false => t,

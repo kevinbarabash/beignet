@@ -1,9 +1,9 @@
-declare type Custom<A> = {
-    -readonly [P in keyof A]+?: A[P];
+declare type Custom<T> = {
+    [P in keyof T]: T[P];
 };
 declare type Obj = {
-    readonly a: number;
-    readonly b?: string;
+    a: number;
+    b?: string;
     c: boolean;
     d?: number;
 };
@@ -14,5 +14,15 @@ declare type ReadonlyObj = {
     readonly d?: number;
 };
 declare type PartialObj = Partial<ReadonlyObj>;
-export declare const custom_obj: Custom<ReadonlyObj>;
-export declare const partial_obj: PartialObj;
+export declare const custom_obj: {
+    a?: number;
+    b?: string;
+    c?: boolean;
+    d?: number;
+};
+export declare const partial_obj: {
+    a?: number;
+    b?: string;
+    c?: boolean;
+    d?: number;
+};

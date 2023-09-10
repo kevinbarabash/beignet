@@ -1,7 +1,7 @@
-let a: number = 5;
-let b: string = "hello";
-let c: boolean = true;
-let d: null = null;
-let e: undefined = undefined;
+let a: number = 5
+let b: string = "hello"
+let c: boolean = true
+let d: null = null
+let e: undefined = undefined
 // TODO: handle symbols
-// lef f: symbol = Symbol("foo");
+// lef f: symbol = Symbol("foo")
