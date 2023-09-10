@@ -1185,6 +1185,7 @@ impl Checker {
                     ..
                 }) => {
                     let (pat_bindings, pat_type) = checker.infer_pattern(pattern, ctx)?;
+                    let undefined = checker.new_lit_type(&Literal::Undefined);
     
                     match (is_declare, init, type_ann) {
                         (false, Some(init), type_ann) => {
@@ -1239,7 +1240,7 @@ impl Checker {
     
                             pattern.inferred_type = Some(idx);
     
-                            idx // TODO: Should this be unit?
+                            undefined
                         }
                         (false, None, _) => {
                             return Err(TypeError {
@@ -1257,7 +1258,7 @@ impl Checker {
                                 ctx.values.insert(name.clone(), binding);
                             }
     
-                            idx
+                            undefined
                         }
                         (true, Some(_), _) => {
                             return Err(TypeError {

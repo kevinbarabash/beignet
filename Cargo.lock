@@ -374,15 +374,13 @@ dependencies = [
 name = "escalier_cli"
 version = "0.1.0"
 dependencies = [
- "escalier_old_ast",
- "escalier_old_codegen",
- "escalier_old_infer",
- "escalier_old_interop",
- "escalier_old_parser",
+ "escalier_ast",
+ "escalier_codegen",
+ "escalier_hm",
+ "escalier_interop",
+ "escalier_parser",
  "insta",
  "pretty_assertions",
- "tree-sitter",
- "tree_sitter_escalier",
 ]
 
 [[package]]
