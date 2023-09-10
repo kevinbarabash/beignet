@@ -95,7 +95,7 @@ let result = match (count) {
 
 export const disjointUnionPatternMatching = `
 type Event = 
-  | {type: "mousedown", x: number, y: number} 
+    {type: "mousedown", x: number, y: number}
   | {type: "keydown", key: string}
 
 declare let event: Event
@@ -128,7 +128,7 @@ obj.c = false
 
 type PartialObj = Partial<Obj>
 let p_obj: PartialObj = {b: "hello"}
-let make_p_obj = fn (a, b, c, d): Partial<Obj> {
+let make_p_obj = fn (a, b, c, d) -> Partial<Obj> {
   return {a, b, c, d}
 }
 
