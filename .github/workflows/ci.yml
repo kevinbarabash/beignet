@@ -52,43 +52,6 @@ jobs:
         working-directory: ./crates/tree_sitter_escalier
         run: yarn test
 
-  build-wasm:
-    name: Build WASM bundle
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Install wasi-sdk
-        run: |
-          export WASI_VERSION=16
-          export WASI_VERSION_FULL=${WASI_VERSION}.0
-          wget https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${WASI_VERSION}/wasi-sdk-${WASI_VERSION_FULL}-linux.tar.gz
-          tar xvf wasi-sdk-${WASI_VERSION_FULL}-linux.tar.gz
-          export WASI_SDK_PATH=`pwd`/wasi-sdk-${WASI_VERSION_FULL}
-          echo "$WASI_SDK_PATH/bin" >> $GITHUB_PATH
-
-      - name: Install wasm32-wasi target for rust
-        run: rustup target add wasm32-wasi
-
-      - name: Install node_modules
-        run: yarn install --frozen-lockfile
-
-      - name: Cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            node_modules/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-build-wasm
-
-      - name: Build .wasm Bundle
-        run: yarn build-wasm
-
   test:
     name: Test
     runs-on: ubuntu-latest
