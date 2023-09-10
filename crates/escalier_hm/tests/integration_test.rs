@@ -1977,6 +1977,29 @@ fn test_pattern_matching_object() -> Result<(), TypeError> {
 }
 
 #[test]
+fn test_pattern_matching_object_event() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    // TODO: allow trailing `,` when doing pattern matching
+    // TODO: add support for omitting fields in object patterns
+    let src = r#"
+    type Event = {type: "mousedown", x: number, y: number} | {type: "keydown", key: string}
+    declare let event: Event
+    let result = match (event) {
+        {type: "mousedown", x, y} => `mousedown: (${x}, ${y})`,
+        {type: "keydown", key} if (key != "Escape") => key
+    }
+    "#;
+    let mut program = parse(src).unwrap();
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("result").unwrap();
+    assert_eq!(checker.print_type(&binding.index), r#"string | string"#);
+
+    assert_no_errors(&checker)
+}
+
+#[test]
 fn member_access_on_union() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 

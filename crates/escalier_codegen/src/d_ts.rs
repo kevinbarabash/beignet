@@ -373,8 +373,8 @@ pub fn build_type(
             let kind = match primitive {
                 types::Primitive::Number => TsKeywordTypeKind::TsNumberKeyword,
                 types::Primitive::Boolean => TsKeywordTypeKind::TsBooleanKeyword,
-                types::Primitive::String => TsKeywordTypeKind::TsNumberKeyword,
-                types::Primitive::Symbol => TsKeywordTypeKind::TsNumberKeyword,
+                types::Primitive::String => TsKeywordTypeKind::TsStringKeyword,
+                types::Primitive::Symbol => TsKeywordTypeKind::TsSymbolKeyword,
             };
 
             TsType::TsKeywordType(TsKeywordType {
