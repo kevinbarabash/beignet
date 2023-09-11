@@ -2,10 +2,15 @@ use crate::block::Block;
 use crate::class::*;
 use crate::expr::*;
 use crate::pattern::*;
+use crate::program::Program;
 use crate::stmt::*;
 use crate::type_ann::TypeAnn;
 
 pub trait Visitor: Sized {
+    fn visit_program(&mut self, program: &Program) {
+        walk_program(self, program)
+    }
+
     fn visit_expr(&mut self, expr: &Expr) {
         walk_expr(self, expr)
     }
@@ -20,6 +25,12 @@ pub trait Visitor: Sized {
 
     fn visit_type_ann(&mut self, type_ann: &TypeAnn) {
         walk_type_ann(self, type_ann)
+    }
+}
+
+pub fn walk_program<V: Visitor>(visitor: &mut V, program: &Program) {
+    for stmt in &program.stmts {
+        visitor.visit_stmt(stmt);
     }
 }
 

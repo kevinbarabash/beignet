@@ -1,12 +1,14 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
+use swc_common::source_map::SourceFile;
 
 use lsp_server::Connection;
 use lsp_types::*;
 
 mod semantic_tokens;
 mod server;
+mod util;
 
 use server::LanguageServer;
 
@@ -58,7 +60,7 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
     let _params: InitializeParams = serde_json::from_value(initialization_params).unwrap();
 
     let lib = fs::read_to_string(LIB_ES5_D_TS).unwrap();
-    let file_cache: HashMap<Url, String> = HashMap::new();
+    let file_cache: HashMap<Url, SourceFile> = HashMap::new();
     let mut server = LanguageServer { lib, file_cache };
 
     server.main_loop(&connection)?;
