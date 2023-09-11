@@ -33,25 +33,6 @@ jobs:
       - name: Clippy
         run: cargo clippy --all-features --no-deps
 
-  tree-sitter-test:
-    name: Test tree-sitter Parser
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Install node_modules
-        working-directory: ./crates/tree_sitter_escalier
-        run: yarn install --frozen-lockfile
-
-      - name: Generate grammar
-        working-directory: ./crates/tree_sitter_escalier
-        run: yarn generate
-
-      - name: Run tests
-        working-directory: ./crates/tree_sitter_escalier
-        run: yarn test
-
   test:
     name: Test
     runs-on: ubuntu-latest
@@ -124,3 +105,28 @@ jobs:
         uses: codecov/codecov-action@v3
         with:
           directory: target/coverage
+
+  playground:
+    name: Build Playground
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            node_modules/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-build-wasm
+
+      - name: Install Dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build Demo
+        run: yarn build
