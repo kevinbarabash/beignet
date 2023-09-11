@@ -8,11 +8,5 @@ members = [
     "crates/escalier_hm",
     "crates/escalier_interop",
     "crates/escalier_lsp",
-    "crates/escalier_old_infer",
-    "crates/escalier_old_ast",
-    "crates/escalier_old_codegen",
-    "crates/escalier_old_parser",
-    "crates/escalier_old_interop",
     "crates/escalier_parser",
-    "crates/tree_sitter_escalier",
 ]

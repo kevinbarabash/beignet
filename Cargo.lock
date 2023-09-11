@@ -48,22 +48,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ariadne"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72fe02fc62033df9ba41cba57ee19acf5e742511a140c7dbc3a873e19a19a1bd"
-dependencies = [
- "unicode-width",
- "yansi",
-]
-
-[[package]]
-name = "array_tool"
-version = "1.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f8cb5d814eb646a863c4f24978cff2880c4be96ad8cde2c0f0678732902e271"
-
-[[package]]
 name = "arrayvec"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -344,7 +328,7 @@ checksum = "a357d28ed41a50f9c765dbfe56cbc04a64e53e5fc58ba79fbc34c10ef3df831f"
 name = "escalier"
 version = "0.1.0"
 dependencies = [
- "ariadne 0.1.5",
+ "ariadne",
  "escalier_ast",
  "escalier_codegen",
  "escalier_hm",
@@ -455,85 +439,6 @@ dependencies = [
  "serde",
  "serde_json",
  "swc_common",
-]
-
-[[package]]
-name = "escalier_old_ast"
-version = "0.1.0"
-dependencies = [
- "derive-visitor",
- "itertools 0.11.0",
- "swc_atoms",
- "swc_common",
- "swc_ecma_ast",
- "tree-sitter",
-]
-
-[[package]]
-name = "escalier_old_codegen"
-version = "0.1.0"
-dependencies = [
- "escalier_old_ast",
- "escalier_old_infer",
- "escalier_old_parser",
- "insta",
- "itertools 0.11.0",
- "pretty_assertions",
- "sourcemap",
- "swc_atoms",
- "swc_common",
- "swc_ecma_ast",
- "swc_ecma_codegen",
- "swc_ecma_transforms_react",
- "swc_ecma_visit",
- "testing_macros",
-]
-
-[[package]]
-name = "escalier_old_infer"
-version = "0.1.0"
-dependencies = [
- "ariadne 0.3.0",
- "array_tool",
- "defaultmap",
- "derive-visitor",
- "escalier_old_ast",
- "escalier_old_parser",
- "im",
- "insta",
- "itertools 0.11.0",
- "regex-syntax",
-]
-
-[[package]]
-name = "escalier_old_interop"
-version = "0.1.0"
-dependencies = [
- "defaultmap",
- "derive-visitor",
- "escalier_old_ast",
- "escalier_old_infer",
- "escalier_old_parser",
- "insta",
- "memoize",
- "swc_atoms",
- "swc_common",
- "swc_ecma_ast",
- "swc_ecma_parser",
- "swc_ecma_visit",
-]
-
-[[package]]
-name = "escalier_old_parser"
-version = "0.1.0"
-dependencies = [
- "escalier_old_ast",
- "insta",
- "itertools 0.11.0",
- "pretty_assertions",
- "tree-sitter",
- "tree_sitter_escalier",
- "unescape",
 ]
 
 [[package]]
@@ -1718,24 +1623,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "24eb03ba0eab1fd845050058ce5e616558e8f8d8fca633e6b163fe25c797213a"
 dependencies = [
  "once_cell",
-]
-
-[[package]]
-name = "tree-sitter"
-version = "0.20.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4423c784fe11398ca91e505cdc71356b07b1a924fc8735cfab5333afe3e18bc"
-dependencies = [
- "cc",
- "regex",
-]
-
-[[package]]
-name = "tree_sitter_escalier"
-version = "0.1.0"
-dependencies = [
- "cc",
- "tree-sitter",
 ]
 
 [[package]]
