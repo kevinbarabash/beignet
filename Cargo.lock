@@ -444,16 +444,17 @@ name = "escalier_lsp"
 version = "0.1.0"
 dependencies = [
  "crossbeam",
- "derive-visitor",
- "escalier_old_ast",
- "escalier_old_infer",
- "escalier_old_interop",
- "escalier_old_parser",
+ "escalier_ast",
+ "escalier_hm",
+ "escalier_interop",
+ "escalier_parser",
+ "generational-arena",
  "insta",
  "lsp-server",
  "lsp-types",
  "serde",
  "serde_json",
+ "swc_common",
 ]
 
 [[package]]

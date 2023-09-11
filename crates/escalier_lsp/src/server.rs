@@ -1,7 +1,8 @@
-use derive_visitor::{DriveMut, VisitorMut};
+use generational_arena::Index;
 use std::collections::HashMap;
 use std::error::Error;
 use std::time::{SystemTime, UNIX_EPOCH};
+use swc_common::source_map::{BytePos, FileName, SourceFile};
 
 use lsp_server::{
     Connection, ErrorCode, ExtractError, Message, Notification, Request, RequestId, Response,
@@ -11,18 +12,19 @@ use lsp_types::notification::{DidChangeTextDocument, DidOpenTextDocument};
 use lsp_types::request::{HoverRequest, SemanticTokensFullRequest};
 use lsp_types::*;
 
-use escalier_old_ast::types::Type;
-use escalier_old_ast::values::{
-    Expr, Pattern, Position, Program, SourceLocation, Statement, TypeAnn,
+use escalier_ast::{
+    walk_expr, walk_pattern, walk_stmt, walk_type_ann, Expr, Pattern, Program, Stmt, TypeAnn,
+    Visitor,
 };
-use escalier_old_interop::parse::parse_dts;
-use escalier_old_parser::parse;
+use escalier_interop::parse::parse_dts;
+use escalier_parser::parse;
 
 use crate::semantic_tokens::get_semantic_tokens;
+use crate::util;
 
 pub struct LanguageServer {
     pub lib: String,
-    pub file_cache: HashMap<Url, String>,
+    pub file_cache: HashMap<Url, SourceFile>,
 }
 
 impl LanguageServer {
@@ -65,10 +67,10 @@ impl LanguageServer {
                 // NOTE: This is slow so we'll want to do this once once
                 // on startup and re-use the results.
                 eprintln!("parsing .d.ts");
-                let mut checker = match parse_dts(&self.lib) {
-                    Ok(checker) => {
+                let (mut checker, mut ctx) = match parse_dts(&self.lib) {
+                    Ok(value) => {
                         eprintln!("success");
-                        checker
+                        value
                     }
                     Err(_) => {
                         eprintln!("error");
@@ -80,18 +82,20 @@ impl LanguageServer {
                     .duration_since(UNIX_EPOCH)
                     .expect("Time went backwards");
 
-                let input = self
+                let file = self
                     .file_cache
                     .get(&params.text_document_position_params.text_document.uri)
                     .unwrap();
 
                 // Update ParseError to implement Error + Sync + Send
                 eprintln!("parsing input");
-                let mut prog = parse(input).unwrap();
+                let mut program = parse(&file.src).unwrap();
 
                 // Update TypeError to implement Error + Sync + Send
                 eprintln!("inferring types");
-                escalier_old_infer::infer_prog(&mut prog, &mut checker).unwrap();
+                checker.infer_program(&mut program, &mut ctx).unwrap();
+
+                eprintln!("program = {program:#?}");
 
                 let end = SystemTime::now()
                     .duration_since(UNIX_EPOCH)
@@ -100,13 +104,10 @@ impl LanguageServer {
                 eprintln!("request took {}ms", elapsed.as_millis());
 
                 // TODO: create a From impl to convert from one Position to another.
-                let cursor_loc = Position {
-                    line: params.text_document_position_params.position.line,
-                    column: params.text_document_position_params.position.character,
-                };
+                let cursor_loc = params.text_document_position_params.position;
 
-                let message = match get_type_at_location(&mut prog, &cursor_loc) {
-                    Some(t) => t.to_string(),
+                let message = match get_type_at_location(file, &program, &cursor_loc) {
+                    Some(t) => checker.print_type(&t),
                     None => String::from("no type info"),
                 };
 
@@ -150,7 +151,9 @@ impl LanguageServer {
                     language_id: _,
                 } = params.text_document;
 
-                self.file_cache.insert(uri, text);
+                let file = SourceFile::new(FileName::Anon, false, FileName::Anon, text, BytePos(1));
+
+                self.file_cache.insert(uri, file);
             }
             "textDocument/didChange" => {
                 let params = cast_note::<DidChangeTextDocument>(note)?;
@@ -160,7 +163,15 @@ impl LanguageServer {
                     match change.range {
                         Some(_) => todo!(),
                         None => {
-                            self.file_cache.insert(uri.to_owned(), change.text);
+                            let file = SourceFile::new(
+                                FileName::Anon,
+                                false,
+                                FileName::Anon,
+                                change.text.to_owned(),
+                                BytePos(1),
+                            );
+
+                            self.file_cache.insert(uri.to_owned(), file);
                         }
                     }
                 }
@@ -176,8 +187,8 @@ impl LanguageServer {
     fn handle_semantic_tokens(&self, id: RequestId, params: SemanticTokensParams) -> Response {
         // TODO: if it isn't in the cache yet, we should load it from disk
         // TODO: if we can't load it from disk then we should report an error
-        let input = match self.file_cache.get(&params.text_document.uri) {
-            Some(input) => input,
+        let file = match self.file_cache.get(&params.text_document.uri) {
+            Some(file) => file,
             None => {
                 return Response {
                     id,
@@ -191,7 +202,7 @@ impl LanguageServer {
             }
         };
 
-        let mut prog = match parse(input) {
+        let mut prog = match parse(&file.src) {
             Ok(prog) => prog,
             Err(_) => {
                 return Response {
@@ -207,7 +218,7 @@ impl LanguageServer {
         };
 
         let result = Some(SemanticTokensPartialResult {
-            data: get_semantic_tokens(&mut prog),
+            data: get_semantic_tokens(file, &mut prog),
         });
 
         let value = match serde_json::to_value(result) {
@@ -233,70 +244,72 @@ impl LanguageServer {
     }
 }
 
-#[derive(VisitorMut)]
-#[visitor(
-    Expr(enter),
-    Pattern(enter),
-    Program(enter),
-    Statement(enter),
-    TypeAnn(enter)
-)]
-struct GetTypeVisitor {
+struct GetTypeVisitor<'a> {
     cursor_pos: Position,
-    t: Option<Type>,
+    file: &'a SourceFile,
+    t: Option<Index>,
 }
 
-fn is_pos_in_source_loc(pos: &Position, src_loc: &SourceLocation) -> bool {
-    let is_after_start = pos.line > src_loc.start.line
-        || (pos.line == src_loc.start.line && pos.column >= src_loc.start.column);
-    let is_before_end = pos.line < src_loc.end.line
-        || (pos.line == src_loc.end.line && pos.column < src_loc.end.column);
-
-    is_after_start && is_before_end
-}
-
-// TODO: use is_pos_in_source_loc to terminate certain branches of the visitor
-impl GetTypeVisitor {
-    fn enter_expr(&mut self, expr: &Expr) {
-        if is_pos_in_source_loc(&self.cursor_pos, &expr.loc) {
+impl<'a> Visitor for GetTypeVisitor<'a> {
+    fn visit_expr(&mut self, expr: &Expr) {
+        let BytePos(offset) = util::get_byte_pos(self.file, &self.cursor_pos).unwrap();
+        let span = expr.span;
+        if offset >= span.start as u32 && offset < span.end as u32 {
             if let Some(t) = &expr.inferred_type {
                 self.t = Some(t.to_owned())
             }
         }
+
+        walk_expr(self, expr);
     }
 
-    fn enter_pattern(&mut self, pattern: &Pattern) {
-        if is_pos_in_source_loc(&self.cursor_pos, &pattern.loc) {
+    fn visit_pattern(&mut self, pattern: &Pattern) {
+        eprintln!("pattern = {pattern:#?}");
+        eprintln!("cursor_pos = {:#?}", self.cursor_pos);
+        let BytePos(offset) = util::get_byte_pos(self.file, &self.cursor_pos).unwrap();
+        eprintln!("offset = {:#?}", offset);
+        let span = pattern.span;
+        if offset >= span.start as u32 && offset < span.end as u32 {
             if let Some(t) = &pattern.inferred_type {
                 self.t = Some(t.to_owned())
             }
         }
+
+        walk_pattern(self, pattern);
     }
 
-    fn enter_program(&mut self, _program: &Program) {
-        eprintln!("enter_program");
-        // Do nothing b/c Program doesn't have an .inferred_type field
+    fn visit_stmt(&mut self, stmt: &Stmt) {
+        // TODO - implemnet this method
+        walk_stmt(self, stmt);
     }
 
-    fn enter_statement(&mut self, _stmt: &Statement) {
-        eprintln!("enter_statement");
-        // Do nothing b/c Statement doesn't have an .inferred_type field (yet)
-    }
-    fn enter_type_ann(&mut self, type_ann: &TypeAnn) {
-        if is_pos_in_source_loc(&self.cursor_pos, &type_ann.loc) {
+    fn visit_type_ann(&mut self, type_ann: &TypeAnn) {
+        let BytePos(offset) = util::get_byte_pos(self.file, &self.cursor_pos).unwrap();
+        let span = type_ann.span;
+        if offset >= span.start as u32 && offset < span.end as u32 {
             if let Some(t) = &type_ann.inferred_type {
                 self.t = Some(t.to_owned())
             }
         }
+
+        walk_type_ann(self, type_ann);
     }
 }
 
-fn get_type_at_location(program: &mut Program, cursor_pos: &Position) -> Option<Type> {
+fn get_type_at_location(
+    file: &SourceFile,
+    program: &Program,
+    cursor_pos: &Position,
+) -> Option<Index> {
     let mut visitor = GetTypeVisitor {
-        cursor_pos: cursor_pos.to_owned(),
+        file,
+        cursor_pos: *cursor_pos,
         t: None,
     };
-    program.drive_mut(&mut visitor);
+
+    // TODO: use visit_program() method
+    visitor.visit_program(program);
+
     visitor.t
 }
 
@@ -340,7 +353,7 @@ mod tests {
                 uri: uri.to_owned(),
                 language_id: String::from("escalier"),
                 version: 123,
-                text: String::from("let a = 5;"),
+                text: String::from("let a = 5"),
             },
         };
 
@@ -352,14 +365,22 @@ mod tests {
         server.handle_notification(note).unwrap();
 
         assert!(server.file_cache.contains_key(&uri));
-        assert_eq!(server.file_cache.get(&uri).unwrap(), "let a = 5;");
+        let file = server.file_cache.get(&uri).unwrap();
+        assert_eq!(file.src.to_string(), "let a = 5");
     }
 
     #[test]
     fn test_handle_notification_did_change() {
         let uri = Url::from_str("file://path/to/file.esc").unwrap();
         let mut file_cache = HashMap::new();
-        file_cache.insert(uri.to_owned(), String::from("let a = 5;"));
+        let file = SourceFile::new(
+            FileName::Anon,
+            false,
+            FileName::Anon,
+            String::from("let a = 5"),
+            BytePos(1),
+        );
+        file_cache.insert(uri.to_owned(), file);
 
         let mut server = LanguageServer {
             file_cache,
@@ -386,14 +407,22 @@ mod tests {
         server.handle_notification(note).unwrap();
 
         assert!(server.file_cache.contains_key(&uri));
-        assert_eq!(server.file_cache.get(&uri).unwrap(), "let a = 10;");
+        let file = server.file_cache.get(&uri).unwrap();
+        assert_eq!(file.src.to_string(), "let a = 10;");
     }
 
     #[test]
     fn test_handle_hover_request() {
         let uri = Url::from_str("file://path/to/file.esc").unwrap();
         let mut file_cache = HashMap::new();
-        file_cache.insert(uri.to_owned(), String::from("let a = 5;"));
+        let file = SourceFile::new(
+            FileName::Anon,
+            false,
+            FileName::Anon,
+            String::from("let a = 5"),
+            BytePos(1),
+        );
+        file_cache.insert(uri.to_owned(), file);
 
         let server = LanguageServer {
             file_cache,
@@ -404,7 +433,7 @@ mod tests {
             text_document_position_params: TextDocumentPositionParams {
                 text_document: TextDocumentIdentifier { uri },
                 position: Position {
-                    line: 0,
+                    line: 1, // deal with 1-indexing vs 0-indexing
                     character: 4,
                 },
             },
