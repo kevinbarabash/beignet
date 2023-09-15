@@ -969,7 +969,7 @@ impl Checker {
         Ok((ret_type, maybe_throws_type))
     }
 
-    fn bind(&mut self, ctx: &Context, a: Index, b: Index) -> Result<(), TypeError> {
+    pub fn bind(&mut self, ctx: &Context, a: Index, b: Index) -> Result<(), TypeError> {
         // eprint!("bind(");
         // eprint!("{:#?}", arena[a].as_string(arena));
         // if let Some(provenance) = &arena[a].provenance {
@@ -983,8 +983,30 @@ impl Checker {
 
         if a != b {
             if self.occurs_in_type(a, b) {
+                // TODO: check if 'b' is a union type and if it is, filter out
+                // the types that contain 'a' and then check if the remaining.
+                if let TypeKind::Union(Union { types }) = &self.arena[b].kind {
+                    let types: Vec<Index> =
+                        types.iter().filter(|t| a != **t).cloned().collect_vec();
+
+                    match types.as_slice() {
+                        [] => return Ok(()),
+                        [t] => {
+                            return self.bind(ctx, a, *t);
+                        }
+                        types => {
+                            let t = self.new_union_type(types);
+                            return self.bind(ctx, a, t);
+                        }
+                    }
+                }
+
                 return Err(TypeError {
-                    message: "recursive unification".to_string(),
+                    message: format!(
+                        "recursive unification - {} occurs in {}",
+                        self.print_type(&a),
+                        self.print_type(&b)
+                    ),
                 });
             }
 

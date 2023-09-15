@@ -21,7 +21,7 @@ fn infer(input: &str) -> String {
     let mut checker = Checker::default();
     let mut ctx = Context::default();
     let result = match &stmt.kind {
-        StmtKind::Expr(_) => checker.infer_statement(&mut stmt, &mut ctx, true),
+        StmtKind::Expr(_) => checker.infer_statement(&mut stmt, &mut ctx),
         _ => Err(TypeError {
             message: "unspecified error".to_string(),
         }),
@@ -388,10 +388,10 @@ fn infer_let_rec_until() -> Result<(), TypeError> {
     let result = checker.print_type(&ctx.values.get("until").unwrap().index);
     // Where is `C` coming from.  Why is `f` not returning `A`?
     // <A, C, B>(p: (arg0: A) -> boolean, f: (arg0: A) -> B, x: A) -> A | C
-    insta::assert_snapshot!(result, @"<A>(p: (arg0: A) -> boolean, f: (arg0: A) -> A, x: A) -> A");
+    insta::assert_snapshot!(result, @"<A>(p: (arg0: A) -> boolean, f: (arg0: A) -> A, x: A) -> A | A");
 
     let result = codegen_d_ts(&program, &ctx, &checker)?;
-    insta::assert_snapshot!(result, @"export declare const until: <A>(p: (arg0: A) => boolean, f: (arg0: A) => A, x: A) => A;
+    insta::assert_snapshot!(result, @"export declare const until: <A>(p: (arg0: A) => boolean, f: (arg0: A) => A, x: A) => A | A;
 ");
 
     Ok(())
