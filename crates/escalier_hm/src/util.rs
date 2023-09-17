@@ -133,6 +133,12 @@ impl Checker {
     /// Returns:
     ///     An uninstantiated TypeVariable or a TypeOperator
     pub fn prune(&mut self, t: Index) -> Index {
+        match self.arena.get(t) {
+            Some(_) => (),
+            None => {
+                eprintln!("t = {:#?}", t)
+            }
+        }
         let v2 = match self.arena.get(t).unwrap().kind {
             // TODO: handle .unwrap() panicing
             TypeKind::TypeVar(TypeVar {

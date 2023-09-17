@@ -10,7 +10,10 @@ pub trait Folder: KeyValueStore<Index, Type> + Sized {
 }
 
 pub fn walk_index<F: Folder>(folder: &mut F, index: &Index) -> Index {
+    eprintln!("walk_index");
     let t = folder.get_type(index);
+
+    eprintln!("t.kind = {:#?}", t.kind);
 
     let kind = match &t.kind {
         TypeKind::TypeVar(TypeVar {
@@ -21,9 +24,9 @@ pub fn walk_index<F: Folder>(folder: &mut F, index: &Index) -> Index {
             let new_instance = instance.map(|instance| folder.fold_index(&instance));
             let new_constraint = constraint.map(|constraint| folder.fold_index(&constraint));
 
-            if new_instance == *instance && new_constraint == *constraint {
-                return *index;
-            }
+            // if new_instance == *instance && new_constraint == *constraint {
+            //     return *index;
+            // }
 
             // This doesn't seem right. We're creating a new type here, but
             // the `id` is the same.
@@ -36,9 +39,9 @@ pub fn walk_index<F: Folder>(folder: &mut F, index: &Index) -> Index {
         TypeKind::TypeRef(TypeRef { name, types }) => {
             let new_types = walk_indexes(folder, types);
 
-            if new_types == *types {
-                return *index;
-            }
+            // if new_types == *types {
+            //     return *index;
+            // }
 
             TypeKind::TypeRef(TypeRef {
                 name: name.to_owned(),
@@ -66,18 +69,18 @@ pub fn walk_index<F: Folder>(folder: &mut F, index: &Index) -> Index {
         TypeKind::Tuple(Tuple { types }) => {
             let new_types = walk_indexes(folder, types);
 
-            if new_types == *types {
-                return *index;
-            }
+            // if new_types == *types {
+            //     return *index;
+            // }
 
             TypeKind::Tuple(Tuple { types: new_types })
         }
         TypeKind::Array(Array { t }) => {
             let new_t = folder.fold_index(t);
 
-            if new_t == *t {
-                return *index;
-            }
+            // if new_t == *t {
+            //     return *index;
+            // }
 
             TypeKind::Array(Array { t: new_t })
         }
@@ -95,13 +98,13 @@ pub fn walk_index<F: Folder>(folder: &mut F, index: &Index) -> Index {
             let new_type_params = walk_type_params(folder, type_params);
             let new_throws = throws.map(|throws| folder.fold_index(&throws));
 
-            if new_params == *params
-                && new_ret == *ret
-                && new_type_params == *type_params
-                && new_throws == *throws
-            {
-                return *index;
-            }
+            // if new_params == *params
+            //     && new_ret == *ret
+            //     && new_type_params == *type_params
+            //     && new_throws == *throws
+            // {
+            //     return *index;
+            // }
 
             TypeKind::Function(Function {
                 params: new_params,

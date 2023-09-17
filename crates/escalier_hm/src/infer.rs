@@ -288,7 +288,7 @@ impl Checker {
                         // TODO: Make the return type `Promise<body_t, throws>` if the function
                         // is async.  Async functions cannot throw.  They can only return a
                         // rejected promise.
-                        let result = if *is_async && !is_promise(&checker.arena[body_t]) {
+                        if *is_async && !is_promise(&checker.arena[body_t]) {
                             let never = checker.new_keyword(Keyword::Never);
                             let throws_t = throws.unwrap_or(never);
                             body_t = checker.new_type_ref("Promise", &[body_t, throws_t]);
@@ -325,16 +325,7 @@ impl Checker {
                                     throws,
                                 ),
                             }
-                        };
-
-                        // TODO: we need to know whether to unify the inferred function
-                        // type with the placeholder type or not.
-                        eprintln!("result = {}", checker.print_type(&result));
-
-                        // eprintln!("unifying {:#?} with {:#?}", until.index, result);
-                        // checker.unify(ctx, until.index, result)?;
-
-                        result
+                        }
                     }
                     ExprKind::IfElse(IfElse {
                         cond,
@@ -1244,7 +1235,7 @@ impl Checker {
         &mut self,
         decl: &mut VarDecl,
         ctx: &mut Context,
-    ) -> Result<HashMap<String, Binding>, TypeError> {
+    ) -> Result<BTreeMap<String, Binding>, TypeError> {
         let VarDecl {
             is_declare,
             pattern,
@@ -1290,8 +1281,6 @@ impl Checker {
                         // because all initializers it introduces are type
                         // variables.  It also prevents patterns from including
                         // variables that don't exist in the initializer.
-                        eprintln!("pat_type = {:#?}", pat_type);
-                        eprintln!("pat_bindings = {:#?}", pat_bindings);
                         self.unify(ctx, init_idx, pat_type)?;
 
                         init_idx
@@ -1299,6 +1288,7 @@ impl Checker {
                 };
 
                 for (name, binding) in &pat_bindings {
+                    eprintln!("{name} = {:#?}", binding);
                     ctx.values.insert(name.clone(), binding.clone());
                 }
 
@@ -1366,6 +1356,7 @@ impl Checker {
                 let (bindings, _) = self.infer_pattern(pattern, ctx)?;
 
                 for (name, binding) in bindings {
+                    eprintln!("name = {:#?}", name);
                     prebindings.insert(name.to_owned(), binding.clone());
                     ctx.non_generic.insert(binding.index);
                     if ctx.values.insert(name.to_owned(), binding).is_some() {
@@ -1386,12 +1377,16 @@ impl Checker {
                     let bindings = self.infer_var_decl(decl, ctx)?;
                     for (name, binding) in bindings {
                         let prebinding = prebindings.get_mut(&name).unwrap();
-                        self.unify(ctx, prebinding.index, binding.index)?;
-
                         let binding_index = self.prune(binding.index);
+
+                        self.unify(ctx, prebinding.index, binding_index)?;
+
                         let kind: &TypeKind = unsafe { transmute(&self.arena[binding_index].kind) };
                         if let TypeKind::Function(func) = &kind {
+                            eprintln!("func = {:#?}", func);
+                            eprintln!("func.throws = {:#?}", func.throws);
                             let func = generalize_func(self, func);
+                            eprintln!("func = {:#?}", func);
                             self.bind(ctx, binding.index, func)?;
                         }
                     }
@@ -1619,7 +1614,9 @@ impl<'a, 'b> KeyValueStore<Index, Type> for Generalize<'a, 'b> {
         self.checker.arena[*index].clone()
     }
     fn put_type(&mut self, t: Type) -> Index {
-        self.checker.arena.insert(t)
+        let index = self.checker.arena.insert(t);
+        eprintln!("put_type - index = {:#?}", index);
+        index
     }
 }
 
@@ -1663,6 +1660,7 @@ pub fn generalize_func(checker: &mut Checker, func: &types::Function) -> Index {
         mapping: &mut mapping,
     };
 
+    eprintln!("func.throws (1) = {:#?}", func.throws);
     let params = func
         .params
         .iter()
@@ -1671,7 +1669,9 @@ pub fn generalize_func(checker: &mut Checker, func: &types::Function) -> Index {
             ..param.to_owned()
         })
         .collect::<Vec<_>>();
+    eprintln!("func.throws (2) = {:#?}", func.throws);
     let ret = generalize.fold_index(&func.ret);
+    eprintln!("func.throws (3) = {:#?}", func.throws);
     let throws = func.throws.map(|throws| generalize.fold_index(&throws));
 
     let mut type_params: Vec<types::TypeParam> = vec![];
@@ -1680,7 +1680,6 @@ pub fn generalize_func(checker: &mut Checker, func: &types::Function) -> Index {
         type_params.extend(explicit_type_params.to_owned());
     }
 
-    eprintln!("mapping = {:#?}", mapping);
     for (_, name) in mapping {
         type_params.push(types::TypeParam {
             name: name.clone(),

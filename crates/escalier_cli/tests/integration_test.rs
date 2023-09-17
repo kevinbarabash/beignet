@@ -379,20 +379,36 @@ fn infer_inequalities() {
     );
 }
 
-// TODO: Fix this test case
 #[test]
-#[ignore]
 fn infer_let_rec_until() -> Result<(), TypeError> {
     let src = "let until = fn (p, f, x) => if (p(x)) { x } else { until(p, f, f(x)) }";
     let (program, (ctx, checker)) = infer_prog(src);
     let result = checker.print_type(&ctx.values.get("until").unwrap().index);
-    // Where is `C` coming from.  Why is `f` not returning `A`?
-    // <A, C, B>(p: (arg0: A) -> boolean, f: (arg0: A) -> B, x: A) -> A | C
     insta::assert_snapshot!(result, @"<A>(p: (arg0: A) -> boolean, f: (arg0: A) -> A, x: A) -> A | A");
 
     let result = codegen_d_ts(&program, &ctx, &checker)?;
     insta::assert_snapshot!(result, @"export declare const until: <A>(p: (arg0: A) => boolean, f: (arg0: A) => A, x: A) => A | A;
 ");
+
+    Ok(())
+}
+
+#[test]
+fn infer_even_odd_rec() -> Result<(), TypeError> {
+    let src = "let [even, odd] = [
+        fn (x) => if (x > 1) { odd(x - 1) } else { true },
+        fn (x) => if (x > 0) { even(x - 1) } else { true },    
+    ]";
+    let (_program, (ctx, checker)) = infer_prog(src);
+
+    let result = checker.print_type(&ctx.values.get("even").unwrap().index);
+    insta::assert_snapshot!(result, @"<A>(x: number) -> A | true");
+
+    let result = checker.print_type(&ctx.values.get("odd").unwrap().index);
+    insta::assert_snapshot!(result, @"(x: number) -> true | true | true | true");
+
+    // let result = codegen_d_ts(&program, &ctx, &checker)?;
+    // insta::assert_snapshot!(result, @"export declare const until: <A>(p: (arg0: A) => boolean, f: (arg0: A) => A, x: A) => A | A;
 
     Ok(())
 }

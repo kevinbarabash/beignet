@@ -1,5 +1,5 @@
 use generational_arena::Index;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use escalier_ast::{self as ast, *};
 
@@ -14,7 +14,7 @@ use crate::types::{self, *};
 //     pub t: Index,
 // }
 
-type Assump = HashMap<String, Binding>;
+type Assump = BTreeMap<String, Binding>;
 
 impl Checker {
     // TODO: Use a Folder for this.
