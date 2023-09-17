@@ -1336,6 +1336,8 @@ impl Checker {
 
         for stmt in &mut node.stmts {
             match &mut stmt.kind {
+                // TODO: introduce a separate enum for module-level this, e.g.
+                // VarDecls, TypeDecls, Imports, and Exports
                 StmtKind::Expr(_) => (),
                 StmtKind::For(_) => (),
                 StmtKind::Return(_) => (),
@@ -1371,45 +1373,43 @@ impl Checker {
             }
         }
 
-        // TODO: figure out how to avoid parsing patterns twice
-        // TODO: collect all of the bindings first before inferring their types
-        // this will ensure consistent behavior between the behavior when a
-        // single decl introduces multiple bindings and when multiple decls
-        // each introduce a single binding.
+        // Collect all of the bindings that are introduced by the top-level.
+        let mut bindings: BTreeMap<String, Binding> = BTreeMap::new();
         for stmt in &mut node.stmts.iter_mut() {
             match &mut stmt.kind {
                 StmtKind::VarDecl(decl) => {
-                    let bindings = self.infer_var_decl(decl, ctx)?;
-
-                    // Unify each binding with its prebinding
-                    for (name, binding) in &bindings {
-                        let prebinding = prebindings.get_mut(name).unwrap();
-                        // QUESTION: Which direction should we unify in?
-                        self.unify(ctx, prebinding.index, binding.index)?;
-                    }
-
-                    // Prune any functions before generalizing, this avoids
-                    // issues with mutually recursive functions being generalized
-                    // prematurely.
-                    for binding in bindings.values() {
-                        let pruned_index = self.prune(binding.index);
-                        self.bind(ctx, binding.index, pruned_index)?;
-                    }
-
-                    // Generalize any functions.
-                    for binding in bindings.values() {
-                        let pruned_index = self.prune(binding.index);
-                        if let TypeKind::Function(func) = &self.arena[pruned_index].kind.clone() {
-                            let func = generalize_func(self, func);
-                            self.bind(ctx, binding.index, func)?;
-                        }
-                    }
+                    // TODO: figure out how to avoid parsing patterns twice
+                    bindings.append(&mut self.infer_var_decl(decl, ctx)?);
                 }
                 _ => {
                     // TODO: disallow non-decls at the top-level
                     self.infer_statement(stmt, ctx)?;
                 }
             };
+        }
+
+        // Unify each binding with its prebinding
+        for (name, binding) in &bindings {
+            let prebinding = prebindings.get_mut(name).unwrap();
+            // QUESTION: Which direction should we unify in?
+            self.unify(ctx, prebinding.index, binding.index)?;
+        }
+
+        // Prune any functions before generalizing, this avoids
+        // issues with mutually recursive functions being generalized
+        // prematurely.
+        for binding in bindings.values() {
+            let pruned_index = self.prune(binding.index);
+            self.bind(ctx, binding.index, pruned_index)?;
+        }
+
+        // Generalize any functions.
+        for binding in bindings.values() {
+            let pruned_index = self.prune(binding.index);
+            if let TypeKind::Function(func) = &self.arena[pruned_index].kind.clone() {
+                let func = generalize_func(self, func);
+                self.bind(ctx, binding.index, func)?;
+            }
         }
 
         Ok(())

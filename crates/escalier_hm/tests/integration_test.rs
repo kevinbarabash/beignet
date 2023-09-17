@@ -294,9 +294,7 @@ fn infer_mutual_rec_decl() -> Result<(), TypeError> {
     Ok(())
 }
 
-// TODO: make this test pass
 #[test]
-#[ignore]
 fn infer_mutual_rec_decls() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
@@ -308,10 +306,10 @@ fn infer_mutual_rec_decls() -> Result<(), TypeError> {
     checker.infer_program(&mut program, &mut my_ctx)?;
 
     let result = checker.print_type(&my_ctx.values.get("foo").unwrap().index);
-    insta::assert_snapshot!(result, @"(x: number) -> false | true | false | true");
+    insta::assert_snapshot!(result, @"(x: number) -> true | false | true");
 
     let result = checker.print_type(&my_ctx.values.get("bar").unwrap().index);
-    insta::assert_snapshot!(result, @"(x: number) -> false | true | false");
+    insta::assert_snapshot!(result, @"(x: number) -> true | false | true | false");
 
     Ok(())
 }
