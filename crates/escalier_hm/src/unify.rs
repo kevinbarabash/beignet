@@ -985,7 +985,8 @@ impl Checker {
             if self.occurs_in_type(a, b) {
                 // TODO: check if 'b' is a union type and if it is, filter out
                 // the types that contain 'a' and then check if the remaining.
-                if let TypeKind::Union(Union { types }) = &self.arena[b].kind {
+                if let TypeKind::Union(Union { types }) = &self.arena[b].kind.clone() {
+                    let types = self.flatten_types(types);
                     let types: Vec<Index> =
                         types.iter().filter(|t| a != **t).cloned().collect_vec();
 
@@ -1035,6 +1036,21 @@ impl Checker {
             TypeKind::TypeRef(TypeRef { name, .. }) if name == "Promise" => Ok(a),
             _ => self.expand_type(ctx, a),
         }
+    }
+
+    fn flatten_types(&mut self, types: &[Index]) -> Vec<Index> {
+        let mut out_types: Vec<Index> = vec![];
+        for t in types {
+            let t = self.prune(*t);
+            match &self.arena[t].kind {
+                TypeKind::Union(Union { types }) => {
+                    let mut types = types.clone();
+                    out_types.append(&mut types);
+                }
+                _ => out_types.push(t),
+            };
+        }
+        out_types
     }
 }
 

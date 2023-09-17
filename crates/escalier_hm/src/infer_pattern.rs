@@ -1,5 +1,5 @@
 use generational_arena::Index;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use escalier_ast::{self as ast, *};
 
@@ -8,13 +8,7 @@ use crate::context::{Binding, Context};
 use crate::type_error::TypeError;
 use crate::types::{self, *};
 
-// #[derive(Clone, Debug)]
-// pub struct Binding {
-//     pub mutable: bool,
-//     pub t: Index,
-// }
-
-type Assump = HashMap<String, Binding>;
+pub type Assump = BTreeMap<String, Binding>;
 
 impl Checker {
     // TODO: Use a Folder for this.

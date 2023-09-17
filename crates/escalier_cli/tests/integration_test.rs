@@ -379,15 +379,11 @@ fn infer_inequalities() {
     );
 }
 
-// TODO: Fix this test case
 #[test]
-#[ignore]
 fn infer_let_rec_until() -> Result<(), TypeError> {
     let src = "let until = fn (p, f, x) => if (p(x)) { x } else { until(p, f, f(x)) }";
     let (program, (ctx, checker)) = infer_prog(src);
     let result = checker.print_type(&ctx.values.get("until").unwrap().index);
-    // Where is `C` coming from.  Why is `f` not returning `A`?
-    // <A, C, B>(p: (arg0: A) -> boolean, f: (arg0: A) -> B, x: A) -> A | C
     insta::assert_snapshot!(result, @"<A>(p: (arg0: A) -> boolean, f: (arg0: A) -> A, x: A) -> A | A");
 
     let result = codegen_d_ts(&program, &ctx, &checker)?;

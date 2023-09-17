@@ -275,6 +275,48 @@ fn test_mutual_recursion_using_destructuring() -> Result<(), TypeError> {
 }
 
 #[test]
+fn infer_mutual_rec_decl() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = "let [foo, bar] = [
+        fn (x) => if (x > 0) { bar(x - 1) } else { true },
+        fn (x) => if (x > 0) { foo(x - 1) } else { false },
+    ]";
+    let mut program = parse(src).unwrap();
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    let result = checker.print_type(&my_ctx.values.get("foo").unwrap().index);
+    insta::assert_snapshot!(result, @"(x: number) -> false | true | false | true");
+
+    let result = checker.print_type(&my_ctx.values.get("bar").unwrap().index);
+    insta::assert_snapshot!(result, @"(x: number) -> false | true | false");
+
+    Ok(())
+}
+
+// TODO: make this test pass
+#[test]
+#[ignore]
+fn infer_mutual_rec_decls() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = "
+    let foo = fn (x) => if (x > 0) { bar(x - 1) } else { true }
+    let bar = fn (x) => if (x > 0) { foo(x - 1) } else { false }
+    ";
+    let mut program = parse(src).unwrap();
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    let result = checker.print_type(&my_ctx.values.get("foo").unwrap().index);
+    insta::assert_snapshot!(result, @"(x: number) -> false | true | false | true");
+
+    let result = checker.print_type(&my_ctx.values.get("bar").unwrap().index);
+    insta::assert_snapshot!(result, @"(x: number) -> false | true | false");
+
+    Ok(())
+}
+
+#[test]
 fn test_no_top_level_redeclaration() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 

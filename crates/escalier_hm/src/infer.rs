@@ -1,7 +1,6 @@
 use generational_arena::Index;
 use itertools::Itertools;
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::mem::transmute;
 
 use escalier_ast::{self as syntax, *};
 
@@ -288,7 +287,7 @@ impl Checker {
                         // TODO: Make the return type `Promise<body_t, throws>` if the function
                         // is async.  Async functions cannot throw.  They can only return a
                         // rejected promise.
-                        let result = if *is_async && !is_promise(&checker.arena[body_t]) {
+                        if *is_async && !is_promise(&checker.arena[body_t]) {
                             let never = checker.new_keyword(Keyword::Never);
                             let throws_t = throws.unwrap_or(never);
                             body_t = checker.new_type_ref("Promise", &[body_t, throws_t]);
@@ -325,16 +324,7 @@ impl Checker {
                                     throws,
                                 ),
                             }
-                        };
-
-                        // TODO: we need to know whether to unify the inferred function
-                        // type with the placeholder type or not.
-                        eprintln!("result = {}", checker.print_type(&result));
-
-                        // eprintln!("unifying {:#?} with {:#?}", until.index, result);
-                        // checker.unify(ctx, until.index, result)?;
-
-                        result
+                        }
                     }
                     ExprKind::IfElse(IfElse {
                         cond,
@@ -1244,7 +1234,7 @@ impl Checker {
         &mut self,
         decl: &mut VarDecl,
         ctx: &mut Context,
-    ) -> Result<HashMap<String, Binding>, TypeError> {
+    ) -> Result<Assump, TypeError> {
         let VarDecl {
             is_declare,
             pattern,
@@ -1290,8 +1280,8 @@ impl Checker {
                         // because all initializers it introduces are type
                         // variables.  It also prevents patterns from including
                         // variables that don't exist in the initializer.
-                        eprintln!("pat_type = {:#?}", pat_type);
-                        eprintln!("pat_bindings = {:#?}", pat_bindings);
+                        // eprintln!("pat_type = {:#?}", pat_type);
+                        // eprintln!("pat_bindings = {:#?}", pat_bindings);
                         self.unify(ctx, init_idx, pat_type)?;
 
                         init_idx
@@ -1340,35 +1330,39 @@ impl Checker {
         node: &mut Program,
         ctx: &mut Context,
     ) -> Result<(), TypeError> {
-        for stmt in &node.stmts {
-            if let StmtKind::TypeDecl(TypeDecl { name, .. }) = &stmt.kind {
-                let placeholder_scheme = Scheme {
-                    t: self.new_keyword(Keyword::Unknown),
-                    type_params: None,
-                };
-                let name = name.to_owned();
-                if ctx
-                    .schemes
-                    .insert(name.clone(), placeholder_scheme)
-                    .is_some()
-                {
-                    return Err(TypeError {
-                        message: format!("{name} cannot be redeclared at the top-level"),
-                    });
-                }
-            }
-        }
-
+        // Prebindings are used to handle recursive and mutually recursive
+        // function declarations.
         let mut prebindings: HashMap<String, Binding> = HashMap::new();
 
         for stmt in &mut node.stmts {
-            if let StmtKind::VarDecl(VarDecl { pattern, .. }) = &mut stmt.kind {
-                let (bindings, _) = self.infer_pattern(pattern, ctx)?;
+            match &mut stmt.kind {
+                StmtKind::Expr(_) => (),
+                StmtKind::For(_) => (),
+                StmtKind::Return(_) => (),
+                StmtKind::VarDecl(VarDecl { pattern, .. }) => {
+                    let (bindings, _) = self.infer_pattern(pattern, ctx)?;
 
-                for (name, binding) in bindings {
-                    prebindings.insert(name.to_owned(), binding.clone());
-                    ctx.non_generic.insert(binding.index);
-                    if ctx.values.insert(name.to_owned(), binding).is_some() {
+                    for (name, binding) in bindings {
+                        prebindings.insert(name.to_owned(), binding.clone());
+                        ctx.non_generic.insert(binding.index);
+                        if ctx.values.insert(name.to_owned(), binding).is_some() {
+                            return Err(TypeError {
+                                message: format!("{name} cannot be redeclared at the top-level"),
+                            });
+                        }
+                    }
+                }
+                StmtKind::TypeDecl(TypeDecl { name, .. }) => {
+                    let placeholder_scheme = Scheme {
+                        t: self.new_keyword(Keyword::Unknown),
+                        type_params: None,
+                    };
+                    let name = name.to_owned();
+                    if ctx
+                        .schemes
+                        .insert(name.clone(), placeholder_scheme)
+                        .is_some()
+                    {
                         return Err(TypeError {
                             message: format!("{name} cannot be redeclared at the top-level"),
                         });
@@ -1377,26 +1371,42 @@ impl Checker {
             }
         }
 
-        // TODO: capture all type decls and do a second pass to valid them
-
         // TODO: figure out how to avoid parsing patterns twice
+        // TODO: collect all of the bindings first before inferring their types
+        // this will ensure consistent behavior between the behavior when a
+        // single decl introduces multiple bindings and when multiple decls
+        // each introduce a single binding.
         for stmt in &mut node.stmts.iter_mut() {
             match &mut stmt.kind {
                 StmtKind::VarDecl(decl) => {
                     let bindings = self.infer_var_decl(decl, ctx)?;
-                    for (name, binding) in bindings {
-                        let prebinding = prebindings.get_mut(&name).unwrap();
-                        self.unify(ctx, prebinding.index, binding.index)?;
 
-                        let binding_index = self.prune(binding.index);
-                        let kind: &TypeKind = unsafe { transmute(&self.arena[binding_index].kind) };
-                        if let TypeKind::Function(func) = &kind {
+                    // Unify each binding with its prebinding
+                    for (name, binding) in &bindings {
+                        let prebinding = prebindings.get_mut(name).unwrap();
+                        // QUESTION: Which direction should we unify in?
+                        self.unify(ctx, prebinding.index, binding.index)?;
+                    }
+
+                    // Prune any functions before generalizing, this avoids
+                    // issues with mutually recursive functions being generalized
+                    // prematurely.
+                    for binding in bindings.values() {
+                        let pruned_index = self.prune(binding.index);
+                        self.bind(ctx, binding.index, pruned_index)?;
+                    }
+
+                    // Generalize any functions.
+                    for binding in bindings.values() {
+                        let pruned_index = self.prune(binding.index);
+                        if let TypeKind::Function(func) = &self.arena[pruned_index].kind.clone() {
                             let func = generalize_func(self, func);
                             self.bind(ctx, binding.index, func)?;
                         }
                     }
                 }
                 _ => {
+                    // TODO: disallow non-decls at the top-level
                     self.infer_statement(stmt, ctx)?;
                 }
             };
@@ -1412,9 +1422,7 @@ impl Checker {
         key_idx: Index,
         is_mut: bool,
     ) -> Result<Index, TypeError> {
-        // We're not mutating `kind` so this should be safe.
-        let kind: &TypeKind = unsafe { transmute(&self.arena[obj_idx].kind) };
-        match kind {
+        match &self.arena[obj_idx].kind.clone() {
             TypeKind::Object(_) => self.get_prop_value(ctx, obj_idx, key_idx, is_mut),
             // declare let obj: {x: number} | {x: string}
             // obj.x; // number | string
