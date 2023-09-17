@@ -1,7 +1,6 @@
 use generational_arena::Index;
 use itertools::Itertools;
-use std::collections::{BTreeMap, HashSet};
-use std::mem::transmute;
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use escalier_ast::{self as syntax, *};
 
@@ -45,631 +44,655 @@ impl Checker {
         ctx: &mut Context,
     ) -> Result<Index, TypeError> {
         self.with_report(|checker| -> Result<Index, TypeError> {
-            let idx: Index = match &mut node.kind {
-                ExprKind::Ident(Ident { name, .. }) => checker.get_type(name, ctx)?,
-                ExprKind::Str(str) => {
-                    checker.arena
-                        .insert(Type::from(TypeKind::Literal(syntax::Literal::String(
-                            str.value.to_owned(),
-                        ))))
-                }
-                ExprKind::Num(num) => {
-                    checker.arena
-                        .insert(Type::from(TypeKind::Literal(syntax::Literal::Number(
-                            num.value.to_owned(),
-                        ))))
-                }
-                ExprKind::Bool(bool) => {
-                    checker.arena
-                        .insert(Type::from(TypeKind::Literal(syntax::Literal::Boolean(
-                            bool.value,
-                        ))))
-                }
-                ExprKind::Null(_) => checker
-                    .arena
-                    .insert(Type::from(TypeKind::Literal(syntax::Literal::Null))),
-                ExprKind::Undefined(_) => checker
-                    .arena
-                    .insert(Type::from(TypeKind::Literal(syntax::Literal::Undefined))),
-                ExprKind::Tuple(syntax::Tuple {
-                    elements: elems, ..
-                }) => {
-                    let mut element_types = vec![];
-                    for element in elems.iter_mut() {
-                        let t = match element {
-                            ExprOrSpread::Expr(expr) => checker.infer_expression(expr, ctx)?,
-                            ExprOrSpread::Spread(_) => todo!(), // TODO: handle spreads
-                        };
-                        element_types.push(t);
+            let idx: Index =
+                match &mut node.kind {
+                    ExprKind::Ident(Ident { name, .. }) => checker.get_type(name, ctx)?,
+                    ExprKind::Str(str) => checker.arena.insert(Type::from(TypeKind::Literal(
+                        syntax::Literal::String(str.value.to_owned()),
+                    ))),
+                    ExprKind::Num(num) => checker.arena.insert(Type::from(TypeKind::Literal(
+                        syntax::Literal::Number(num.value.to_owned()),
+                    ))),
+                    ExprKind::Bool(bool) => checker.arena.insert(Type::from(TypeKind::Literal(
+                        syntax::Literal::Boolean(bool.value),
+                    ))),
+                    ExprKind::Null(_) => checker
+                        .arena
+                        .insert(Type::from(TypeKind::Literal(syntax::Literal::Null))),
+                    ExprKind::Undefined(_) => checker
+                        .arena
+                        .insert(Type::from(TypeKind::Literal(syntax::Literal::Undefined))),
+                    ExprKind::Tuple(syntax::Tuple {
+                        elements: elems, ..
+                    }) => {
+                        let mut element_types = vec![];
+                        for element in elems.iter_mut() {
+                            let t = match element {
+                                ExprOrSpread::Expr(expr) => checker.infer_expression(expr, ctx)?,
+                                ExprOrSpread::Spread(_) => todo!(), // TODO: handle spreads
+                            };
+                            element_types.push(t);
+                        }
+                        checker.new_tuple_type(&element_types)
                     }
-                    checker.new_tuple_type(&element_types)
-                }
-                ExprKind::Object(syntax::Object {
-                    properties: props, ..
-                }) => {
-                    let mut prop_types: Vec<types::TObjElem> = vec![];
-                    for prop_or_spread in props.iter_mut() {
-                        match prop_or_spread {
-                            PropOrSpread::Spread(_) => todo!(),
-                            PropOrSpread::Prop(prop) => match prop {
-                                expr::Prop::Shorthand(Ident {name, span: _}) => {
-                                    prop_types.push(types::TObjElem::Prop(types::TProp {
-                                        name: TPropKey::StringKey(name.to_owned()),
-                                        modifier: None,
-                                        t: checker.get_type(name, ctx)?,
-                                        readonly: false,
-                                        optional: false,
-                                    }));
-                                }
-                                expr::Prop::Property { key, value } => {
-                                    let prop = match key {
-                                        ObjectKey::Ident(ident) => types::TProp {
-                                            name: TPropKey::StringKey(ident.name.to_owned()),
-                                            modifier: None,
-                                            t: checker.infer_expression(value, ctx)?,
-                                            readonly: false,
-                                            optional: false,
-                                        },
-                                        ObjectKey::String(name) => types::TProp {
+                    ExprKind::Object(syntax::Object {
+                        properties: props, ..
+                    }) => {
+                        let mut prop_types: Vec<types::TObjElem> = vec![];
+                        for prop_or_spread in props.iter_mut() {
+                            match prop_or_spread {
+                                PropOrSpread::Spread(_) => todo!(),
+                                PropOrSpread::Prop(prop) => match prop {
+                                    expr::Prop::Shorthand(Ident { name, span: _ }) => {
+                                        prop_types.push(types::TObjElem::Prop(types::TProp {
                                             name: TPropKey::StringKey(name.to_owned()),
                                             modifier: None,
-                                            t: checker.infer_expression(value, ctx)?,
+                                            t: checker.get_type(name, ctx)?,
                                             readonly: false,
                                             optional: false,
-                                        },
-                                        ObjectKey::Number(name) => types::TProp {
-                                            name: TPropKey::StringKey(name.to_owned()),
-                                            modifier: None,
-                                            t: checker.infer_expression(value, ctx)?,
-                                            readonly: false,
-                                            optional: false,
-                                        },
-                                        ObjectKey::Computed(_) => todo!(),
-                                    };
-                                    prop_types.push(types::TObjElem::Prop(prop));
-                                }
-                            },
-                        }
-                    }
-                    checker.new_object_type(&prop_types)
-                }
-                ExprKind::Call(syntax::Call {
-                    callee: func,
-                    args,
-                    type_args,
-                    opt_chain,
-                    throws,
-                }) => {
-                    let mut func_idx = checker.infer_expression(func, ctx)?;
-                    let mut has_undefined = false;
-                    if *opt_chain {
-                        if let TypeKind::Union(union) = &checker.arena[func_idx].kind {
-                            let types = filter_nullables(&checker.arena, &union.types);
-                            has_undefined = types.len() != union.types.len();
-                            func_idx = checker.new_union_type(&types);
-                        }
-                    }
-
-                    let (result, new_throws) = match type_args {
-                        Some(type_args) => {
-                            let type_args = type_args
-                                .iter_mut()
-                                .map(|type_arg| checker.infer_type_ann(type_arg, ctx))
-                                .collect::<Result<Vec<_>, _>>()?;
-
-                            checker.unify_call(ctx, args, Some(&type_args), func_idx)?
-                        }
-                        None => checker.unify_call(ctx, args, None, func_idx)?,
-                    };
-
-                    if let Some(new_throws) = new_throws {
-                        throws.replace(new_throws);
-                    }
-
-                    match *opt_chain && has_undefined {
-                        true => {
-                            let undefined = checker.new_lit_type(&Literal::Undefined);
-                            if let TypeKind::Union(union) = &checker.arena[result].kind {
-                                let mut types = filter_nullables(&checker.arena, &union.types);
-
-                                if types.len() != union.types.len() {
-                                    // If we didn't end up removing any `undefined`s then
-                                    // itmeans that `result` already contains `undefined`
-                                    // and we can return it as is.
-                                    result
-                                } else {
-                                    types.push(undefined);
-                                    checker.new_union_type(&types)
-                                }
-                            } else {
-                                checker.new_union_type(&[result, undefined])
+                                        }));
+                                    }
+                                    expr::Prop::Property { key, value } => {
+                                        let prop = match key {
+                                            ObjectKey::Ident(ident) => types::TProp {
+                                                name: TPropKey::StringKey(ident.name.to_owned()),
+                                                modifier: None,
+                                                t: checker.infer_expression(value, ctx)?,
+                                                readonly: false,
+                                                optional: false,
+                                            },
+                                            ObjectKey::String(name) => types::TProp {
+                                                name: TPropKey::StringKey(name.to_owned()),
+                                                modifier: None,
+                                                t: checker.infer_expression(value, ctx)?,
+                                                readonly: false,
+                                                optional: false,
+                                            },
+                                            ObjectKey::Number(name) => types::TProp {
+                                                name: TPropKey::StringKey(name.to_owned()),
+                                                modifier: None,
+                                                t: checker.infer_expression(value, ctx)?,
+                                                readonly: false,
+                                                optional: false,
+                                            },
+                                            ObjectKey::Computed(_) => todo!(),
+                                        };
+                                        prop_types.push(types::TObjElem::Prop(prop));
+                                    }
+                                },
                             }
                         }
-                        false => result,
+                        checker.new_object_type(&prop_types)
                     }
-                }
-                ExprKind::Function(syntax::Function {
-                    params,
-                    body,
-                    is_async,
-                    is_gen: _,
-                    type_params,
-                    type_ann: return_type,
-                    throws: sig_throws,
-                }) => {
-                    let mut func_params: Vec<types::FuncParam> = vec![];
-                    let mut sig_ctx = ctx.clone();
-
-                    let type_params = checker.infer_type_params(type_params, &mut sig_ctx)?;
-
-                    for syntax::FuncParam {
-                        pattern,
-                        type_ann,
-                        optional,
-                    } in params.iter_mut()
-                    {
-                        let type_ann_t = match type_ann {
-                            Some(type_ann) => checker.infer_type_ann(type_ann, &mut sig_ctx)?,
-                            None => checker.new_type_var(None),
-                        };
-                        pattern.inferred_type = Some(type_ann_t);
-
-                        let (assumps, param_t) = checker.infer_pattern(pattern, &sig_ctx)?;
-                        checker.unify(&sig_ctx, param_t, type_ann_t)?;
-
-                        for (name, binding) in assumps {
-                            sig_ctx.non_generic.insert(binding.index);
-                            sig_ctx.values.insert(name.to_owned(), binding);
+                    ExprKind::Call(syntax::Call {
+                        callee: func,
+                        args,
+                        type_args,
+                        opt_chain,
+                        throws,
+                    }) => {
+                        let mut func_idx = checker.infer_expression(func, ctx)?;
+                        let mut has_undefined = false;
+                        if *opt_chain {
+                            if let TypeKind::Union(union) = &checker.arena[func_idx].kind {
+                                let types = filter_nullables(&checker.arena, &union.types);
+                                has_undefined = types.len() != union.types.len();
+                                func_idx = checker.new_union_type(&types);
+                            }
                         }
 
-                        func_params.push(types::FuncParam {
-                            pattern: pattern_to_tpat(pattern, true),
-                            t: type_ann_t,
-                            optional: *optional,
-                        });
+                        let (result, new_throws) = match type_args {
+                            Some(type_args) => {
+                                let type_args = type_args
+                                    .iter_mut()
+                                    .map(|type_arg| checker.infer_type_ann(type_arg, ctx))
+                                    .collect::<Result<Vec<_>, _>>()?;
+
+                                checker.unify_call(ctx, args, Some(&type_args), func_idx)?
+                            }
+                            None => checker.unify_call(ctx, args, None, func_idx)?,
+                        };
+
+                        if let Some(new_throws) = new_throws {
+                            throws.replace(new_throws);
+                        }
+
+                        match *opt_chain && has_undefined {
+                            true => {
+                                let undefined = checker.new_lit_type(&Literal::Undefined);
+                                if let TypeKind::Union(union) = &checker.arena[result].kind {
+                                    let mut types = filter_nullables(&checker.arena, &union.types);
+
+                                    if types.len() != union.types.len() {
+                                        // If we didn't end up removing any `undefined`s then
+                                        // itmeans that `result` already contains `undefined`
+                                        // and we can return it as is.
+                                        result
+                                    } else {
+                                        types.push(undefined);
+                                        checker.new_union_type(&types)
+                                    }
+                                } else {
+                                    checker.new_union_type(&[result, undefined])
+                                }
+                            }
+                            false => result,
+                        }
                     }
+                    ExprKind::Function(syntax::Function {
+                        params,
+                        body,
+                        is_async,
+                        is_gen: _,
+                        type_params,
+                        type_ann: return_type,
+                        throws: sig_throws,
+                    }) => {
+                        let mut func_params: Vec<types::FuncParam> = vec![];
+                        let mut sig_ctx = ctx.clone();
 
-                    let mut body_ctx = sig_ctx.clone();
-                    body_ctx.is_async = *is_async;
+                        let type_params = checker.infer_type_params(type_params, &mut sig_ctx)?;
 
-                    let mut body_t = 'outer: {
-                        match body {
-                            BlockOrExpr::Block(Block { stmts, .. }) => {
-                                for stmt in stmts.iter_mut() {
-                                    body_ctx = body_ctx.clone();
-                                    checker.infer_statement(stmt, &mut body_ctx, false)?;
-                                    if let StmtKind::Return(_) = stmt.kind {
-                                        let ret_types: Vec<Index> = find_returns(body)
-                                            .iter()
-                                            .filter_map(|ret| ret.inferred_type)
-                                            .collect();
+                        for syntax::FuncParam {
+                            pattern,
+                            type_ann,
+                            optional,
+                        } in params.iter_mut()
+                        {
+                            let type_ann_t = match type_ann {
+                                Some(type_ann) => checker.infer_type_ann(type_ann, &mut sig_ctx)?,
+                                None => checker.new_type_var(None),
+                            };
+                            pattern.inferred_type = Some(type_ann_t);
 
-                                        // TODO: warn about unreachable code.
-                                        break 'outer checker.new_union_type(&ret_types);
+                            let (assumps, param_t) = checker.infer_pattern(pattern, &sig_ctx)?;
+                            checker.unify(&sig_ctx, param_t, type_ann_t)?;
+
+                            for (name, binding) in assumps {
+                                sig_ctx.non_generic.insert(binding.index);
+                                sig_ctx.values.insert(name.to_owned(), binding);
+                            }
+
+                            func_params.push(types::FuncParam {
+                                pattern: pattern_to_tpat(pattern, true),
+                                t: type_ann_t,
+                                optional: *optional,
+                            });
+                        }
+
+                        let mut body_ctx = sig_ctx.clone();
+                        body_ctx.is_async = *is_async;
+
+                        let mut body_t = 'outer: {
+                            match body {
+                                BlockOrExpr::Block(Block { stmts, .. }) => {
+                                    for stmt in stmts.iter_mut() {
+                                        body_ctx = body_ctx.clone();
+                                        checker.infer_statement(stmt, &mut body_ctx)?;
+                                        if let StmtKind::Return(_) = stmt.kind {
+                                            let ret_types: Vec<Index> = find_returns(body)
+                                                .iter()
+                                                .filter_map(|ret| ret.inferred_type)
+                                                .collect();
+
+                                            // TODO: warn about unreachable code.
+                                            break 'outer checker.new_union_type(&ret_types);
+                                        }
+                                    }
+
+                                    // If we don't encounter a return statement, we assume
+                                    // the return type is `undefined`.
+                                    checker.new_lit_type(&Literal::Undefined)
+                                }
+                                BlockOrExpr::Expr(expr) => {
+                                    // TODO: use `find_returns` here as well
+                                    checker.infer_expression(expr, &mut body_ctx)?
+                                }
+                            }
+                        };
+
+                        // let until = body_ctx.get_binding("until").unwrap();
+                        // eprintln!("until = {}", checker.print_type(&until.index));
+
+                        // TODO: search for `throw` expressions in the body and include
+                        // them in the throws type.
+
+                        let body_throws = find_throws(body);
+                        let body_throws = if body_throws.is_empty() {
+                            None
+                        } else {
+                            Some(checker.new_union_type(
+                                // TODO: compare string reps of the types for deduplication
+                                &body_throws.into_iter().unique().collect_vec(),
+                            ))
+                        };
+
+                        let sig_throws = sig_throws
+                            .as_mut()
+                            .map(|t| checker.infer_type_ann(t, &mut sig_ctx))
+                            .transpose()?;
+
+                        let throws = match (body_throws, sig_throws) {
+                            (Some(call_throws), Some(sig_throws)) => {
+                                checker.unify(&sig_ctx, call_throws, sig_throws)?;
+                                Some(sig_throws)
+                            }
+                            (Some(call_throws), None) => Some(call_throws),
+                            // This should probably be a warning.  If the function doesn't
+                            // throw anything, then it shouldn't be marked as such.
+                            (None, Some(sig_throws)) => Some(sig_throws),
+                            (None, None) => None,
+                        };
+
+                        // TODO: Make the return type `Promise<body_t, throws>` if the function
+                        // is async.  Async functions cannot throw.  They can only return a
+                        // rejected promise.
+                        if *is_async && !is_promise(&checker.arena[body_t]) {
+                            let never = checker.new_keyword(Keyword::Never);
+                            let throws_t = throws.unwrap_or(never);
+                            body_t = checker.new_type_ref("Promise", &[body_t, throws_t]);
+
+                            match return_type {
+                                Some(return_type) => {
+                                    let ret_t =
+                                        checker.infer_type_ann(return_type, &mut sig_ctx)?;
+                                    // TODO: add sig_ctx which is a copy of ctx but with all of
+                                    // the type params added to sig_ctx.schemes so that they can
+                                    // be looked up.
+                                    checker.unify(&sig_ctx, body_t, ret_t)?;
+                                    checker.new_func_type(&func_params, ret_t, &type_params, None)
+                                }
+                                None => {
+                                    checker.new_func_type(&func_params, body_t, &type_params, None)
+                                }
+                            }
+                        } else {
+                            match return_type {
+                                Some(return_type) => {
+                                    let ret_t =
+                                        checker.infer_type_ann(return_type, &mut sig_ctx)?;
+                                    // TODO: add sig_ctx which is a copy of ctx but with all of
+                                    // the type params added to sig_ctx.schemes so that they can
+                                    // be looked up.
+                                    checker.unify(&sig_ctx, body_t, ret_t)?;
+                                    checker.new_func_type(&func_params, ret_t, &type_params, throws)
+                                }
+                                None => checker.new_func_type(
+                                    &func_params,
+                                    body_t,
+                                    &type_params,
+                                    throws,
+                                ),
+                            }
+                        }
+                    }
+                    ExprKind::IfElse(IfElse {
+                        cond,
+                        consequent,
+                        alternate,
+                    }) => {
+                        let cond_type = checker.infer_expression(cond, ctx)?;
+                        let bool_type = checker.new_primitive(Primitive::Boolean);
+                        checker.unify(ctx, cond_type, bool_type)?;
+                        let consequent_type = checker.infer_block(consequent, ctx)?;
+                        let alternate_type = match alternate {
+                            Some(alternate) => match alternate {
+                                BlockOrExpr::Block(block) => checker.infer_block(block, ctx)?,
+                                BlockOrExpr::Expr(expr) => checker.infer_expression(expr, ctx)?,
+                            },
+                            None => checker.new_lit_type(&Literal::Undefined),
+                        };
+                        // checker.unify(ctx, consequent_type, alternate_type)?;
+                        // consequent_type
+                        checker.new_union_type(&[consequent_type, alternate_type])
+                    }
+                    ExprKind::Member(Member {
+                        object: obj,
+                        property: prop,
+                        opt_chain,
+                    }) => {
+                        let mut obj_idx = checker.infer_expression(obj, ctx)?;
+                        let is_mut = is_expr_mutable(ctx, obj)?;
+                        let mut has_undefined = false;
+                        if *opt_chain {
+                            if let TypeKind::Union(union) = &checker.arena[obj_idx].kind {
+                                let types = filter_nullables(&checker.arena, &union.types);
+                                has_undefined = types.len() != union.types.len();
+                                obj_idx = checker.new_union_type(&types);
+                            }
+                        }
+
+                        let result = match prop {
+                            MemberProp::Ident(Ident { name, .. }) => {
+                                let key_idx =
+                                    checker.new_lit_type(&Literal::String(name.to_owned()));
+                                checker.get_ident_member(ctx, obj_idx, key_idx, is_mut)?
+                            }
+                            MemberProp::Computed(ComputedPropName { expr, .. }) => {
+                                let prop_type = checker.infer_expression(expr, ctx)?;
+                                checker.get_computed_member(ctx, obj_idx, prop_type, is_mut)?
+                            }
+                        };
+
+                        match *opt_chain && has_undefined {
+                            true => {
+                                let undefined = checker.new_lit_type(&Literal::Undefined);
+
+                                if let TypeKind::Union(union) = &checker.arena[result].kind {
+                                    let mut types = filter_nullables(&checker.arena, &union.types);
+
+                                    if types.len() != union.types.len() {
+                                        // If we didn't end up removing any `undefined`s then
+                                        // itmeans that `result` already contains `undefined`
+                                        // and we can return it as is.
+                                        result
+                                    } else {
+                                        types.push(undefined);
+                                        checker.new_union_type(&types)
+                                    }
+                                } else {
+                                    checker.new_union_type(&[result, undefined])
+                                }
+                            }
+                            false => result,
+                        }
+                    }
+                    ExprKind::JSXElement(_) => todo!(),
+                    ExprKind::Assign(Assign { left, op: _, right }) => {
+                        if !is_expr_mutable(ctx, left)? {
+                            return Err(TypeError {
+                                message: "Cannot assign to immutable lvalue".to_string(),
+                            });
+                        }
+
+                        let l_t = checker.infer_expression(left, ctx)?;
+                        let r_t = checker.infer_expression(right, ctx)?;
+                        checker.unify(ctx, r_t, l_t)?;
+
+                        r_t
+                    }
+                    ExprKind::Binary(Binary { op, left, right }) => {
+                        let number = checker.new_primitive(Primitive::Number);
+                        let boolean = checker.new_primitive(Primitive::Boolean);
+                        let left_type = checker.infer_expression(left, ctx)?;
+                        let right_type = checker.infer_expression(right, ctx)?;
+
+                        match op {
+                            BinaryOp::Plus
+                            | BinaryOp::Minus
+                            | BinaryOp::Times
+                            | BinaryOp::Divide
+                            | BinaryOp::Modulo => {
+                                match (
+                                    &checker.arena[left_type].kind,
+                                    &checker.arena[right_type].kind,
+                                ) {
+                                    (
+                                        TypeKind::Literal(Literal::Number(left)),
+                                        TypeKind::Literal(Literal::Number(right)),
+                                    ) => {
+                                        let left = left.parse::<f64>().unwrap();
+                                        let right = right.parse::<f64>().unwrap();
+
+                                        let result = match op {
+                                            BinaryOp::Plus => left + right,
+                                            BinaryOp::Minus => left - right,
+                                            BinaryOp::Times => left * right,
+                                            BinaryOp::Divide => left / right,
+                                            BinaryOp::Modulo => left % right,
+                                            _ => unreachable!(),
+                                        };
+
+                                        checker.new_lit_type(&Literal::Number(result.to_string()))
+                                    }
+                                    (_, _) => {
+                                        checker.unify(ctx, left_type, number)?;
+                                        checker.unify(ctx, right_type, number)?;
+                                        number
                                     }
                                 }
-
-                                // If we don't encounter a return statement, we assume
-                                // the return type is `undefined`.
-                                checker.new_lit_type(&Literal::Undefined)
                             }
-                            BlockOrExpr::Expr(expr) => {
-                                // TODO: use `find_returns` here as well
-                                checker.infer_expression(expr, &mut body_ctx)?
-                            }
-                        }
-                    };
+                            BinaryOp::GreaterThan
+                            | BinaryOp::GreaterThanOrEqual
+                            | BinaryOp::LessThan
+                            | BinaryOp::LessThanOrEqual => {
+                                match (
+                                    &checker.arena[left_type].kind,
+                                    &checker.arena[right_type].kind,
+                                ) {
+                                    (
+                                        TypeKind::Literal(Literal::Number(left)),
+                                        TypeKind::Literal(Literal::Number(right)),
+                                    ) => {
+                                        let left = left.parse::<f64>().unwrap();
+                                        let right = right.parse::<f64>().unwrap();
 
-                    // TODO: search for `throw` expressions in the body and include
-                    // them in the throws type.
+                                        let result = match op {
+                                            BinaryOp::GreaterThan => left > right,
+                                            BinaryOp::GreaterThanOrEqual => left >= right,
+                                            BinaryOp::LessThan => left < right,
+                                            BinaryOp::LessThanOrEqual => left <= right,
+                                            _ => unreachable!(),
+                                        };
 
-                    let body_throws = find_throws(body);
-                    let body_throws = if body_throws.is_empty() {
-                        None
-                    } else {
-                        Some(checker.new_union_type(
-                            // TODO: compare string reps of the types for deduplication
-                            &body_throws.into_iter().unique().collect_vec(),
-                        ))
-                    };
-
-                    let sig_throws = sig_throws
-                        .as_mut()
-                        .map(|t| checker.infer_type_ann(t, &mut sig_ctx))
-                        .transpose()?;
-
-                    let throws = match (body_throws, sig_throws) {
-                        (Some(call_throws), Some(sig_throws)) => {
-                            checker.unify(&sig_ctx, call_throws, sig_throws)?;
-                            Some(sig_throws)
-                        }
-                        (Some(call_throws), None) => Some(call_throws),
-                        // This should probably be a warning.  If the function doesn't
-                        // throw anything, then it shouldn't be marked as such.
-                        (None, Some(sig_throws)) => Some(sig_throws),
-                        (None, None) => None,
-                    };
-
-                    // TODO: Make the return type `Promise<body_t, throws>` if the function
-                    // is async.  Async functions cannot throw.  They can only return a
-                    // rejected promise.
-                    if *is_async && !is_promise(&checker.arena[body_t]) {
-                        let never = checker.new_keyword(Keyword::Never);
-                        let throws_t = throws.unwrap_or(never);
-                        body_t = checker.new_type_ref("Promise", &[body_t, throws_t]);
-
-                        match return_type {
-                            Some(return_type) => {
-                                let ret_t = checker.infer_type_ann(return_type, &mut sig_ctx)?;
-                                // TODO: add sig_ctx which is a copy of ctx but with all of
-                                // the type params added to sig_ctx.schemes so that they can
-                                // be looked up.
-                                checker.unify(&sig_ctx, body_t, ret_t)?;
-                                checker.new_func_type(&func_params, ret_t, &type_params, None)
-                            }
-                            None => checker.new_func_type(&func_params, body_t, &type_params, None),
-                        }
-                    } else {
-                        match return_type {
-                            Some(return_type) => {
-                                let ret_t = checker.infer_type_ann(return_type, &mut sig_ctx)?;
-                                // TODO: add sig_ctx which is a copy of ctx but with all of
-                                // the type params added to sig_ctx.schemes so that they can
-                                // be looked up.
-                                checker.unify(&sig_ctx, body_t, ret_t)?;
-                                checker.new_func_type(&func_params, ret_t, &type_params, throws)
-                            }
-                            None => checker.new_func_type(&func_params, body_t, &type_params, throws),
-                        }
-                    }
-                }
-                ExprKind::IfElse(IfElse {
-                    cond,
-                    consequent,
-                    alternate,
-                }) => {
-                    let cond_type = checker.infer_expression(cond, ctx)?;
-                    let bool_type = checker.new_primitive(Primitive::Boolean);
-                    checker.unify(ctx, cond_type, bool_type)?;
-                    let consequent_type = checker.infer_block(consequent, ctx)?;
-                    let alternate_type = match alternate {
-                        Some(alternate) => match alternate {
-                            BlockOrExpr::Block(block) => checker.infer_block(block, ctx)?,
-                            BlockOrExpr::Expr(expr) => checker.infer_expression(expr, ctx)?,
-                        },
-                        None => checker.new_lit_type(&Literal::Undefined),
-                    };
-                    checker.new_union_type(&[consequent_type, alternate_type])
-                }
-                ExprKind::Member(Member {
-                    object: obj,
-                    property: prop,
-                    opt_chain,
-                }) => {
-                    let mut obj_idx = checker.infer_expression(obj, ctx)?;
-                    let is_mut = is_expr_mutable(ctx, obj)?;
-                    let mut has_undefined = false;
-                    if *opt_chain {
-                        if let TypeKind::Union(union) = &checker.arena[obj_idx].kind {
-                            let types = filter_nullables(&checker.arena, &union.types);
-                            has_undefined = types.len() != union.types.len();
-                            obj_idx = checker.new_union_type(&types);
-                        }
-                    }
-
-                    let result = match prop {
-                        MemberProp::Ident(Ident { name, .. }) => {
-                            let key_idx = checker.new_lit_type(&Literal::String(name.to_owned()));
-                            checker.get_ident_member(ctx, obj_idx, key_idx, is_mut)?
-                        }
-                        MemberProp::Computed(ComputedPropName { expr, .. }) => {
-                            let prop_type = checker.infer_expression(expr, ctx)?;
-                            checker.get_computed_member(ctx, obj_idx, prop_type, is_mut)?
-                        }
-                    };
-
-                    match *opt_chain && has_undefined {
-                        true => {
-                            let undefined = checker.new_lit_type(&Literal::Undefined);
-
-                            if let TypeKind::Union(union) = &checker.arena[result].kind {
-                                let mut types = filter_nullables(&checker.arena, &union.types);
-
-                                if types.len() != union.types.len() {
-                                    // If we didn't end up removing any `undefined`s then
-                                    // itmeans that `result` already contains `undefined`
-                                    // and we can return it as is.
-                                    result
-                                } else {
-                                    types.push(undefined);
-                                    checker.new_union_type(&types)
-                                }
-                            } else {
-                                checker.new_union_type(&[result, undefined])
-                            }
-                        }
-                        false => result,
-                    }
-                }
-                ExprKind::JSXElement(_) => todo!(),
-                ExprKind::Assign(Assign { left, op: _, right }) => {
-                    if !is_expr_mutable(ctx, left)? {
-                        return Err(TypeError {
-                            message: "Cannot assign to immutable lvalue".to_string(),
-                        });
-                    }
-
-                    let l_t = checker.infer_expression(left, ctx)?;
-                    let r_t = checker.infer_expression(right, ctx)?;
-                    checker.unify(ctx, r_t, l_t)?;
-
-                    r_t
-                }
-                ExprKind::Binary(Binary { op, left, right }) => {
-                    let number = checker.new_primitive(Primitive::Number);
-                    let boolean = checker.new_primitive(Primitive::Boolean);
-                    let left_type = checker.infer_expression(left, ctx)?;
-                    let right_type = checker.infer_expression(right, ctx)?;
-
-                    match op {
-                        BinaryOp::Plus
-                        | BinaryOp::Minus
-                        | BinaryOp::Times
-                        | BinaryOp::Divide
-                        | BinaryOp::Modulo => {
-                            match (&checker.arena[left_type].kind, &checker.arena[right_type].kind) {
-                                (
-                                    TypeKind::Literal(Literal::Number(left)),
-                                    TypeKind::Literal(Literal::Number(right)),
-                                ) => {
-                                    let left = left.parse::<f64>().unwrap();
-                                    let right = right.parse::<f64>().unwrap();
-
-                                    let result = match op {
-                                        BinaryOp::Plus => left + right,
-                                        BinaryOp::Minus => left - right,
-                                        BinaryOp::Times => left * right,
-                                        BinaryOp::Divide => left / right,
-                                        BinaryOp::Modulo => left % right,
-                                        _ => unreachable!(),
-                                    };
-
-                                    checker.new_lit_type(&Literal::Number(result.to_string()))
-                                }
-                                (_, _) => {
-                                    checker.unify(ctx, left_type, number)?;
-                                    checker.unify(ctx, right_type, number)?;
-                                    number
+                                        checker.new_lit_type(&Literal::Boolean(result))
+                                    }
+                                    (_, _) => {
+                                        checker.unify(ctx, left_type, number)?;
+                                        checker.unify(ctx, right_type, number)?;
+                                        boolean
+                                    }
                                 }
                             }
-                        }
-                        BinaryOp::GreaterThan
-                        | BinaryOp::GreaterThanOrEqual
-                        | BinaryOp::LessThan
-                        | BinaryOp::LessThanOrEqual => {
-                            match (&checker.arena[left_type].kind, &checker.arena[right_type].kind) {
-                                (
-                                    TypeKind::Literal(Literal::Number(left)),
-                                    TypeKind::Literal(Literal::Number(right)),
-                                ) => {
-                                    let left = left.parse::<f64>().unwrap();
-                                    let right = right.parse::<f64>().unwrap();
-
-                                    let result = match op {
-                                        BinaryOp::GreaterThan => left > right,
-                                        BinaryOp::GreaterThanOrEqual => left >= right,
-                                        BinaryOp::LessThan => left < right,
-                                        BinaryOp::LessThanOrEqual => left <= right,
-                                        _ => unreachable!(),
-                                    };
-
-                                    checker.new_lit_type(&Literal::Boolean(result))
-                                }
-                                (_, _) => {
-                                    checker.unify(ctx, left_type, number)?;
-                                    checker.unify(ctx, right_type, number)?;
-                                    boolean
-                                }
+                            BinaryOp::And | BinaryOp::Or => {
+                                checker.unify(ctx, left_type, boolean)?;
+                                checker.unify(ctx, right_type, boolean)?;
+                                boolean
                             }
-                        }
-                        BinaryOp::And | BinaryOp::Or => {
-                            checker.unify(ctx, left_type, boolean)?;
-                            checker.unify(ctx, right_type, boolean)?;
-                            boolean
-                        }
-                        BinaryOp::Equals | BinaryOp::NotEquals => {
-                            match (&checker.arena[left_type].kind, &checker.arena[right_type].kind) {
-                                (
-                                    TypeKind::Literal(Literal::Number(left)),
-                                    TypeKind::Literal(Literal::Number(right)),
-                                ) => {
-                                    let result = match op {
-                                        BinaryOp::Equals => left == right,
-                                        BinaryOp::NotEquals => left != right,
-                                        _ => unreachable!(),
-                                    };
+                            BinaryOp::Equals | BinaryOp::NotEquals => {
+                                match (
+                                    &checker.arena[left_type].kind,
+                                    &checker.arena[right_type].kind,
+                                ) {
+                                    (
+                                        TypeKind::Literal(Literal::Number(left)),
+                                        TypeKind::Literal(Literal::Number(right)),
+                                    ) => {
+                                        let result = match op {
+                                            BinaryOp::Equals => left == right,
+                                            BinaryOp::NotEquals => left != right,
+                                            _ => unreachable!(),
+                                        };
 
-                                    checker.new_lit_type(&Literal::Boolean(result))
-                                }
-                                (
-                                    TypeKind::Literal(Literal::String(left)),
-                                    TypeKind::Literal(Literal::String(right)),
-                                ) => {
-                                    let result = match op {
-                                        BinaryOp::Equals => left == right,
-                                        BinaryOp::NotEquals => left != right,
-                                        _ => unreachable!(),
-                                    };
+                                        checker.new_lit_type(&Literal::Boolean(result))
+                                    }
+                                    (
+                                        TypeKind::Literal(Literal::String(left)),
+                                        TypeKind::Literal(Literal::String(right)),
+                                    ) => {
+                                        let result = match op {
+                                            BinaryOp::Equals => left == right,
+                                            BinaryOp::NotEquals => left != right,
+                                            _ => unreachable!(),
+                                        };
 
-                                    checker.new_lit_type(&Literal::Boolean(result))
-                                }
-                                (_, _) => {
-                                    let var_a = checker.new_type_var(None);
-                                    let var_b = checker.new_type_var(None);
-                                    checker.unify(ctx, left_type, var_a)?;
-                                    checker.unify(ctx, right_type, var_b)?;
-                                    boolean
+                                        checker.new_lit_type(&Literal::Boolean(result))
+                                    }
+                                    (_, _) => {
+                                        let var_a = checker.new_type_var(None);
+                                        let var_b = checker.new_type_var(None);
+                                        checker.unify(ctx, left_type, var_a)?;
+                                        checker.unify(ctx, right_type, var_b)?;
+                                        boolean
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                ExprKind::Unary(Unary {
-                    op,
-                    right: arg, // TODO: rename `right` to `arg`
-                }) => {
-                    let number = checker.new_primitive(Primitive::Number);
-                    let boolean = checker.new_primitive(Primitive::Boolean);
-                    let arg_type = checker.infer_expression(arg, ctx)?;
+                    ExprKind::Unary(Unary {
+                        op,
+                        right: arg, // TODO: rename `right` to `arg`
+                    }) => {
+                        let number = checker.new_primitive(Primitive::Number);
+                        let boolean = checker.new_primitive(Primitive::Boolean);
+                        let arg_type = checker.infer_expression(arg, ctx)?;
 
-                    match op {
-                        UnaryOp::Minus => {
-                            checker.unify(ctx, arg_type, number)?;
-                            number
-                        }
-                        UnaryOp::Plus => {
-                            checker.unify(ctx, arg_type, number)?;
-                            number
-                        }
-                        UnaryOp::Not => {
-                            checker.unify(ctx, arg_type, boolean)?;
-                            boolean
+                        match op {
+                            UnaryOp::Minus => {
+                                checker.unify(ctx, arg_type, number)?;
+                                number
+                            }
+                            UnaryOp::Plus => {
+                                checker.unify(ctx, arg_type, number)?;
+                                number
+                            }
+                            UnaryOp::Not => {
+                                checker.unify(ctx, arg_type, boolean)?;
+                                boolean
+                            }
                         }
                     }
-                }
-                ExprKind::Await(Await { arg: expr, throws }) => {
-                    if !ctx.is_async {
-                        return Err(TypeError {
-                            message: "Can't use await outside of an async function".to_string(),
-                        });
+                    ExprKind::Await(Await { arg: expr, throws }) => {
+                        if !ctx.is_async {
+                            return Err(TypeError {
+                                message: "Can't use await outside of an async function".to_string(),
+                            });
+                        }
+
+                        let expr_t = checker.infer_expression(expr, ctx)?;
+                        let inner_t = checker.new_type_var(None);
+                        let throws_t = checker.new_type_var(None);
+                        // TODO: Merge Constructor and TypeRef
+                        // NOTE: This isn't quite right because we can await non-promise values.
+                        // That being said, we should avoid doing so.
+                        let promise_t = checker.new_type_ref("Promise", &[inner_t, throws_t]);
+                        checker.unify(ctx, expr_t, promise_t)?;
+                        *throws = Some(throws_t);
+
+                        inner_t
                     }
+                    ExprKind::TemplateLiteral(TemplateLiteral { parts: _, exprs: _ }) => {
+                        // QUESTION: Do we want to require that each expr in
+                        // exprs has a .toString() method?
+                        checker.new_primitive(Primitive::String)
+                    }
+                    ExprKind::TaggedTemplateLiteral(TaggedTemplateLiteral {
+                        tag,
+                        template: TemplateLiteral { parts, exprs },
+                        throws,
+                    }) => {
+                        let tag = checker.infer_expression(tag, ctx)?;
 
-                    let expr_t = checker.infer_expression(expr, ctx)?;
-                    let inner_t = checker.new_type_var(None);
-                    let throws_t = checker.new_type_var(None);
-                    // TODO: Merge Constructor and TypeRef
-                    // NOTE: This isn't quite right because we can await non-promise values.
-                    // That being said, we should avoid doing so.
-                    let promise_t = checker.new_type_ref("Promise", &[inner_t, throws_t]);
-                    checker.unify(ctx, expr_t, promise_t)?;
-                    *throws = Some(throws_t);
+                        let mut args = vec![Expr {
+                            kind: ExprKind::Tuple(syntax::Tuple {
+                                elements: parts
+                                    .iter()
+                                    .map(|part| {
+                                        let part = Expr {
+                                            kind: ExprKind::Str(Str {
+                                                value: part.value.to_owned(),
+                                                span: Span { start: 0, end: 0 },
+                                            }),
+                                            span: Span { start: 0, end: 0 },
+                                            inferred_type: None,
+                                        };
+                                        ExprOrSpread::Expr(part)
+                                    })
+                                    .collect(),
+                            }),
+                            span: Span { start: 0, end: 0 },
+                            inferred_type: None,
+                        }];
+                        args.extend(exprs.clone());
 
-                    inner_t
-                }
-                ExprKind::TemplateLiteral(TemplateLiteral { parts: _, exprs: _ }) => {
-                    // QUESTION: Do we want to require that each expr in
-                    // exprs has a .toString() method?
-                    checker.new_primitive(Primitive::String)
-                },
-                ExprKind::TaggedTemplateLiteral(TaggedTemplateLiteral { 
-                    tag,
-                    template: TemplateLiteral { parts, exprs },
-                    throws,
-                }) => {
-                    let tag = checker.infer_expression(tag, ctx)?;
+                        let (call_result, call_throws) =
+                            checker.unify_call(ctx, &mut args, None, tag)?;
 
-                    let mut args = vec![Expr {
-                        kind: ExprKind::Tuple(syntax::Tuple { elements: parts.iter().map(|part| {
-                            let part = Expr {
-                                kind: ExprKind::Str(Str { 
-                                    value: part.value.to_owned(),
-                                    span: Span {start: 0, end: 0},
-                                }),
-                                span: Span {start: 0, end: 0},
-                                inferred_type: None,
+                        if let Some(call_throws) = call_throws {
+                            throws.replace(call_throws);
+                        }
+
+                        call_result
+                    }
+                    // ExprKind::TaggedTemplateLiteral(_) => todo!(),
+                    ExprKind::Match(Match { expr, arms }) => {
+                        let expr_idx = checker.infer_expression(expr, ctx)?;
+                        let mut body_types: Vec<Index> = vec![];
+
+                        for arm in arms.iter_mut() {
+                            let (pat_bindings, pat_idx) =
+                                checker.infer_pattern(&mut arm.pattern, ctx)?;
+
+                            // Checks that the pattern is a sub-type of expr
+                            checker.unify(ctx, pat_idx, expr_idx)?;
+
+                            let mut new_ctx = ctx.clone();
+                            for (name, binding) in pat_bindings {
+                                // TODO: Update .env to store bindings so that we can handle
+                                // mutability correctly
+                                new_ctx.values.insert(name, binding);
+                            }
+
+                            let body_type = match arm.body {
+                                BlockOrExpr::Block(ref mut block) => {
+                                    checker.infer_block(block, &mut new_ctx)?
+                                }
+                                BlockOrExpr::Expr(ref mut expr) => {
+                                    checker.infer_expression(expr, &mut new_ctx)?
+                                }
                             };
-                            ExprOrSpread::Expr(part)
-                        }).collect() }),
-                        span: Span {start: 0, end: 0},
-                        inferred_type: None
-                    }];
-                    args.extend(exprs.clone());
-
-                    let (call_result, call_throws) = checker.unify_call(ctx, &mut args, None, tag)?;
-
-                    if let Some(call_throws) = call_throws {
-                        throws.replace(call_throws);
-                    }
-
-                    call_result
-                },
-                // ExprKind::TaggedTemplateLiteral(_) => todo!(),
-                ExprKind::Match(Match { expr, arms }) => {
-                    let expr_idx = checker.infer_expression(expr, ctx)?;
-                    let mut body_types: Vec<Index> = vec![];
-
-                    for arm in arms.iter_mut() {
-                        let (pat_bindings, pat_idx) = checker.infer_pattern(&mut arm.pattern, ctx)?;
-
-                        // Checks that the pattern is a sub-type of expr
-                        checker.unify(ctx, pat_idx, expr_idx)?;
-
-                        let mut new_ctx = ctx.clone();
-                        for (name, binding) in pat_bindings {
-                            // TODO: Update .env to store bindings so that we can handle
-                            // mutability correctly
-                            new_ctx.values.insert(name, binding);
+                            body_types.push(body_type);
                         }
 
-                        let body_type = match arm.body {
-                            BlockOrExpr::Block(ref mut block) => {
-                                checker.infer_block(block, &mut new_ctx)?
-                            }
-                            BlockOrExpr::Expr(ref mut expr) => {
-                                checker.infer_expression(expr, &mut new_ctx)?
-                            }
-                        };
-                        body_types.push(body_type);
+                        let t0 = checker.prune(body_types[0]);
+                        eprintln!("t0 = {}", checker.print_type(&t0));
+
+                        let t1 = checker.prune(body_types[1]);
+                        eprintln!("t1 = {}", checker.print_type(&t1));
+
+                        checker.new_union_type(&body_types)
                     }
+                    ExprKind::Class(_) => todo!(),
+                    ExprKind::Do(Do { body }) => checker.infer_block(body, ctx)?,
+                    ExprKind::Try(Try {
+                        body,
+                        catch,
+                        finally: _, // Don't include this in the result
+                    }) => {
+                        let body_t = checker.infer_block(body, ctx)?;
 
-                    let t0 = checker.prune(body_types[0]);
-                    eprintln!("t0 = {}", checker.print_type(&t0));
+                        match catch {
+                            Some(catch) => {
+                                let throws = find_throws_in_block(body);
 
-                    let t1 = checker.prune(body_types[1]);
-                    eprintln!("t1 = {}", checker.print_type(&t1));
+                                let init_idx = checker.new_union_type(&throws);
 
-                    checker.new_union_type(&body_types)
-                }
-                ExprKind::Class(_) => todo!(),
-                ExprKind::Do(Do { body }) => checker.infer_block(body, ctx)?,
-                ExprKind::Try(Try {
-                    body,
-                    catch,
-                    finally: _, // Don't include this in the result
-                }) => {
-                    let body_t = checker.infer_block(body, ctx)?;
+                                if let Some(pattern) = &mut catch.param {
+                                    let (pat_bindings, pat_type) =
+                                        checker.infer_pattern(pattern, ctx)?;
 
-                    match catch {
-                        Some(catch) => {
-                            let throws = find_throws_in_block(body);
+                                    checker.unify(ctx, init_idx, pat_type)?;
 
-                            let init_idx = checker.new_union_type(&throws);
+                                    for (name, binding) in pat_bindings {
+                                        ctx.values.insert(name.clone(), binding);
+                                    }
 
-                            if let Some(pattern) = &mut catch.param {
-                                let (pat_bindings, pat_type) = checker.infer_pattern(pattern, ctx)?;
-
-                                checker.unify(ctx, init_idx, pat_type)?;
-
-                                for (name, binding) in pat_bindings {
-                                    ctx.values.insert(name.clone(), binding);
+                                    pattern.inferred_type = Some(init_idx);
                                 }
 
-                                pattern.inferred_type = Some(init_idx);
+                                let catch_t = checker.infer_block(&mut catch.body, ctx)?;
+                                checker.new_union_type(&[body_t, catch_t])
                             }
-
-                            let catch_t = checker.infer_block(&mut catch.body, ctx)?;
-                            checker.new_union_type(&[body_t, catch_t])
+                            None => body_t,
                         }
-                        None => body_t,
                     }
-                }
-                ExprKind::Yield(_) => todo!(),
-                ExprKind::Throw(Throw { arg, throws }) => {
-                    throws.replace(checker.infer_expression(arg, ctx)?);
-                    checker.new_keyword(Keyword::Never)
-                }
-                ExprKind::JSXFragment(_) => todo!(),
-            };
+                    ExprKind::Yield(_) => todo!(),
+                    ExprKind::Throw(Throw { arg, throws }) => {
+                        throws.replace(checker.infer_expression(arg, ctx)?);
+                        checker.new_keyword(Keyword::Never)
+                    }
+                    ExprKind::JSXFragment(_) => todo!(),
+                };
 
             let t = &mut checker.arena[idx];
             t.provenance = Some(Provenance::Expr(Box::new(node.to_owned())));
@@ -689,7 +712,7 @@ impl Checker {
         let mut result_t = self.new_lit_type(&Literal::Undefined);
 
         for stmt in &mut block.stmts.iter_mut() {
-            result_t = self.infer_statement(stmt, &mut new_ctx, false)?;
+            result_t = self.infer_statement(stmt, &mut new_ctx)?;
         }
 
         Ok(result_t)
@@ -719,14 +742,14 @@ impl Checker {
                             Some(type_ann) => self.infer_type_ann(type_ann, &mut sig_ctx)?,
                             None => {
                                 match &param.pattern.kind {
-                                    // TODO: add a check that `self` is only allowed 
+                                    // TODO: add a check that `self` is only allowed
                                     // as the first param in a method signature.
                                     PatternKind::Ident(ident) if ident.name == "self" => {
                                         self.new_type_ref("Self", &[])
-                                    },
+                                    }
                                     _ => self.new_type_var(None),
                                 }
-                            },
+                            }
                         };
 
                         Ok(types::FuncParam {
@@ -817,11 +840,9 @@ impl Checker {
                             let key = self.infer_type_ann(key, &mut type_ctx)?;
                             let value = self.infer_type_ann(value, &mut type_ctx)?;
 
-                            let optional = optional.as_ref().map(|modifier| {
-                                match modifier {
-                                    syntax::MappedModifier::Add => types::MappedModifier::Add,
-                                    syntax::MappedModifier::Remove => types::MappedModifier::Remove,
-                                }
+                            let optional = optional.as_ref().map(|modifier| match modifier {
+                                syntax::MappedModifier::Add => types::MappedModifier::Add,
+                                syntax::MappedModifier::Remove => types::MappedModifier::Remove,
                             });
 
                             let check = match check {
@@ -946,15 +967,17 @@ impl Checker {
                 }
                 self.new_object_type(&props)
             }
-            TypeAnnKind::TypeRef(name, type_args) if name == "Array" => { 
-                match type_args {
-                    Some(type_args) => {
-                        let t = self.infer_type_ann(&mut type_args[0], ctx)?;
-                        self.new_array_type(t)
-                    },
-                    None => return Err(TypeError { message: "Array expects 1 type arg".to_string() }),
+            TypeAnnKind::TypeRef(name, type_args) if name == "Array" => match type_args {
+                Some(type_args) => {
+                    let t = self.infer_type_ann(&mut type_args[0], ctx)?;
+                    self.new_array_type(t)
                 }
-            }
+                None => {
+                    return Err(TypeError {
+                        message: "Array expects 1 type arg".to_string(),
+                    })
+                }
+            },
             TypeAnnKind::TypeRef(name, type_args) => {
                 let type_args = match type_args {
                     Some(type_args) => {
@@ -1145,7 +1168,6 @@ impl Checker {
         &mut self,
         statement: &mut Stmt,
         ctx: &mut Context,
-        top_level: bool,
     ) -> Result<Index, TypeError> {
         self.with_report(|checker| -> Result<Index, TypeError> {
             let t = match &mut statement.kind {
@@ -1157,7 +1179,7 @@ impl Checker {
                     // The expression we're iterating over must be assignable
                     // to an array.
                     checker.unify(ctx, right_t, array_t)?;
-                    
+
                     let mut new_ctx = ctx.clone();
 
                     for (name, binding) in bindings {
@@ -1177,104 +1199,9 @@ impl Checker {
                         }
                     }
                 }
-                StmtKind::VarDecl(VarDecl{
-                    is_declare,
-                    pattern,
-                    expr: init,
-                    type_ann,
-                    ..
-                }) => {
-                    let (pat_bindings, pat_type) = checker.infer_pattern(pattern, ctx)?;
-                    let undefined = checker.new_lit_type(&Literal::Undefined);
-    
-                    match (is_declare, init, type_ann) {
-                        (false, Some(init), type_ann) => {
-                            let init_idx = checker.infer_expression(init, ctx)?;
-    
-                            let init_type = checker.arena.get(init_idx).unwrap().clone();
-                            let init_idx = match &init_type.kind {
-                                TypeKind::Function(func) if top_level => generalize_func(checker, func),
-                                _ => init_idx,
-                            };
-    
-                            let tpat = pattern_to_tpat(pattern, false);
-                            let mutability = check_mutability(ctx, &tpat, init)?;
-    
-                            let idx = match type_ann {
-                                Some(type_ann) => {
-                                    let type_ann_idx = checker.infer_type_ann(type_ann, ctx)?;
-    
-                                    // The initializer must conform to the type annotation's
-                                    // inferred type.
-                                    match mutability {
-                                        true => checker.unify_mut(ctx, init_idx, type_ann_idx)?,
-                                        false => checker.unify(ctx, init_idx, type_ann_idx)?,
-                                    };
-    
-                                    // Results in bindings introduced by the LHS pattern
-                                    // having their types inferred.
-                                    // It's okay for pat_type to be the super type here
-                                    // because all initializers it introduces are type
-                                    // variables.  It also prevents patterns from including
-                                    // variables that don't exist in the type annotation.
-                                    checker.unify(ctx, type_ann_idx, pat_type)?;
-    
-                                    type_ann_idx
-                                }
-                                None => {
-                                    // Results in bindings introduced by the LHS pattern
-                                    // having their types inferred.
-                                    // It's okay for pat_type to be the super type here
-                                    // because all initializers it introduces are type
-                                    // variables.  It also prevents patterns from including
-                                    // variables that don't exist in the initializer.
-                                    checker.unify(ctx, init_idx, pat_type)?;
-    
-                                    init_idx
-                                }
-                            };
-    
-                            for (name, binding) in pat_bindings {
-                                ctx.values.insert(name.clone(), binding);
-                            }
-    
-                            pattern.inferred_type = Some(idx);
-    
-                            undefined
-                        }
-                        (false, None, _) => {
-                            return Err(TypeError {
-                                message:
-                                    "Variable declarations not using `declare` must have an initializer"
-                                        .to_string(),
-                            });
-                        }
-                        (true, None, Some(type_ann)) => {
-                            let idx = checker.infer_type_ann(type_ann, ctx)?;
-    
-                            checker.unify(ctx, idx, pat_type)?;
-    
-                            for (name, binding) in pat_bindings {
-                                ctx.values.insert(name.clone(), binding);
-                            }
-    
-                            undefined
-                        }
-                        (true, Some(_), _) => {
-                            return Err(TypeError {
-                                message:
-                                    "Variable declarations using `declare` cannot have an initializer"
-                                        .to_string(),
-                            });
-                        }
-                        (true, None, None) => {
-                            return Err(TypeError {
-                                message:
-                                    "Variable declarations using `declare` must have a type annotation"
-                                        .to_string(),
-                            });
-                        }
-                    }
+                StmtKind::VarDecl(decl) => {
+                    checker.infer_var_decl(decl, ctx)?;
+                    checker.new_lit_type(&Literal::Undefined)
                 }
                 // StmtKind::ClassDecl(_) => todo!(),
                 StmtKind::TypeDecl(TypeDecl {
@@ -1284,23 +1211,115 @@ impl Checker {
                 }) => {
                     // NOTE: We clone `ctx` so that type params don't escape the signature
                     let mut sig_ctx = ctx.clone();
-    
+
                     let type_params = checker.infer_type_params(type_params, &mut sig_ctx)?;
                     let t = checker.infer_type_ann(type_ann, &mut sig_ctx)?;
-    
+
                     // TODO: generalize type `t` into a scheme
                     let scheme = Scheme { t, type_params };
-    
+
                     ctx.schemes.insert(name.to_owned(), scheme);
-    
+
                     t
                 } // StmtKind::ForStmt(_) => todo!(),
             };
-    
+
             statement.inferred_type = Some(t);
-        
+
             Ok(t)
         })
+    }
+
+    pub fn infer_var_decl(
+        &mut self,
+        decl: &mut VarDecl,
+        ctx: &mut Context,
+    ) -> Result<Assump, TypeError> {
+        let VarDecl {
+            is_declare,
+            pattern,
+            expr: init,
+            type_ann,
+            ..
+        } = decl;
+
+        let (pat_bindings, pat_type) = self.infer_pattern(pattern, ctx)?;
+        // let undefined = self.new_lit_type(&Literal::Undefined);
+
+        match (is_declare, init, type_ann) {
+            (false, Some(init), type_ann) => {
+                let init_idx = self.infer_expression(init, ctx)?;
+                let tpat = pattern_to_tpat(pattern, false);
+                let mutability = check_mutability(ctx, &tpat, init)?;
+
+                let idx = match type_ann {
+                    Some(type_ann) => {
+                        let type_ann_idx = self.infer_type_ann(type_ann, ctx)?;
+
+                        // The initializer must conform to the type annotation's
+                        // inferred type.
+                        match mutability {
+                            true => self.unify_mut(ctx, init_idx, type_ann_idx)?,
+                            false => self.unify(ctx, init_idx, type_ann_idx)?,
+                        };
+
+                        // Results in bindings introduced by the LHS pattern
+                        // having their types inferred.
+                        // It's okay for pat_type to be the super type here
+                        // because all initializers it introduces are type
+                        // variables.  It also prevents patterns from including
+                        // variables that don't exist in the type annotation.
+                        self.unify(ctx, type_ann_idx, pat_type)?;
+
+                        type_ann_idx
+                    }
+                    None => {
+                        // Results in bindings introduced by the LHS pattern
+                        // having their types inferred.
+                        // It's okay for pat_type to be the super type here
+                        // because all initializers it introduces are type
+                        // variables.  It also prevents patterns from including
+                        // variables that don't exist in the initializer.
+                        // eprintln!("pat_type = {:#?}", pat_type);
+                        // eprintln!("pat_bindings = {:#?}", pat_bindings);
+                        self.unify(ctx, init_idx, pat_type)?;
+
+                        init_idx
+                    }
+                };
+
+                for (name, binding) in &pat_bindings {
+                    ctx.values.insert(name.clone(), binding.clone());
+                }
+
+                pattern.inferred_type = Some(idx);
+
+                Ok(pat_bindings)
+            }
+            (false, None, _) => Err(TypeError {
+                message: "Variable declarations not using `declare` must have an initializer"
+                    .to_string(),
+            }),
+            (true, None, Some(type_ann)) => {
+                let idx = self.infer_type_ann(type_ann, ctx)?;
+
+                self.unify(ctx, idx, pat_type)?;
+
+                for (name, binding) in &pat_bindings {
+                    ctx.values.insert(name.clone(), binding.clone());
+                }
+
+                Ok(pat_bindings)
+            }
+            (true, Some(_), _) => Err(TypeError {
+                message: "Variable declarations using `declare` cannot have an initializer"
+                    .to_string(),
+            }),
+            (true, None, None) => Err(TypeError {
+                message: "Variable declarations using `declare` must have a type annotation"
+                    .to_string(),
+            }),
+        }
     }
 
     // TODO: introduce `infer_script` which has the same semantics as those used
@@ -1311,32 +1330,41 @@ impl Checker {
         node: &mut Program,
         ctx: &mut Context,
     ) -> Result<(), TypeError> {
-        for stmt in &node.stmts {
-            if let StmtKind::TypeDecl(TypeDecl { name, .. }) = &stmt.kind {
-                let placeholder_scheme = Scheme {
-                    t: self.new_keyword(Keyword::Unknown),
-                    type_params: None,
-                };
-                let name = name.to_owned();
-                if ctx
-                    .schemes
-                    .insert(name.clone(), placeholder_scheme)
-                    .is_some()
-                {
-                    return Err(TypeError {
-                        message: format!("{name} cannot be redeclared at the top-level"),
-                    });
-                }
-            }
-        }
+        // Prebindings are used to handle recursive and mutually recursive
+        // function declarations.
+        let mut prebindings: HashMap<String, Binding> = HashMap::new();
 
         for stmt in &mut node.stmts {
-            if let StmtKind::VarDecl(VarDecl { pattern, .. }) = &mut stmt.kind {
-                let (bindings, _) = self.infer_pattern(pattern, ctx)?;
+            match &mut stmt.kind {
+                // TODO: introduce a separate enum for module-level this, e.g.
+                // VarDecls, TypeDecls, Imports, and Exports
+                StmtKind::Expr(_) => (),
+                StmtKind::For(_) => (),
+                StmtKind::Return(_) => (),
+                StmtKind::VarDecl(VarDecl { pattern, .. }) => {
+                    let (bindings, _) = self.infer_pattern(pattern, ctx)?;
 
-                for (name, binding) in bindings {
-                    ctx.non_generic.insert(binding.index);
-                    if ctx.values.insert(name.to_owned(), binding).is_some() {
+                    for (name, binding) in bindings {
+                        prebindings.insert(name.to_owned(), binding.clone());
+                        ctx.non_generic.insert(binding.index);
+                        if ctx.values.insert(name.to_owned(), binding).is_some() {
+                            return Err(TypeError {
+                                message: format!("{name} cannot be redeclared at the top-level"),
+                            });
+                        }
+                    }
+                }
+                StmtKind::TypeDecl(TypeDecl { name, .. }) => {
+                    let placeholder_scheme = Scheme {
+                        t: self.new_keyword(Keyword::Unknown),
+                        type_params: None,
+                    };
+                    let name = name.to_owned();
+                    if ctx
+                        .schemes
+                        .insert(name.clone(), placeholder_scheme)
+                        .is_some()
+                    {
                         return Err(TypeError {
                             message: format!("{name} cannot be redeclared at the top-level"),
                         });
@@ -1345,11 +1373,43 @@ impl Checker {
             }
         }
 
-        // TODO: capture all type decls and do a second pass to valid them
-
-        // TODO: figure out how to avoid parsing patterns twice
+        // Collect all of the bindings that are introduced by the top-level.
+        let mut bindings: BTreeMap<String, Binding> = BTreeMap::new();
         for stmt in &mut node.stmts.iter_mut() {
-            self.infer_statement(stmt, ctx, true)?;
+            match &mut stmt.kind {
+                StmtKind::VarDecl(decl) => {
+                    // TODO: figure out how to avoid parsing patterns twice
+                    bindings.append(&mut self.infer_var_decl(decl, ctx)?);
+                }
+                _ => {
+                    // TODO: disallow non-decls at the top-level
+                    self.infer_statement(stmt, ctx)?;
+                }
+            };
+        }
+
+        // Unify each binding with its prebinding
+        for (name, binding) in &bindings {
+            let prebinding = prebindings.get_mut(name).unwrap();
+            // QUESTION: Which direction should we unify in?
+            self.unify(ctx, prebinding.index, binding.index)?;
+        }
+
+        // Prune any functions before generalizing, this avoids
+        // issues with mutually recursive functions being generalized
+        // prematurely.
+        for binding in bindings.values() {
+            let pruned_index = self.prune(binding.index);
+            self.bind(ctx, binding.index, pruned_index)?;
+        }
+
+        // Generalize any functions.
+        for binding in bindings.values() {
+            let pruned_index = self.prune(binding.index);
+            if let TypeKind::Function(func) = &self.arena[pruned_index].kind.clone() {
+                let func = generalize_func(self, func);
+                self.bind(ctx, binding.index, func)?;
+            }
         }
 
         Ok(())
@@ -1362,9 +1422,7 @@ impl Checker {
         key_idx: Index,
         is_mut: bool,
     ) -> Result<Index, TypeError> {
-        // We're not mutating `kind` so this should be safe.
-        let kind: &TypeKind = unsafe { transmute(&self.arena[obj_idx].kind) };
-        match kind {
+        match &self.arena[obj_idx].kind.clone() {
             TypeKind::Object(_) => self.get_prop_value(ctx, obj_idx, key_idx, is_mut),
             // declare let obj: {x: number} | {x: string}
             // obj.x; // number | string
@@ -1630,6 +1688,7 @@ pub fn generalize_func(checker: &mut Checker, func: &types::Function) -> Index {
         type_params.extend(explicit_type_params.to_owned());
     }
 
+    eprintln!("mapping = {:#?}", mapping);
     for (_, name) in mapping {
         type_params.push(types::TypeParam {
             name: name.clone(),

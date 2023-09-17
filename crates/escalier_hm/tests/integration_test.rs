@@ -275,6 +275,46 @@ fn test_mutual_recursion_using_destructuring() -> Result<(), TypeError> {
 }
 
 #[test]
+fn infer_mutual_rec_decl() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = "let [foo, bar] = [
+        fn (x) => if (x > 0) { bar(x - 1) } else { true },
+        fn (x) => if (x > 0) { foo(x - 1) } else { false },
+    ]";
+    let mut program = parse(src).unwrap();
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    let result = checker.print_type(&my_ctx.values.get("foo").unwrap().index);
+    insta::assert_snapshot!(result, @"(x: number) -> false | true | false | true");
+
+    let result = checker.print_type(&my_ctx.values.get("bar").unwrap().index);
+    insta::assert_snapshot!(result, @"(x: number) -> false | true | false");
+
+    Ok(())
+}
+
+#[test]
+fn infer_mutual_rec_decls() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = "
+    let foo = fn (x) => if (x > 0) { bar(x - 1) } else { true }
+    let bar = fn (x) => if (x > 0) { foo(x - 1) } else { false }
+    ";
+    let mut program = parse(src).unwrap();
+    checker.infer_program(&mut program, &mut my_ctx)?;
+
+    let result = checker.print_type(&my_ctx.values.get("foo").unwrap().index);
+    insta::assert_snapshot!(result, @"(x: number) -> true | false | true");
+
+    let result = checker.print_type(&my_ctx.values.get("bar").unwrap().index);
+    insta::assert_snapshot!(result, @"(x: number) -> true | false | true | false");
+
+    Ok(())
+}
+
+#[test]
 fn test_no_top_level_redeclaration() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
@@ -1669,7 +1709,7 @@ fn test_await_non_promise() -> Result<(), TypeError> {
     assert_eq!(
         result,
         Err(TypeError {
-            message: "type mismatch: unify(5, Promise<t11, t12>) failed".to_string()
+            message: "type mismatch: unify(5, Promise<t10, t11>) failed".to_string()
         })
     );
 
@@ -2100,7 +2140,7 @@ fn member_access_on_type_variable() -> Result<(), TypeError> {
     assert_eq!(
         result,
         Err(TypeError {
-            message: "Can't access properties on t10".to_string()
+            message: "Can't access properties on t9".to_string()
         })
     );
 
@@ -5201,7 +5241,7 @@ fn test_generalization_inside_function() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("bar").unwrap();
     assert_eq!(
         checker.print_type(&binding.index),
-        r#"[5, "hello", (x: t36) -> t36]"#
+        r#"[5, "hello", (x: t34) -> t34]"#
     );
 
     assert_no_errors(&checker)
