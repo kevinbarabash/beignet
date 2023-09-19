@@ -159,7 +159,7 @@ impl<'a> Parser<'a> {
         Ok(stmt)
     }
 
-    pub fn parse_program(&mut self) -> Result<Program, ParseError> {
+    pub fn parse_script(&mut self) -> Result<Script, ParseError> {
         let mut stmts = Vec::new();
         while self.peek().unwrap_or(&EOF).kind != TokenKind::Eof {
             // TODO: attach comments to AST nodes
@@ -169,13 +169,13 @@ impl<'a> Parser<'a> {
             }
             stmts.push(self.parse_stmt()?);
         }
-        Ok(Program { stmts })
+        Ok(Script { stmts })
     }
 }
 
-pub fn parse(input: &str) -> Result<Program, ParseError> {
+pub fn parse(input: &str) -> Result<Script, ParseError> {
     let mut parser = Parser::new(input);
-    parser.parse_program()
+    parser.parse_script()
 }
 
 #[cfg(test)]
@@ -184,7 +184,7 @@ mod tests {
 
     fn parse(input: &str) -> Vec<Stmt> {
         let mut parser = Parser::new(input);
-        parser.parse_program().unwrap().stmts
+        parser.parse_script().unwrap().stmts
     }
 
     #[test]

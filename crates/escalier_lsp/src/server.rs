@@ -13,7 +13,7 @@ use lsp_types::request::{HoverRequest, SemanticTokensFullRequest};
 use lsp_types::*;
 
 use escalier_ast::{
-    walk_expr, walk_pattern, walk_stmt, walk_type_ann, Expr, Pattern, Program, Stmt, TypeAnn,
+    walk_expr, walk_pattern, walk_stmt, walk_type_ann, Expr, Pattern, Script, Stmt, TypeAnn,
     Visitor,
 };
 use escalier_interop::parse::parse_dts;
@@ -93,7 +93,7 @@ impl LanguageServer {
 
                 // Update TypeError to implement Error + Sync + Send
                 eprintln!("inferring types");
-                checker.infer_program(&mut program, &mut ctx).unwrap();
+                checker.infer_script(&mut program, &mut ctx).unwrap();
 
                 eprintln!("program = {program:#?}");
 
@@ -298,7 +298,7 @@ impl<'a> Visitor for GetTypeVisitor<'a> {
 
 fn get_type_at_location(
     file: &SourceFile,
-    program: &Program,
+    program: &Script,
     cursor_pos: &Position,
 ) -> Option<Index> {
     let mut visitor = GetTypeVisitor {

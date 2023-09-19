@@ -17,14 +17,14 @@ fn infer_prog(src: &str) -> (Checker, Context) {
     let (mut checker, mut ctx) = parse_dts(&lib).unwrap();
 
     let result = parse(src);
-    let mut prog = match result {
-        Ok(prog) => prog,
+    let mut script = match result {
+        Ok(script) => script,
         Err(err) => {
             println!("err = {:?}", err);
             panic!("Error parsing expression");
         }
     };
-    match checker.infer_program(&mut prog, &mut ctx) {
+    match checker.infer_script(&mut script, &mut ctx) {
         Ok(_) => {
             if !checker.current_report.diagnostics.is_empty() {
                 panic!("was expecting infer_prog() to return no errors");
@@ -38,17 +38,17 @@ fn infer_prog(src: &str) -> (Checker, Context) {
     }
 }
 
-fn infer_prog_with_checker(
+fn infer_script_with_checker(
     src: &str,
     checker: &mut Checker,
     ctx: &mut Context,
 ) -> Result<(), String> {
     let result = parse(src);
-    let mut prog = match result {
-        Ok(prog) => prog,
+    let mut script = match result {
+        Ok(script) => script,
         Err(_) => return Err("Error parsing expression".to_string()),
     };
-    match checker.infer_program(&mut prog, ctx) {
+    match checker.infer_script(&mut script, ctx) {
         Ok(_) => {
             if !checker.current_report.diagnostics.is_empty() {
                 Err("was expecting infer_prog() to return no errors".to_string())
@@ -236,7 +236,7 @@ fn infer_index_value_on_interface() -> Result<(), String> {
     let bool = foo.bar
     "#;
 
-    infer_prog_with_checker(src, &mut checker, &mut ctx)?;
+    infer_script_with_checker(src, &mut checker, &mut ctx)?;
 
     let binding = ctx.values.get("num").unwrap();
     let result = checker.print_type(&binding.index);
@@ -263,7 +263,7 @@ fn infer_generic_index_value_on_interface() -> Result<(), String> {
     declare let foo: Foo
     let id = foo[5]
     "#;
-    infer_prog_with_checker(src, &mut checker, &mut ctx)?;
+    infer_script_with_checker(src, &mut checker, &mut ctx)?;
 
     let binding = ctx.values.get("id").unwrap();
     let result = checker.print_type(&binding.index);
@@ -290,7 +290,7 @@ fn infer_index_with_incorrect_key_type_on_interface() -> Result<(), String> {
     let bool = foo.bar
     "#;
 
-    let error = infer_prog_with_checker(src, &mut checker, &mut ctx);
+    let error = infer_script_with_checker(src, &mut checker, &mut ctx);
 
     assert_eq!(
         error,
@@ -315,7 +315,7 @@ fn instantiating_generic_interfaces() -> Result<(), String> {
     let bar = foo.bar
     "#;
 
-    infer_prog_with_checker(src, &mut checker, &mut ctx)?;
+    infer_script_with_checker(src, &mut checker, &mut ctx)?;
 
     let binding = ctx.values.get("bar").unwrap();
     let result = checker.print_type(&binding.index);
@@ -339,7 +339,7 @@ fn interface_with_generic_method() -> Result<(), String> {
     let bar = foo.bar
     "#;
 
-    infer_prog_with_checker(src, &mut checker, &mut ctx)?;
+    infer_script_with_checker(src, &mut checker, &mut ctx)?;
 
     let binding = ctx.values.get("bar").unwrap();
     let result = checker.print_type(&binding.index);
@@ -365,7 +365,7 @@ fn merging_generic_interfaces() -> Result<(), String> {
     declare let foo: Foo<number>
     "#;
 
-    infer_prog_with_checker(src, &mut checker, &mut ctx)?;
+    infer_script_with_checker(src, &mut checker, &mut ctx)?;
 
     let scheme = ctx.schemes.get("Foo").unwrap();
     let result = checker.print_scheme(scheme);
@@ -549,7 +549,7 @@ fn infer_out_of_order_exclude() {
     type T1 = Exclude<"a" | "b", "a" | "b" | "c">
     "#;
 
-    infer_prog_with_checker(src, &mut checker, &mut ctx).unwrap();
+    infer_script_with_checker(src, &mut checker, &mut ctx).unwrap();
 
     let scheme = ctx.get_scheme("T1").unwrap();
     let t = checker.expand_type(&ctx, scheme.t).unwrap();

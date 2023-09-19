@@ -135,13 +135,13 @@ pub fn merge_readonly_and_mutable_schemes(
 mod tests {
     use super::*;
 
-    use escalier_ast::program::Program;
+    use escalier_ast::script::Script;
     use escalier_hm::context::Context;
     use escalier_parser::*;
 
-    pub fn parse(input: &str) -> Result<Program, ParseError> {
+    pub fn parse(input: &str) -> Result<Script, ParseError> {
         let mut parser = Parser::new(input);
-        parser.parse_program()
+        parser.parse_script()
     }
 
     #[test]
@@ -157,7 +157,7 @@ mod tests {
         let mut checker = Checker::default();
         let mut ctx = Context::default();
         let mut program = parse(src).unwrap();
-        checker.infer_program(&mut program, &mut ctx).unwrap();
+        checker.infer_script(&mut program, &mut ctx).unwrap();
 
         let scheme_a = ctx.schemes.get("A").unwrap();
         let scheme_b = ctx.schemes.get("B").unwrap();
@@ -183,7 +183,7 @@ mod tests {
         let mut checker = Checker::default();
         let mut ctx = Context::default();
         let mut program = parse(src).unwrap();
-        checker.infer_program(&mut program, &mut ctx).unwrap();
+        checker.infer_script(&mut program, &mut ctx).unwrap();
 
         let scheme_a = ctx.schemes.get("A").unwrap().to_owned();
         let scheme_b = ctx.schemes.get("B").unwrap().to_owned();
@@ -209,7 +209,7 @@ mod tests {
         let mut checker = Checker::default();
         let mut ctx = Context::default();
         let mut program = parse(src).unwrap();
-        checker.infer_program(&mut program, &mut ctx).unwrap();
+        checker.infer_script(&mut program, &mut ctx).unwrap();
 
         let scheme_a = ctx.schemes.get("A").unwrap().to_owned();
         let scheme_b = ctx.schemes.get("B").unwrap().to_owned();

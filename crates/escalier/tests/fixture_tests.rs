@@ -115,8 +115,8 @@ pub fn all_reports_to_string(src: &str, checker: &Checker) -> String {
 }
 
 fn compile(input: &str, lib: &str) -> (String, String, String, String) {
-    let mut program = match escalier_parser::parse(input) {
-        Ok(program) => program,
+    let mut script = match escalier_parser::parse(input) {
+        Ok(script) => script,
         Err(error) => {
             return (
                 "".to_string(),
@@ -127,12 +127,12 @@ fn compile(input: &str, lib: &str) -> (String, String, String, String) {
         }
     };
 
-    let (js, srcmap) = escalier_codegen::js::codegen_js(input, &program);
+    let (js, srcmap) = escalier_codegen::js::codegen_js(input, &script);
 
     // TODO: return errors as part of CompileResult
     let (mut checker, mut ctx) = parse_dts(lib).unwrap();
 
-    match checker.infer_program(&mut program, &mut ctx) {
+    match checker.infer_script(&mut script, &mut ctx) {
         Ok(_) => (),
         Err(error) => {
             return (
@@ -148,7 +148,7 @@ fn compile(input: &str, lib: &str) -> (String, String, String, String) {
         }
     };
 
-    let dts = match escalier_codegen::d_ts::codegen_d_ts(&program, &ctx, &checker) {
+    let dts = match escalier_codegen::d_ts::codegen_d_ts(&script, &ctx, &checker) {
         Ok(value) => value,
         Err(error) => {
             return (

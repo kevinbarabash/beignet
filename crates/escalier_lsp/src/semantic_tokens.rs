@@ -7,7 +7,7 @@ use escalier_ast::*;
 
 use crate::util::*;
 
-pub fn get_semantic_tokens(file: &SourceFile, program: &mut Program) -> Vec<SemanticToken> {
+pub fn get_semantic_tokens(file: &SourceFile, program: &mut Script) -> Vec<SemanticToken> {
     let mut visitor = SemanticTokenVisitor {
         file,
         raw_tokens: vec![],

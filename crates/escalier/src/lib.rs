@@ -37,7 +37,7 @@ fn _compile(input: &str, lib: &str) -> Result<(String, String, String, String), 
     let (mut checker, mut ctx) = parse_dts(lib).unwrap();
 
     // TODO: get rid of panics and return errors instead
-    match checker.infer_program(&mut program, &mut ctx) {
+    match checker.infer_script(&mut program, &mut ctx) {
         Ok(_) => {
             if !checker.current_report.diagnostics.is_empty() {
                 panic!("was expecting infer_prog() to return no errors");

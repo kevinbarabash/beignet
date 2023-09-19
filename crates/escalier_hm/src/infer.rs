@@ -1326,11 +1326,7 @@ impl Checker {
     // shouldn't allow mutually recursion between statements while `infer_module`
     // should.  `infer_script` can still allow mutual recursion that occurs within
     // a single statment (variable declaration).
-    pub fn infer_program(
-        &mut self,
-        node: &mut Program,
-        ctx: &mut Context,
-    ) -> Result<(), TypeError> {
+    pub fn infer_script(&mut self, node: &mut Script, ctx: &mut Context) -> Result<(), TypeError> {
         // Prebindings are used to handle recursive and mutually recursive
         // function declarations.
         let mut prebindings: HashMap<String, Binding> = HashMap::new();
