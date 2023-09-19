@@ -306,10 +306,10 @@ fn infer_mutual_rec_decls() -> Result<(), TypeError> {
     checker.infer_program(&mut program, &mut my_ctx)?;
 
     let result = checker.print_type(&my_ctx.values.get("foo").unwrap().index);
-    insta::assert_snapshot!(result, @"(x: number) -> true | false | true");
+    insta::assert_snapshot!(result, @"<A>(x: number) -> A | true");
 
     let result = checker.print_type(&my_ctx.values.get("bar").unwrap().index);
-    insta::assert_snapshot!(result, @"(x: number) -> true | false | true | false");
+    insta::assert_snapshot!(result, @"<A>(x: number) -> A | true | false");
 
     Ok(())
 }

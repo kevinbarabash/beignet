@@ -1322,9 +1322,10 @@ impl Checker {
         }
     }
 
-    // TODO: introduce `infer_script` which has the same semantics as those used
-    // to infer the body of a function.
-    // TODO: rename to `infer_module`
+    // TODO: split this into `infer_script` and `infer_module`.  `infer_script`
+    // shouldn't allow mutually recursion between statements while `infer_module`
+    // should.  `infer_script` can still allow mutual recursion that occurs within
+    // a single statment (variable declaration).
     pub fn infer_program(
         &mut self,
         node: &mut Program,
@@ -1373,43 +1374,41 @@ impl Checker {
             }
         }
 
-        // Collect all of the bindings that are introduced by the top-level.
-        let mut bindings: BTreeMap<String, Binding> = BTreeMap::new();
         for stmt in &mut node.stmts.iter_mut() {
             match &mut stmt.kind {
                 StmtKind::VarDecl(decl) => {
                     // TODO: figure out how to avoid parsing patterns twice
-                    bindings.append(&mut self.infer_var_decl(decl, ctx)?);
+                    let bindings = self.infer_var_decl(decl, ctx)?;
+
+                    // Unify each binding with its prebinding
+                    for (name, binding) in &bindings {
+                        let prebinding = prebindings.get_mut(name).unwrap();
+                        // QUESTION: Which direction should we unify in?
+                        self.unify(ctx, prebinding.index, binding.index)?;
+                    }
+
+                    // Prune any functions before generalizing, this avoids
+                    // issues with mutually recursive functions being generalized
+                    // prematurely.
+                    for binding in bindings.values() {
+                        let pruned_index = self.prune(binding.index);
+                        self.bind(ctx, binding.index, pruned_index)?;
+                    }
+
+                    // Generalize any functions.
+                    for binding in bindings.values() {
+                        let pruned_index = self.prune(binding.index);
+                        if let TypeKind::Function(func) = &self.arena[pruned_index].kind.clone() {
+                            let func = generalize_func(self, func);
+                            self.bind(ctx, binding.index, func)?;
+                        }
+                    }
                 }
                 _ => {
                     // TODO: disallow non-decls at the top-level
                     self.infer_statement(stmt, ctx)?;
                 }
             };
-        }
-
-        // Unify each binding with its prebinding
-        for (name, binding) in &bindings {
-            let prebinding = prebindings.get_mut(name).unwrap();
-            // QUESTION: Which direction should we unify in?
-            self.unify(ctx, prebinding.index, binding.index)?;
-        }
-
-        // Prune any functions before generalizing, this avoids
-        // issues with mutually recursive functions being generalized
-        // prematurely.
-        for binding in bindings.values() {
-            let pruned_index = self.prune(binding.index);
-            self.bind(ctx, binding.index, pruned_index)?;
-        }
-
-        // Generalize any functions.
-        for binding in bindings.values() {
-            let pruned_index = self.prune(binding.index);
-            if let TypeKind::Function(func) = &self.arena[pruned_index].kind.clone() {
-                let func = generalize_func(self, func);
-                self.bind(ctx, binding.index, func)?;
-            }
         }
 
         Ok(())
@@ -1703,3 +1702,24 @@ pub fn generalize_func(checker: &mut Checker, func: &types::Function) -> Index {
         checker.new_func_type(&params, ret, &Some(type_params), throws)
     }
 }
+
+// NOTES:
+// - can't have cycles between const fn's and other const's
+// - because cycles aren't allowed, you can determine graph that's a tree
+//   that describes the dependences of all declarations
+// - what about mutually recursive functions?
+//   - we can group those together and determine the dependencies of that group
+//     of functions
+//   - as long as there are no cycles involving non-function const's, we should
+//     be able to infer it correctly
+
+const fn Foo() -> u32 {
+    A
+}
+const fn Bar() -> u32 {
+    B + C
+}
+
+const C: u32 = B;
+const A: u32 = 5;
+const B: u32 = Foo();
