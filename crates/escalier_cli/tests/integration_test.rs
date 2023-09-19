@@ -1,4 +1,4 @@
-use escalier_ast::{Program, StmtKind};
+use escalier_ast::{Script, StmtKind};
 use escalier_codegen::*;
 use escalier_hm::checker::Checker;
 use escalier_hm::context::Context;
@@ -35,21 +35,20 @@ fn infer(input: &str) -> String {
     }
 }
 
-fn infer_prog(src: &str) -> (Program, (Context, Checker)) {
+fn infer_script(src: &str) -> (Script, (Context, Checker)) {
     let result = parse(src);
-    let mut prog = match result {
-        Ok(prog) => prog,
+    let mut script = match result {
+        Ok(script) => script,
         Err(err) => {
             println!("err = {:?}", err);
             panic!("Error parsing expression");
         }
     };
-    // println!("prog = {:#?}", &prog);
     let mut checker = Checker::default();
     let mut ctx = Context::default();
 
-    match checker.infer_program(&mut prog, &mut ctx) {
-        Ok(()) => (prog, (ctx, checker)),
+    match checker.infer_script(&mut script, &mut ctx) {
+        Ok(()) => (script, (ctx, checker)),
         Err(error) => {
             let message = error.message;
             panic!("{message}");
@@ -101,7 +100,7 @@ fn infer_fn_with_param_types() {
 #[test]
 fn infer_let_fn_with_param_types() {
     let src = "let add = fn (a: 5, b: 10) => a + b";
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("add").unwrap().index);
     assert_eq!(result, "(a: 5, b: 10) -> 15");
@@ -111,7 +110,7 @@ fn infer_let_fn_with_param_types() {
 #[test]
 #[ignore]
 fn infer_fn_with_incorrect_param_types() {
-    let (_, (_, checker)) = infer_prog("fn (a: string, b: boolean) => a + b");
+    let (_, (_, checker)) = infer_script("fn (a: string, b: boolean) => a + b");
 
     insta::assert_snapshot!(current_report_message(&checker), @r###"
     ESC_1 - string is not a number:
@@ -127,7 +126,7 @@ fn infer_fn_with_incorrect_param_types() {
 #[ignore]
 fn infer_let_fn_with_incorrect_param_types() -> Result<(), TypeError> {
     let src = "let add = fn (a: string, b: boolean) => a + b";
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     insta::assert_snapshot!(current_report_message(&checker), @r###"
     ESC_1 - string is not a number:
@@ -158,18 +157,18 @@ fn infer_fn_param_used_with_multiple_other_params() {
 
 #[test]
 fn infer_i_combinator() {
-    let (_, (ctx, checker)) = infer_prog("let I = fn (x) => x");
+    let (_, (ctx, checker)) = infer_script("let I = fn (x) => x");
     let result = checker.print_type(&ctx.values.get("I").unwrap().index);
     insta::assert_snapshot!(result, @"<A>(x: A) -> A");
 }
 
 #[test]
 fn infer_k_combinator_not_curried() -> Result<(), TypeError> {
-    let (program, (ctx, checker)) = infer_prog("let K = fn (x, y) => x");
+    let (script, (ctx, checker)) = infer_script("let K = fn (x, y) => x");
     let result = checker.print_type(&ctx.values.get("K").unwrap().index);
     insta::assert_snapshot!(result, @"<A, B>(x: A, y: B) -> A");
 
-    let result = codegen_d_ts(&program, &ctx, &checker)?;
+    let result = codegen_d_ts(&script, &ctx, &checker)?;
     insta::assert_snapshot!(result, @"export declare const K: <A, B>(x: A, y: B) => A;\n");
 
     Ok(())
@@ -177,21 +176,21 @@ fn infer_k_combinator_not_curried() -> Result<(), TypeError> {
 
 #[test]
 fn infer_s_combinator_not_curried() {
-    let (_, (ctx, checker)) = infer_prog("let S = fn (f, g, x) => f(x, g(x))");
+    let (_, (ctx, checker)) = infer_script("let S = fn (f, g, x) => f(x, g(x))");
     let result = checker.print_type(&ctx.values.get("S").unwrap().index);
     insta::assert_snapshot!(result, @"<A, C, B>(f: (arg0: A, arg1: B) -> C, g: (arg0: A) -> B, x: A) -> C");
 }
 
 #[test]
 fn infer_k_combinator_curried() {
-    let (_, (ctx, checker)) = infer_prog("let K = fn (x) => fn (y) => x");
+    let (_, (ctx, checker)) = infer_script("let K = fn (x) => fn (y) => x");
     let result = checker.print_type(&ctx.values.get("K").unwrap().index);
     insta::assert_snapshot!(result, @"<A, B>(x: A) -> (y: B) -> A");
 }
 
 #[test]
 fn infer_s_combinator_curried() {
-    let (_, (ctx, checker)) = infer_prog("let S = fn (f) => fn (g) => fn (x) => f(x)(g(x))");
+    let (_, (ctx, checker)) = infer_script("let S = fn (f) => fn (g) => fn (x) => f(x)(g(x))");
     let result = checker.print_type(&ctx.values.get("S").unwrap().index);
     insta::assert_snapshot!(
         result,
@@ -206,7 +205,7 @@ fn infer_skk() {
     let K = fn (x) => fn (y) => x
     let I = S(K)(K)
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
     let result = checker.print_type(&ctx.values.get("S").unwrap().index);
     insta::assert_snapshot!(result, @"<A, C, B>(f: (arg0: A) -> (arg0: B) -> C) -> (g: (arg0: A) -> B) -> (x: A) -> C");
     let result = checker.print_type(&ctx.values.get("K").unwrap().index);
@@ -222,7 +221,7 @@ fn infer_adding_literals_in_variables() {
     let y = 10
     let z = x + y
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
     let result = checker.print_type(&ctx.values.get("z").unwrap().index);
     assert_eq!(result, "15");
 }
@@ -234,7 +233,7 @@ fn infer_adding_numbers() {
     let y = 10
     let z = x + y
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
     let result = checker.print_type(&ctx.values.get("z").unwrap().index);
     assert_eq!(result, "number");
 }
@@ -245,8 +244,8 @@ fn infer_decl() -> Result<(), TypeError> {
     let foo = fn (a, b) => a + b
     let bar = "hello"
     "#;
-    let (program, (ctx, checker)) = infer_prog(src);
-    let result = codegen_d_ts(&program, &ctx, &checker)?;
+    let (script, (ctx, checker)) = infer_script(src);
+    let result = codegen_d_ts(&script, &ctx, &checker)?;
 
     insta::assert_snapshot!(result, @r###"
     export declare const bar: "hello";
@@ -262,8 +261,8 @@ fn infer_with_subtyping() -> Result<(), TypeError> {
     let foo = fn (a, b) => a + b
     let bar = foo(5, 10)
     "#;
-    let (program, (ctx, checker)) = infer_prog(src);
-    let result = codegen_d_ts(&program, &ctx, &checker)?;
+    let (script, (ctx, checker)) = infer_script(src);
+    let result = codegen_d_ts(&script, &ctx, &checker)?;
 
     insta::assert_snapshot!(result, @r###"
     export declare const bar: number;
@@ -275,7 +274,7 @@ fn infer_with_subtyping() -> Result<(), TypeError> {
 
 #[test]
 fn infer_if_else_without_widening() {
-    let (_, (ctx, checker)) = infer_prog("let x = if (true) { 5 } else { 5 }");
+    let (_, (ctx, checker)) = infer_script("let x = if (true) { 5 } else { 5 }");
     let result = checker.print_type(&ctx.values.get("x").unwrap().index);
     // TODO: remove duplicate types from union types
     assert_eq!(result, "5 | 5");
@@ -283,14 +282,14 @@ fn infer_if_else_without_widening() {
 
 #[test]
 fn infer_if_else_with_widening() {
-    let (_, (ctx, checker)) = infer_prog("let x = if (true) { 5 } else { 10 }");
+    let (_, (ctx, checker)) = infer_script("let x = if (true) { 5 } else { 10 }");
     let result = checker.print_type(&ctx.values.get("x").unwrap().index);
     assert_eq!(result, "5 | 10");
 }
 
 #[test]
 fn infer_value_of_let_from_a_block_return_is_undefined() {
-    let (_, (ctx, checker)) = infer_prog("let x = if (true) { let a = 5 }");
+    let (_, (ctx, checker)) = infer_script("let x = if (true) { let a = 5 }");
     let result = checker.print_type(&ctx.values.get("x").unwrap().index);
     assert_eq!(result, "undefined | undefined");
 }
@@ -303,7 +302,7 @@ fn infer_only_if() {
         a
     }
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
     let result = checker.print_type(&ctx.values.get("x").unwrap().index);
     assert_eq!(result, "5 | undefined");
 }
@@ -315,7 +314,7 @@ fn infer_if_else_with_widening_of_top_level_vars() {
     let b = 10
     let x = if (true) { a } else { b }
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
     let result = checker.print_type(&ctx.values.get("x").unwrap().index);
     assert_eq!(result, "5 | 10");
 }
@@ -325,11 +324,11 @@ fn infer_if_else_with_multiple_widenings() -> Result<(), TypeError> {
     let src = r#"
     let x = if (true) { 5 } else if (false) { 10 } else { 15 }
     "#;
-    let (program, (ctx, checker)) = infer_prog(src);
+    let (script, (ctx, checker)) = infer_script(src);
     let result = checker.print_type(&ctx.values.get("x").unwrap().index);
     assert_eq!(result, "5 | 10 | 15");
 
-    let result = codegen_d_ts(&program, &ctx, &checker)?;
+    let result = codegen_d_ts(&script, &ctx, &checker)?;
     insta::assert_snapshot!(result, @"export declare const x: 5 | 10 | 15;\n");
 
     Ok(())
@@ -337,7 +336,7 @@ fn infer_if_else_with_multiple_widenings() -> Result<(), TypeError> {
 
 #[test]
 fn infer_equal_with_numbers() {
-    let (_, (ctx, checker)) = infer_prog("let cond = 5 == 10");
+    let (_, (ctx, checker)) = infer_script("let cond = 5 == 10");
     let result = checker.print_type(&ctx.values.get("cond").unwrap().index);
     assert_eq!(result, "false");
 }
@@ -347,7 +346,7 @@ fn infer_equal_with_numbers() {
 #[test]
 #[ignore]
 fn infer_not_equal_with_variables() {
-    let (_, (ctx, checker)) = infer_prog("let neq = fn (a, b) => a != b");
+    let (_, (ctx, checker)) = infer_script("let neq = fn (a, b) => a != b");
     let result = checker.print_type(&ctx.values.get("neq").unwrap().index);
     insta::assert_snapshot!(result, @"<A, B>(a: A, b: B) -> boolean");
 }
@@ -360,7 +359,7 @@ fn infer_inequalities() {
     let gt = fn (a, b) => a > b
     let gte = fn (a, b) => a >= b
     "###;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
     assert_eq!(
         checker.print_type(&ctx.values.get("lt").unwrap().index),
         "(a: number, b: number) -> boolean"
@@ -382,11 +381,11 @@ fn infer_inequalities() {
 #[test]
 fn infer_let_rec_until() -> Result<(), TypeError> {
     let src = "let until = fn (p, f, x) => if (p(x)) { x } else { until(p, f, f(x)) }";
-    let (program, (ctx, checker)) = infer_prog(src);
+    let (script, (ctx, checker)) = infer_script(src);
     let result = checker.print_type(&ctx.values.get("until").unwrap().index);
     insta::assert_snapshot!(result, @"<A>(p: (arg0: A) -> boolean, f: (arg0: A) -> A, x: A) -> A | A");
 
-    let result = codegen_d_ts(&program, &ctx, &checker)?;
+    let result = codegen_d_ts(&script, &ctx, &checker)?;
     insta::assert_snapshot!(result, @"export declare const until: <A>(p: (arg0: A) => boolean, f: (arg0: A) => A, x: A) => A | A;
 ");
 
@@ -405,7 +404,7 @@ fn infer_fib() {
     }
     "###;
 
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
     let fib = ctx.values.get("fib").unwrap();
     assert_eq!(
         format!("{}", checker.print_type(&fib.index)),
@@ -420,7 +419,7 @@ fn infer_obj() {
     let src = r#"
     let point = {x: 5, y: 10, msg: "Hello, world!"}
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
     let result = checker.print_type(&ctx.values.get("point").unwrap().index);
     assert_eq!(result, "{x: 5, y: 10, msg: \"Hello, world!\"}");
 }
@@ -428,7 +427,7 @@ fn infer_obj() {
 #[test]
 fn infer_async() {
     let src = "let foo = async fn () => 10";
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
     let result = checker.print_type(&ctx.values.get("foo").unwrap().index);
     assert_eq!(result, "() -> Promise<10, never>");
 }
@@ -436,14 +435,14 @@ fn infer_async() {
 #[test]
 fn infer_async_math() -> Result<(), TypeError> {
     let src = "let add = async fn (a, b) => await a() + await b()";
-    let (program, (ctx, checker)) = infer_prog(src);
+    let (script, (ctx, checker)) = infer_script(src);
     let result = checker.print_type(&ctx.values.get("add").unwrap().index);
     assert_eq!(
         result,
         "<A, B>(a: () -> Promise<number, A>, b: () -> Promise<number, B>) -> Promise<number, A | B>"
     );
 
-    let result = codegen_d_ts(&program, &ctx, &checker)?;
+    let result = codegen_d_ts(&script, &ctx, &checker)?;
     insta::assert_snapshot!(result, @"export declare const add: <A, B>(a: () => Promise<number, A>, b: () => Promise<number, B>) => Promise<number, A | B>;
 ");
 
@@ -453,13 +452,13 @@ fn infer_async_math() -> Result<(), TypeError> {
 #[test]
 fn codegen_let_rec() -> Result<(), TypeError> {
     let src = "let f = fn () => f()";
-    let (program, (ctx, checker)) = infer_prog(src);
-    let (js, _) = codegen_js(src, &program);
+    let (script, (ctx, checker)) = infer_script(src);
+    let (js, _) = codegen_js(src, &script);
 
     insta::assert_snapshot!(js, @"export const f = ()=>f();
 ");
 
-    let result = codegen_d_ts(&program, &ctx, &checker)?;
+    let result = codegen_d_ts(&script, &ctx, &checker)?;
 
     insta::assert_snapshot!(result, @"export declare const f: <A>() => A;\n");
 
@@ -472,9 +471,9 @@ fn codegen_if_else() -> Result<(), TypeError> {
     let cond = true
     let result = if (cond) { 5 } else { 5 }
     "#;
-    let (program, (ctx, checker)) = infer_prog(src);
+    let (script, (ctx, checker)) = infer_script(src);
 
-    let (js, _) = codegen_js(src, &program);
+    let (js, _) = codegen_js(src, &script);
     insta::assert_snapshot!(js, @r###"
     export const cond = true;
     let $temp_0;
@@ -486,7 +485,7 @@ fn codegen_if_else() -> Result<(), TypeError> {
     export const result = $temp_0;
     "###);
 
-    let result = codegen_d_ts(&program, &ctx, &checker)?;
+    let result = codegen_d_ts(&script, &ctx, &checker)?;
 
     // TODO: remove duplicates from union types
     insta::assert_snapshot!(result, @r###"
@@ -500,8 +499,8 @@ fn codegen_if_else() -> Result<(), TypeError> {
 #[test]
 fn codegen_object() -> Result<(), TypeError> {
     let src = "let point = {x: 5, y: 10}";
-    let (program, (ctx, checker)) = infer_prog(src);
-    let (js, _) = codegen_js(src, &program);
+    let (script, (ctx, checker)) = infer_script(src);
+    let (js, _) = codegen_js(src, &script);
 
     insta::assert_snapshot!(js, @r###"
     export const point = {
@@ -510,7 +509,7 @@ fn codegen_object() -> Result<(), TypeError> {
     };
     "###);
 
-    let result = codegen_d_ts(&program, &ctx, &checker)?;
+    let result = codegen_d_ts(&script, &ctx, &checker)?;
 
     // TODO: wrap types in `Readonly<>` if the binding is immutable
     insta::assert_snapshot!(result, @r###"
@@ -526,14 +525,14 @@ fn codegen_object() -> Result<(), TypeError> {
 #[test]
 fn codegen_async_math() -> Result<(), TypeError> {
     let src = "let add = async fn (a, b) => await a() + await b()";
-    let (program, (ctx, checker)) = infer_prog(src);
+    let (script, (ctx, checker)) = infer_script(src);
 
-    let (js, _) = codegen_js(src, &program);
+    let (js, _) = codegen_js(src, &script);
 
     insta::assert_snapshot!(js, @"export const add = async (a, b)=>await a() + await b();
 ");
 
-    let result = codegen_d_ts(&program, &ctx, &checker)?;
+    let result = codegen_d_ts(&script, &ctx, &checker)?;
 
     insta::assert_snapshot!(result, @"export declare const add: <A, B>(a: () => Promise<number, A>, b: () => Promise<number, B>) => Promise<number, A | B>;
 ");
@@ -544,7 +543,7 @@ fn codegen_async_math() -> Result<(), TypeError> {
 #[test]
 fn infer_let_decl_with_type_ann() {
     let src = "let x: number = 10";
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("x").unwrap().index);
     assert_eq!(result, "number");
@@ -558,7 +557,7 @@ fn infer_let_decl_with_type_ann() {
 fn infer_let_decl_with_incorrect_type_ann() {
     let src = "let x: string = 10";
 
-    let (_, (_, checker)) = infer_prog(src);
+    let (_, (_, checker)) = infer_script(src);
 
     insta::assert_snapshot!(current_report_message(&checker), @r###"
     ESC_1 - 10 is not assignable to string:
@@ -569,7 +568,7 @@ fn infer_let_decl_with_incorrect_type_ann() {
 #[test]
 fn infer_declare() {
     let src = "declare let x: number";
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("x").unwrap().index);
     assert_eq!(result, "number");
@@ -581,7 +580,7 @@ fn infer_expr_using_declared_var() {
     declare let x: number
     let y = x + 5
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("y").unwrap().index);
     assert_eq!(result, "number");
@@ -593,7 +592,7 @@ fn infer_app_of_declared_fn() {
     declare let add: fn (a: number, b: number) -> number
     let sum = add(5, 10)
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("sum").unwrap().index);
     assert_eq!(result, "number");
@@ -605,7 +604,7 @@ fn infer_app_of_declared_fn_with_obj_param() {
     declare let mag: fn (p: {x: number, y: number}) -> number
     let result = mag({x: 5, y: 10})
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("result").unwrap().index);
     assert_eq!(result, "number");
@@ -617,7 +616,7 @@ fn calling_a_fn_with_an_obj_subtype() {
     declare let mag: fn (p: {x: number, y: number}) -> number
     let result = mag({x: 5, y: 10, z: 15})
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("result").unwrap().index);
     assert_eq!(result, "number");
@@ -629,7 +628,7 @@ fn calling_a_fn_with_an_obj_missing_a_property() {
     declare let mag: fn (p: {x: number, y: number}) -> number
     let result = mag({x: 5})
     "#;
-    let (_, (_, checker)) = infer_prog(src);
+    let (_, (_, checker)) = infer_script(src);
 
     insta::assert_snapshot!(current_report_message(&checker), @r###"
     ESC_1000 - Function arguments are incorrect:
@@ -640,7 +639,7 @@ fn calling_a_fn_with_an_obj_missing_a_property() {
 #[test]
 fn infer_literal_tuple() {
     let src = r#"let tuple = [1, "two", true]"#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("tuple").unwrap().index);
     assert_eq!(result, "[1, \"two\", true]");
@@ -649,7 +648,7 @@ fn infer_literal_tuple() {
 #[test]
 fn infer_tuple_with_type_annotation() {
     let src = r#"let tuple: [number, string, boolean] = [1, "two", true]"#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("tuple").unwrap().index);
     assert_eq!(result, "[number, string, boolean]");
@@ -658,7 +657,7 @@ fn infer_tuple_with_type_annotation() {
 #[test]
 fn infer_tuple_with_type_annotation_and_extra_element() {
     let src = r#"let tuple: [number, string, boolean] = [1, "two", true, "ignored"]"#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("tuple").unwrap().index);
     assert_eq!(result, "[number, string, boolean]");
@@ -670,7 +669,7 @@ fn infer_tuple_with_type_annotation_and_extra_element() {
 fn infer_tuple_with_type_annotation_and_incorrect_element() {
     let src = r#"let tuple: [number, string, boolean] = [1, "two", 3]"#;
 
-    let (_, (_, checker)) = infer_prog(src);
+    let (_, (_, checker)) = infer_script(src);
 
     insta::assert_snapshot!(current_report_message(&checker), @r###"
     ESC_1 - [1, "two", 3] is not assignable to [number, string, boolean]:
@@ -683,7 +682,7 @@ fn infer_tuple_with_type_annotation_and_incorrect_element() {
 #[ignore]
 fn infer_tuple_with_not_enough_elements() {
     let src = r#"let tuple: [number, string, boolean] = [1, "two"]"#;
-    let (_, (_, checker)) = infer_prog(src);
+    let (_, (_, checker)) = infer_script(src);
 
     insta::assert_snapshot!(current_report_message(&checker), @r###"
     ESC_1 - [1, "two"] is not assignable to [number, string, boolean]:
@@ -697,7 +696,7 @@ fn infer_var_with_union_type_annotation() {
     let a: number | string = 5
     let b: number | string = "ten"
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let a = checker.print_type(&ctx.values.get("a").unwrap().index);
     assert_eq!(a, "number | string");
@@ -715,7 +714,7 @@ fn infer_widen_tuple_return() {
             [true, false]
         }
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("result").unwrap().index);
     assert_eq!(result, "(cond: boolean) -> [1, 2] | [true, false]");
@@ -735,7 +734,7 @@ fn infer_widen_tuples_with_type_annotations() {
         }
     }
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("result").unwrap().index);
     assert_eq!(
@@ -751,7 +750,7 @@ fn infer_member_access() {
     let x = point.x
     let y = point.y
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let x = checker.print_type(&ctx.values.get("x").unwrap().index);
     assert_eq!(x, "5");
@@ -762,7 +761,7 @@ fn infer_member_access() {
 #[test]
 fn infer_member_access_on_obj_lit() {
     let src = r#"let x = {x: 5, y: 10}.x"#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let x = checker.print_type(&ctx.values.get("x").unwrap().index);
     assert_eq!(x, "5");
@@ -774,7 +773,7 @@ fn infer_fn_using_type_decl() {
     type Point = {x: number, y: number}
     let mag = fn (p: Point) => p.x * p.x + p.y * p.y
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("mag").unwrap().index);
     assert_eq!(result, "(p: Point) -> number");
@@ -790,7 +789,7 @@ fn infer_react_component() {
         return <div>Hello, world</div>
     }
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("Foo").unwrap().index);
     assert_eq!(result, "(props: Props) => JSXElement");
@@ -802,8 +801,8 @@ fn codegen_code_with_type_delcarations() -> Result<(), TypeError> {
     type Point = {x: number, y: number}
     let point: Point = {x: 5, y: 10}
     "#;
-    let (program, (ctx, checker)) = infer_prog(src);
-    let (js, _) = codegen_js(src, &program);
+    let (script, (ctx, checker)) = infer_script(src);
+    let (js, _) = codegen_js(src, &script);
 
     insta::assert_snapshot!(js, @r###"
     ;
@@ -813,7 +812,7 @@ fn codegen_code_with_type_delcarations() -> Result<(), TypeError> {
     };
     "###);
 
-    let result = codegen_d_ts(&program, &ctx, &checker)?;
+    let result = codegen_d_ts(&script, &ctx, &checker)?;
 
     insta::assert_snapshot!(result, @r###"
     declare type Point = {
@@ -839,7 +838,7 @@ fn infer_mem_access_with_optional_prop() {
     declare let point: {x?: number, y: number}
     let x = point.x
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("x").unwrap().index);
     assert_eq!(result, "number | undefined");
@@ -853,7 +852,7 @@ fn recursive_mem_access_on_optional_prop_should_fail() {
     declare let foo: {a?: {b?: number}}
     let b = foo.a.b
     "#;
-    infer_prog(src);
+    infer_script(src);
 }
 
 #[test]
@@ -862,7 +861,7 @@ fn infer_assigning_to_obj_with_optional_props() {
     let p: {x?: number, y: number} = {y: 10}
     let x = p.x
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let x = checker.print_type(&ctx.values.get("x").unwrap().index);
     assert_eq!(x, "number | undefined");
@@ -873,7 +872,7 @@ fn infer_assigning_an_obj_lit_with_extra_props() {
     let src = r#"
     let point: {x: number, y: number} = {x: 5, y: 10, z: 15}
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let point = checker.print_type(&ctx.values.get("point").unwrap().index);
     assert_eq!(point, "{x: number, y: number}");
@@ -886,7 +885,7 @@ fn infer_function_overloading() {
     let num = add(5, 10)
     let str = add("hello, ", "world")
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let num_result = checker.print_type(&ctx.values.get("num").unwrap().index);
     assert_eq!(num_result, "number");
@@ -901,7 +900,7 @@ fn infer_function_overloading_with_incorrect_args() {
     declare let add: (fn (a: number, b: number) -> number) & (fn (a: string, b: string) -> string)
     let bool = add(true, false)
     "#;
-    infer_prog(src);
+    infer_script(src);
 }
 
 #[test]
@@ -910,8 +909,8 @@ fn codegen_object_type_with_optional_property() -> Result<(), TypeError> {
     type Point = {x?: number, y: number}
     let point: Point = {y: 10}
     "#;
-    let (program, (ctx, checker)) = infer_prog(src);
-    let (js, _) = codegen_js(src, &program);
+    let (script, (ctx, checker)) = infer_script(src);
+    let (js, _) = codegen_js(src, &script);
 
     insta::assert_snapshot!(js, @r###"
     ;
@@ -920,7 +919,7 @@ fn codegen_object_type_with_optional_property() -> Result<(), TypeError> {
     };
     "###);
 
-    let result = codegen_d_ts(&program, &ctx, &checker)?;
+    let result = codegen_d_ts(&script, &ctx, &checker)?;
 
     // TODO: wrap type annotations for immutable bindings in Readonly<>
     // TODO: use the type annotation for bindings when present instead of
@@ -954,7 +953,7 @@ fn infer_nested_block() {
         }
         sum
     }"#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("result").unwrap().index);
     assert_eq!(result, "15");
@@ -973,7 +972,7 @@ fn infer_block_with_multiple_non_let_lines() {
         x + 0
         x
     }"#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("result").unwrap().index);
     assert_eq!(result, "5");
@@ -987,8 +986,8 @@ fn codegen_block_with_multiple_non_let_lines() -> Result<(), TypeError> {
         x + 0
         x
     }"#;
-    let (program, (ctx, checker)) = infer_prog(src);
-    let (js, _) = codegen_js(src, &program);
+    let (script, (ctx, checker)) = infer_script(src);
+    let (js, _) = codegen_js(src, &script);
 
     insta::assert_snapshot!(js, @r###"
     let $temp_0;
@@ -999,7 +998,7 @@ fn codegen_block_with_multiple_non_let_lines() -> Result<(), TypeError> {
     }export const result = $temp_0;
     "###);
 
-    let result = codegen_d_ts(&program, &ctx, &checker)?;
+    let result = codegen_d_ts(&script, &ctx, &checker)?;
 
     insta::assert_snapshot!(result, @"export declare const result: 5;
 ");
@@ -1014,7 +1013,7 @@ fn infer_type_alias_with_param() {
     declare let foo: Foo<string>
     let bar = foo.bar
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("bar").unwrap().index);
     assert_eq!(result, "string");
@@ -1027,7 +1026,7 @@ fn infer_fn_param_with_type_alias_with_param() {
     let get_bar = fn (foo: Foo<string>) => foo.bar
     let bar = get_bar({bar: "hello"})
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("bar").unwrap().index);
     assert_eq!(result, "string");
@@ -1039,7 +1038,7 @@ fn infer_fn_param_with_type_alias_with_param_2() {
     type Foo<T> = {bar: T}
     declare let get_bar: fn <T>(foo: Foo<T>) -> T
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("get_bar").unwrap().index);
     // TODO: normalize the type before inserting it into the context
@@ -1053,7 +1052,7 @@ fn infer_fn_param_with_type_alias_with_param_3() {
     declare let get_bar: fn <T>(foo: Foo<T>) -> T
     let bar = get_bar({bar: "hello"})
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("bar").unwrap().index);
     assert_eq!(result, "\"hello\"");
@@ -1066,7 +1065,7 @@ fn infer_fn_param_with_type_alias_with_param_4() {
     let get_bar = fn <T>(foo: Foo<T>) => foo.bar
     let bar = get_bar({bar: "hello"})
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("get_bar").unwrap().index);
     insta::assert_snapshot!(result, @"<T>(foo: Foo<T>) -> T");
@@ -1082,7 +1081,7 @@ fn infer_with_constrained_polymorphism_success() {
     declare let get_bar: fn <T: string>(foo: Foo<T>) -> T
     let bar = get_bar({bar: "hello"})
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("bar").unwrap().index);
     assert_eq!(result, "\"hello\"");
@@ -1098,7 +1097,7 @@ fn infer_with_constrained_polymorphism_failiure() {
     declare let get_bar: fn <T: number>(foo: Foo<T>) -> T
     let bar = get_bar({bar: "hello"})
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     insta::assert_snapshot!(current_report_message(&checker), @r###"
     ESC_1000 - Function arguments are incorrect:
@@ -1118,7 +1117,7 @@ fn infer_generic_type_aliases() {
     type Identity1<T> = fn <T>(foo: T) -> T
     type Identity2 = fn <T>(foo: T) -> T
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_scheme(&ctx.get_scheme("Identity1").unwrap());
     // TODO: normalize the type before inserting it into the context
@@ -1136,7 +1135,7 @@ fn infer_destructure_all_object_properties() {
     let point = {x: 5, y: 10}
     let {x, y} = point
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("x").unwrap().index);
     assert_eq!(result, "5");
@@ -1150,7 +1149,7 @@ fn infer_destructure_some_object_properties() {
     let point = {x: 5, y: 10}
     let {x} = point
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("x").unwrap().index);
     assert_eq!(result, "5");
@@ -1162,7 +1161,7 @@ fn infer_destructure_some_object_properties_with_renaming() {
     let point = {x: 5, y: 10}
     let {x: a} = point
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("a").unwrap().index);
     assert_eq!(result, "5");
@@ -1175,7 +1174,7 @@ fn infer_destructure_object_with_type_alias() {
     let point: Point = {x: 5, y: 10}
     let {x, y} = point
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("x").unwrap().index);
     assert_eq!(result, "number");
@@ -1191,7 +1190,7 @@ fn infer_destructure_object_inside_fn() {
     }
     let foo = get_foo({foo: 5, bar: "hello"})
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("foo").unwrap().index);
     assert_eq!(result, "number");
@@ -1207,7 +1206,7 @@ fn infer_destructure_object_inside_fn_2() {
     }
     let foo = get_foo({foo: 5, bar: "hello"})
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let result = checker.print_type(&ctx.values.get("foo").unwrap().index);
     assert_eq!(result, "number");
@@ -1219,7 +1218,7 @@ fn infer_destructure_object_param() {
     let foo = fn ({a, b}: {a: string, b: number}) => a
     let a = foo({a: "hello", b: 5})
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let a = checker.print_type(&ctx.values.get("a").unwrap().index);
     assert_eq!(a, "string");
@@ -1233,7 +1232,7 @@ fn infer_destructure_object_param_2() {
     }
     let {a, b} = foo({a: "hello", b: 5})
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let a = checker.print_type(&ctx.values.get("a").unwrap().index);
     assert_eq!(a, "string");
@@ -1250,7 +1249,7 @@ fn return_an_object() {
     }
     let {a, b} = foo()
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let a = checker.print_type(&ctx.values.get("a").unwrap().index);
     assert_eq!(a, "\"hello\"");
@@ -1266,7 +1265,7 @@ fn object_property_shorthand() {
     let b = 5
     let c = {a, b}
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let c = checker.print_type(&ctx.values.get("c").unwrap().index);
     assert_eq!(c, "{a: \"hello\", b: 5}");
@@ -1278,7 +1277,7 @@ fn infer_destructuring_with_optional_properties() {
     let p: {x?: number, y: number} = {y: 10}
     let {x, y: _} = p
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let x = checker.print_type(&ctx.values.get("x").unwrap().index);
     assert_eq!(x, "number | undefined");
@@ -1290,7 +1289,7 @@ fn infer_destructure_tuple() {
     let src = r#"
     let [a, b] = ["hello", 5]
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let a = checker.print_type(&ctx.values.get("a").unwrap().index);
     assert_eq!(a, "\"hello\"");
@@ -1305,7 +1304,7 @@ fn infer_destructure_tuple_too_many_identifiers() {
     let src = r#"
     let [a, b, c] = ["hello", 5]
     "#;
-    infer_prog(src);
+    infer_script(src);
 }
 
 #[test]
@@ -1313,7 +1312,7 @@ fn infer_destructure_tuple_extra_values_are_ignored() {
     let src = r#"
     let [a, b] = ["hello", 5, true]
     "#;
-    infer_prog(src);
+    infer_script(src);
 }
 
 #[test]
@@ -1322,7 +1321,7 @@ fn lam_param_tuple() {
     let foo = fn (bar: [string, number]) => bar
     let [a, b] = foo(["hello", 5])
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let a = checker.print_type(&ctx.values.get("a").unwrap().index);
     assert_eq!(a, "string");
@@ -1337,7 +1336,7 @@ fn destructure_lam_param_tuple() {
     let foo = fn ([a, b]: [string, number]) => [a, b]
     let [a, b] = foo(["hello", 5])
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let a = checker.print_type(&ctx.values.get("a").unwrap().index);
     assert_eq!(a, "string");
@@ -1356,7 +1355,7 @@ fn infer_jsx() {
     let msg = "world"
     let elem = <div point={point} id="point">Hello, {msg}</div>
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let elem = checker.print_type(&ctx.values.get("elem").unwrap().index);
     assert_eq!(elem, "JSXElement");
@@ -1369,7 +1368,7 @@ fn incorrect_args() {
     add("hello", "world")
     "#;
 
-    let (_, (_, checker)) = infer_prog(src);
+    let (_, (_, checker)) = infer_script(src);
 
     insta::assert_snapshot!(current_report_message(&checker), @r###"
     ESC_1000 - Function arguments are incorrect:
@@ -1383,7 +1382,7 @@ fn return_empty() {
     let src = r#"
     let foo = fn () {}
     "#;
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     assert_eq!(
         checker.print_type(&ctx.values.get("foo").unwrap().index),
@@ -1399,7 +1398,7 @@ fn return_empty_with_body() {
     }
     "#;
 
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     let func = checker.print_type(&ctx.values.get("foo").unwrap().index);
     assert_eq!(func, "() -> undefined");
@@ -1416,7 +1415,7 @@ fn infer_if_let() {
     }
     "#;
 
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     assert_eq!(
         checker.print_type(&ctx.values.get("p").unwrap().index),
@@ -1438,7 +1437,7 @@ fn infer_if_let_with_is() {
     }
     "#;
 
-    let (_, (ctx, checker)) = infer_prog(src);
+    let (_, (ctx, checker)) = infer_script(src);
 
     assert_eq!(
         checker.print_type(&ctx.values.get("b").unwrap().index),
@@ -1459,9 +1458,9 @@ fn codegen_if_let() -> Result<(), TypeError> {
     }
     "#;
 
-    let (program, (ctx, checker)) = infer_prog(src);
+    let (script, (ctx, checker)) = infer_script(src);
 
-    let (js, _) = codegen_js(src, &program);
+    let (js, _) = codegen_js(src, &script);
     insta::assert_snapshot!(js, @r###"
     export const p = {
         x: 5,
@@ -1475,7 +1474,7 @@ fn codegen_if_let() -> Result<(), TypeError> {
     }$temp_0;
     "###);
 
-    let result = codegen_d_ts(&program, &ctx, &checker)?;
+    let result = codegen_d_ts(&script, &ctx, &checker)?;
 
     insta::assert_snapshot!(result, @r###"
     export declare const p: {
@@ -1498,9 +1497,9 @@ fn codegen_if_let_with_rename() -> Result<(), TypeError> {
     }
     "#;
 
-    let (program, (ctx, checker)) = infer_prog(src);
+    let (script, (ctx, checker)) = infer_script(src);
 
-    let (js, _) = codegen_js(src, &program);
+    let (js, _) = codegen_js(src, &script);
     insta::assert_snapshot!(js, @r###"
     export const p = {
         x: 5,
@@ -1514,7 +1513,7 @@ fn codegen_if_let_with_rename() -> Result<(), TypeError> {
     }$temp_0;
     "###);
 
-    let result = codegen_d_ts(&program, &ctx, &checker)?;
+    let result = codegen_d_ts(&script, &ctx, &checker)?;
 
     insta::assert_snapshot!(result, @r###"
     export declare const p: {
@@ -1537,7 +1536,7 @@ fn infer_if_let_with_type_error() {
     }
     "#;
 
-    let (_, (_, checker)) = infer_prog(src);
+    let (_, (_, checker)) = infer_script(src);
 
     insta::assert_snapshot!(current_report_message(&checker), @r###"
     ESC_1 - "hello" is not a number:
@@ -1559,14 +1558,14 @@ fn infer_if_let_refutable_pattern_obj() -> Result<(), TypeError> {
     }
     "#;
 
-    let (program, (ctx, checker)) = infer_prog(src);
+    let (script, (ctx, checker)) = infer_script(src);
 
     assert_eq!(
         checker.print_type(&ctx.values.get("p").unwrap().index),
         "{x: 5, y: 10}"
     );
 
-    let (js, _) = codegen_js(src, &program);
+    let (js, _) = codegen_js(src, &script);
     insta::assert_snapshot!(js, @r###"
     export const p = {
         x: 5,
@@ -1581,7 +1580,7 @@ fn infer_if_let_refutable_pattern_obj() -> Result<(), TypeError> {
     $temp_0;
     "###);
 
-    let result = codegen_d_ts(&program, &ctx, &checker)?;
+    let result = codegen_d_ts(&script, &ctx, &checker)?;
 
     insta::assert_snapshot!(result, @r###"
     export declare const p: {
@@ -1604,9 +1603,9 @@ fn infer_if_let_refutable_pattern_nested_obj() -> Result<(), TypeError> {
     }
     "#;
 
-    let (program, (ctx, checker)) = infer_prog(src);
+    let (script, (ctx, checker)) = infer_script(src);
 
-    let (js, _) = codegen_js(src, &program);
+    let (js, _) = codegen_js(src, &script);
     insta::assert_snapshot!(js, @r###"
     export const action = {
         type: "moveto",
@@ -1624,7 +1623,7 @@ fn infer_if_let_refutable_pattern_nested_obj() -> Result<(), TypeError> {
     $temp_0;
     "###);
 
-    let result = codegen_d_ts(&program, &ctx, &checker)?;
+    let result = codegen_d_ts(&script, &ctx, &checker)?;
 
     insta::assert_snapshot!(result, @r###"
     export declare const action: {
@@ -1652,9 +1651,9 @@ fn infer_if_let_refutable_pattern_with_disjoint_union() -> Result<(), TypeError>
     }
     "#;
 
-    let (program, (ctx, checker)) = infer_prog(src);
+    let (script, (ctx, checker)) = infer_script(src);
 
-    let (js, _) = codegen_js(src, &program);
+    let (js, _) = codegen_js(src, &script);
     insta::assert_snapshot!(js, @r###"
     ;
     ;
@@ -1668,7 +1667,7 @@ fn infer_if_let_refutable_pattern_with_disjoint_union() -> Result<(), TypeError>
     $temp_0;
     "###);
 
-    let result = codegen_d_ts(&program, &ctx, &checker)?;
+    let result = codegen_d_ts(&script, &ctx, &checker)?;
 
     insta::assert_snapshot!(result, @r###"
     declare type Action = {
@@ -1699,14 +1698,14 @@ fn infer_if_let_refutable_pattern_array() -> Result<(), TypeError> {
     }
     "#;
 
-    let (program, (ctx, checker)) = infer_prog(src);
+    let (script, (ctx, checker)) = infer_script(src);
 
     assert_eq!(
         checker.print_type(&ctx.values.get("p").unwrap().index),
         "[5, 10]"
     );
 
-    let (js, _) = codegen_js(src, &program);
+    let (js, _) = codegen_js(src, &script);
     insta::assert_snapshot!(js, @r###"
     export const p = [
         5,
@@ -1721,7 +1720,7 @@ fn infer_if_let_refutable_pattern_array() -> Result<(), TypeError> {
     $temp_0;
     "###);
 
-    let result = codegen_d_ts(&program, &ctx, &checker)?;
+    let result = codegen_d_ts(&script, &ctx, &checker)?;
 
     insta::assert_snapshot!(result, @"export declare const p: readonly [5, 10];
 ");
@@ -1740,9 +1739,9 @@ fn infer_if_let_refutable_pattern_nested_array() -> Result<(), TypeError> {
     };
     "#;
 
-    let (program, (ctx, checker)) = infer_prog(src);
+    let (script, (ctx, checker)) = infer_script(src);
 
-    let (js, _) = codegen_js(src, &program);
+    let (js, _) = codegen_js(src, &script);
     insta::assert_snapshot!(js, @r###"
     export const action = [
         "moveto",
@@ -1760,7 +1759,7 @@ fn infer_if_let_refutable_pattern_nested_array() -> Result<(), TypeError> {
     $temp_0;
     "###);
 
-    let result = codegen_d_ts(&program, &ctx, &checker)?;
+    let result = codegen_d_ts(&script, &ctx, &checker)?;
 
     insta::assert_snapshot!(result, @r###"export declare const action: readonly ["moveto", readonly [5, 10]];
 "###);
@@ -1779,9 +1778,9 @@ fn codegen_if_let_with_is_prim() -> Result<(), TypeError> {
     }
     "#;
 
-    let (program, (ctx, checker)) = infer_prog(src);
+    let (script, (ctx, checker)) = infer_script(src);
 
-    let (js, _) = codegen_js(src, &program);
+    let (js, _) = codegen_js(src, &script);
     insta::assert_snapshot!(js, @r###"
     ;
     let $temp_0;
@@ -1793,7 +1792,7 @@ fn codegen_if_let_with_is_prim() -> Result<(), TypeError> {
     $temp_0;
     "###);
 
-    let result = codegen_d_ts(&program, &ctx, &checker)?;
+    let result = codegen_d_ts(&script, &ctx, &checker)?;
 
     insta::assert_snapshot!(result, @"export declare const b: number | string;
 ");
@@ -1829,7 +1828,7 @@ fn codegen_if_let_with_is_class() {
     "#;
 
     let result = parse(src);
-    let program = match result {
+    let script = match result {
         Ok(prog) => prog,
         Err(err) => {
             println!("err = {:?}", err);
@@ -1837,7 +1836,7 @@ fn codegen_if_let_with_is_class() {
         }
     };
 
-    let (js, _) = codegen_js(src, &program);
+    let (js, _) = codegen_js(src, &script);
     insta::assert_snapshot!(js, @r###"
     ;
     ;
@@ -1866,9 +1865,9 @@ fn codegen_array() -> Result<(), TypeError> {
     let arr: string[] = ["hello", "world"]
     "#;
 
-    let (program, (ctx, checker)) = infer_prog(src);
+    let (script, (ctx, checker)) = infer_script(src);
 
-    let (js, _) = codegen_js(src, &program);
+    let (js, _) = codegen_js(src, &script);
     insta::assert_snapshot!(js, @r###"
     export const arr = [
         "hello",
@@ -1876,7 +1875,7 @@ fn codegen_array() -> Result<(), TypeError> {
     ];
     "###);
 
-    let result = codegen_d_ts(&program, &ctx, &checker)?;
+    let result = codegen_d_ts(&script, &ctx, &checker)?;
     insta::assert_snapshot!(result, @"export declare const arr: readonly string[];
 ");
 

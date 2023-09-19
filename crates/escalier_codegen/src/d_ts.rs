@@ -14,7 +14,7 @@ use escalier_hm::type_error::TypeError;
 use escalier_hm::types;
 
 pub fn codegen_d_ts(
-    program: &values::Program,
+    program: &values::Script,
     ctx: &Context,
     checker: &Checker,
 ) -> core::result::Result<String, TypeError> {
@@ -70,7 +70,7 @@ fn build_type_params_from_type_params(
 }
 
 fn build_d_ts(
-    program: &values::Program,
+    program: &values::Script,
     ctx: &Context,
     checker: &Checker,
 ) -> core::result::Result<Program, TypeError> {

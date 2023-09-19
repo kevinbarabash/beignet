@@ -110,9 +110,9 @@ fn test_complex_logic() -> Result<(), TypeError> {
     declare let c: number
     let result = a > b || b >= c || c != a && c != b
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"boolean"#);
@@ -130,9 +130,9 @@ fn test_string_equality() -> Result<(), TypeError> {
     let eq = a == b
     let neq = a != b
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("eq").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"boolean"#);
@@ -151,9 +151,9 @@ fn test_if_else() -> Result<(), TypeError> {
     let result = if (cond) { 5 } else { 10 }
     "#;
 
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
 
     assert_eq!(checker.print_type(&binding.index), r#"5 | 10"#);
@@ -170,9 +170,9 @@ fn test_chained_if_else() -> Result<(), TypeError> {
     let result = if (cond1) { 5 } else if (cond2) { 10 } else { 15 }
     "#;
 
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
 
     assert_eq!(checker.print_type(&binding.index), r#"5 | 10 | 15"#);
@@ -193,9 +193,9 @@ fn test_factorial() -> Result<(), TypeError> {
         }
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
     let binding = my_ctx.values.get("fact").unwrap();
 
     assert_eq!(
@@ -222,8 +222,8 @@ fn test_mutual_recursion() -> Result<(), TypeError> {
         !even(x - 1)
     }
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("even").unwrap();
     assert_eq!(
@@ -257,8 +257,8 @@ fn test_mutual_recursion_using_destructuring() -> Result<(), TypeError> {
         },
     }
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("even").unwrap();
     assert_eq!(
@@ -282,8 +282,8 @@ fn infer_mutual_rec_decl() -> Result<(), TypeError> {
         fn (x) => if (x > 0) { bar(x - 1) } else { true },
         fn (x) => if (x > 0) { foo(x - 1) } else { false },
     ]";
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let result = checker.print_type(&my_ctx.values.get("foo").unwrap().index);
     insta::assert_snapshot!(result, @"(x: number) -> false | true | false | true");
@@ -302,8 +302,8 @@ fn infer_mutual_rec_decls() -> Result<(), TypeError> {
     let foo = fn (x) => if (x > 0) { bar(x - 1) } else { true }
     let bar = fn (x) => if (x > 0) { foo(x - 1) } else { false }
     ";
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let result = checker.print_type(&my_ctx.values.get("foo").unwrap().index);
     insta::assert_snapshot!(result, @"<A>(x: number) -> A | true");
@@ -322,8 +322,8 @@ fn test_no_top_level_redeclaration() -> Result<(), TypeError> {
     let id = fn (x) => x
     let id = fn (y) => y
     "#;
-    let mut program = parse(src).unwrap();
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let mut script = parse(src).unwrap();
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -341,9 +341,9 @@ fn test_mismatch() -> Result<(), TypeError> {
 
     let src = r#"fn (x) => [x(3), x(true)]"#;
 
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     insta::assert_display_snapshot!(checker.current_report, @r###"
     ESC_1000 - Function arguments are incorrect:
@@ -362,9 +362,9 @@ fn test_multiple_incorrect_args() -> Result<(), TypeError> {
     foo(true, false)
     "#;
 
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     insta::assert_display_snapshot!(checker.current_report, @r###"
     ESC_1000 - Function arguments are incorrect:
@@ -382,8 +382,8 @@ fn test_pair() -> Result<(), TypeError> {
 
     let src = r#"[f(3), f(true)]"#;
 
-    let mut program = parse(src).unwrap();
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let mut script = parse(src).unwrap();
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -404,8 +404,8 @@ fn test_mul() -> Result<(), TypeError> {
         let result = [f(4), f(true)]
     "#;
 
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"[4, true]"#);
@@ -419,8 +419,8 @@ fn test_recursive() {
 
     let src = r#"fn (f) => f(f)"#;
 
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx).unwrap();
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx).unwrap();
 }
 
 #[test]
@@ -437,8 +437,8 @@ fn test_fib() -> Result<(), TypeError> {
         }
     "#;
 
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx).unwrap();
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx).unwrap();
 
     let binding = my_ctx.values.get("fib").unwrap();
     assert_eq!(
@@ -458,8 +458,8 @@ fn test_number_literal() -> Result<(), TypeError> {
     let result = g(g)
     "#;
 
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"5"#);
@@ -476,9 +476,9 @@ fn test_generic_nongeneric() -> Result<(), TypeError> {
         return [f(3), f(true)]
     }"#;
 
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"<A>(g: A) -> [A, A]"#);
@@ -491,9 +491,9 @@ fn test_basic_generics() -> Result<(), TypeError> {
 
     // example that demonstrates generic and non-generic variables:
     let src = r#"let result = fn (x) => x"#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"<A>(x: A) -> A"#);
 
@@ -507,9 +507,9 @@ fn test_composition() -> Result<(), TypeError> {
     // Function composition
     // fn f (fn g (fn arg (f g arg)))
     let src = r#"let result = fn (f) => fn (g) => fn (arg) => g(f(arg))"#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(
         checker.print_type(&binding.index),
@@ -527,9 +527,9 @@ fn test_skk() -> Result<(), TypeError> {
     let K = fn (x) => fn (y) => x
     let I = S(K)(K)
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("S").unwrap();
     assert_eq!(
@@ -561,9 +561,9 @@ fn test_composition_with_statements() -> Result<(), TypeError> {
         return mantel
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(
         checker.print_type(&binding.index),
@@ -580,9 +580,9 @@ fn test_subtype() -> Result<(), TypeError> {
     let times = fn (x, y) => x * y
     let result = times(5, 10)
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number"#);
     assert_no_errors(&checker)
@@ -602,9 +602,9 @@ fn test_callback_subtyping() -> Result<(), TypeError> {
     declare let bar: fn (x: number | string) -> boolean
     let result = foo(bar)
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"boolean"#);
     assert_no_errors(&checker)
@@ -619,9 +619,9 @@ fn test_callback_error_too_many_params() -> Result<(), TypeError> {
     declare let bar: fn (a: number, b: string) -> boolean
     let result = foo(bar)
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     insta::assert_display_snapshot!(checker.current_report, @r###"
     ESC_1000 - Function arguments are incorrect:
@@ -649,9 +649,9 @@ fn test_union_subtype() -> Result<(), TypeError> {
     let times = fn (x, y) => x * y
     let result = times(foo, 2)
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number"#);
     assert_no_errors(&checker)
@@ -674,9 +674,9 @@ fn test_calling_a_union() -> Result<(), TypeError> {
     );
 
     let src = r#"let result = foo()"#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"boolean | string"#);
     assert_no_errors(&checker)
@@ -690,9 +690,9 @@ fn call_with_too_few_args() -> Result<(), TypeError> {
     let times = fn (x, y) => x * y
     let result = times()
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -718,9 +718,9 @@ fn literal_isnt_callable() -> Result<(), TypeError> {
     );
 
     let src = r#"let result = foo()"#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -737,9 +737,9 @@ fn infer_basic_tuple() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"let result = [5, "hello"]"#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(
         checker.print_type(&binding.index),
@@ -759,9 +759,9 @@ fn tuple_member() -> Result<(), TypeError> {
     declare let index: number
     let any = tuple[index]
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("second").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#""hello""#.to_string(),);
@@ -782,9 +782,9 @@ fn tuple_member_invalid_index() -> Result<(), TypeError> {
     let tuple = [5, "hello"]
     let second = tuple["foo"]
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -806,9 +806,9 @@ fn array_member() -> Result<(), TypeError> {
     declare let index: number
     let any = array[0]
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("first").unwrap();
     assert_eq!(
@@ -832,9 +832,9 @@ fn tuple_member_error_out_of_bounds() -> Result<(), TypeError> {
     let tuple = [5, "hello"]
     let result = tuple[2]
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -854,9 +854,9 @@ fn tuple_subtyping() -> Result<(), TypeError> {
     declare let foo: fn (x: [number, string]) -> boolean
     let result = foo([5, "hello", true])
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), "boolean".to_string(),);
 
@@ -874,9 +874,9 @@ fn more_tuple_subtyping() -> Result<(), TypeError> {
     let tuple2: [number, ...string[]] = [5, "hello"]
     let tuple3: [number, ...string[]] = [5, "hello", "world"]
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -889,9 +889,9 @@ fn tuple_subtyping_not_enough_elements() -> Result<(), TypeError> {
     declare let foo: fn (x: [number, string]) -> boolean
     let result = foo([5])
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     insta::assert_display_snapshot!(checker.current_report, @r###"
     ESC_1000 - Function arguments are incorrect:
@@ -906,9 +906,9 @@ fn infer_basic_object() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"let result = {a: 5, b: "hello"}"#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
 
     assert_eq!(
@@ -927,9 +927,9 @@ fn object_member() -> Result<(), TypeError> {
     let obj = {a: 5, b: "hello"}
     let result = obj.a
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
 
     assert_eq!(checker.print_type(&binding.index), "5".to_string(),);
@@ -946,9 +946,9 @@ fn object_member_string_key() -> Result<(), TypeError> {
     declare let key: string
     let result = obj[key]
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
 
     assert_eq!(
@@ -967,9 +967,9 @@ fn object_member_missing_prop() -> Result<(), TypeError> {
     let obj = {a: 5, b: "hello"}
     let result = obj.c
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -991,9 +991,9 @@ fn object_subtyping() -> Result<(), TypeError> {
     declare let foo: fn (x: {a: number, b: string}) -> boolean
     let result = foo({a: 5, b: "hello", c: true})
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
     let binding = my_ctx.values.get("result").unwrap();
 
     assert_eq!(checker.print_type(&binding.index), "boolean".to_string(),);
@@ -1018,9 +1018,9 @@ fn object_signatures() -> Result<(), TypeError> {
         qux: string,
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
     let binding = my_ctx.values.get("obj").unwrap();
 
     assert_eq!(
@@ -1043,9 +1043,9 @@ fn object_callable_subtyping() -> Result<(), TypeError> {
         fn (self, a: number) -> number | string,
     } = foo
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -1065,9 +1065,9 @@ fn object_callable_subtyping_failure_case() -> Result<(), TypeError> {
         fn (self, a: number) -> number,
     } = foo
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -1091,9 +1091,9 @@ fn object_method_subtyping() -> Result<(), TypeError> {
         method: fn (self, a: number) -> number | string,
     } = foo
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -1113,9 +1113,9 @@ fn object_property_subtyping() -> Result<(), TypeError> {
         x: number | string,
     } = foo
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -1132,9 +1132,9 @@ fn object_mapped_subtyping() -> Result<(), TypeError> {
         [P]: number | string for P in string
     } = foo
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -1151,9 +1151,9 @@ fn object_methods_and_properties_should_unify() -> Result<(), TypeError> {
         foo: fn (a: number) -> string,
     } = foo
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -1174,9 +1174,9 @@ fn object_mappeds_should_unify_with_all_named_obj_elems() -> Result<(), TypeErro
     } = foo
     "#;
 
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -1194,9 +1194,9 @@ fn object_mappeds_and_properties_unify_failure() -> Result<(), TypeError> {
     } = foo
     "#;
 
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -1220,9 +1220,9 @@ fn object_properties_and_getter_should_unify() -> Result<(), TypeError> {
         foo: number,
     } = foo
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -1242,9 +1242,9 @@ fn mutable_object_properties_unify_with_getters_setters() -> Result<(), TypeErro
         x: set (mut self, value: number) -> undefined,
     } = foo
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -1257,9 +1257,9 @@ fn object_subtyping_missing_prop() -> Result<(), TypeError> {
     declare let foo: fn (x: {a: number, b: string}) -> boolean
     let result = foo({b: "hello"})
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     insta::assert_display_snapshot!(checker.current_report, @r###"
     ESC_1000 - Function arguments are incorrect:
@@ -1277,9 +1277,9 @@ fn test_subtype_error() -> Result<(), TypeError> {
     let times = fn (x, y) => x * y
     let result = times(5, "hello")
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     insta::assert_display_snapshot!(checker.current_report, @r###"
     ESC_1000 - Function arguments are incorrect:
@@ -1307,9 +1307,9 @@ fn test_union_subtype_error() -> Result<(), TypeError> {
     let times = fn (x, y) => x * y
     let result = times(foo, "world")
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     insta::assert_display_snapshot!(checker.current_report, @r###"
     ESC_1000 - Function arguments are incorrect:
@@ -1328,9 +1328,9 @@ fn test_union_subtype_error_with_type_ann() -> Result<(), TypeError> {
     let src = r#"
     let x: number | string = true
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -1351,9 +1351,9 @@ fn test_program() -> Result<(), TypeError> {
     let str = "hello"
     num * num
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("num").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"5"#);
@@ -1362,9 +1362,9 @@ fn test_program() -> Result<(), TypeError> {
     assert_eq!(checker.print_type(&binding.index), r#""hello""#);
 
     // TODO: implement std::fmt for Program et al
-    // eprintln!("program = {program}");
+    // eprintln!("script = {script}");
 
-    // insta::assert_snapshot!(program.to_string(), @r###"
+    // insta::assert_snapshot!(script.to_string(), @r###"
     // let num = 5
     // let str = "hello"
     // times(num, num)
@@ -1382,9 +1382,9 @@ fn test_program_with_generic_func() -> Result<(), TypeError> {
     let a = id(5)
     let b = id("hello")
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("id").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"<A>(x: A) -> A"#);
@@ -1406,9 +1406,9 @@ fn test_program_with_generic_func_multiple_type_params() -> Result<(), TypeError
     let fst = fn (x, y) => x
     let snd = fn (x, y) => y
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("fst").unwrap();
     assert_eq!(
@@ -1436,16 +1436,16 @@ fn test_function_with_multiple_statements() -> Result<(), TypeError> {
         return x * y
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"() -> 50"#);
 
     if let StmtKind::VarDecl(VarDecl {
         expr: Some(init), ..
-    }) = &program.stmts[0].kind
+    }) = &script.stmts[0].kind
     {
         if let ExprKind::Function(syntax::Function {
             body: BlockOrExpr::Block(Block { stmts: _, .. }),
@@ -1481,13 +1481,13 @@ fn test_inferred_type_on_ast_nodes() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"let result = fn (x, y) => x * y"#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     if let StmtKind::VarDecl(VarDecl {
         expr: Some(init), ..
-    }) = &program.stmts[0].kind
+    }) = &script.stmts[0].kind
     {
         if let ExprKind::Function(expr::Function { params, .. }) = &init.kind {
             let x_t = params[0].pattern.inferred_type.unwrap();
@@ -1510,9 +1510,9 @@ fn test_unary_op() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"let neg = fn (x) => -x"#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
     let binding = my_ctx.values.get("neg").unwrap();
 
     assert_eq!(
@@ -1529,9 +1529,9 @@ fn test_async_return_type() -> Result<(), TypeError> {
     let src = r#"
     let foo = async fn () => 5
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
     let binding = my_ctx.values.get("foo").unwrap();
 
     assert_eq!(
@@ -1548,9 +1548,9 @@ fn throws_in_async() -> Result<(), TypeError> {
     let src = r#"
     let foo = async fn (cond) => if (cond) { throw "error" } else { 5 }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
     let binding = my_ctx.values.get("foo").unwrap();
 
     assert_eq!(
@@ -1568,9 +1568,9 @@ fn await_async_func_with_throw() -> Result<(), TypeError> {
     let foo = async fn (cond) => if (cond) { throw "error" } else { 5 }
     let bar = async fn () => await foo(true)
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
@@ -1601,9 +1601,9 @@ fn catch_await_async_func_that_throws() -> Result<(), TypeError> {
         }
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
@@ -1629,9 +1629,9 @@ fn test_async_without_return() -> Result<(), TypeError> {
         let sum = 5 + 10
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
     let binding = my_ctx.values.get("foo").unwrap();
 
     assert_eq!(
@@ -1653,9 +1653,9 @@ fn test_await_in_async() -> Result<(), TypeError> {
     }
     let baz = async fn () => foo()
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("bar").unwrap();
     assert_eq!(
@@ -1683,9 +1683,9 @@ fn test_await_outside_of_async() -> Result<(), TypeError> {
         return x
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
     assert_eq!(
         result,
         Err(TypeError {
@@ -1703,9 +1703,9 @@ fn test_await_non_promise() -> Result<(), TypeError> {
     let src = r#"
     let foo = async fn () => await 5
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
     assert_eq!(
         result,
         Err(TypeError {
@@ -1739,8 +1739,8 @@ fn test_do_expr() -> Result<(), TypeError> {
     // [msg]
     // TODO: If there's a newline before a postfix operator, we should
     // ignore the postfix operator.
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("sum").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"["hello", 15]"#);
@@ -1753,8 +1753,8 @@ fn test_empty_do_expr() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"let sum = do {}"#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("sum").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"undefined"#);
@@ -1781,8 +1781,8 @@ fn test_let_with_type_ann() -> Result<(), TypeError> {
     // TODO: add support for comments
     // This should be valid, but we don't support it yet
     // let baz: (number) => number = <A>(a: A) => a;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("x").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number"#);
@@ -1799,8 +1799,8 @@ fn test_function_overloads() -> Result<(), TypeError> {
     let sum = add(5, 10)
     let msg = add("hello, ", "world")
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("sum").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number"#);
@@ -1819,9 +1819,9 @@ fn test_function_no_valid_overload() -> Result<(), TypeError> {
     declare let add: (fn (a: number, b: number) -> number) & (fn (a: string, b: string) -> string)
     add(5, "world")
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -1840,8 +1840,8 @@ fn test_declare_cant_have_initializer() -> Result<(), TypeError> {
     let src = r#"
     declare let add: fn (a: number, b: number) -> number = fn (a, b) => a + b
     "#;
-    let mut program = parse(src).unwrap();
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let mut script = parse(src).unwrap();
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -1860,8 +1860,8 @@ fn test_declare_must_have_type_annotations() -> Result<(), TypeError> {
     let src = r#"
     declare let add
     "#;
-    let mut program = parse(src).unwrap();
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let mut script = parse(src).unwrap();
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -1881,8 +1881,8 @@ fn test_normal_decl_must_have_initializer() -> Result<(), TypeError> {
     let src = r#"
     let add: fn (a: number, b: number) -> number
     "#;
-    let mut program = parse(src).unwrap();
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let mut script = parse(src).unwrap();
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -1907,8 +1907,8 @@ fn test_pattern_matching_is_patterns() -> Result<(), TypeError> {
         b is string => "bar"
     }
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("name").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number | "bar""#);
@@ -1928,8 +1928,8 @@ fn test_pattern_matching_does_not_refine_expr() -> Result<(), TypeError> {
         x is string => "bar"
     }
     "#;
-    let mut program = parse(src).unwrap();
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let mut script = parse(src).unwrap();
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -1954,8 +1954,8 @@ fn test_pattern_not_a_subtype_of_expr() -> Result<(), TypeError> {
         x is boolean => "baz"
     }
     "#;
-    let mut program = parse(src).unwrap();
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let mut script = parse(src).unwrap();
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -1981,8 +1981,8 @@ fn test_pattern_matching_array() -> Result<(), TypeError> {
         [_, _, ...rest] => rest
     }
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(
@@ -2007,8 +2007,8 @@ fn test_pattern_matching_object() -> Result<(), TypeError> {
         {type: "delete", key} => key
     }
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("key").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string | string"#);
@@ -2030,8 +2030,8 @@ fn test_pattern_matching_object_event() -> Result<(), TypeError> {
         {type: "keydown", key} if (key != "Escape") => key
     }
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string | string"#);
@@ -2049,8 +2049,8 @@ fn member_access_on_union() -> Result<(), TypeError> {
     declare let obj: {a: number, b: string} | {b: boolean}
     let b = obj.b
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("b").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string | boolean"#);
@@ -2067,8 +2067,8 @@ fn member_access_optional_property() -> Result<(), TypeError> {
     let a = obj.a
     let b = obj.b
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("a").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number | undefined"#);
@@ -2086,8 +2086,8 @@ fn unifying_object_with_optional_properties() -> Result<(), TypeError> {
     type Obj = {a?: number, b: string}
     let obj: Obj = {b: "hello"}
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -2098,8 +2098,8 @@ fn unifying_null_literals() -> Result<(), TypeError> {
 
     let src = "let d: null = null";
 
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -2112,9 +2112,9 @@ fn member_access_on_unknown_type() -> Result<(), TypeError> {
     declare let obj: unknown
     let a = obj.a
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -2133,9 +2133,9 @@ fn member_access_on_type_variable() -> Result<(), TypeError> {
     let src = r#"
     let get_a = fn (x) => x.a
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -2156,8 +2156,8 @@ fn test_object_destructuring_assignment() -> Result<(), TypeError> {
     declare let obj: {a?: number, b: string, c: boolean}
     let {a, b, c} = obj
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("a").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number | undefined"#);
@@ -2179,8 +2179,8 @@ fn test_object_destructuring_assignment_with_rest() -> Result<(), TypeError> {
     declare let obj: {a?: number, b: string, c: boolean}
     let {a, ...rest} = obj
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("a").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number | undefined"#);
@@ -2201,8 +2201,8 @@ fn test_object_nested_destructuring_assignment() -> Result<(), TypeError> {
     declare let obj: {a: {b: {c: string}}}
     let {a: {b: {c}}} = obj
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("c").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string"#);
@@ -2221,8 +2221,8 @@ fn test_tuple_destrcuturing_assignment() -> Result<(), TypeError> {
     declare let tuple: [number, string, boolean]
     let [a, b, c] = tuple
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("a").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number"#);
@@ -2241,8 +2241,8 @@ fn test_tuple_destructuring_assignment_with_rest() -> Result<(), TypeError> {
     declare let tuple: [number, string, boolean]
     let [a, ...tuple_rest] = tuple
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("a").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number"#);
@@ -2260,8 +2260,8 @@ fn test_array_destructuring_assignment_with_rest() -> Result<(), TypeError> {
     declare let array: Array<string>
     let [a, ...array_rest] = array
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("a").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string | undefined"#);
@@ -2279,8 +2279,8 @@ fn test_tuple_nested_destrcuturing_assignment() -> Result<(), TypeError> {
     declare let tuple: [number, [string, [boolean]]]
     let [_, [_, [c]]] = tuple
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("c").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"boolean"#);
@@ -2297,8 +2297,8 @@ fn test_explicit_type_params() -> Result<(), TypeError> {
     let x = identity<number>(5)
     let y = identity<string>("hello")
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("x").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number"#);
@@ -2316,8 +2316,8 @@ fn test_explicit_type_params_type_error() -> Result<(), TypeError> {
     let identity = fn (x) => x
     identity<number>("hello")
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     insta::assert_display_snapshot!(checker.current_report, @r###"
     ESC_1000 - Function arguments are incorrect:
@@ -2335,8 +2335,8 @@ fn test_explicit_type_params_too_many_type_args() -> Result<(), TypeError> {
     let identity = fn (x) => x
     identity<number, string>(5)
     "#;
-    let mut program = parse(src).unwrap();
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let mut script = parse(src).unwrap();
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -2357,8 +2357,8 @@ fn test_type_param_with_constraint() -> Result<(), TypeError> {
     let x = identity(5)
     let y = identity("hello")
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("identity").unwrap();
     assert_eq!(
@@ -2381,8 +2381,8 @@ fn test_mix_explicit_implicit_type_params() -> Result<(), TypeError> {
     let fst = fn <B>(a, b: B) => a
     let snd = fn <B>(a, b: B) -> B => b
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("fst").unwrap();
     assert_eq!(
@@ -2405,8 +2405,8 @@ fn test_duplicate_type_param_names_error() -> Result<(), TypeError> {
     let src = r#"
     let fst = fn <T, T>(a: T, b: T) -> T => a
     "#;
-    let mut program = parse(src).unwrap();
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let mut script = parse(src).unwrap();
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -2426,8 +2426,8 @@ fn test_type_param_with_violated_constraint() -> Result<(), TypeError> {
     let identity = fn <T: number | string>(x: T) -> T => x
     identity(true)
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     insta::assert_display_snapshot!(checker.current_report, @r###"
     ESC_1000 - Function arguments are incorrect:
@@ -2445,8 +2445,8 @@ fn test_type_ann_func_with_type_constraint() -> Result<(), TypeError> {
     let identity: fn <T: number | string>(x: T) -> T = fn (x) => x
     let x = identity<number>(5)
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("identity").unwrap();
     assert_eq!(
@@ -2467,8 +2467,8 @@ fn test_type_ann_func_with_type_constraint_error() -> Result<(), TypeError> {
     let id1 = fn <T: number | string>(x: T) -> T => x
     let id2: fn <T: boolean>(x: T) -> T = id1
     "#;
-    let mut program = parse(src).unwrap();
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let mut script = parse(src).unwrap();
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -2489,8 +2489,8 @@ fn test_callback_with_type_param_subtyping() -> Result<(), TypeError> {
     let identity = fn <T: number | string>(x: T) -> T => x
     let result = foo(identity)
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"boolean"#);
@@ -2507,8 +2507,8 @@ fn test_callback_with_type_param_subtyping_error() -> Result<(), TypeError> {
     let identity = fn <T: number>(x: T) -> T => x
     let result = foo(identity)
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     insta::assert_display_snapshot!(checker.current_report, @r###"
     ESC_1000 - Function arguments are incorrect:
@@ -2526,8 +2526,8 @@ fn test_return_type_checking() -> Result<(), TypeError> {
     let foo = fn () -> string => "hello"
     let result = foo()
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"() -> string"#);
@@ -2544,8 +2544,8 @@ fn test_return_value_is_not_subtype_of_return_type() -> Result<(), TypeError> {
     let src = r#"
     let foo = fn () -> number => "hello"
     "#;
-    let mut program = parse(src).unwrap();
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let mut script = parse(src).unwrap();
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -2569,8 +2569,8 @@ fn test_multiple_returns() -> Result<(), TypeError> {
         return "hello"
     }
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
@@ -2590,8 +2590,8 @@ fn test_no_returns() -> Result<(), TypeError> {
         if (x > 5) { }
     }
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
@@ -2616,8 +2616,8 @@ fn test_multiple_returns_with_nested_functions() -> Result<(), TypeError> {
         return "hello"
     }
     "#;
-    let mut program = parse(src).unwrap();
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    let mut script = parse(src).unwrap();
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
@@ -2636,9 +2636,9 @@ fn type_alias() -> Result<(), TypeError> {
     type Point = {x: number, y: number}
     let p: Point = {x: 5, y: 10}
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
     let binding = my_ctx.values.get("p").unwrap();
     assert_eq!(
         checker.print_type(&binding.index),
@@ -2657,9 +2657,9 @@ fn type_alias_with_params_with_destructuring() -> Result<(), TypeError> {
     let node: Node<string> = {value: "hello"}
     let {value} = node
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("node").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"{value: string}"#);
@@ -2678,9 +2678,9 @@ fn type_alias_with_params_with_member_access() -> Result<(), TypeError> {
     let node: Node<string> = {value: "hello"}
     let value = node.value
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("node").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"{value: string}"#);
@@ -2700,9 +2700,9 @@ fn type_alias_with_params_with_computed_member_access() -> Result<(), TypeError>
     let key = "value"
     let value = node[key]
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("node").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"{value: string}"#);
@@ -2720,9 +2720,9 @@ fn instantiate_type_alias_with_too_many_type_args() -> Result<(), TypeError> {
     type Node<T> = {value: T}
     let node: Node<string, number> = {value: "hello"}
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -2742,9 +2742,9 @@ fn instantiate_type_alias_with_args_when_it_has_no_type_params() -> Result<(), T
     type Point = {x: number, y: number}
     let p: Point<number> = {x: 5, y: 10}
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -2768,9 +2768,9 @@ fn property_accesses_on_unions() -> Result<(), TypeError> {
     let key = "x"
     let x2 = object_union[key]
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("elem").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number | string"#);
@@ -2792,9 +2792,9 @@ fn maybe_property_accesses_on_unions() -> Result<(), TypeError> {
     let maybe_elem = tuple_union[1]
     let maybe_y = object_union.y
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("maybe_elem").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number | undefined"#);
@@ -2815,9 +2815,9 @@ fn optional_chaining() -> Result<(), TypeError> {
     let x = p?.x
     let y = q?.["y"]
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("x").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number | undefined"#);
@@ -2838,9 +2838,9 @@ fn optional_chaining_with_alias() -> Result<(), TypeError> {
     let x = p?.x
     let y = p?.["y"]
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("x").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number | undefined"#);
@@ -2860,9 +2860,9 @@ fn optional_chaining_unnecessary_chaining() -> Result<(), TypeError> {
     let obj: Obj = {msg: "hello"}
     let msg = obj?.msg
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("msg").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string"#);
@@ -2879,9 +2879,9 @@ fn optional_chaining_multiple_levels() -> Result<(), TypeError> {
     let obj: Obj = {a: {b: {c: 5}}}
     let c = obj?.a?.b?.c
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("c").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number | undefined"#);
@@ -2898,9 +2898,9 @@ fn calling_variable_whose_type_is_aliased_function_type() -> Result<(), TypeErro
     declare let foo: Fn
     let result = foo()
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number"#);
@@ -2917,9 +2917,9 @@ fn optional_chaining_call() -> Result<(), TypeError> {
     declare let foo: Fn | undefined | null
     let result = foo?.()
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number | undefined"#);
@@ -2938,9 +2938,9 @@ fn destructuring_unions() -> Result<(), TypeError> {
     let [fst, snd] = tuple_union
     let {x, y} = object_union
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     // TODO: write assertions for this test once the desired
     // behavior has been implemented.
@@ -2956,9 +2956,9 @@ fn missing_property_accesses_on_union_of_tuples() -> Result<(), TypeError> {
     declare let tuple_union: [number, number] | [string]
     let elem = tuple_union[2]
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -2978,9 +2978,9 @@ fn missing_property_accesses_on_union_of_objects() -> Result<(), TypeError> {
     declare let object_union: {x: number, y: number} | {x: string}
     let z = object_union.z
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -3004,9 +3004,9 @@ fn methods_on_arrays() -> Result<(), TypeError> {
 
     let len = str_array.length
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
     let binding = my_ctx.values.get("len").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number"#);
 
@@ -3021,9 +3021,9 @@ fn properties_on_tuple() -> Result<(), TypeError> {
     let tuple: [number, string] = [5, "hello"]
     let len = tuple.length
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("len").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number"#);
@@ -3041,9 +3041,9 @@ fn set_array_element() -> Result<(), TypeError> {
     array[0] = 5
     array[1] = 10
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -3058,9 +3058,9 @@ fn set_tuple_element() -> Result<(), TypeError> {
     tuple[0] = 5
     tuple[1] = 10
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("len").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number"#);
@@ -3076,9 +3076,9 @@ fn methods_on_arrays_incorrect_type() -> Result<(), TypeError> {
     let num_array: Array<number> = []
     num_array.push("hello")
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     insta::assert_display_snapshot!(checker.current_report, @r###"
     ESC_1000 - Function arguments are incorrect:
@@ -3097,9 +3097,9 @@ fn test_unknown() -> Result<(), TypeError> {
     let b: unknown = "hello"
     let c: unknown = true
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("a").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"unknown"#);
@@ -3119,9 +3119,9 @@ fn test_unknown_assignment_error() -> Result<(), TypeError> {
     let a: unknown = 5
     let b: number = a
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -3142,9 +3142,9 @@ fn test_type_param_explicit_unknown_constraint() -> Result<(), TypeError> {
         return a + b
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -3165,9 +3165,9 @@ fn test_type_param_implicit_unknown_constraint() -> Result<(), TypeError> {
         return a + b
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -3188,9 +3188,9 @@ fn test_optional_function_params() -> Result<(), TypeError> {
         return a
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
@@ -3209,9 +3209,9 @@ fn passing_undefined_to_an_optional_param() -> Result<(), TypeError> {
     declare let foo: fn (a: number, b?: number) -> number
     foo(5, undefined)
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -3224,9 +3224,9 @@ fn passing_undefined_to_an_optional_param_with_rest_param() -> Result<(), TypeEr
     declare let foo: fn (a: number, b?: number, ...c: number[]) -> number
     foo(5, undefined)
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -3239,9 +3239,9 @@ fn args_for_optional_params_can_be_omitted() -> Result<(), TypeError> {
     declare let foo: fn (a: number, b?: number) -> number
     foo(5)
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -3254,9 +3254,9 @@ fn args_for_optional_params_can_be_omitted_with_rest_param() -> Result<(), TypeE
     declare let foo: fn (a: number, b?: number, ...c: number[]) -> number
     foo(5)
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -3273,9 +3273,9 @@ fn test_func_param_patterns() -> Result<(), TypeError> {
         return b
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
@@ -3300,9 +3300,9 @@ fn test_func_param_object_rest_patterns() -> Result<(), TypeError> {
         return rest.b
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
@@ -3322,9 +3322,9 @@ fn test_func_param_object_multiple_rest_patterns() -> Result<(), TypeError> {
         return rest.b
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -3345,9 +3345,9 @@ fn test_func_param_tuple_rest_patterns() -> Result<(), TypeError> {
         return rest[1]
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("bar").unwrap();
     assert_eq!(
@@ -3368,9 +3368,9 @@ fn test_index_access_type() -> Result<(), TypeError> {
     type B = Foo["b"]
     type C = Foo["c"]
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("A").unwrap();
     assert_eq!(checker.print_type(&scheme.t), r#"Foo["a"]"#);
@@ -3396,9 +3396,9 @@ fn test_index_access_type_using_string_as_mapped() -> Result<(), TypeError> {
     type Foo = {a: string, b: number, c: boolean}
     type T = Foo[string]
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("T").unwrap();
     let t = checker.expand_type(&my_ctx, scheme.t)?;
@@ -3418,9 +3418,9 @@ fn test_index_access_type_using_number_as_mapped() -> Result<(), TypeError> {
     type Foo = {a: string, b: number, [P]: boolean for P in number}
     type T = Foo[number]
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("T").unwrap();
     let t = checker.expand_type(&my_ctx, scheme.t)?;
@@ -3437,9 +3437,9 @@ fn test_index_access_type_missing_property() -> Result<(), TypeError> {
     type Foo = {a: string, b?: number}
     type C = Foo["c"]
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("C").unwrap();
     let result = checker.expand_type(&my_ctx, scheme.t);
@@ -3463,9 +3463,9 @@ fn test_index_access_type_missing_mapped() -> Result<(), TypeError> {
     type Foo = {[P]: string for P in number}
     type C = Foo["c"]
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("C").unwrap();
     let result = checker.expand_type(&my_ctx, scheme.t);
@@ -3490,9 +3490,9 @@ fn test_index_access_type_number_mapped() -> Result<(), TypeError> {
     type T = Foo[1]
     let t: T = "hello"
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("T").unwrap();
     let t = checker.expand_type(&my_ctx, scheme.t)?;
@@ -3514,9 +3514,9 @@ fn test_mapped_type_pick() -> Result<(), TypeError> {
     type Obj = {a?: string, b: number, c: boolean}
     type Result = Pick<Obj, "a" | "b">
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("Result").unwrap();
     let t = checker.expand_type(&my_ctx, scheme.t)?;
@@ -3534,9 +3534,9 @@ fn test_pick_type() -> Result<(), TypeError> {
     type Obj = {a: string, b: number, c: boolean}
     type Result = Pick<Obj, "a" | "b">
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("Result").unwrap();
     let t = checker.expand_type(&my_ctx, scheme.t)?;
@@ -3554,9 +3554,9 @@ fn test_exclude_type() -> Result<(), TypeError> {
     type Obj = {a: string, b: number, c: boolean}
     type Result = Exclude<keyof Obj, "c">
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("Result").unwrap();
     let t = checker.expand_type(&my_ctx, scheme.t)?;
@@ -3576,9 +3576,9 @@ fn test_omit_type() -> Result<(), TypeError> {
     type Obj = {a: string, b: number, c: boolean}
     type Result = Omit<Obj, "c">
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("Result").unwrap();
     let t = checker.expand_type(&my_ctx, scheme.t)?;
@@ -3596,9 +3596,9 @@ fn test_index_access_type_on_tuple() -> Result<(), TypeError> {
     type T = Foo[1]
     let t: T = "hello"
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("t").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string"#);
@@ -3615,9 +3615,9 @@ fn test_index_access_type_on_tuple_with_number_key() -> Result<(), TypeError> {
     type T = Foo[number]
     let t: T = "hello"
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("t").unwrap();
     assert_eq!(
@@ -3637,9 +3637,9 @@ fn test_index_access_out_of_bounds_on_tuple() -> Result<(), TypeError> {
     type T = Foo[3]
     let t: T = "hello"
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -3660,9 +3660,9 @@ fn test_index_access_not_usize() -> Result<(), TypeError> {
     type T = Foo[1.5]
     let t: T = "hello"
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -3682,9 +3682,9 @@ fn test_typeof() -> Result<(), TypeError> {
     let foo = {a: "hello", b: 5, c: true}
     type Foo = typeof foo
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("Foo").unwrap();
     let t = checker.expand_type(&my_ctx, scheme.t)?;
@@ -3707,9 +3707,9 @@ fn test_keyof_obj() -> Result<(), TypeError> {
     type D = keyof {[P]: number for P in string, x: number}
     type E = keyof {[P]: boolean for P in number, x: boolean}
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("A").unwrap();
     let t = checker.expand_type(&my_ctx, scheme.t)?;
@@ -3744,9 +3744,9 @@ fn test_keyof_array_tuple() -> Result<(), TypeError> {
     type Baz = keyof ["hello"]
     type Qux = keyof []
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("Foo").unwrap();
     let t = checker.expand_type(&my_ctx, scheme.t)?;
@@ -3775,9 +3775,9 @@ fn test_keyof_alias() -> Result<(), TypeError> {
     type Point = {x: number, y: number}
     type Foo = keyof Point
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("Foo").unwrap();
     let t = checker.expand_type(&my_ctx, scheme.t)?;
@@ -3806,9 +3806,9 @@ fn test_keyof_literal() -> Result<(), TypeError> {
     type B = keyof 5
     type C = keyof true
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("A").unwrap();
     let t = checker.expand_type(&my_ctx, scheme.t)?;
@@ -3845,9 +3845,9 @@ fn test_keyof_primitive() -> Result<(), TypeError> {
     type B = keyof number
     type C = keyof boolean
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("A").unwrap();
     let t = checker.expand_type(&my_ctx, scheme.t)?;
@@ -3874,9 +3874,9 @@ fn test_keyof_unknown_undefined_null() -> Result<(), TypeError> {
     type C = keyof null
     type D = keyof never
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("A").unwrap();
     let t = checker.expand_type(&my_ctx, scheme.t)?;
@@ -3907,9 +3907,9 @@ fn test_keyof_intersection() -> Result<(), TypeError> {
     type C = keyof ({a: number} & undefined)
     type D = keyof ({a: number} & {[P]: number for P in string})
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let scheme = my_ctx.schemes.get("A").unwrap();
     let t = checker.expand_type(&my_ctx, scheme.t)?;
@@ -3945,9 +3945,9 @@ fn test_mutually_recursive_type() -> Result<(), TypeError> {
     }
     "#;
 
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -3969,9 +3969,9 @@ fn test_mutually_recursive_type_with_index_access_type() -> Result<(), TypeError
     let foo: Foo = {a: 5, b: "hello"}
     "#;
 
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -3983,9 +3983,9 @@ fn test_type_alias_with_undefined_def() -> Result<(), TypeError> {
     type A = B
     "#;
 
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -4010,9 +4010,9 @@ fn test_mutable_error_arg_passing() -> Result<(), TypeError> {
     let p: Point = {x: 5, y: 10}
     scale(p, 2)
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -4033,9 +4033,9 @@ fn test_infer_array_element_type_from_assignment() -> Result<(), TypeError> {
     let src = r#"
     let numbers: Array<_> = [1, 2, 3]
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let numbers = my_ctx.values.get("numbers").unwrap();
     assert_eq!(checker.print_type(&numbers.index), r#"Array<1 | 2 | 3>"#);
@@ -4053,9 +4053,9 @@ fn test_mutable_error_arg_passing_with_subtyping() -> Result<(), TypeError> {
     let mut numbers: Array<number> = [1, 2, 3]
     foo(numbers)
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -4095,9 +4095,9 @@ fn test_mutable_ok_arg_passing() -> Result<(), TypeError> {
         let mut p = scale(p, 2)
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -4112,9 +4112,9 @@ fn test_mutable_error_arg_passing_declared_fn() -> Result<(), TypeError> {
     let p: Point = {x: 5, y: 10}
     scale(p, 2)
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -4150,9 +4150,9 @@ fn test_mutable_ok_arg_passing_declared_fns() -> Result<(), TypeError> {
         let mut p = scale(p, 2)
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -4166,9 +4166,9 @@ fn test_mutable_error_assignment() -> Result<(), TypeError> {
     let p: Point = {x: 5, y: 10}
     let mut q = p
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -4198,9 +4198,9 @@ fn test_mutable_ok_assignments() -> Result<(), TypeError> {
         let q = p
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -4213,9 +4213,9 @@ fn test_mutable_invalid_assignments() -> Result<(), TypeError> {
     let mut arr1: Array<number> = [1, 2, 3]
     let mut arr2: Array<number | string>  = arr1
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -4238,9 +4238,9 @@ fn test_sub_objects_are_mutable() -> Result<(), TypeError> {
     let b1 = obj1.a.b
     let b2 = obj2.a.b
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("b1").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"{c: string}"#);
@@ -4260,9 +4260,9 @@ fn test_tuple_type_equality() -> Result<(), TypeError> {
     declare let a: [number, string]
     declare let b: [number, string]
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let a = my_ctx.values.get("a").unwrap();
     let b = my_ctx.values.get("b").unwrap();
@@ -4280,9 +4280,9 @@ fn test_function_type_equality() -> Result<(), TypeError> {
     declare let add: fn(a: number, b: number) -> number
     declare let sub: fn(a: number, b: number) -> number
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let add = my_ctx.values.get("add").unwrap();
     let sub = my_ctx.values.get("sub").unwrap();
@@ -4300,9 +4300,9 @@ fn test_literal_type_equality() -> Result<(), TypeError> {
     let a = 5
     let b = 5
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let a = my_ctx.values.get("a").unwrap();
     let b = my_ctx.values.get("b").unwrap();
@@ -4321,9 +4321,9 @@ fn test_mutable_object_type_equality() -> Result<(), TypeError> {
     let mut p: Point = {x: 5, y: 10}
     let mut q: Point = {x: 0, y: 1}
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let p = my_ctx.values.get("p").unwrap();
     let q = my_ctx.values.get("q").unwrap();
@@ -4343,9 +4343,9 @@ fn test_mutating_mutable_object() -> Result<(), TypeError> {
     p.x = 0
     p["y"] = 0
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -4359,9 +4359,9 @@ fn test_mutating_immutable_object_errors() -> Result<(), TypeError> {
     let p: Point = {x: 5, y: 10}
     p.x = 0
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -4381,9 +4381,9 @@ fn conditional_type_exclude() -> Result<(), TypeError> {
     type Exclude<T, U> = if (T: U) { never } else { T }
     type Result = Exclude<"a" | "b" | "c" | "d" | "e", "a" | "e">
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("Result").unwrap();
     let t = checker.expand_type(&my_ctx, result.t)?;
@@ -4406,9 +4406,9 @@ fn chained_conditional_types() -> Result<(), TypeError> {
     }
     type Result = Foo<5 | "hello">
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("Result").unwrap();
     let t = checker.expand_type(&my_ctx, result.t)?;
@@ -4429,9 +4429,9 @@ fn match_type_with_catchall() -> Result<(), TypeError> {
     }
     type Result = Foo<5 | "hello">
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("Result").unwrap();
     let t = checker.expand_type(&my_ctx, result.t)?;
@@ -4452,9 +4452,9 @@ fn match_type_without_catchall() -> Result<(), TypeError> {
     type True = Foo<5 | true>
     type Never = Foo<true>
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("True").unwrap();
     let t = checker.expand_type(&my_ctx, result.t)?;
@@ -4489,9 +4489,9 @@ fn match_type_with_tuples() -> Result<(), TypeError> {
     type Tuple4 = Bar<[5, "hello", true, 10]>
     type Tuple5 = Bar<[5, "hello", true, 10, "world"]>
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("Tuple0").unwrap();
     let t = checker.expand_type(&my_ctx, result.t)?;
@@ -4529,9 +4529,9 @@ fn conditional_type_with_placeholders() -> Result<(), TypeError> {
         type T = IsArray<Array<number>>
         type F = IsArray<number>
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("T").unwrap();
     let t = checker.expand_type(&my_ctx, result.t)?;
@@ -4553,9 +4553,9 @@ fn conditional_type_with_constraint() -> Result<(), TypeError> {
         type T = IsArrayOfNumbers<[1, 2, 3]>
         type F = IsArrayOfNumbers<["hello", "world"]>
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("T").unwrap();
     let t = checker.expand_type(&my_ctx, result.t)?;
@@ -4576,9 +4576,9 @@ fn unify_tuple_and_array() -> Result<(), TypeError> {
         let tuple = [1, 2, 3]
         let array: Array<number> = tuple
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -4593,9 +4593,9 @@ fn conditional_type_with_function_subtyping() -> Result<(), TypeError> {
         type T = IsFunction<fn (a: number) -> string>
         type F = IsFunction<number>
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("T").unwrap();
     let t = checker.expand_type(&my_ctx, result.t)?;
@@ -4626,9 +4626,9 @@ fn return_type_rest_placeholder() -> Result<(), TypeError> {
         type RT2 = ReturnType<fn (a: string) -> number>
         type RT3 = ReturnType<fn () -> string>
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("RT1").unwrap();
     let t = checker.expand_type(&my_ctx, result.t)?;
@@ -4659,9 +4659,9 @@ fn return_type_of_union() -> Result<(), TypeError> {
         }
         type Result = ReturnType<(fn () -> number) | (fn () -> string)>
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("Result").unwrap();
     let t = checker.expand_type(&my_ctx, result.t)?;
@@ -4688,9 +4688,9 @@ fn parameters_utility_type() -> Result<(), TypeError> {
     type P4 = Parameters<fn (a: string, ...rest: [number, boolean, ...string[]]) -> boolean>
     "#;
 
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("P1").unwrap();
     let t = checker.expand_type(&my_ctx, result.t)?;
@@ -4728,9 +4728,9 @@ fn function_subtyping_with_rest_placeholder() -> Result<(), TypeError> {
     let tuple2: fn (...args: [_, _]) -> boolean = fn (a: string, b: number) => true
     let tuple3: fn (...args: [string, number]) -> boolean = fn (a: string, b: number) => true
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -4742,9 +4742,9 @@ fn function_subtyping_with_rest_array_fails() -> Result<(), TypeError> {
     let src = r#"
     let result: fn (...args: Array<_>) -> boolean = fn (a: string, b: number) => true
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -4763,9 +4763,9 @@ fn function_multiple_rest_params_in_type_fails() -> Result<(), TypeError> {
     let src = r#"
     let result: fn (...args: _, ...moar_args: _) -> boolean = fn (a: string, b: number) => true
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -4784,9 +4784,9 @@ fn function_multiple_rest_params_function_fails() -> Result<(), TypeError> {
     let src = r#"
     let result: fn (...args: _) -> boolean = fn (...args: _, ...moar_args: _) => true
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -4811,9 +4811,9 @@ fn arithmetic_op_const_folding() -> Result<(), TypeError> {
     let quot = a / b
     let rem = a % b
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("sum").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"5"#);
@@ -4847,9 +4847,9 @@ fn comparison_op_const_folding() -> Result<(), TypeError> {
     let eq = a == b
     let neq = a != b
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("gt").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"true"#);
@@ -4882,9 +4882,9 @@ fn other_equality_checks() -> Result<(), TypeError> {
     let c = "hello" == 5
     let d = "hello" != 5
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("a").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"false"#);
@@ -4912,9 +4912,9 @@ fn type_level_arithmetic() -> Result<(), TypeError> {
     type D = 10 / 5
     type E = 10 % 5
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("A").unwrap();
     assert_eq!(checker.print_type(&result.t), r#"10 + 5"#);
@@ -4951,9 +4951,9 @@ fn type_level_arithmetic_incorrect_operands() -> Result<(), TypeError> {
     let src = r#"
     type Sum = "hello" + true
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -4973,9 +4973,9 @@ fn check_type_constraints() -> Result<(), TypeError> {
     type Add<A: number, B: number> = A + B
     type A = Add<"hello", "world">
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -4998,9 +4998,9 @@ fn type_level_arithmetic_with_alias() -> Result<(), TypeError> {
     type C = Add<number, 10>
     type D = Add<number, number>
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let result = my_ctx.schemes.get("A").unwrap();
     let t = checker.expand_type(&my_ctx, result.t)?;
@@ -5029,9 +5029,9 @@ fn type_level_arithmetic_with_incorrect_types() -> Result<(), TypeError> {
     let src = r#"
     type Sum = string + number
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -5051,9 +5051,9 @@ fn type_args_are_eagerly_checked() -> Result<(), TypeError> {
     type Foo<A: number> = A
     type Bar = Foo<string>
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -5075,9 +5075,9 @@ fn for_in_loop() -> Result<(), TypeError> {
         sum = sum + num
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -5095,9 +5095,9 @@ fn for_in_loop_with_patterns() -> Result<(), TypeError> {
         centroid.y += y
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -5112,9 +5112,9 @@ fn function_call_func_wth_rest_arg_array() -> Result<(), TypeError> {
     foo([5, 10], "hello")
     foo([5, 10])
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -5128,9 +5128,9 @@ fn function_call_func_wth_rest_arg_tuple() -> Result<(), TypeError> {
     foo([5, 10], "hello", true)
     foo([5, 10], "hello", true, "world")
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -5143,9 +5143,9 @@ fn function_call_func_wth_rest_arg_tuple_not_enough_args() -> Result<(), TypeErr
     let foo = fn (a: Array<number>, ...rest: [string, boolean]) => true
     foo([5, 10], "hello")
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -5168,9 +5168,9 @@ fn function_call_with_spread_args() -> Result<(), TypeError> {
     let args = [5, "hello"]
     let result = foo(...args)
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -5183,9 +5183,9 @@ fn tagged_template_literal() -> Result<(), TypeError> {
     declare let foo: fn(strings: Array<string>, ...args: Array<number>) -> number
     let result = foo`hello ${1} world ${5}`
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"number"#);
@@ -5201,9 +5201,9 @@ fn tagged_template_literal_with_throw() -> Result<(), TypeError> {
     declare let foo: fn(strings: Array<string>, ...args: Array<number>) -> number throws "RangeError"
     let bar = fn () => foo`hello ${1} world ${5}`
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("bar").unwrap();
     assert_eq!(
@@ -5227,9 +5227,9 @@ fn test_generalization_inside_function() -> Result<(), TypeError> {
     }
     let bar = foo()
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     // TODO: do let-generalization within functions, not just
     // at the top level.
@@ -5254,9 +5254,9 @@ fn higher_rank_type_1() -> Result<(), TypeError> {
     let src = r#"
     let f = fn (g: fn<A>(x: A) -> A) => [g(5), g("hello")]
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("f").unwrap();
     assert_eq!(
@@ -5282,9 +5282,9 @@ fn higher_rank_type_2() -> Result<(), TypeError> {
     type IdHigherRank = fn <T>(item: T) -> T
     let z: IdHigherRank = identity // fine
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }
@@ -5300,9 +5300,9 @@ fn higher_rank_type_expected_error() -> Result<(), TypeError> {
     type IdHigherRank = fn <T>(item: T) -> T
     let zz: IdHigherRank = plusOne // error
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     assert_no_errors(&checker)
 }

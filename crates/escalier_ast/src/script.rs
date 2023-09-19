@@ -1,6 +1,6 @@
 use crate::stmt::Stmt;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Program {
+pub struct Script {
     pub stmts: Vec<Stmt>,
 }

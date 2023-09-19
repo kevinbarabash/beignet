@@ -86,9 +86,9 @@ fn basic_throws_test() -> Result<(), TypeError> {
         return add(a, b)
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("div").unwrap();
     assert_eq!(
@@ -121,9 +121,9 @@ fn constrained_throws() -> Result<(), TypeError> {
         return div(a, b)
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
@@ -144,9 +144,9 @@ fn constrained_throws_type_mismatch() -> Result<(), TypeError> {
         return div(a, b)
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -169,9 +169,9 @@ fn throws_multiple_exceptions() -> Result<(), TypeError> {
         return sqrt(div(a, b))
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
@@ -193,9 +193,9 @@ fn unify_call_throws_with_func_sig_throws() -> Result<(), TypeError> {
         return sqrt(div(a, b))
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
@@ -217,9 +217,9 @@ fn unify_call_throws_with_func_sig_throws_failure() -> Result<(), TypeError> {
         return sqrt(div(a, b))
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    let result = checker.infer_program(&mut program, &mut my_ctx);
+    let result = checker.infer_script(&mut script, &mut my_ctx);
 
     assert_eq!(
         result,
@@ -242,9 +242,9 @@ fn scoped_throws() -> Result<(), TypeError> {
         return a + b
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
@@ -265,9 +265,9 @@ fn throws_coalesces_duplicate_exceptions() -> Result<(), TypeError> {
         return div(1, a) + div(1, b)
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
@@ -300,9 +300,9 @@ fn callback_with_throws() -> Result<(), TypeError> {
         return result
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("foo").unwrap();
     assert_eq!(
@@ -328,9 +328,9 @@ fn infer_throws_from_throw() -> Result<(), TypeError> {
         return a / b
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("div").unwrap();
     assert_eq!(
@@ -357,9 +357,9 @@ fn try_catches_throw() -> Result<(), TypeError> {
         0
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("div").unwrap();
     assert_eq!(
@@ -386,9 +386,9 @@ fn try_catches_throw_and_rethrows() -> Result<(), TypeError> {
         throw "RETHROWN_ERROR"
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("div").unwrap();
     assert_eq!(
@@ -417,9 +417,9 @@ fn try_catches_throw_return_inside_try_catch() -> Result<(), TypeError> {
         }
     }
     "#;
-    let mut program = parse(src).unwrap();
+    let mut script = parse(src).unwrap();
 
-    checker.infer_program(&mut program, &mut my_ctx)?;
+    checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("div").unwrap();
     assert_eq!(

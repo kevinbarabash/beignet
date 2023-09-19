@@ -30,7 +30,7 @@ impl Context {
     }
 }
 
-pub fn codegen_js(src: &str, program: &values::Program) -> (String, String) {
+pub fn codegen_js(src: &str, program: &values::Script) -> (String, String) {
     let mut ctx = Context { temp_id: 0 };
     let program = build_js(program, &mut ctx);
 
@@ -81,7 +81,7 @@ fn print_js(src: &str, program: &Program) -> (String, String) {
     (output_code, String::from_utf8(source_map_buf).unwrap())
 }
 
-fn build_js(program: &values::Program, ctx: &mut Context) -> Program {
+fn build_js(program: &values::Script, ctx: &mut Context) -> Program {
     let body: Vec<ModuleItem> = program
         .stmts
         .iter()

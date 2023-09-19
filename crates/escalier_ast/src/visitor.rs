@@ -2,12 +2,12 @@ use crate::block::Block;
 use crate::class::*;
 use crate::expr::*;
 use crate::pattern::*;
-use crate::program::Program;
+use crate::script::Script;
 use crate::stmt::*;
 use crate::type_ann::TypeAnn;
 
 pub trait Visitor: Sized {
-    fn visit_program(&mut self, program: &Program) {
+    fn visit_program(&mut self, program: &Script) {
         walk_program(self, program)
     }
 
@@ -28,7 +28,7 @@ pub trait Visitor: Sized {
     }
 }
 
-pub fn walk_program<V: Visitor>(visitor: &mut V, program: &Program) {
+pub fn walk_program<V: Visitor>(visitor: &mut V, program: &Script) {
     for stmt in &program.stmts {
         visitor.visit_stmt(stmt);
     }

@@ -2,8 +2,8 @@ use escalier_codegen::js::*;
 use escalier_parser::parse;
 
 fn compile(input: &str) -> String {
-    let program = parse(input).unwrap();
-    let (js, _) = codegen_js(input, &program);
+    let script = parse(input).unwrap();
+    let (js, _) = codegen_js(input, &script);
     js
 }
 
