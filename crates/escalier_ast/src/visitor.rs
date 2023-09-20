@@ -1,5 +1,6 @@
 use crate::block::Block;
 use crate::class::*;
+use crate::decl::*;
 use crate::expr::*;
 use crate::pattern::*;
 use crate::script::Script;
@@ -7,6 +8,9 @@ use crate::stmt::*;
 use crate::type_ann::TypeAnn;
 
 pub trait Visitor: Sized {
+    // TODO: add `visit_module`
+
+    // TODO: rename `visit_script`
     fn visit_program(&mut self, program: &Script) {
         walk_program(self, program)
     }
@@ -17,6 +21,10 @@ pub trait Visitor: Sized {
 
     fn visit_pattern(&mut self, pattern: &Pattern) {
         walk_pattern(self, pattern)
+    }
+
+    fn visit_decl(&mut self, decl: &Decl) {
+        walk_decl(self, decl)
     }
 
     fn visit_stmt(&mut self, stmt: &Stmt) {
@@ -283,21 +291,9 @@ pub fn walk_pattern<V: Visitor>(visitor: &mut V, pattern: &Pattern) {
     }
 }
 
-pub fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &Stmt) {
-    match &stmt.kind {
-        StmtKind::Expr(ExprStmt { expr }) => visitor.visit_expr(expr),
-        StmtKind::For(ForStmt { left, right, body }) => {
-            visitor.visit_pattern(left);
-            visitor.visit_expr(right);
-            walk_block(visitor, body);
-        }
-        StmtKind::Return(ReturnStmt { arg }) => {
-            if let Some(arg) = arg {
-                visitor.visit_expr(arg);
-            }
-        }
-
-        StmtKind::VarDecl(crate::VarDecl {
+pub fn walk_decl<V: Visitor>(visitor: &mut V, decl: &Decl) {
+    match &decl.kind {
+        DeclKind::VarDecl(crate::VarDecl {
             is_declare: _,
             is_var: _,
             pattern,
@@ -312,7 +308,7 @@ pub fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &Stmt) {
                 visitor.visit_type_ann(type_ann);
             }
         }
-        StmtKind::TypeDecl(TypeDecl {
+        DeclKind::TypeDecl(TypeDecl {
             name: _,
             type_ann,
             type_params,
@@ -329,6 +325,23 @@ pub fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &Stmt) {
             }
             visitor.visit_type_ann(type_ann);
         }
+    }
+}
+
+pub fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &Stmt) {
+    match &stmt.kind {
+        StmtKind::Expr(ExprStmt { expr }) => visitor.visit_expr(expr),
+        StmtKind::For(ForStmt { left, right, body }) => {
+            visitor.visit_pattern(left);
+            visitor.visit_expr(right);
+            walk_block(visitor, body);
+        }
+        StmtKind::Return(ReturnStmt { arg }) => {
+            if let Some(arg) = arg {
+                visitor.visit_expr(arg);
+            }
+        }
+        StmtKind::Decl(decl) => visitor.visit_decl(decl),
     }
 }
 

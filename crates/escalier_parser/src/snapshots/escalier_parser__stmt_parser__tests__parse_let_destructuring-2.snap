@@ -4,76 +4,81 @@ expression: "parse(\"let {x: x1, y: y1} = p1\")"
 ---
 [
     Stmt {
-        kind: VarDecl(
-            VarDecl {
-                is_declare: false,
-                is_var: false,
-                pattern: Pattern {
-                    kind: Object(
-                        ObjectPat {
-                            props: [
-                                KeyValue(
-                                    KeyValuePatProp {
-                                        span: 5..10,
-                                        key: Ident {
-                                            name: "x",
-                                            span: 5..6,
-                                        },
-                                        value: Pattern {
-                                            kind: Ident(
-                                                BindingIdent {
-                                                    name: "x1",
+        kind: Decl(
+            Decl {
+                kind: VarDecl(
+                    VarDecl {
+                        is_declare: false,
+                        is_var: false,
+                        pattern: Pattern {
+                            kind: Object(
+                                ObjectPat {
+                                    props: [
+                                        KeyValue(
+                                            KeyValuePatProp {
+                                                span: 5..10,
+                                                key: Ident {
+                                                    name: "x",
+                                                    span: 5..6,
+                                                },
+                                                value: Pattern {
+                                                    kind: Ident(
+                                                        BindingIdent {
+                                                            name: "x1",
+                                                            span: 8..10,
+                                                            mutable: false,
+                                                        },
+                                                    ),
                                                     span: 8..10,
-                                                    mutable: false,
+                                                    inferred_type: None,
                                                 },
-                                            ),
-                                            span: 8..10,
-                                            inferred_type: None,
-                                        },
-                                        init: None,
-                                    },
-                                ),
-                                KeyValue(
-                                    KeyValuePatProp {
-                                        span: 12..17,
-                                        key: Ident {
-                                            name: "y",
-                                            span: 12..13,
-                                        },
-                                        value: Pattern {
-                                            kind: Ident(
-                                                BindingIdent {
-                                                    name: "y1",
+                                                init: None,
+                                            },
+                                        ),
+                                        KeyValue(
+                                            KeyValuePatProp {
+                                                span: 12..17,
+                                                key: Ident {
+                                                    name: "y",
+                                                    span: 12..13,
+                                                },
+                                                value: Pattern {
+                                                    kind: Ident(
+                                                        BindingIdent {
+                                                            name: "y1",
+                                                            span: 15..17,
+                                                            mutable: false,
+                                                        },
+                                                    ),
                                                     span: 15..17,
-                                                    mutable: false,
+                                                    inferred_type: None,
                                                 },
-                                            ),
-                                            span: 15..17,
-                                            inferred_type: None,
-                                        },
-                                        init: None,
+                                                init: None,
+                                            },
+                                        ),
+                                    ],
+                                    optional: false,
+                                },
+                            ),
+                            span: 3..18,
+                            inferred_type: None,
+                        },
+                        expr: Some(
+                            Expr {
+                                kind: Ident(
+                                    Ident {
+                                        name: "p1",
+                                        span: 21..23,
                                     },
                                 ),
-                            ],
-                            optional: false,
-                        },
-                    ),
-                    span: 3..18,
-                    inferred_type: None,
-                },
-                expr: Some(
-                    Expr {
-                        kind: Ident(
-                            Ident {
-                                name: "p1",
                                 span: 21..23,
+                                inferred_type: None,
                             },
                         ),
-                        span: 21..23,
-                        inferred_type: None,
+                        type_ann: None,
                     },
                 ),
-                type_ann: None,
+                span: 0..23,
             },
         ),
         span: 0..23,

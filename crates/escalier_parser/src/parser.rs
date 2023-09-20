@@ -317,6 +317,8 @@ impl<'a> Parser<'a> {
         }
 
         let kind = match ident.as_ref() {
+            "import" => TokenKind::Import,
+            "export" => TokenKind::Export,
             "fn" => TokenKind::Fn,
             "get" => TokenKind::Get,
             "set" => TokenKind::Set,

@@ -54,15 +54,20 @@ impl<'a> Parser<'a> {
                     },
                 };
 
-                // TODO: check invariants in semantic analysis pass
-                Stmt {
-                    kind: StmtKind::VarDecl(VarDecl {
+                let decl = Decl {
+                    kind: DeclKind::VarDecl(VarDecl {
                         is_declare,
                         is_var,
                         pattern,
                         expr,
                         type_ann,
                     }),
+                    span,
+                };
+
+                // TODO: check invariants in semantic analysis pass
+                Stmt {
+                    kind: StmtKind::Decl(decl),
                     span,
                     inferred_type: None,
                 }
@@ -135,12 +140,17 @@ impl<'a> Parser<'a> {
                 let type_ann = self.parse_type_ann()?;
                 let span = merge_spans(&token.span, &type_ann.span);
 
-                Stmt {
-                    kind: StmtKind::TypeDecl(TypeDecl {
+                let decl = Decl {
+                    kind: DeclKind::TypeDecl(TypeDecl {
                         name,
                         type_ann,
                         type_params,
                     }),
+                    span,
+                };
+
+                Stmt {
+                    kind: StmtKind::Decl(decl),
                     span,
                     inferred_type: None,
                 }
@@ -158,21 +168,9 @@ impl<'a> Parser<'a> {
 
         Ok(stmt)
     }
-
-    pub fn parse_script(&mut self) -> Result<Script, ParseError> {
-        let mut stmts = Vec::new();
-        while self.peek().unwrap_or(&EOF).kind != TokenKind::Eof {
-            // TODO: attach comments to AST nodes
-            if let TokenKind::Comment(_) = &self.peek().unwrap_or(&EOF).kind {
-                self.next(); // consumes the comment
-                continue;
-            }
-            stmts.push(self.parse_stmt()?);
-        }
-        Ok(Script { stmts })
-    }
 }
 
+// TODO: remove this function
 pub fn parse(input: &str) -> Result<Script, ParseError> {
     let mut parser = Parser::new(input);
     parser.parse_script()

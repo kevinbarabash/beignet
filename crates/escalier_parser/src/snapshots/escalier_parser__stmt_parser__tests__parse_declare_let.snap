@@ -4,29 +4,34 @@ expression: "parse(r#\"declare let foo: number\"#)"
 ---
 [
     Stmt {
-        kind: VarDecl(
-            VarDecl {
-                is_declare: true,
-                is_var: false,
-                pattern: Pattern {
-                    kind: Ident(
-                        BindingIdent {
-                            name: "foo",
+        kind: Decl(
+            Decl {
+                kind: VarDecl(
+                    VarDecl {
+                        is_declare: true,
+                        is_var: false,
+                        pattern: Pattern {
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "foo",
+                                    span: 12..15,
+                                    mutable: false,
+                                },
+                            ),
                             span: 12..15,
-                            mutable: false,
+                            inferred_type: None,
                         },
-                    ),
-                    span: 12..15,
-                    inferred_type: None,
-                },
-                expr: None,
-                type_ann: Some(
-                    TypeAnn {
-                        kind: Number,
-                        span: 17..23,
-                        inferred_type: None,
+                        expr: None,
+                        type_ann: Some(
+                            TypeAnn {
+                                kind: Number,
+                                span: 17..23,
+                                inferred_type: None,
+                            },
+                        ),
                     },
                 ),
+                span: 0..23,
             },
         ),
         span: 0..23,

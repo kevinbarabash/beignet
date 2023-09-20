@@ -12,66 +12,76 @@ Expr {
                     span: 5..43,
                     stmts: [
                         Stmt {
-                            kind: VarDecl(
-                                VarDecl {
-                                    is_declare: false,
-                                    is_var: false,
-                                    pattern: Pattern {
-                                        kind: Ident(
-                                            BindingIdent {
-                                                name: "x",
+                            kind: Decl(
+                                Decl {
+                                    kind: VarDecl(
+                                        VarDecl {
+                                            is_declare: false,
+                                            is_var: false,
+                                            pattern: Pattern {
+                                                kind: Ident(
+                                                    BindingIdent {
+                                                        name: "x",
+                                                        span: 12..13,
+                                                        mutable: false,
+                                                    },
+                                                ),
                                                 span: 12..13,
-                                                mutable: false,
+                                                inferred_type: None,
                                             },
-                                        ),
-                                        span: 12..13,
-                                        inferred_type: None,
-                                    },
-                                    expr: Some(
-                                        Expr {
-                                            kind: Num(
-                                                Num {
-                                                    value: "5",
+                                            expr: Some(
+                                                Expr {
+                                                    kind: Num(
+                                                        Num {
+                                                            value: "5",
+                                                        },
+                                                    ),
+                                                    span: 16..17,
+                                                    inferred_type: None,
                                                 },
                                             ),
-                                            span: 16..17,
-                                            inferred_type: None,
+                                            type_ann: None,
                                         },
                                     ),
-                                    type_ann: None,
+                                    span: 8..17,
                                 },
                             ),
                             span: 8..17,
                             inferred_type: None,
                         },
                         Stmt {
-                            kind: VarDecl(
-                                VarDecl {
-                                    is_declare: false,
-                                    is_var: false,
-                                    pattern: Pattern {
-                                        kind: Ident(
-                                            BindingIdent {
-                                                name: "y",
+                            kind: Decl(
+                                Decl {
+                                    kind: VarDecl(
+                                        VarDecl {
+                                            is_declare: false,
+                                            is_var: false,
+                                            pattern: Pattern {
+                                                kind: Ident(
+                                                    BindingIdent {
+                                                        name: "y",
+                                                        span: 22..23,
+                                                        mutable: false,
+                                                    },
+                                                ),
                                                 span: 22..23,
-                                                mutable: false,
+                                                inferred_type: None,
                                             },
-                                        ),
-                                        span: 22..23,
-                                        inferred_type: None,
-                                    },
-                                    expr: Some(
-                                        Expr {
-                                            kind: Num(
-                                                Num {
-                                                    value: "10",
+                                            expr: Some(
+                                                Expr {
+                                                    kind: Num(
+                                                        Num {
+                                                            value: "10",
+                                                        },
+                                                    ),
+                                                    span: 26..28,
+                                                    inferred_type: None,
                                                 },
                                             ),
-                                            span: 26..28,
-                                            inferred_type: None,
+                                            type_ann: None,
                                         },
                                     ),
-                                    type_ann: None,
+                                    span: 18..28,
                                 },
                             ),
                             span: 18..28,

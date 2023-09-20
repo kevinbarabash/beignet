@@ -1,6 +1,7 @@
 use generational_arena::Index;
 use itertools::Itertools;
 use std::collections::{BTreeMap, HashMap, HashSet};
+use swc_ecma_ast::VarDeclKind;
 
 use escalier_ast::{self as syntax, *};
 
@@ -1199,29 +1200,15 @@ impl Checker {
                         }
                     }
                 }
-                StmtKind::VarDecl(decl) => {
-                    checker.infer_var_decl(decl, ctx)?;
-                    checker.new_lit_type(&Literal::Undefined)
-                }
-                // StmtKind::ClassDecl(_) => todo!(),
-                StmtKind::TypeDecl(TypeDecl {
-                    name,
-                    type_ann,
-                    type_params,
-                }) => {
-                    // NOTE: We clone `ctx` so that type params don't escape the signature
-                    let mut sig_ctx = ctx.clone();
-
-                    let type_params = checker.infer_type_params(type_params, &mut sig_ctx)?;
-                    let t = checker.infer_type_ann(type_ann, &mut sig_ctx)?;
-
-                    // TODO: generalize type `t` into a scheme
-                    let scheme = Scheme { t, type_params };
-
-                    ctx.schemes.insert(name.to_owned(), scheme);
-
-                    t
-                } // StmtKind::ForStmt(_) => todo!(),
+                StmtKind::Decl(decl) => match &mut decl.kind {
+                    DeclKind::TypeDecl(decl) => checker.infer_type_decl(decl, ctx)?,
+                    DeclKind::VarDecl(decl) => {
+                        checker.infer_var_decl(decl, ctx)?;
+                        checker.new_lit_type(&Literal::Undefined)
+                    }
+                    // DeclKind::ClassDecl(_) => todo!(),
+                    // DeclKind::StructDecl(_) => todo!(),
+                },
             };
 
             statement.inferred_type = Some(t);
@@ -1322,6 +1309,31 @@ impl Checker {
         }
     }
 
+    pub fn infer_type_decl(
+        &mut self,
+        decl: &mut TypeDecl,
+        ctx: &mut Context,
+    ) -> Result<Index, TypeError> {
+        let TypeDecl {
+            name,
+            type_ann,
+            type_params,
+        } = decl;
+
+        // NOTE: We clone `ctx` so that type params don't escape the signature
+        let mut sig_ctx = ctx.clone();
+
+        let type_params = self.infer_type_params(type_params, &mut sig_ctx)?;
+        let t = self.infer_type_ann(type_ann, &mut sig_ctx)?;
+
+        // TODO: generalize type `t` into a scheme
+        let scheme = Scheme { t, type_params };
+
+        ctx.schemes.insert(name.to_owned(), scheme);
+
+        Ok(t)
+    }
+
     // TODO: split this into `infer_script` and `infer_module`.  `infer_script`
     // shouldn't allow mutually recursion between statements while `infer_module`
     // should.  `infer_script` can still allow mutual recursion that occurs within
@@ -1338,41 +1350,48 @@ impl Checker {
                 StmtKind::Expr(_) => (),
                 StmtKind::For(_) => (),
                 StmtKind::Return(_) => (),
-                StmtKind::VarDecl(VarDecl { pattern, .. }) => {
-                    let (bindings, _) = self.infer_pattern(pattern, ctx)?;
-
-                    for (name, binding) in bindings {
-                        prebindings.insert(name.to_owned(), binding.clone());
-                        ctx.non_generic.insert(binding.index);
-                        if ctx.values.insert(name.to_owned(), binding).is_some() {
+                StmtKind::Decl(decl) => match &mut decl.kind {
+                    DeclKind::TypeDecl(TypeDecl { name, .. }) => {
+                        let placeholder_scheme = Scheme {
+                            t: self.new_keyword(Keyword::Unknown),
+                            type_params: None,
+                        };
+                        let name = name.to_owned();
+                        if ctx
+                            .schemes
+                            .insert(name.clone(), placeholder_scheme)
+                            .is_some()
+                        {
                             return Err(TypeError {
                                 message: format!("{name} cannot be redeclared at the top-level"),
                             });
                         }
                     }
-                }
-                StmtKind::TypeDecl(TypeDecl { name, .. }) => {
-                    let placeholder_scheme = Scheme {
-                        t: self.new_keyword(Keyword::Unknown),
-                        type_params: None,
-                    };
-                    let name = name.to_owned();
-                    if ctx
-                        .schemes
-                        .insert(name.clone(), placeholder_scheme)
-                        .is_some()
-                    {
-                        return Err(TypeError {
-                            message: format!("{name} cannot be redeclared at the top-level"),
-                        });
+                    DeclKind::VarDecl(VarDecl { pattern, .. }) => {
+                        let (bindings, _) = self.infer_pattern(pattern, ctx)?;
+
+                        for (name, binding) in bindings {
+                            prebindings.insert(name.to_owned(), binding.clone());
+                            ctx.non_generic.insert(binding.index);
+                            if ctx.values.insert(name.to_owned(), binding).is_some() {
+                                return Err(TypeError {
+                                    message: format!(
+                                        "{name} cannot be redeclared at the top-level"
+                                    ),
+                                });
+                            }
+                        }
                     }
-                }
+                },
             }
         }
 
         for stmt in &mut node.stmts.iter_mut() {
             match &mut stmt.kind {
-                StmtKind::VarDecl(decl) => {
+                StmtKind::Decl(Decl {
+                    kind: DeclKind::VarDecl(decl),
+                    ..
+                }) => {
                     // TODO: figure out how to avoid parsing patterns twice
                     let bindings = self.infer_var_decl(decl, ctx)?;
 
@@ -1401,7 +1420,6 @@ impl Checker {
                     }
                 }
                 _ => {
-                    // TODO: disallow non-decls at the top-level
                     self.infer_statement(stmt, ctx)?;
                 }
             };

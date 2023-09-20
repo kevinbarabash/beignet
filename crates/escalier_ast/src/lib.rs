@@ -1,10 +1,12 @@
 pub mod block;
 pub mod class;
+pub mod decl;
 pub mod expr;
 pub mod func_param;
 pub mod identifier;
 pub mod jsx;
 pub mod literal;
+pub mod module;
 pub mod pattern;
 pub mod script;
 pub mod span;
@@ -15,11 +17,13 @@ pub mod visitor;
 
 pub use block::*;
 pub use class::*;
+pub use decl::*;
 pub use expr::*;
 pub use func_param::*;
 pub use identifier::*;
 pub use jsx::*;
 pub use literal::*;
+pub use module::*;
 pub use pattern::*;
 pub use script::*;
 pub use span::*;

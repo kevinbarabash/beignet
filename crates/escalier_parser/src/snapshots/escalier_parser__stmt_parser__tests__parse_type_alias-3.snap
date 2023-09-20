@@ -4,165 +4,170 @@ expression: "parse(r#\"\n            type ReturnType<T: fn (...args: Array<_>) -
 ---
 [
     Stmt {
-        kind: TypeDecl(
-            TypeDecl {
-                name: "ReturnType",
-                type_ann: TypeAnn {
-                    kind: Condition(
-                        ConditionType {
-                            check: TypeAnn {
-                                kind: TypeRef(
-                                    "T",
-                                    None,
-                                ),
-                                span: 84..85,
-                                inferred_type: None,
-                            },
-                            extends: TypeAnn {
-                                kind: Function(
-                                    FunctionType {
-                                        type_params: None,
-                                        params: [
-                                            FuncParam {
-                                                pattern: Pattern {
-                                                    kind: Rest(
-                                                        RestPat {
-                                                            arg: Pattern {
-                                                                kind: Ident(
-                                                                    BindingIdent {
-                                                                        name: "args",
+        kind: Decl(
+            Decl {
+                kind: TypeDecl(
+                    TypeDecl {
+                        name: "ReturnType",
+                        type_ann: TypeAnn {
+                            kind: Condition(
+                                ConditionType {
+                                    check: TypeAnn {
+                                        kind: TypeRef(
+                                            "T",
+                                            None,
+                                        ),
+                                        span: 84..85,
+                                        inferred_type: None,
+                                    },
+                                    extends: TypeAnn {
+                                        kind: Function(
+                                            FunctionType {
+                                                type_params: None,
+                                                params: [
+                                                    FuncParam {
+                                                        pattern: Pattern {
+                                                            kind: Rest(
+                                                                RestPat {
+                                                                    arg: Pattern {
+                                                                        kind: Ident(
+                                                                            BindingIdent {
+                                                                                name: "args",
+                                                                                span: 94..98,
+                                                                                mutable: false,
+                                                                            },
+                                                                        ),
                                                                         span: 94..98,
-                                                                        mutable: false,
-                                                                    },
-                                                                ),
-                                                                span: 94..98,
-                                                                inferred_type: None,
-                                                            },
-                                                        },
-                                                    ),
-                                                    span: 91..94,
-                                                    inferred_type: None,
-                                                },
-                                                type_ann: Some(
-                                                    TypeAnn {
-                                                        kind: TypeRef(
-                                                            "Array",
-                                                            Some(
-                                                                [
-                                                                    TypeAnn {
-                                                                        kind: Wildcard,
-                                                                        span: 106..107,
                                                                         inferred_type: None,
                                                                     },
-                                                                ],
-                                                            ),
-                                                        ),
-                                                        span: 100..108,
-                                                        inferred_type: None,
-                                                    },
-                                                ),
-                                                optional: false,
-                                            },
-                                        ],
-                                        ret: TypeAnn {
-                                            kind: Infer(
-                                                "R",
-                                            ),
-                                            span: 113..118,
-                                            inferred_type: None,
-                                        },
-                                        throws: None,
-                                    },
-                                ),
-                                span: 87..89,
-                                inferred_type: None,
-                            },
-                            true_type: TypeAnn {
-                                kind: TypeRef(
-                                    "R",
-                                    None,
-                                ),
-                                span: 154..155,
-                                inferred_type: None,
-                            },
-                            false_type: TypeAnn {
-                                kind: Never,
-                                span: 193..198,
-                                inferred_type: None,
-                            },
-                        },
-                    ),
-                    span: 63..65,
-                    inferred_type: None,
-                },
-                type_params: Some(
-                    [
-                        TypeParam {
-                            span: 30..60,
-                            name: "T",
-                            bound: Some(
-                                TypeAnn {
-                                    kind: Function(
-                                        FunctionType {
-                                            type_params: None,
-                                            params: [
-                                                FuncParam {
-                                                    pattern: Pattern {
-                                                        kind: Rest(
-                                                            RestPat {
-                                                                arg: Pattern {
-                                                                    kind: Ident(
-                                                                        BindingIdent {
-                                                                            name: "args",
-                                                                            span: 39..43,
-                                                                            mutable: false,
-                                                                        },
-                                                                    ),
-                                                                    span: 39..43,
-                                                                    inferred_type: None,
                                                                 },
-                                                            },
-                                                        ),
-                                                        span: 36..39,
-                                                        inferred_type: None,
-                                                    },
-                                                    type_ann: Some(
-                                                        TypeAnn {
-                                                            kind: TypeRef(
-                                                                "Array",
-                                                                Some(
-                                                                    [
-                                                                        TypeAnn {
-                                                                            kind: Wildcard,
-                                                                            span: 51..52,
-                                                                            inferred_type: None,
-                                                                        },
-                                                                    ],
-                                                                ),
                                                             ),
-                                                            span: 45..53,
+                                                            span: 91..94,
                                                             inferred_type: None,
                                                         },
+                                                        type_ann: Some(
+                                                            TypeAnn {
+                                                                kind: TypeRef(
+                                                                    "Array",
+                                                                    Some(
+                                                                        [
+                                                                            TypeAnn {
+                                                                                kind: Wildcard,
+                                                                                span: 106..107,
+                                                                                inferred_type: None,
+                                                                            },
+                                                                        ],
+                                                                    ),
+                                                                ),
+                                                                span: 100..108,
+                                                                inferred_type: None,
+                                                            },
+                                                        ),
+                                                        optional: false,
+                                                    },
+                                                ],
+                                                ret: TypeAnn {
+                                                    kind: Infer(
+                                                        "R",
                                                     ),
-                                                    optional: false,
+                                                    span: 113..118,
+                                                    inferred_type: None,
                                                 },
-                                            ],
-                                            ret: TypeAnn {
-                                                kind: Wildcard,
-                                                span: 58..59,
-                                                inferred_type: None,
+                                                throws: None,
                                             },
-                                            throws: None,
-                                        },
-                                    ),
-                                    span: 32..34,
-                                    inferred_type: None,
+                                        ),
+                                        span: 87..89,
+                                        inferred_type: None,
+                                    },
+                                    true_type: TypeAnn {
+                                        kind: TypeRef(
+                                            "R",
+                                            None,
+                                        ),
+                                        span: 154..155,
+                                        inferred_type: None,
+                                    },
+                                    false_type: TypeAnn {
+                                        kind: Never,
+                                        span: 193..198,
+                                        inferred_type: None,
+                                    },
                                 },
                             ),
-                            default: None,
+                            span: 63..65,
+                            inferred_type: None,
                         },
-                    ],
+                        type_params: Some(
+                            [
+                                TypeParam {
+                                    span: 30..60,
+                                    name: "T",
+                                    bound: Some(
+                                        TypeAnn {
+                                            kind: Function(
+                                                FunctionType {
+                                                    type_params: None,
+                                                    params: [
+                                                        FuncParam {
+                                                            pattern: Pattern {
+                                                                kind: Rest(
+                                                                    RestPat {
+                                                                        arg: Pattern {
+                                                                            kind: Ident(
+                                                                                BindingIdent {
+                                                                                    name: "args",
+                                                                                    span: 39..43,
+                                                                                    mutable: false,
+                                                                                },
+                                                                            ),
+                                                                            span: 39..43,
+                                                                            inferred_type: None,
+                                                                        },
+                                                                    },
+                                                                ),
+                                                                span: 36..39,
+                                                                inferred_type: None,
+                                                            },
+                                                            type_ann: Some(
+                                                                TypeAnn {
+                                                                    kind: TypeRef(
+                                                                        "Array",
+                                                                        Some(
+                                                                            [
+                                                                                TypeAnn {
+                                                                                    kind: Wildcard,
+                                                                                    span: 51..52,
+                                                                                    inferred_type: None,
+                                                                                },
+                                                                            ],
+                                                                        ),
+                                                                    ),
+                                                                    span: 45..53,
+                                                                    inferred_type: None,
+                                                                },
+                                                            ),
+                                                            optional: false,
+                                                        },
+                                                    ],
+                                                    ret: TypeAnn {
+                                                        kind: Wildcard,
+                                                        span: 58..59,
+                                                        inferred_type: None,
+                                                    },
+                                                    throws: None,
+                                                },
+                                            ),
+                                            span: 32..34,
+                                            inferred_type: None,
+                                        },
+                                    ),
+                                    default: None,
+                                },
+                            ],
+                        ),
+                    },
                 ),
+                span: 13..65,
             },
         ),
         span: 13..65,
