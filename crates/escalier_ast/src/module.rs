@@ -2,8 +2,15 @@ use crate::decl::Decl;
 use crate::span::Span;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub struct ImportSpecifier {
+    pub local: String,            // the local name of the imported symbol
+    pub imported: Option<String>, // the symbol being imported
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Import {
-    // todo
+    pub specifiers: Vec<ImportSpecifier>,
+    pub source: String,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

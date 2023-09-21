@@ -94,31 +94,80 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_module_item(&mut self) -> Result<ModuleItem, ParseError> {
-        // import
-        // import {a, b} from "alpha";
-
-        // export
-        // 'export' folloed by a decl, there are no default exports
-        // 'export' vs 'pub'?
-        // the nice thing about 'pub' is you can make other things public like
-        // members on structs or classes
-
-        // pub let x = 5
-        // pub fn foo() {}
-
         let token = self.peek().unwrap_or(&EOF).clone();
-        let start = token.span;
 
         let item = match &token.kind {
             TokenKind::Export => {
                 self.next(); // consumes 'export'
 
                 let decl = self.parse_decl()?;
-                let span = merge_spans(&start, &decl.span);
+                let span = merge_spans(&token.span, &decl.span);
 
                 ModuleItem {
                     kind: ModuleItemKind::Export(Export { decl }),
                     span,
+                }
+            }
+            TokenKind::Import => {
+                self.next(); // consumes 'import'
+
+                assert_eq!(
+                    self.next().unwrap_or(EOF.clone()).kind,
+                    TokenKind::LeftBrace
+                );
+
+                let mut specifiers: Vec<ImportSpecifier> = vec![];
+                while self.peek().unwrap_or(&EOF).kind != TokenKind::RightBrace {
+                    let local = match self.next().unwrap_or(EOF.clone()).kind {
+                        TokenKind::Identifier(name) => name,
+                        _ => panic!("expected identifier"),
+                    };
+
+                    match self.peek().unwrap_or(&EOF).kind {
+                        TokenKind::As => {
+                            self.next(); // consumes 'as'
+
+                            let imported = Some(local);
+
+                            match self.next().unwrap_or(EOF.clone()).kind {
+                                TokenKind::Identifier(local) => {
+                                    specifiers.push(ImportSpecifier { local, imported });
+                                }
+                                _ => panic!("expected identifier"),
+                            };
+                        }
+                        _ => {
+                            specifiers.push(ImportSpecifier {
+                                local,
+                                imported: None,
+                            });
+                        }
+                    };
+
+                    match self.peek().unwrap_or(&EOF).kind {
+                        TokenKind::RightBrace => break,
+                        TokenKind::Comma => {
+                            self.next().unwrap_or(EOF.clone());
+                        }
+                        _ => panic!(
+                            "Expected comma or right paren, got {:?}",
+                            self.peek().unwrap_or(&EOF)
+                        ),
+                    }
+                }
+
+                self.next(); // consumes '}'
+
+                assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::From);
+
+                let source = match self.next().unwrap_or(EOF.clone()).kind {
+                    TokenKind::StrLit(source) => source,
+                    _ => panic!("expected string literal"),
+                };
+
+                ModuleItem {
+                    kind: ModuleItemKind::Import(Import { specifiers, source }),
+                    span: token.span,
                 }
             }
             _ => {
@@ -183,5 +232,10 @@ mod tests {
             export let p: Point = {x: 5, y: 10}
             "#
         ));
+    }
+
+    #[test]
+    fn parse_imports() {
+        insta::assert_debug_snapshot!(parse(r#"import {a, b as c} from "foo""#));
     }
 }
