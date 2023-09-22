@@ -1334,6 +1334,95 @@ impl Checker {
         Ok(t)
     }
 
+    // TODO: write tests for this
+    pub fn infer_module(&mut self, node: &mut Module, ctx: &mut Context) -> Result<(), TypeError> {
+        // Prebindings are used to handle recursive and mutually recursive
+        // function declarations.
+        let mut prebindings: HashMap<String, Binding> = HashMap::new();
+
+        for item in &mut node.items {
+            match &mut item.kind {
+                ModuleItemKind::Import(_) => {
+                    // TODO: handle imports
+                }
+                ModuleItemKind::Export(_) => (),
+                ModuleItemKind::Decl(decl) => match &mut decl.kind {
+                    DeclKind::TypeDecl(TypeDecl { name, .. }) => {
+                        let placeholder_scheme = Scheme {
+                            t: self.new_keyword(Keyword::Unknown),
+                            type_params: None,
+                        };
+                        let name = name.to_owned();
+                        if ctx
+                            .schemes
+                            .insert(name.clone(), placeholder_scheme)
+                            .is_some()
+                        {
+                            return Err(TypeError {
+                                message: format!("{name} cannot be redeclared at the top-level"),
+                            });
+                        }
+                    }
+                    DeclKind::VarDecl(VarDecl { pattern, .. }) => {
+                        let (bindings, _) = self.infer_pattern(pattern, ctx)?;
+
+                        for (name, binding) in bindings {
+                            prebindings.insert(name.to_owned(), binding.clone());
+                            ctx.non_generic.insert(binding.index);
+                            if ctx.values.insert(name.to_owned(), binding).is_some() {
+                                return Err(TypeError {
+                                    message: format!(
+                                        "{name} cannot be redeclared at the top-level"
+                                    ),
+                                });
+                            }
+                        }
+                    }
+                },
+            }
+        }
+
+        let mut bindings = BTreeMap::<String, Binding>::new();
+
+        for item in &mut node.items.iter_mut() {
+            // TODO: handle imports and exports
+            if let ModuleItemKind::Decl(Decl {
+                kind: DeclKind::VarDecl(decl),
+                ..
+            }) = &mut item.kind
+            {
+                // TODO: figure out how to avoid parsing patterns twice
+                bindings.append(&mut self.infer_var_decl(decl, ctx)?);
+            }
+        }
+
+        // Unify each binding with its prebinding
+        for (name, binding) in &bindings {
+            let prebinding = prebindings.get_mut(name).unwrap();
+            // QUESTION: Which direction should we unify in?
+            self.unify(ctx, prebinding.index, binding.index)?;
+        }
+
+        // Prune any functions before generalizing, this avoids
+        // issues with mutually recursive functions being generalized
+        // prematurely.
+        for binding in bindings.values() {
+            let pruned_index = self.prune(binding.index);
+            self.bind(ctx, binding.index, pruned_index)?;
+        }
+
+        // Generalize any functions.
+        for binding in bindings.values() {
+            let pruned_index = self.prune(binding.index);
+            if let TypeKind::Function(func) = &self.arena[pruned_index].kind.clone() {
+                let func = generalize_func(self, func);
+                self.bind(ctx, binding.index, func)?;
+            }
+        }
+
+        Ok(())
+    }
+
     // TODO: split this into `infer_script` and `infer_module`.  `infer_script`
     // shouldn't allow mutually recursion between statements while `infer_module`
     // should.  `infer_script` can still allow mutual recursion that occurs within

@@ -35,7 +35,3 @@ pub struct ModuleItem {
 pub struct Module {
     pub items: Vec<ModuleItem>,
 }
-
-// TODO:
-// - parse_module()
-// - infer_module()
