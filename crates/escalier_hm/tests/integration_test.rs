@@ -347,6 +347,45 @@ fn infer_mutual_rec_separate_decls_in_module() -> Result<(), TypeError> {
 }
 
 #[test]
+fn infer_type_in_module() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = "
+    type Point = {x: number, y: number}
+    let p: Point = {x: 5, y: 10}
+    ";
+    let mut module = parse_module(src).unwrap();
+    checker.infer_module(&mut module, &mut my_ctx)?;
+
+    let result = checker.print_type(&my_ctx.values.get("p").unwrap().index);
+    insta::assert_snapshot!(result, @"{x: number, y: number}");
+
+    Ok(())
+}
+
+#[test]
+fn top_level_for_loop_in_module_errors() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = "
+    let tuple = [1, 2, 3]
+    for (i in tuple) {
+        // do something
+    }
+    ";
+    let result = parse_module(src);
+
+    assert_eq!(
+        result,
+        Err(ParseError {
+            message: "expected module item".to_string()
+        })
+    );
+
+    Ok(())
+}
+
+#[test]
 fn infer_mutual_rec_decls() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 

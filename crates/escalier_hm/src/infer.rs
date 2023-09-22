@@ -1,7 +1,6 @@
 use generational_arena::Index;
 use itertools::Itertools;
 use std::collections::{BTreeMap, HashMap, HashSet};
-use swc_ecma_ast::VarDeclKind;
 
 use escalier_ast::{self as syntax, *};
 
@@ -1386,14 +1385,22 @@ impl Checker {
 
         for item in &mut node.items.iter_mut() {
             // TODO: handle imports and exports
-            if let ModuleItemKind::Decl(Decl {
-                kind: DeclKind::VarDecl(decl),
-                ..
-            }) = &mut item.kind
-            {
-                // TODO: figure out how to avoid parsing patterns twice
-                bindings.append(&mut self.infer_var_decl(decl, ctx)?);
-            }
+            if let ModuleItemKind::Decl(decl) = &mut item.kind {
+                match &mut decl.kind {
+                    DeclKind::TypeDecl(decl) => {
+                        // NOTE: This updates ctx.schemes.
+                        self.infer_type_decl(decl, ctx)?;
+                    }
+                    DeclKind::VarDecl(decl) => {
+                        // TODO: figure out how to avoid parsing patterns twice
+                        bindings.append(&mut self.infer_var_decl(decl, ctx)?);
+                    }
+                }
+            };
+        }
+
+        for (name, binding) in &bindings {
+            eprintln!("{name} = {}", self.print_type(&binding.index));
         }
 
         // Unify each binding with its prebinding
@@ -1805,24 +1812,3 @@ pub fn generalize_func(checker: &mut Checker, func: &types::Function) -> Index {
         checker.new_func_type(&params, ret, &Some(type_params), throws)
     }
 }
-
-// NOTES:
-// - can't have cycles between const fn's and other const's
-// - because cycles aren't allowed, you can determine graph that's a tree
-//   that describes the dependences of all declarations
-// - what about mutually recursive functions?
-//   - we can group those together and determine the dependencies of that group
-//     of functions
-//   - as long as there are no cycles involving non-function const's, we should
-//     be able to infer it correctly
-
-const fn Foo() -> u32 {
-    A
-}
-const fn Bar() -> u32 {
-    B + C
-}
-
-const C: u32 = B;
-const A: u32 = 5;
-const B: u32 = Foo();
