@@ -1,0 +1,26 @@
+---
+source: crates/escalier_parser/src/module_parser.rs
+expression: "parse(r#\"import {a, b as c} from \"foo\"\"#)"
+---
+[
+    ModuleItem {
+        kind: Import(
+            Import {
+                specifiers: [
+                    ImportSpecifier {
+                        local: "a",
+                        imported: None,
+                    },
+                    ImportSpecifier {
+                        local: "c",
+                        imported: Some(
+                            "b",
+                        ),
+                    },
+                ],
+                source: "foo",
+            },
+        ),
+        span: 0..6,
+    },
+]

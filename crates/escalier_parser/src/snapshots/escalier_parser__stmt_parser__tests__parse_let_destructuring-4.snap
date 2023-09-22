@@ -4,74 +4,79 @@ expression: "parse(\"let [head, ...tail] = polygon\")"
 ---
 [
     Stmt {
-        kind: VarDecl(
-            VarDecl {
-                is_declare: false,
-                is_var: false,
-                pattern: Pattern {
-                    kind: Tuple(
-                        TuplePat {
-                            elems: [
-                                Some(
-                                    TuplePatElem {
-                                        pattern: Pattern {
-                                            kind: Ident(
-                                                BindingIdent {
-                                                    name: "head",
+        kind: Decl(
+            Decl {
+                kind: VarDecl(
+                    VarDecl {
+                        is_declare: false,
+                        is_var: false,
+                        pattern: Pattern {
+                            kind: Tuple(
+                                TuplePat {
+                                    elems: [
+                                        Some(
+                                            TuplePatElem {
+                                                pattern: Pattern {
+                                                    kind: Ident(
+                                                        BindingIdent {
+                                                            name: "head",
+                                                            span: 5..9,
+                                                            mutable: false,
+                                                        },
+                                                    ),
                                                     span: 5..9,
-                                                    mutable: false,
+                                                    inferred_type: None,
                                                 },
-                                            ),
-                                            span: 5..9,
-                                            inferred_type: None,
-                                        },
-                                        init: None,
-                                    },
-                                ),
-                                Some(
-                                    TuplePatElem {
-                                        pattern: Pattern {
-                                            kind: Rest(
-                                                RestPat {
-                                                    arg: Pattern {
-                                                        kind: Ident(
-                                                            BindingIdent {
-                                                                name: "tail",
+                                                init: None,
+                                            },
+                                        ),
+                                        Some(
+                                            TuplePatElem {
+                                                pattern: Pattern {
+                                                    kind: Rest(
+                                                        RestPat {
+                                                            arg: Pattern {
+                                                                kind: Ident(
+                                                                    BindingIdent {
+                                                                        name: "tail",
+                                                                        span: 14..18,
+                                                                        mutable: false,
+                                                                    },
+                                                                ),
                                                                 span: 14..18,
-                                                                mutable: false,
+                                                                inferred_type: None,
                                                             },
-                                                        ),
-                                                        span: 14..18,
-                                                        inferred_type: None,
-                                                    },
+                                                        },
+                                                    ),
+                                                    span: 10..14,
+                                                    inferred_type: None,
                                                 },
-                                            ),
-                                            span: 10..14,
-                                            inferred_type: None,
-                                        },
-                                        init: None,
+                                                init: None,
+                                            },
+                                        ),
+                                    ],
+                                    optional: false,
+                                },
+                            ),
+                            span: 3..19,
+                            inferred_type: None,
+                        },
+                        expr: Some(
+                            Expr {
+                                kind: Ident(
+                                    Ident {
+                                        name: "polygon",
+                                        span: 22..29,
                                     },
                                 ),
-                            ],
-                            optional: false,
-                        },
-                    ),
-                    span: 3..19,
-                    inferred_type: None,
-                },
-                expr: Some(
-                    Expr {
-                        kind: Ident(
-                            Ident {
-                                name: "polygon",
                                 span: 22..29,
+                                inferred_type: None,
                             },
                         ),
-                        span: 22..29,
-                        inferred_type: None,
+                        type_ann: None,
                     },
                 ),
-                type_ann: None,
+                span: 0..29,
             },
         ),
         span: 0..29,

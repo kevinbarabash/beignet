@@ -88,32 +88,34 @@ fn build_js(program: &values::Script, ctx: &mut Context) -> Program {
         .flat_map(|child| {
             let mut stmts: Vec<Stmt> = vec![];
             let result = match &child.kind {
-                values::StmtKind::VarDecl(values::VarDecl {
-                    pattern,
-                    expr: init,
-                    is_declare: declare,
-                    ..
-                }) => match declare {
-                    true => ModuleItem::Stmt(Stmt::Empty(EmptyStmt { span: DUMMY_SP })),
-                    false => {
-                        // It should be okay to unwrap this here since any decl that isn't
-                        // using `declare` should have an initial value.
-                        let init = init.as_ref().unwrap();
-
-                        ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
-                            span: DUMMY_SP,
-                            decl: Decl::Var(Box::from(build_var_decl(
-                                pattern,
-                                Some(init),
-                                &mut stmts,
-                                ctx,
-                            ))),
-                        }))
+                values::StmtKind::Decl(decl) => match &decl.kind {
+                    values::DeclKind::TypeDecl(_) => {
+                        ModuleItem::Stmt(Stmt::Empty(EmptyStmt { span: DUMMY_SP }))
                     }
+                    values::DeclKind::VarDecl(values::VarDecl {
+                        pattern,
+                        expr: init,
+                        is_declare: declare,
+                        ..
+                    }) => match declare {
+                        true => ModuleItem::Stmt(Stmt::Empty(EmptyStmt { span: DUMMY_SP })),
+                        false => {
+                            // It should be okay to unwrap this here since any decl that isn't
+                            // using `declare` should have an initial value.
+                            let init = init.as_ref().unwrap();
+
+                            ModuleItem::ModuleDecl(ModuleDecl::ExportDecl(ExportDecl {
+                                span: DUMMY_SP,
+                                decl: Decl::Var(Box::from(build_var_decl(
+                                    pattern,
+                                    Some(init),
+                                    &mut stmts,
+                                    ctx,
+                                ))),
+                            }))
+                        }
+                    },
                 },
-                values::StmtKind::TypeDecl { .. } => {
-                    ModuleItem::Stmt(Stmt::Empty(EmptyStmt { span: DUMMY_SP }))
-                }
                 values::StmtKind::Expr(values::ExprStmt { expr }) => {
                     ModuleItem::Stmt(Stmt::Expr(ExprStmt {
                         span: DUMMY_SP,
@@ -858,11 +860,15 @@ fn build_body_block_stmt(
 
     for (i, stmt) in body.stmts.iter().enumerate() {
         match &stmt.kind {
-            values::StmtKind::VarDecl(values::VarDecl {
-                pattern,
-                type_ann: _,
-                expr: Some(init),
-                is_declare: _,
+            values::StmtKind::Decl(values::Decl {
+                kind:
+                    values::DeclKind::VarDecl(values::VarDecl {
+                        pattern,
+                        type_ann: _,
+                        expr: Some(init),
+                        is_declare: _,
+                        ..
+                    }),
                 ..
             }) => {
                 let stmt = match build_pattern(pattern, &mut new_stmts, ctx) {
@@ -943,10 +949,8 @@ fn build_body_block_stmt(
                 new_stmts.push(stmt);
             }
 
-            // Types are ignored when generating .js code.
-            values::StmtKind::TypeDecl { .. } => (),
-            // Variable declarations that use `declare` are ignored as well.
-            values::StmtKind::VarDecl { .. } => (),
+            // Other decls are ignored when generating .js
+            values::StmtKind::Decl(_) => (),
         }
     }
 

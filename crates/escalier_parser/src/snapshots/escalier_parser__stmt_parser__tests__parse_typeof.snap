@@ -4,31 +4,36 @@ expression: "parse(\"type RetType = GetReturnType<typeof foo>\")"
 ---
 [
     Stmt {
-        kind: TypeDecl(
-            TypeDecl {
-                name: "RetType",
-                type_ann: TypeAnn {
-                    kind: TypeRef(
-                        "GetReturnType",
-                        Some(
-                            [
-                                TypeAnn {
-                                    kind: TypeOf(
-                                        Ident {
-                                            name: "foo",
-                                            span: 36..39,
+        kind: Decl(
+            Decl {
+                kind: TypeDecl(
+                    TypeDecl {
+                        name: "RetType",
+                        type_ann: TypeAnn {
+                            kind: TypeRef(
+                                "GetReturnType",
+                                Some(
+                                    [
+                                        TypeAnn {
+                                            kind: TypeOf(
+                                                Ident {
+                                                    name: "foo",
+                                                    span: 36..39,
+                                                },
+                                            ),
+                                            span: 29..35,
+                                            inferred_type: None,
                                         },
-                                    ),
-                                    span: 29..35,
-                                    inferred_type: None,
-                                },
-                            ],
-                        ),
-                    ),
-                    span: 15..40,
-                    inferred_type: None,
-                },
-                type_params: None,
+                                    ],
+                                ),
+                            ),
+                            span: 15..40,
+                            inferred_type: None,
+                        },
+                        type_params: None,
+                    },
+                ),
+                span: 0..40,
             },
         ),
         span: 0..40,

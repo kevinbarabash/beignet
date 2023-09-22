@@ -1199,29 +1199,15 @@ impl Checker {
                         }
                     }
                 }
-                StmtKind::VarDecl(decl) => {
-                    checker.infer_var_decl(decl, ctx)?;
-                    checker.new_lit_type(&Literal::Undefined)
-                }
-                // StmtKind::ClassDecl(_) => todo!(),
-                StmtKind::TypeDecl(TypeDecl {
-                    name,
-                    type_ann,
-                    type_params,
-                }) => {
-                    // NOTE: We clone `ctx` so that type params don't escape the signature
-                    let mut sig_ctx = ctx.clone();
-
-                    let type_params = checker.infer_type_params(type_params, &mut sig_ctx)?;
-                    let t = checker.infer_type_ann(type_ann, &mut sig_ctx)?;
-
-                    // TODO: generalize type `t` into a scheme
-                    let scheme = Scheme { t, type_params };
-
-                    ctx.schemes.insert(name.to_owned(), scheme);
-
-                    t
-                } // StmtKind::ForStmt(_) => todo!(),
+                StmtKind::Decl(decl) => match &mut decl.kind {
+                    DeclKind::TypeDecl(decl) => checker.infer_type_decl(decl, ctx)?,
+                    DeclKind::VarDecl(decl) => {
+                        checker.infer_var_decl(decl, ctx)?;
+                        checker.new_lit_type(&Literal::Undefined)
+                    }
+                    // DeclKind::ClassDecl(_) => todo!(),
+                    // DeclKind::StructDecl(_) => todo!(),
+                },
             };
 
             statement.inferred_type = Some(t);
@@ -1322,6 +1308,128 @@ impl Checker {
         }
     }
 
+    pub fn infer_type_decl(
+        &mut self,
+        decl: &mut TypeDecl,
+        ctx: &mut Context,
+    ) -> Result<Index, TypeError> {
+        let TypeDecl {
+            name,
+            type_ann,
+            type_params,
+        } = decl;
+
+        // NOTE: We clone `ctx` so that type params don't escape the signature
+        let mut sig_ctx = ctx.clone();
+
+        let type_params = self.infer_type_params(type_params, &mut sig_ctx)?;
+        let t = self.infer_type_ann(type_ann, &mut sig_ctx)?;
+
+        // TODO: generalize type `t` into a scheme
+        let scheme = Scheme { t, type_params };
+
+        ctx.schemes.insert(name.to_owned(), scheme);
+
+        Ok(t)
+    }
+
+    // TODO: write tests for this
+    pub fn infer_module(&mut self, node: &mut Module, ctx: &mut Context) -> Result<(), TypeError> {
+        // Prebindings are used to handle recursive and mutually recursive
+        // function declarations.
+        let mut prebindings: HashMap<String, Binding> = HashMap::new();
+
+        for item in &mut node.items {
+            match &mut item.kind {
+                ModuleItemKind::Import(_) => {
+                    // TODO: handle imports
+                }
+                ModuleItemKind::Export(_) => (),
+                ModuleItemKind::Decl(decl) => match &mut decl.kind {
+                    DeclKind::TypeDecl(TypeDecl { name, .. }) => {
+                        let placeholder_scheme = Scheme {
+                            t: self.new_keyword(Keyword::Unknown),
+                            type_params: None,
+                        };
+                        let name = name.to_owned();
+                        if ctx
+                            .schemes
+                            .insert(name.clone(), placeholder_scheme)
+                            .is_some()
+                        {
+                            return Err(TypeError {
+                                message: format!("{name} cannot be redeclared at the top-level"),
+                            });
+                        }
+                    }
+                    DeclKind::VarDecl(VarDecl { pattern, .. }) => {
+                        let (bindings, _) = self.infer_pattern(pattern, ctx)?;
+
+                        for (name, binding) in bindings {
+                            prebindings.insert(name.to_owned(), binding.clone());
+                            ctx.non_generic.insert(binding.index);
+                            if ctx.values.insert(name.to_owned(), binding).is_some() {
+                                return Err(TypeError {
+                                    message: format!(
+                                        "{name} cannot be redeclared at the top-level"
+                                    ),
+                                });
+                            }
+                        }
+                    }
+                },
+            }
+        }
+
+        let mut bindings = BTreeMap::<String, Binding>::new();
+
+        for item in &mut node.items.iter_mut() {
+            // TODO: handle imports and exports
+            if let ModuleItemKind::Decl(decl) = &mut item.kind {
+                match &mut decl.kind {
+                    DeclKind::TypeDecl(decl) => {
+                        // NOTE: This updates ctx.schemes.
+                        self.infer_type_decl(decl, ctx)?;
+                    }
+                    DeclKind::VarDecl(decl) => {
+                        // TODO: figure out how to avoid parsing patterns twice
+                        bindings.append(&mut self.infer_var_decl(decl, ctx)?);
+                    }
+                }
+            };
+        }
+
+        for (name, binding) in &bindings {
+            eprintln!("{name} = {}", self.print_type(&binding.index));
+        }
+
+        // Unify each binding with its prebinding
+        for (name, binding) in &bindings {
+            let prebinding = prebindings.get_mut(name).unwrap();
+            // QUESTION: Which direction should we unify in?
+            self.unify(ctx, prebinding.index, binding.index)?;
+        }
+
+        // Prune any functions before generalizing, this avoids
+        // issues with mutually recursive functions being generalized
+        // prematurely.
+        for binding in bindings.values() {
+            let pruned_index = self.prune(binding.index);
+            self.bind(ctx, binding.index, pruned_index)?;
+        }
+
+        // Generalize any functions.
+        for binding in bindings.values() {
+            let pruned_index = self.prune(binding.index);
+            if let TypeKind::Function(func) = &self.arena[pruned_index].kind.clone() {
+                let func = generalize_func(self, func);
+                self.bind(ctx, binding.index, func)?;
+            }
+        }
+
+        Ok(())
+    }
+
     // TODO: split this into `infer_script` and `infer_module`.  `infer_script`
     // shouldn't allow mutually recursion between statements while `infer_module`
     // should.  `infer_script` can still allow mutual recursion that occurs within
@@ -1338,41 +1446,48 @@ impl Checker {
                 StmtKind::Expr(_) => (),
                 StmtKind::For(_) => (),
                 StmtKind::Return(_) => (),
-                StmtKind::VarDecl(VarDecl { pattern, .. }) => {
-                    let (bindings, _) = self.infer_pattern(pattern, ctx)?;
-
-                    for (name, binding) in bindings {
-                        prebindings.insert(name.to_owned(), binding.clone());
-                        ctx.non_generic.insert(binding.index);
-                        if ctx.values.insert(name.to_owned(), binding).is_some() {
+                StmtKind::Decl(decl) => match &mut decl.kind {
+                    DeclKind::TypeDecl(TypeDecl { name, .. }) => {
+                        let placeholder_scheme = Scheme {
+                            t: self.new_keyword(Keyword::Unknown),
+                            type_params: None,
+                        };
+                        let name = name.to_owned();
+                        if ctx
+                            .schemes
+                            .insert(name.clone(), placeholder_scheme)
+                            .is_some()
+                        {
                             return Err(TypeError {
                                 message: format!("{name} cannot be redeclared at the top-level"),
                             });
                         }
                     }
-                }
-                StmtKind::TypeDecl(TypeDecl { name, .. }) => {
-                    let placeholder_scheme = Scheme {
-                        t: self.new_keyword(Keyword::Unknown),
-                        type_params: None,
-                    };
-                    let name = name.to_owned();
-                    if ctx
-                        .schemes
-                        .insert(name.clone(), placeholder_scheme)
-                        .is_some()
-                    {
-                        return Err(TypeError {
-                            message: format!("{name} cannot be redeclared at the top-level"),
-                        });
+                    DeclKind::VarDecl(VarDecl { pattern, .. }) => {
+                        let (bindings, _) = self.infer_pattern(pattern, ctx)?;
+
+                        for (name, binding) in bindings {
+                            prebindings.insert(name.to_owned(), binding.clone());
+                            ctx.non_generic.insert(binding.index);
+                            if ctx.values.insert(name.to_owned(), binding).is_some() {
+                                return Err(TypeError {
+                                    message: format!(
+                                        "{name} cannot be redeclared at the top-level"
+                                    ),
+                                });
+                            }
+                        }
                     }
-                }
+                },
             }
         }
 
         for stmt in &mut node.stmts.iter_mut() {
             match &mut stmt.kind {
-                StmtKind::VarDecl(decl) => {
+                StmtKind::Decl(Decl {
+                    kind: DeclKind::VarDecl(decl),
+                    ..
+                }) => {
                     // TODO: figure out how to avoid parsing patterns twice
                     let bindings = self.infer_var_decl(decl, ctx)?;
 
@@ -1401,7 +1516,6 @@ impl Checker {
                     }
                 }
                 _ => {
-                    // TODO: disallow non-decls at the top-level
                     self.infer_statement(stmt, ctx)?;
                 }
             };
@@ -1698,24 +1812,3 @@ pub fn generalize_func(checker: &mut Checker, func: &types::Function) -> Index {
         checker.new_func_type(&params, ret, &Some(type_params), throws)
     }
 }
-
-// NOTES:
-// - can't have cycles between const fn's and other const's
-// - because cycles aren't allowed, you can determine graph that's a tree
-//   that describes the dependences of all declarations
-// - what about mutually recursive functions?
-//   - we can group those together and determine the dependencies of that group
-//     of functions
-//   - as long as there are no cycles involving non-function const's, we should
-//     be able to infer it correctly
-
-const fn Foo() -> u32 {
-    A
-}
-const fn Bar() -> u32 {
-    B + C
-}
-
-const C: u32 = B;
-const A: u32 = 5;
-const B: u32 = Foo();

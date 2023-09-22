@@ -4,40 +4,45 @@ expression: "parse(r#\"declare let bar: fn () -> number\"#)"
 ---
 [
     Stmt {
-        kind: VarDecl(
-            VarDecl {
-                is_declare: true,
-                is_var: false,
-                pattern: Pattern {
-                    kind: Ident(
-                        BindingIdent {
-                            name: "bar",
-                            span: 12..15,
-                            mutable: false,
-                        },
-                    ),
-                    span: 12..15,
-                    inferred_type: None,
-                },
-                expr: None,
-                type_ann: Some(
-                    TypeAnn {
-                        kind: Function(
-                            FunctionType {
-                                type_params: None,
-                                params: [],
-                                ret: TypeAnn {
-                                    kind: Number,
-                                    span: 26..32,
-                                    inferred_type: None,
+        kind: Decl(
+            Decl {
+                kind: VarDecl(
+                    VarDecl {
+                        is_declare: true,
+                        is_var: false,
+                        pattern: Pattern {
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "bar",
+                                    span: 12..15,
+                                    mutable: false,
                                 },
-                                throws: None,
+                            ),
+                            span: 12..15,
+                            inferred_type: None,
+                        },
+                        expr: None,
+                        type_ann: Some(
+                            TypeAnn {
+                                kind: Function(
+                                    FunctionType {
+                                        type_params: None,
+                                        params: [],
+                                        ret: TypeAnn {
+                                            kind: Number,
+                                            span: 26..32,
+                                            inferred_type: None,
+                                        },
+                                        throws: None,
+                                    },
+                                ),
+                                span: 17..19,
+                                inferred_type: None,
                             },
                         ),
-                        span: 17..19,
-                        inferred_type: None,
                     },
                 ),
+                span: 0..19,
             },
         ),
         span: 0..19,

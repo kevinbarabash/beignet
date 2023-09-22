@@ -4,81 +4,86 @@ expression: "parse(r#\"let button = <Button count={5} foo=\"bar\"></Button>\"#)"
 ---
 [
     Stmt {
-        kind: VarDecl(
-            VarDecl {
-                is_declare: false,
-                is_var: false,
-                pattern: Pattern {
-                    kind: Ident(
-                        BindingIdent {
-                            name: "button",
+        kind: Decl(
+            Decl {
+                kind: VarDecl(
+                    VarDecl {
+                        is_declare: false,
+                        is_var: false,
+                        pattern: Pattern {
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "button",
+                                    span: 4..10,
+                                    mutable: false,
+                                },
+                            ),
                             span: 4..10,
-                            mutable: false,
+                            inferred_type: None,
                         },
-                    ),
-                    span: 4..10,
-                    inferred_type: None,
-                },
-                expr: Some(
-                    Expr {
-                        kind: JSXElement(
-                            JSXElement {
-                                span: 14..50,
-                                opening: JSXOpeningElement {
-                                    name: Ident(
-                                        Ident {
-                                            name: "Button",
-                                            span: 14..20,
-                                        },
-                                    ),
-                                    attrs: [
-                                        JSXAttr {
-                                            name: "count",
-                                            value: Some(
-                                                ExprContainer(
-                                                    JSXExprContainer {
-                                                        expr: Expr {
-                                                            kind: Num(
-                                                                Num {
-                                                                    value: "5",
+                        expr: Some(
+                            Expr {
+                                kind: JSXElement(
+                                    JSXElement {
+                                        span: 14..50,
+                                        opening: JSXOpeningElement {
+                                            name: Ident(
+                                                Ident {
+                                                    name: "Button",
+                                                    span: 14..20,
+                                                },
+                                            ),
+                                            attrs: [
+                                                JSXAttr {
+                                                    name: "count",
+                                                    value: Some(
+                                                        ExprContainer(
+                                                            JSXExprContainer {
+                                                                expr: Expr {
+                                                                    kind: Num(
+                                                                        Num {
+                                                                            value: "5",
+                                                                        },
+                                                                    ),
+                                                                    span: 28..29,
+                                                                    inferred_type: None,
                                                                 },
-                                                            ),
-                                                            span: 28..29,
-                                                            inferred_type: None,
-                                                        },
+                                                            },
+                                                        ),
+                                                    ),
+                                                },
+                                                JSXAttr {
+                                                    name: "foo",
+                                                    value: Some(
+                                                        Str(
+                                                            "bar",
+                                                        ),
+                                                    ),
+                                                },
+                                            ],
+                                            self_closing: false,
+                                        },
+                                        children: [],
+                                        closing: Some(
+                                            JSXClosingElement {
+                                                name: Ident(
+                                                    Ident {
+                                                        name: "Button",
+                                                        span: 41..50,
                                                     },
                                                 ),
-                                            ),
-                                        },
-                                        JSXAttr {
-                                            name: "foo",
-                                            value: Some(
-                                                Str(
-                                                    "bar",
-                                                ),
-                                            ),
-                                        },
-                                    ],
-                                    self_closing: false,
-                                },
-                                children: [],
-                                closing: Some(
-                                    JSXClosingElement {
-                                        name: Ident(
-                                            Ident {
-                                                name: "Button",
-                                                span: 41..50,
                                             },
                                         ),
                                     },
                                 ),
+                                span: 14..50,
+                                inferred_type: None,
                             },
                         ),
-                        span: 14..50,
-                        inferred_type: None,
+                        type_ann: None,
                     },
                 ),
-                type_ann: None,
+                span: 0..50,
             },
         ),
         span: 0..50,

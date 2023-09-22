@@ -4,66 +4,76 @@ expression: "parse(r#\"\n            let x = 5  // x-coord\n            let y = 
 ---
 [
     Stmt {
-        kind: VarDecl(
-            VarDecl {
-                is_declare: false,
-                is_var: false,
-                pattern: Pattern {
-                    kind: Ident(
-                        BindingIdent {
-                            name: "x",
+        kind: Decl(
+            Decl {
+                kind: VarDecl(
+                    VarDecl {
+                        is_declare: false,
+                        is_var: false,
+                        pattern: Pattern {
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "x",
+                                    span: 17..18,
+                                    mutable: false,
+                                },
+                            ),
                             span: 17..18,
-                            mutable: false,
+                            inferred_type: None,
                         },
-                    ),
-                    span: 17..18,
-                    inferred_type: None,
-                },
-                expr: Some(
-                    Expr {
-                        kind: Num(
-                            Num {
-                                value: "5",
+                        expr: Some(
+                            Expr {
+                                kind: Num(
+                                    Num {
+                                        value: "5",
+                                    },
+                                ),
+                                span: 21..22,
+                                inferred_type: None,
                             },
                         ),
-                        span: 21..22,
-                        inferred_type: None,
+                        type_ann: None,
                     },
                 ),
-                type_ann: None,
+                span: 13..22,
             },
         ),
         span: 13..22,
         inferred_type: None,
     },
     Stmt {
-        kind: VarDecl(
-            VarDecl {
-                is_declare: false,
-                is_var: false,
-                pattern: Pattern {
-                    kind: Ident(
-                        BindingIdent {
-                            name: "y",
+        kind: Decl(
+            Decl {
+                kind: VarDecl(
+                    VarDecl {
+                        is_declare: false,
+                        is_var: false,
+                        pattern: Pattern {
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "y",
+                                    span: 51..52,
+                                    mutable: false,
+                                },
+                            ),
                             span: 51..52,
-                            mutable: false,
+                            inferred_type: None,
                         },
-                    ),
-                    span: 51..52,
-                    inferred_type: None,
-                },
-                expr: Some(
-                    Expr {
-                        kind: Num(
-                            Num {
-                                value: "10",
+                        expr: Some(
+                            Expr {
+                                kind: Num(
+                                    Num {
+                                        value: "10",
+                                    },
+                                ),
+                                span: 55..57,
+                                inferred_type: None,
                             },
                         ),
-                        span: 55..57,
-                        inferred_type: None,
+                        type_ann: None,
                     },
                 ),
-                type_ann: None,
+                span: 47..57,
             },
         ),
         span: 47..57,

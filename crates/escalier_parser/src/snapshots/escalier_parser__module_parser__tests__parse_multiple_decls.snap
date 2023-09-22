@@ -1,0 +1,141 @@
+---
+source: crates/escalier_parser/src/module_parser.rs
+expression: "parse(r#\"\n            type Point = {x: number, y: number}\n            let p: Point = {x: 5, y: 10}\n            \"#)"
+---
+[
+    ModuleItem {
+        kind: Decl(
+            Decl {
+                kind: TypeDecl(
+                    TypeDecl {
+                        name: "Point",
+                        type_ann: TypeAnn {
+                            kind: Object(
+                                [
+                                    Prop(
+                                        Prop {
+                                            span: 0..0,
+                                            name: "x",
+                                            modifier: None,
+                                            optional: false,
+                                            readonly: false,
+                                            type_ann: TypeAnn {
+                                                kind: Number,
+                                                span: 30..36,
+                                                inferred_type: None,
+                                            },
+                                        },
+                                    ),
+                                    Prop(
+                                        Prop {
+                                            span: 0..0,
+                                            name: "y",
+                                            modifier: None,
+                                            optional: false,
+                                            readonly: false,
+                                            type_ann: TypeAnn {
+                                                kind: Number,
+                                                span: 41..47,
+                                                inferred_type: None,
+                                            },
+                                        },
+                                    ),
+                                ],
+                            ),
+                            span: 25..48,
+                            inferred_type: None,
+                        },
+                        type_params: None,
+                    },
+                ),
+                span: 13..48,
+            },
+        ),
+        span: 13..48,
+    },
+    ModuleItem {
+        kind: Decl(
+            Decl {
+                kind: VarDecl(
+                    VarDecl {
+                        is_declare: false,
+                        is_var: false,
+                        pattern: Pattern {
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "p",
+                                    span: 65..66,
+                                    mutable: false,
+                                },
+                            ),
+                            span: 65..66,
+                            inferred_type: None,
+                        },
+                        expr: Some(
+                            Expr {
+                                kind: Object(
+                                    Object {
+                                        properties: [
+                                            Prop(
+                                                Property {
+                                                    key: Ident(
+                                                        Ident {
+                                                            name: "x",
+                                                            span: 77..78,
+                                                        },
+                                                    ),
+                                                    value: Expr {
+                                                        kind: Num(
+                                                            Num {
+                                                                value: "5",
+                                                            },
+                                                        ),
+                                                        span: 80..81,
+                                                        inferred_type: None,
+                                                    },
+                                                },
+                                            ),
+                                            Prop(
+                                                Property {
+                                                    key: Ident(
+                                                        Ident {
+                                                            name: "y",
+                                                            span: 83..84,
+                                                        },
+                                                    ),
+                                                    value: Expr {
+                                                        kind: Num(
+                                                            Num {
+                                                                value: "10",
+                                                            },
+                                                        ),
+                                                        span: 86..88,
+                                                        inferred_type: None,
+                                                    },
+                                                },
+                                            ),
+                                        ],
+                                    },
+                                ),
+                                span: 75..89,
+                                inferred_type: None,
+                            },
+                        ),
+                        type_ann: Some(
+                            TypeAnn {
+                                kind: TypeRef(
+                                    "Point",
+                                    None,
+                                ),
+                                span: 68..73,
+                                inferred_type: None,
+                            },
+                        ),
+                    },
+                ),
+                span: 61..89,
+            },
+        ),
+        span: 61..89,
+    },
+]

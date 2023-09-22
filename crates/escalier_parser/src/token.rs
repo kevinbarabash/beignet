@@ -25,6 +25,10 @@ pub enum TokenKind {
     Never,
 
     // Keywords
+    Import,
+    Export,
+    From,
+    As,
     Declare,
     Let,
     Mut, // denotes a binding to a mutable reference
