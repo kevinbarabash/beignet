@@ -81,7 +81,7 @@ StrTemplateLit {
                                                                         TemplateLiteral {
                                                                             parts: [
                                                                                 Str {
-                                                                                    span: 27..30,
+                                                                                    span: 28..30,
                                                                                     value: "x",
                                                                                 },
                                                                                 Str {
@@ -103,7 +103,7 @@ StrTemplateLit {
                                                                             ],
                                                                         },
                                                                     ),
-                                                                    span: 27..36,
+                                                                    span: 28..36,
                                                                     inferred_type: None,
                                                                 },
                                                             ),

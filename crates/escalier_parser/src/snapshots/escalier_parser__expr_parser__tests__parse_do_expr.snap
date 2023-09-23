@@ -6,7 +6,7 @@ Expr {
     kind: Do(
         Do {
             body: Block {
-                span: 15..106,
+                span: 16..106,
                 stmts: [
                     Stmt {
                         kind: Decl(

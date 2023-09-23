@@ -67,7 +67,7 @@ expression: "parse(r#\"let mut p = {x: 5, y: 10}\"#)"
                                         ],
                                     },
                                 ),
-                                span: 11..25,
+                                span: 12..25,
                                 inferred_type: None,
                             },
                         ),

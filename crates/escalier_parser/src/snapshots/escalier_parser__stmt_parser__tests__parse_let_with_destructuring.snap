@@ -40,7 +40,7 @@ expression: "parse(r#\"let {x, y} = point\"#)"
                                     optional: false,
                                 },
                             ),
-                            span: 3..10,
+                            span: 4..10,
                             inferred_type: None,
                         },
                         expr: Some(

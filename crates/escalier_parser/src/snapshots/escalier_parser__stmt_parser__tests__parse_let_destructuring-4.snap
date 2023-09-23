@@ -48,7 +48,7 @@ expression: "parse(\"let [head, ...tail] = polygon\")"
                                                             },
                                                         },
                                                     ),
-                                                    span: 10..14,
+                                                    span: 11..14,
                                                     inferred_type: None,
                                                 },
                                                 init: None,
@@ -58,7 +58,7 @@ expression: "parse(\"let [head, ...tail] = polygon\")"
                                     optional: false,
                                 },
                             ),
-                            span: 3..19,
+                            span: 4..19,
                             inferred_type: None,
                         },
                         expr: Some(

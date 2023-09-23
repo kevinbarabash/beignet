@@ -9,7 +9,7 @@ Expr {
             params: [],
             body: Block(
                 Block {
-                    span: 5..43,
+                    span: 6..43,
                     stmts: [
                         Stmt {
                             kind: Decl(

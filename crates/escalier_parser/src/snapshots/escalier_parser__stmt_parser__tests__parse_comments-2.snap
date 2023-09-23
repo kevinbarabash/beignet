@@ -72,7 +72,7 @@ expression: "parse(r#\"\n            let make_point = fn (x: number, y: number) 
                                         ],
                                         body: Block(
                                             Block {
-                                                span: 55..136,
+                                                span: 56..136,
                                                 stmts: [
                                                     Stmt {
                                                         kind: Return(
@@ -101,13 +101,13 @@ expression: "parse(r#\"\n            let make_point = fn (x: number, y: number) 
                                                                                 ],
                                                                             },
                                                                         ),
-                                                                        span: 115..122,
+                                                                        span: 116..122,
                                                                         inferred_type: None,
                                                                     },
                                                                 ),
                                                             },
                                                         ),
-                                                        span: 115..122,
+                                                        span: 116..122,
                                                         inferred_type: None,
                                                     },
                                                 ],

@@ -16,7 +16,7 @@ Expr {
                 inferred_type: None,
             },
             consequent: Block {
-                span: 22..68,
+                span: 23..68,
                 stmts: [
                     Stmt {
                         kind: Expr(
@@ -66,12 +66,12 @@ Expr {
                                             ],
                                         },
                                     ),
-                                    span: 24..54,
+                                    span: 41..54,
                                     inferred_type: None,
                                 },
                             },
                         ),
-                        span: 24..54,
+                        span: 41..54,
                         inferred_type: None,
                     },
                 ],
@@ -79,7 +79,7 @@ Expr {
             alternate: Some(
                 Block(
                     Block {
-                        span: 73..118,
+                        span: 74..118,
                         stmts: [
                             Stmt {
                                 kind: Expr(
@@ -129,12 +129,12 @@ Expr {
                                                     ],
                                                 },
                                             ),
-                                            span: 75..104,
+                                            span: 92..104,
                                             inferred_type: None,
                                         },
                                     },
                                 ),
-                                span: 75..104,
+                                span: 92..104,
                                 inferred_type: None,
                             },
                         ],

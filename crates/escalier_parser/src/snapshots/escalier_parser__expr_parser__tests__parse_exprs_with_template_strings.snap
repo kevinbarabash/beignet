@@ -21,7 +21,7 @@ Expr {
                     TemplateLiteral {
                         parts: [
                             Str {
-                                span: 3..7,
+                                span: 4..7,
                                 value: "b ",
                             },
                             Str {
@@ -43,7 +43,7 @@ Expr {
                         ],
                     },
                 ),
-                span: 3..14,
+                span: 4..14,
                 inferred_type: None,
             },
         },

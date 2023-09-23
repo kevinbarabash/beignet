@@ -48,7 +48,7 @@ expression: "parse(r#\"type Point<T> = {x: T, y: T}\"#)"
                                     ),
                                 ],
                             ),
-                            span: 15..28,
+                            span: 16..28,
                             inferred_type: None,
                         },
                         type_params: Some(

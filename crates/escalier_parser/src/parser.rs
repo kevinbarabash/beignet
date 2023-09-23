@@ -85,8 +85,6 @@ impl<'a> Parser<'a> {
                 None => return None,
             };
 
-            let start = self.scanner.cursor();
-
             // skip whitespace
             while character == ' ' || character == '\n' || character == '\t' {
                 self.scanner.pop();
@@ -95,6 +93,8 @@ impl<'a> Parser<'a> {
                     None => return None,
                 }
             }
+
+            let start = self.scanner.cursor();
 
             let kind = match character {
                 'a'..='z' | 'A'..='Z' | '_' => {

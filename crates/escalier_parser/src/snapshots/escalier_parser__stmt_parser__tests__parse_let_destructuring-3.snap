@@ -50,7 +50,7 @@ expression: "parse(\"let [p1, p2] = line\")"
                                     optional: false,
                                 },
                             ),
-                            span: 3..12,
+                            span: 4..12,
                             inferred_type: None,
                         },
                         expr: Some(

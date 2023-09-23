@@ -16,7 +16,7 @@ Expr {
                 inferred_type: None,
             },
             consequent: Block {
-                span: 9..15,
+                span: 10..15,
                 stmts: [
                     Stmt {
                         kind: Expr(
@@ -41,7 +41,7 @@ Expr {
             alternate: Some(
                 Block(
                     Block {
-                        span: 20..26,
+                        span: 21..26,
                         stmts: [
                             Stmt {
                                 kind: Expr(

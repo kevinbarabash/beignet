@@ -92,7 +92,7 @@ TypeAnn {
                         ),
                     ],
                 ),
-                span: 43..74,
+                span: 44..74,
                 inferred_type: None,
             },
         ],

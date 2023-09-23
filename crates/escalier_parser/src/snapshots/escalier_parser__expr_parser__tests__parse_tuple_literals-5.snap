@@ -48,7 +48,7 @@ Expr {
                                 ],
                             },
                         ),
-                        span: 10..14,
+                        span: 11..14,
                         inferred_type: None,
                     },
                 ),

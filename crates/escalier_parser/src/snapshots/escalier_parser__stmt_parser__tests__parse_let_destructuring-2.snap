@@ -60,7 +60,7 @@ expression: "parse(\"let {x: x1, y: y1} = p1\")"
                                     optional: false,
                                 },
                             ),
-                            span: 3..18,
+                            span: 4..18,
                             inferred_type: None,
                         },
                         expr: Some(

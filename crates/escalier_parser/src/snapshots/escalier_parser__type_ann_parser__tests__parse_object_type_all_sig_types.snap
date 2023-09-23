@@ -297,6 +297,6 @@ TypeAnn {
             ),
         ],
     ),
-    span: 0..352,
+    span: 13..352,
     inferred_type: None,
 }

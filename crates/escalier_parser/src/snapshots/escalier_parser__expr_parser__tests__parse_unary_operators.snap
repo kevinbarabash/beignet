@@ -50,7 +50,7 @@ Expr {
                         },
                     },
                 ),
-                span: 5..8,
+                span: 6..8,
                 inferred_type: None,
             },
         },

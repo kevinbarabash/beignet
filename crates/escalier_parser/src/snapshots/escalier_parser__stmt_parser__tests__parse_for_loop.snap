@@ -50,7 +50,7 @@ expression: "parse(r#\"\n            for ({x, y} in points) {\n                c
                     inferred_type: None,
                 },
                 body: Block {
-                    span: 35..95,
+                    span: 36..95,
                     stmts: [
                         Stmt {
                             kind: Expr(

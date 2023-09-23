@@ -6,7 +6,7 @@ Expr {
     kind: Try(
         Try {
             body: Block {
-                span: 16..59,
+                span: 17..59,
                 stmts: [
                     Stmt {
                         kind: Expr(
@@ -56,7 +56,7 @@ Expr {
                         },
                     ),
                     body: Block {
-                        span: 69..128,
+                        span: 70..128,
                         stmts: [
                             Stmt {
                                 kind: Expr(

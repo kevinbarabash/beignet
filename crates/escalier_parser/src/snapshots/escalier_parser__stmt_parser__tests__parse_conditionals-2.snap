@@ -20,7 +20,7 @@ expression: "parse(\"if (foo) { console.log(foo) }\")"
                                 inferred_type: None,
                             },
                             consequent: Block {
-                                span: 8..29,
+                                span: 9..29,
                                 stmts: [
                                     Stmt {
                                         kind: Expr(

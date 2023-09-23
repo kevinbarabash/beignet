@@ -47,7 +47,7 @@ Expr {
             ],
             body: Block(
                 Block {
-                    span: 11..28,
+                    span: 12..28,
                     stmts: [
                         Stmt {
                             kind: Return(

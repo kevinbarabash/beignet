@@ -55,7 +55,7 @@ expression: "parse(\"let max = if (x > y) { x } else { y }\")"
                                             inferred_type: None,
                                         },
                                         consequent: Block {
-                                            span: 20..26,
+                                            span: 21..26,
                                             stmts: [
                                                 Stmt {
                                                     kind: Expr(
@@ -80,7 +80,7 @@ expression: "parse(\"let max = if (x > y) { x } else { y }\")"
                                         alternate: Some(
                                             Block(
                                                 Block {
-                                                    span: 31..37,
+                                                    span: 32..37,
                                                     stmts: [
                                                         Stmt {
                                                             kind: Expr(
