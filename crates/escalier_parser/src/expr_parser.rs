@@ -446,50 +446,55 @@ impl<'a> Parser<'a> {
                 }
             }
             TokenKind::Class => self.parse_class()?,
-            t => {
-                self.next(); // consume the token
-                match get_prefix_precedence(&token) {
-                    Some(precendence) => {
-                        let rhs = self.parse_expr_with_precedence(precendence.0)?;
-                        let span = merge_spans(&token.span, &rhs.get_span());
-
-                        let kind = match t {
-                            TokenKind::Plus => ExprKind::Unary(Unary {
-                                op: UnaryOp::Plus,
-                                right: Box::new(rhs),
-                            }),
-                            TokenKind::Minus => ExprKind::Unary(Unary {
-                                op: UnaryOp::Minus,
-                                right: Box::new(rhs),
-                            }),
-                            TokenKind::Not => ExprKind::Unary(Unary {
-                                op: UnaryOp::Not,
-                                right: Box::new(rhs),
-                            }),
-                            TokenKind::Await => ExprKind::Await(Await {
-                                arg: Box::new(rhs),
-                                throws: None,
-                            }),
-                            TokenKind::Yield => ExprKind::Yield(Yield { arg: Box::new(rhs) }),
-                            TokenKind::Throw => ExprKind::Throw(Throw {
-                                arg: Box::new(rhs),
-                                throws: None,
-                            }),
-                            _ => panic!("unexpected token: {:?}", t),
-                        };
-
-                        Expr {
-                            kind,
-                            span,
-                            inferred_type: None,
-                        }
-                    }
-                    None => panic!("unexpected token: {:?}", token),
-                }
-            }
+            _ => todo!(),
         };
 
         Ok(lhs)
+    }
+
+    fn parse_prefix(&mut self) -> Result<Expr, ParseError> {
+        let token = self.peek().unwrap_or(&EOF).clone();
+
+        match get_prefix_precedence(&token) {
+            Some(precedence) => {
+                self.next(); // consume the token
+
+                let rhs = self.parse_expr_with_precedence(precedence.0)?;
+                let span = merge_spans(&token.span, &rhs.get_span());
+
+                let kind = match token.kind {
+                    TokenKind::Plus => ExprKind::Unary(Unary {
+                        op: UnaryOp::Plus,
+                        right: Box::new(rhs),
+                    }),
+                    TokenKind::Minus => ExprKind::Unary(Unary {
+                        op: UnaryOp::Minus,
+                        right: Box::new(rhs),
+                    }),
+                    TokenKind::Not => ExprKind::Unary(Unary {
+                        op: UnaryOp::Not,
+                        right: Box::new(rhs),
+                    }),
+                    TokenKind::Await => ExprKind::Await(Await {
+                        arg: Box::new(rhs),
+                        throws: None,
+                    }),
+                    TokenKind::Yield => ExprKind::Yield(Yield { arg: Box::new(rhs) }),
+                    TokenKind::Throw => ExprKind::Throw(Throw {
+                        arg: Box::new(rhs),
+                        throws: None,
+                    }),
+                    t => panic!("unexpected token: {:?}", t),
+                };
+
+                Ok(Expr {
+                    kind,
+                    span,
+                    inferred_type: None,
+                })
+            }
+            None => self.parse_atom(),
+        }
     }
 
     fn parse_if_else(&mut self) -> Result<Expr, ParseError> {
@@ -655,7 +660,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_expr_with_precedence(&mut self, precedence: u8) -> Result<Expr, ParseError> {
-        let mut lhs = self.parse_atom()?;
+        let mut lhs = self.parse_prefix()?;
 
         loop {
             let next = self.peek().unwrap_or(&EOF).clone();
@@ -668,101 +673,102 @@ impl<'a> Parser<'a> {
             }
 
             if let Some(next_precedence) = get_postfix_precedence(&next) {
-                if precedence >= next_precedence.0 {
+                if precedence < next_precedence.0 {
+                    if let Some(result) = self.parse_postfix(lhs.clone(), next_precedence, false)? {
+                        lhs = result;
+                        continue;
+                    }
+                } else {
                     return Ok(lhs);
-                }
-
-                if let Some(result) = self.parse_postfix(lhs.clone(), next_precedence, false)? {
-                    lhs = result;
-                    continue;
                 }
             }
 
             if let Some(next_precedence) = get_infix_precedence(&next) {
-                if precedence >= next_precedence.0 {
+                if precedence < next_precedence.0 {
+                    lhs = self.parse_infix(lhs.clone(), next_precedence)?;
+                    continue;
+                } else {
                     return Ok(lhs);
                 }
-
-                self.next().unwrap_or(EOF.clone());
-
-                let op: Option<AssignOp> = match &next.kind {
-                    TokenKind::Assign => Some(AssignOp::Assign),
-                    TokenKind::PlusAssign => Some(AssignOp::AddAssign),
-                    TokenKind::MinusAssign => Some(AssignOp::SubAssign),
-                    TokenKind::TimesAssign => Some(AssignOp::MulAssign),
-                    TokenKind::DivideAssign => Some(AssignOp::DivAssign),
-                    TokenKind::ModuloAssign => Some(AssignOp::ModAssign),
-                    _ => None,
-                };
-
-                if let Some(op) = op {
-                    if !lhs.is_lvalue() {
-                        panic!("expected lvalue");
-                    }
-
-                    let precedence = if next_precedence.1 == Associativity::Left {
-                        next_precedence.0
-                    } else {
-                        next_precedence.0 - 1
-                    };
-
-                    let rhs = self.parse_expr_with_precedence(precedence)?;
-                    let span = merge_spans(&lhs.get_span(), &rhs.get_span());
-
-                    lhs = Expr {
-                        kind: ExprKind::Assign(Assign {
-                            op,
-                            left: Box::new(lhs),
-                            right: Box::new(rhs),
-                        }),
-                        span,
-                        inferred_type: None,
-                    };
-
-                    continue;
-                }
-
-                let op: BinaryOp = match &next.kind {
-                    TokenKind::Plus => BinaryOp::Plus,
-                    TokenKind::Minus => BinaryOp::Minus,
-                    TokenKind::Times => BinaryOp::Times,
-                    TokenKind::Divide => BinaryOp::Divide,
-                    TokenKind::Modulo => BinaryOp::Modulo,
-                    TokenKind::Equals => BinaryOp::Equals,
-                    TokenKind::NotEquals => BinaryOp::NotEquals,
-                    TokenKind::LessThan => BinaryOp::LessThan,
-                    TokenKind::LessThanOrEqual => BinaryOp::LessThanOrEqual,
-                    TokenKind::GreaterThan => BinaryOp::GreaterThan,
-                    TokenKind::GreaterThanOrEqual => BinaryOp::GreaterThanOrEqual,
-                    TokenKind::And => BinaryOp::And,
-                    TokenKind::Or => BinaryOp::Or,
-                    _ => panic!("unexpected token: {:?}", next),
-                };
-
-                let precedence = if next_precedence.1 == Associativity::Left {
-                    next_precedence.0
-                } else {
-                    next_precedence.0 - 1
-                };
-
-                let rhs = self.parse_expr_with_precedence(precedence)?;
-                let span = merge_spans(&lhs.get_span(), &rhs.get_span());
-
-                lhs = Expr {
-                    kind: ExprKind::Binary(Binary {
-                        op,
-                        left: Box::new(lhs),
-                        right: Box::new(rhs),
-                    }),
-                    span,
-                    inferred_type: None,
-                };
-
-                continue;
             }
 
             return Ok(lhs);
         }
+    }
+
+    fn parse_infix(
+        &mut self,
+        lhs: Expr,
+        next_precedence: (u8, Associativity),
+    ) -> Result<Expr, ParseError> {
+        let token = self.peek().unwrap_or(&EOF).clone();
+
+        self.next(); // consume the token
+
+        let precedence = if next_precedence.1 == Associativity::Left {
+            next_precedence.0
+        } else {
+            next_precedence.0 - 1
+        };
+
+        let op: Option<AssignOp> = match &token.kind {
+            TokenKind::Assign => Some(AssignOp::Assign),
+            TokenKind::PlusAssign => Some(AssignOp::AddAssign),
+            TokenKind::MinusAssign => Some(AssignOp::SubAssign),
+            TokenKind::TimesAssign => Some(AssignOp::MulAssign),
+            TokenKind::DivideAssign => Some(AssignOp::DivAssign),
+            TokenKind::ModuloAssign => Some(AssignOp::ModAssign),
+            _ => None,
+        };
+
+        if let Some(op) = op {
+            if !lhs.is_lvalue() {
+                panic!("expected lvalue");
+            }
+
+            let rhs = self.parse_expr_with_precedence(precedence)?;
+            let span = merge_spans(&lhs.get_span(), &rhs.get_span());
+
+            return Ok(Expr {
+                kind: ExprKind::Assign(Assign {
+                    op,
+                    left: Box::new(lhs),
+                    right: Box::new(rhs),
+                }),
+                span,
+                inferred_type: None,
+            });
+        }
+
+        let op: BinaryOp = match &token.kind {
+            TokenKind::Plus => BinaryOp::Plus,
+            TokenKind::Minus => BinaryOp::Minus,
+            TokenKind::Times => BinaryOp::Times,
+            TokenKind::Divide => BinaryOp::Divide,
+            TokenKind::Modulo => BinaryOp::Modulo,
+            TokenKind::Equals => BinaryOp::Equals,
+            TokenKind::NotEquals => BinaryOp::NotEquals,
+            TokenKind::LessThan => BinaryOp::LessThan,
+            TokenKind::LessThanOrEqual => BinaryOp::LessThanOrEqual,
+            TokenKind::GreaterThan => BinaryOp::GreaterThan,
+            TokenKind::GreaterThanOrEqual => BinaryOp::GreaterThanOrEqual,
+            TokenKind::And => BinaryOp::And,
+            TokenKind::Or => BinaryOp::Or,
+            _ => panic!("unexpected token: {:?}", token),
+        };
+
+        let rhs = self.parse_expr_with_precedence(precedence)?;
+        let span = merge_spans(&lhs.get_span(), &rhs.get_span());
+
+        Ok(Expr {
+            kind: ExprKind::Binary(Binary {
+                op,
+                left: Box::new(lhs),
+                right: Box::new(rhs),
+            }),
+            span,
+            inferred_type: None,
+        })
     }
 
     // If we attempt to parse explicit type args for a function call and fail,
