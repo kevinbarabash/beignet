@@ -3,7 +3,7 @@ use escalier_ast::*;
 
 use crate::parse_error::ParseError;
 use crate::parser::*;
-use crate::precedence::{Associativity, OpInfo, Operator, Precedence, PRECEDENCE_TABLE};
+use crate::precedence::{OpInfo, Operator, Precedence, PRECEDENCE_TABLE};
 use crate::token::*;
 
 fn get_prefix_op_info(op: &Token) -> Option<OpInfo> {
