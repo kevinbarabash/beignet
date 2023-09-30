@@ -1,48 +1,59 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(\"x = y = z\")"
+expression: "parse(\"x.a = y.b\")"
 ---
 Expr {
     kind: Assign(
         Assign {
             left: Expr {
-                kind: Ident(
-                    Ident {
-                        name: "x",
-                        span: 0..1,
+                kind: Member(
+                    Member {
+                        object: Expr {
+                            kind: Ident(
+                                Ident {
+                                    name: "x",
+                                    span: 0..1,
+                                },
+                            ),
+                            span: 0..1,
+                            inferred_type: None,
+                        },
+                        property: Ident(
+                            Ident {
+                                name: "a",
+                                span: 2..3,
+                            },
+                        ),
+                        opt_chain: false,
                     },
                 ),
-                span: 0..1,
+                span: 0..3,
                 inferred_type: None,
             },
             op: Assign,
             right: Expr {
-                kind: Assign(
-                    Assign {
-                        left: Expr {
+                kind: Member(
+                    Member {
+                        object: Expr {
                             kind: Ident(
                                 Ident {
                                     name: "y",
-                                    span: 4..5,
+                                    span: 6..7,
                                 },
                             ),
-                            span: 4..5,
+                            span: 6..7,
                             inferred_type: None,
                         },
-                        op: Assign,
-                        right: Expr {
-                            kind: Ident(
-                                Ident {
-                                    name: "z",
-                                    span: 8..9,
-                                },
-                            ),
-                            span: 8..9,
-                            inferred_type: None,
-                        },
+                        property: Ident(
+                            Ident {
+                                name: "b",
+                                span: 8..9,
+                            },
+                        ),
+                        opt_chain: false,
                     },
                 ),
-                span: 4..9,
+                span: 6..9,
                 inferred_type: None,
             },
         },

@@ -118,7 +118,10 @@ lazy_static! {
             (17, Associativity::NotApplicable),
         );
         table.insert(Operator::FunctionCall, (17, Associativity::NotApplicable));
-        table.insert(Operator::TemplateLiteral, (17, Associativity::NotApplicable));
+        table.insert(
+            Operator::TemplateLiteral,
+            (17, Associativity::NotApplicable),
+        );
 
         table.insert(Operator::LogicalNot, (14, Associativity::NotApplicable));
         table.insert(Operator::UnaryPlus, (14, Associativity::NotApplicable));
@@ -153,7 +156,6 @@ lazy_static! {
         table.insert(Operator::LogicalOr, (3, Associativity::Left));
         table.insert(Operator::NullishCoalescing, (3, Associativity::Left));
 
-        // QUESTION: How do we prevent chaining of assignment operators?
         table.insert(Operator::Assignment, (2, Associativity::NotApplicable));
         table.insert(Operator::Conditional, (2, Associativity::Left));
         table.insert(Operator::Arrow, (2, Associativity::Right));

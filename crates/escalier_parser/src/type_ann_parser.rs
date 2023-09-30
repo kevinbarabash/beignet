@@ -545,17 +545,6 @@ impl<'a> Parser<'a> {
                         }
                     }
                 }
-                // let next = self.peek().unwrap_or(&EOF);
-                // let merged_span = merge_spans(&lhs.span, &next.span);
-                // assert_eq!(
-                //     self.next().unwrap_or(EOF.clone()).kind,
-                //     TokenKind::RightBracket
-                // );
-                // TypeAnn {
-                //     kind: TypeAnnKind::Array(Box::new(lhs)),
-                //     span: merged_span,
-                //     inferred_type: None,
-                // }
             }
             _ => panic!("unexpected token: {:?}", token),
         };

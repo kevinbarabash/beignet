@@ -459,7 +459,7 @@ impl<'a> Parser<'a> {
             Some(precedence) => {
                 self.next(); // consume the token
 
-                let rhs = self.parse_expr_with_precedence(precedence.0)?;
+                let rhs = self.parse_expr_with_precedence(precedence.0 * 10 - 1)?;
                 let span = merge_spans(&token.span, &rhs.get_span());
 
                 let kind = match token.kind {
@@ -673,7 +673,7 @@ impl<'a> Parser<'a> {
             }
 
             if let Some(next_precedence) = get_postfix_precedence(&next) {
-                if precedence < next_precedence.0 {
+                if precedence < next_precedence.0 * 10 {
                     if let Some(result) = self.parse_postfix(lhs.clone(), next_precedence, false)? {
                         lhs = result;
                         continue;
@@ -684,7 +684,7 @@ impl<'a> Parser<'a> {
             }
 
             if let Some(next_precedence) = get_infix_precedence(&next) {
-                if precedence < next_precedence.0 {
+                if precedence < next_precedence.0 * 10 {
                     lhs = self.parse_infix(lhs.clone(), next_precedence)?;
                     continue;
                 } else {
@@ -705,10 +705,10 @@ impl<'a> Parser<'a> {
 
         self.next(); // consume the token
 
-        let precedence = if next_precedence.1 == Associativity::Left {
-            next_precedence.0
-        } else {
-            next_precedence.0 - 1
+        let precedence = match next_precedence.1 {
+            Associativity::Left => next_precedence.0 * 10,
+            Associativity::Right => next_precedence.0 * 10 - 1,
+            Associativity::NotApplicable => next_precedence.0 * 10 + 1,
         };
 
         let op: Option<AssignOp> = match &token.kind {
@@ -723,6 +723,7 @@ impl<'a> Parser<'a> {
 
         if let Some(op) = op {
             if !lhs.is_lvalue() {
+                eprintln!("lhs = {:?}", lhs);
                 panic!("expected lvalue");
             }
 
@@ -780,10 +781,10 @@ impl<'a> Parser<'a> {
         next_precedence: (u8, Associativity),
         opt_chain: bool,
     ) -> Result<Option<Expr>, ParseError> {
-        let precedence = if next_precedence.1 == Associativity::Left {
-            next_precedence.0
-        } else {
-            next_precedence.0 - 1
+        let precedence = match next_precedence.1 {
+            Associativity::Left => next_precedence.0 * 10,
+            Associativity::Right => next_precedence.0 * 10 - 1,
+            Associativity::NotApplicable => next_precedence.0 * 10 + 1,
         };
 
         let token = self.peek().unwrap_or(&EOF).clone();
@@ -1343,7 +1344,6 @@ mod tests {
     #[test]
     fn parse_assignment() {
         insta::assert_debug_snapshot!(parse("x = y"));
-        insta::assert_debug_snapshot!(parse("x = y = z"));
         insta::assert_debug_snapshot!(parse("x.a = y.b"));
         insta::assert_debug_snapshot!(parse("x += 1"));
         insta::assert_debug_snapshot!(parse("x -= 1"));
