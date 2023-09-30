@@ -2,10 +2,10 @@ use escalier_ast::*;
 
 use crate::parse_error::ParseError;
 use crate::parser::*;
-use crate::precedence::{Associativity, Operator, PRECEDENCE_TABLE};
+use crate::precedence::{Associativity, OpInfo, Operator, Precedence, PRECEDENCE_TABLE};
 use crate::token::*;
 
-fn get_infix_precedence(op: &Token) -> Option<(u8, Associativity)> {
+fn get_infix_op_info(op: &Token) -> Option<OpInfo> {
     match &op.kind {
         // multiplicative
         TokenKind::Times => PRECEDENCE_TABLE.get(&Operator::Multiplication).cloned(),
@@ -16,16 +16,16 @@ fn get_infix_precedence(op: &Token) -> Option<(u8, Associativity)> {
         TokenKind::Plus => PRECEDENCE_TABLE.get(&Operator::Addition).cloned(),
         TokenKind::Minus => PRECEDENCE_TABLE.get(&Operator::Subtraction).cloned(),
 
-        TokenKind::Ampersand => Some((4, Associativity::Left)), // same as LogicalAnd
-        TokenKind::Pipe => Some((3, Associativity::Left)),      // same as LogicalOr
+        TokenKind::Ampersand => Some(OpInfo::new_infix(4, Associativity::Left)), // same as LogicalAnd
+        TokenKind::Pipe => Some(OpInfo::new_infix(3, Associativity::Left)), // same as LogicalOr
 
         _ => None,
     }
 }
 
-fn get_postfix_precedence(op: &Token) -> Option<(u8, Associativity)> {
+fn get_postfix_op_info(op: &Token) -> Option<OpInfo> {
     match &op.kind {
-        TokenKind::LeftBracket => Some((12, Associativity::NotApplicable)),
+        TokenKind::LeftBracket => Some(OpInfo::new_postfix(12)),
         _ => None,
     }
 }
@@ -507,13 +507,9 @@ impl<'a> Parser<'a> {
     fn parse_type_ann_postfix(
         &mut self,
         lhs: TypeAnn,
-        next_precedence: (u8, Associativity),
+        next_op_info: OpInfo,
     ) -> Result<TypeAnn, ParseError> {
-        let _precedence = match next_precedence.1 {
-            Associativity::Left => next_precedence.0 * 10,
-            Associativity::Right => next_precedence.0 * 10 - 1,
-            Associativity::NotApplicable => next_precedence.0 * 10 + 1,
-        };
+        let _precedence = next_op_info.infix_postfix_prec();
 
         let token = self.peek().unwrap_or(&EOF).clone();
 
@@ -552,7 +548,10 @@ impl<'a> Parser<'a> {
         Ok(type_ann)
     }
 
-    fn parse_type_ann_with_precedence(&mut self, precedence: u8) -> Result<TypeAnn, ParseError> {
+    fn parse_type_ann_with_precedence(
+        &mut self,
+        precedence: Precedence,
+    ) -> Result<TypeAnn, ParseError> {
         let mut lhs = self.parse_type_ann_atom()?;
 
         loop {
@@ -565,18 +564,18 @@ impl<'a> Parser<'a> {
                 return Ok(lhs);
             }
 
-            if let Some(next_precedence) = get_postfix_precedence(&next) {
-                if precedence < next_precedence.0 * 10 {
-                    lhs = self.parse_type_ann_postfix(lhs.clone(), next_precedence)?;
+            if let Some(next_op_info) = get_postfix_op_info(&next) {
+                if precedence < next_op_info.normalized_prec() {
+                    lhs = self.parse_type_ann_postfix(lhs.clone(), next_op_info)?;
                     continue;
                 } else {
                     return Ok(lhs);
                 }
             }
 
-            if let Some(next_precedence) = get_infix_precedence(&next) {
-                if precedence < next_precedence.0 * 10 {
-                    lhs = self.parse_type_ann_infix(lhs.clone(), next_precedence)?;
+            if let Some(next_op_info) = get_infix_op_info(&next) {
+                if precedence < next_op_info.normalized_prec() {
+                    lhs = self.parse_type_ann_infix(lhs.clone(), next_op_info)?;
                     continue;
                 } else {
                     return Ok(lhs);
@@ -590,17 +589,13 @@ impl<'a> Parser<'a> {
     fn parse_type_ann_infix(
         &mut self,
         lhs: TypeAnn,
-        next_precedence: (u8, Associativity),
+        next_op_info: OpInfo,
     ) -> Result<TypeAnn, ParseError> {
         let token = self.peek().unwrap_or(&EOF).clone();
 
         self.next();
 
-        let precedence = match next_precedence.1 {
-            Associativity::Left => next_precedence.0 * 10,
-            Associativity::Right => next_precedence.0 * 10 - 1,
-            Associativity::NotApplicable => next_precedence.0 * 10 + 1,
-        };
+        let precedence = next_op_info.infix_postfix_prec();
 
         let result = match &token.kind {
             TokenKind::Ampersand => {

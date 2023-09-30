@@ -1,13 +1,13 @@
 use lazy_static::lazy_static;
 use std::collections::hash_map::HashMap;
 
-type Precedence = u8;
+pub type Precedence = u32;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Associativity {
     Left,
     Right,
-    NotApplicable,
+    Neither, // indicates a unary operator
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -101,67 +101,98 @@ pub enum Operator {
     // CommaSequence,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OpInfo {
+    prec: Precedence,
+    assoc: Associativity,
+}
+
+impl OpInfo {
+    pub fn new_prefix(prec: Precedence) -> Self {
+        Self {
+            prec,
+            assoc: Associativity::Neither,
+        }
+    }
+
+    pub fn new_infix(prec: Precedence, assoc: Associativity) -> Self {
+        Self { prec, assoc }
+    }
+
+    pub fn new_postfix(prec: Precedence) -> Self {
+        Self {
+            prec,
+            assoc: Associativity::Neither,
+        }
+    }
+
+    pub fn normalized_prec(&self) -> Precedence {
+        self.prec * 10
+    }
+
+    pub fn infix_postfix_prec(&self) -> Precedence {
+        let normalized = self.normalized_prec();
+        match self.assoc {
+            Associativity::Left => normalized,
+            Associativity::Right => normalized - 1,
+            Associativity::Neither => normalized + 1,
+        }
+    }
+}
+
 lazy_static! {
-    pub static ref PRECEDENCE_TABLE: HashMap<Operator, (Precedence, Associativity)> = {
-        let mut table = HashMap::new();
+    pub static ref PRECEDENCE_TABLE: HashMap<Operator, OpInfo> = {
+        let mut table: HashMap<Operator, OpInfo> = HashMap::new();
 
-        table.insert(Operator::Grouping, (18, Associativity::NotApplicable));
+        // Grouping is parsed as an atom
+        // table.insert(Operator::Grouping, (18, Associativity::Neither));
 
-        table.insert(Operator::MemberAccess, (17, Associativity::Left));
-        table.insert(Operator::OptionalChaining, (17, Associativity::Left));
-        table.insert(
-            Operator::ComputedMemberAccess,
-            (17, Associativity::NotApplicable),
-        );
-        table.insert(
-            Operator::NewWithArgumentList,
-            (17, Associativity::NotApplicable),
-        );
-        table.insert(Operator::FunctionCall, (17, Associativity::NotApplicable));
-        table.insert(
-            Operator::TemplateLiteral,
-            (17, Associativity::NotApplicable),
-        );
+        table.insert(Operator::MemberAccess, OpInfo::new_infix(17, Associativity::Left));
+        table.insert(Operator::OptionalChaining, OpInfo::new_infix(17, Associativity::Left));
+        table.insert(Operator::ComputedMemberAccess, OpInfo::new_postfix(17));
+        table.insert(Operator::NewWithArgumentList, OpInfo::new_postfix(17));
+        table.insert(Operator::FunctionCall, OpInfo::new_postfix(17));
+        table.insert(Operator::TemplateLiteral, OpInfo::new_postfix(17));
 
-        table.insert(Operator::LogicalNot, (14, Associativity::NotApplicable));
-        table.insert(Operator::UnaryPlus, (14, Associativity::NotApplicable));
-        table.insert(Operator::UnaryMinus, (14, Associativity::NotApplicable));
-        table.insert(Operator::Typeof, (14, Associativity::NotApplicable));
-        table.insert(Operator::Void, (14, Associativity::NotApplicable));
-        table.insert(Operator::Delete, (14, Associativity::NotApplicable));
-        table.insert(Operator::Await, (14, Associativity::NotApplicable));
-        table.insert(Operator::Throw, (14, Associativity::NotApplicable));
+        table.insert(Operator::LogicalNot, OpInfo::new_prefix(14));
+        table.insert(Operator::UnaryPlus, OpInfo::new_prefix(14));
+        table.insert(Operator::UnaryMinus, OpInfo::new_prefix(14));
+        table.insert(Operator::Typeof, OpInfo::new_prefix(14));
+        table.insert(Operator::Void, OpInfo::new_prefix(14));
+        table.insert(Operator::Delete, OpInfo::new_prefix(14));
+        table.insert(Operator::Await, OpInfo::new_prefix(14));
+        table.insert(Operator::Throw, OpInfo::new_prefix(14));
 
-        table.insert(Operator::Exponentiation, (13, Associativity::Right));
+        table.insert(Operator::Exponentiation, OpInfo::new_infix(13, Associativity::Right));
 
-        table.insert(Operator::Multiplication, (12, Associativity::Left));
-        table.insert(Operator::Division, (12, Associativity::Left));
-        table.insert(Operator::Remainder, (12, Associativity::Left));
+        table.insert(Operator::Multiplication, OpInfo::new_infix(12, Associativity::Left));
+        table.insert(Operator::Division, OpInfo::new_infix(12, Associativity::Left));
+        table.insert(Operator::Remainder, OpInfo::new_infix(12, Associativity::Left));
 
-        table.insert(Operator::Addition, (11, Associativity::Left));
-        table.insert(Operator::Subtraction, (11, Associativity::Left));
+        table.insert(Operator::Addition, OpInfo::new_infix(11, Associativity::Left));
+        table.insert(Operator::Subtraction, OpInfo::new_infix(11, Associativity::Left));
 
-        table.insert(Operator::LessThan, (9, Associativity::Left));
-        table.insert(Operator::LessThanOrEqual, (9, Associativity::Left));
-        table.insert(Operator::GreaterThan, (9, Associativity::Left));
-        table.insert(Operator::GreaterThanOrEqual, (9, Associativity::Left));
-        table.insert(Operator::In, (9, Associativity::Left));
-        table.insert(Operator::Instanceof, (9, Associativity::Left));
+        table.insert(Operator::LessThan, OpInfo::new_infix(9, Associativity::Left));
+        table.insert(Operator::LessThanOrEqual, OpInfo::new_infix(9, Associativity::Left));
+        table.insert(Operator::GreaterThan, OpInfo::new_infix(9, Associativity::Left));
+        table.insert(Operator::GreaterThanOrEqual, OpInfo::new_infix(9, Associativity::Left));
+        table.insert(Operator::In, OpInfo::new_infix(9, Associativity::Left));
+        table.insert(Operator::Instanceof, OpInfo::new_infix(9, Associativity::Left));
 
-        table.insert(Operator::Equals, (8, Associativity::Left));
-        table.insert(Operator::NotEquals, (8, Associativity::Left));
+        table.insert(Operator::Equals, OpInfo::new_infix(8, Associativity::Left));
+        table.insert(Operator::NotEquals, OpInfo::new_infix(8, Associativity::Left));
 
-        table.insert(Operator::LogicalAnd, (4, Associativity::Left));
+        table.insert(Operator::LogicalAnd, OpInfo::new_infix(4, Associativity::Left));
 
-        table.insert(Operator::LogicalOr, (3, Associativity::Left));
-        table.insert(Operator::NullishCoalescing, (3, Associativity::Left));
+        table.insert(Operator::LogicalOr, OpInfo::new_infix(3, Associativity::Left));
+        table.insert(Operator::NullishCoalescing, OpInfo::new_infix(3, Associativity::Left));
 
-        table.insert(Operator::Assignment, (2, Associativity::NotApplicable));
-        table.insert(Operator::Conditional, (2, Associativity::Left));
-        table.insert(Operator::Arrow, (2, Associativity::Right));
-        table.insert(Operator::Yield, (2, Associativity::Right));
-        table.insert(Operator::YieldStar, (2, Associativity::Right));
-        table.insert(Operator::Spread, (2, Associativity::Right));
+        table.insert(Operator::Assignment, OpInfo::new_infix(2, Associativity::Neither));
+        table.insert(Operator::Conditional, OpInfo::new_infix(2, Associativity::Left));
+        table.insert(Operator::Arrow, OpInfo::new_infix(2, Associativity::Right));
+        table.insert(Operator::Yield, OpInfo::new_infix(2, Associativity::Right));
+        table.insert(Operator::YieldStar, OpInfo::new_infix(2, Associativity::Right));
+        table.insert(Operator::Spread, OpInfo::new_infix(2, Associativity::Right));
 
         table
     };
