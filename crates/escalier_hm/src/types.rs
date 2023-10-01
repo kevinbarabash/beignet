@@ -250,7 +250,7 @@ pub struct TCallable {
     pub params: Vec<FuncParam>,
     pub ret: Index,
     pub type_params: Option<Vec<TypeParam>>,
-    // TODO: support mutating callables? ...they'd still need have the same type
+    // TODO: support throws
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -447,6 +447,7 @@ impl Checker {
         result
     }
 
+    // TODO: support pretty printing of types
     pub fn print_type(&self, index: &Index) -> String {
         match &self.arena[*index].kind {
             TypeKind::TypeVar(TypeVar {
@@ -482,7 +483,7 @@ impl Checker {
                             ret,
                             type_params,
                         }) => {
-                            let mut result = "fn".to_string();
+                            let mut result = "new fn".to_string();
                             match type_params {
                                 Some(type_params) if !type_params.is_empty() => {
                                     let type_params = type_params

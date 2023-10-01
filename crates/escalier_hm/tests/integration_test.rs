@@ -365,7 +365,7 @@ fn infer_type_in_module() -> Result<(), TypeError> {
 
 #[test]
 fn top_level_for_loop_in_module_errors() -> Result<(), TypeError> {
-    let (mut checker, mut my_ctx) = test_env();
+    let (_, _) = test_env();
 
     let src = "
     let tuple = [1, 2, 3]
@@ -5422,3 +5422,22 @@ fn higher_rank_type_expected_error() -> Result<(), TypeError> {
 
     assert_no_errors(&checker)
 }
+
+// TODO: If a type param is used for multiple params or if it's
+// used in a spread param, create multiple type variables and unify
+// the params independently.  The result of each can be union-ed
+// together to determine the actual value of `T`.
+// #[test]
+// fn unify_multiple_args_with_same_type_param() -> Result<(), TypeError> {
+//     let (mut checker, mut my_ctx) = test_env();
+
+//     let src = r#"
+//     declare let foo: fn<T>(a: T, b: T, c: T) -> T
+//     foo(1, 2, 3)
+//     "#;
+//     let mut script = parse_script(src).unwrap();
+
+//     checker.infer_script(&mut script, &mut my_ctx)?;
+
+//     assert_no_errors(&checker)
+// }

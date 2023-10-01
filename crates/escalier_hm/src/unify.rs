@@ -653,6 +653,7 @@ impl Checker {
         ctx: &mut Context,
         args: &mut [Expr],
         type_args: Option<&[Index]>,
+        newable: bool,
         t2: Index,
     ) -> Result<(Index, Option<Index>), TypeError> {
         let ret_type = self.new_type_var(None);
@@ -690,7 +691,8 @@ impl Checker {
                 let mut ret_types = vec![];
                 let mut throws_types = vec![];
                 for t in types.iter() {
-                    let (ret_type, throws_type) = self.unify_call(ctx, args, type_args, *t)?;
+                    let (ret_type, throws_type) =
+                        self.unify_call(ctx, args, type_args, newable, *t)?;
                     ret_types.push(ret_type);
                     if let Some(throws_type) = throws_type {
                         throws_types.push(throws_type);
@@ -714,7 +716,7 @@ impl Checker {
                     // TODO: if there are multiple overloads that unify, pick the
                     // best one.
                     let (ret_type, maybe_throws_type) =
-                        self.unify_call(ctx, args, type_args, *t)?;
+                        self.unify_call(ctx, args, type_args, newable, *t)?;
 
                     if self.current_report.diagnostics.is_empty() {
                         self.pop_report();
@@ -764,7 +766,7 @@ impl Checker {
                     Some(type_args.as_slice())
                 };
 
-                return self.unify_call(ctx, args, type_args, t);
+                return self.unify_call(ctx, args, type_args, newable, t);
             }
             TypeKind::Literal(lit) => {
                 return Err(TypeError {
@@ -781,149 +783,72 @@ impl Checker {
                     message: format!("{keyword} is not callable"),
                 })
             }
-            TypeKind::Object(_) => {
-                // TODO: check if the object has a callbale signature
-                return Err(TypeError {
-                    message: "object is not callable".to_string(),
-                });
+            TypeKind::Object(Object { elems }) => {
+                let mut newables = vec![];
+                let mut callables = vec![];
+
+                for elem in elems {
+                    match elem {
+                        TObjElem::Call(callable) => callables.push(callable),
+                        TObjElem::Constructor(callable) => newables.push(callable),
+                        _ => (),
+                    }
+                }
+
+                if newable {
+                    if newables.is_empty() {
+                        return Err(TypeError {
+                            message: "Cannot new a non-newable type".to_string(),
+                        });
+                    }
+
+                    // TODO: Cycle through all of the newables and try to unify
+                    // using the best result.  One of criteria might be picking
+                    // one that ignores the fewest number of arguments.
+                    let func = Function {
+                        params: newables[0].params.clone(),
+                        ret: newables[0].ret,
+                        throws: None, // newables[0].throws,
+                        type_params: newables[0].type_params.clone(),
+                    };
+
+                    eprintln!("ret_type = {}", self.print_type(&ret_type));
+
+                    maybe_throws_type =
+                        self.unify_func_call(ctx, args, type_args, ret_type, func)?;
+
+                    eprintln!("newables[0].ret = {}", self.print_type(&newables[0].ret));
+                    eprintln!("ret_type = {}", self.print_type(&ret_type));
+                } else {
+                    if callables.is_empty() {
+                        return Err(TypeError {
+                            message: "Cannot call a non-callable type".to_string(),
+                        });
+                    }
+
+                    // TODO: Cycle through all of the callables and try to unify
+                    // using the best result.  One of criteria might be picking
+                    // one that ignores the fewest number of arguments.
+                    let func = Function {
+                        params: callables[0].params.clone(),
+                        ret: callables[0].ret,
+                        throws: None, // callables[0].throws,
+                        type_params: callables[0].type_params.clone(),
+                    };
+
+                    maybe_throws_type =
+                        self.unify_func_call(ctx, args, type_args, ret_type, func)?;
+                }
             }
             TypeKind::Rest(_) => {
                 return Err(TypeError {
                     message: "rest is not callable".to_string(),
                 });
             }
+            // TODO: extract this into a helper function so that it can
+            // be reused when unifying callables/newables.
             TypeKind::Function(func) => {
-                let func = if func.type_params.is_some() {
-                    self.instantiate_func(&func, type_args)?
-                } else {
-                    func
-                };
-
-                let func_params = match func.params.get(0) {
-                    Some(param) => {
-                        if param.is_self() {
-                            &func.params[1..]
-                        } else {
-                            &func.params[..]
-                        }
-                    }
-                    None => &[],
-                };
-
-                let (params, rest_param) = match func_params.last() {
-                    Some(param) => match &param.pattern {
-                        TPat::Rest(_) => (&func_params[..func_params.len() - 1], Some(param)),
-                        _ => (func_params, None),
-                    },
-                    None => (func_params, None),
-                };
-
-                let required_params = params.iter().filter(|param| !param.optional).collect_vec();
-
-                if args.len() < required_params.len() {
-                    return Err(TypeError {
-                        message: format!(
-                            "too few arguments to function: expected {}, got {}",
-                            required_params.len(),
-                            args.len()
-                        ),
-                    });
-                }
-
-                let arg_types = args
-                    .iter_mut()
-                    .map(|arg| {
-                        // TODO: handle spreads
-                        let t = self.infer_expression(arg, ctx)?;
-                        Ok((arg, t))
-                    })
-                    .collect::<Result<Vec<_>, _>>()?;
-
-                let mut reasons: Vec<TypeError> = vec![];
-                for ((arg, p), param) in arg_types.iter().zip(params.iter()) {
-                    if param.optional {
-                        if let Some(index) = arg.inferred_type {
-                            if let TypeKind::Literal(Lit::Undefined) = &self.arena[index].kind {
-                                continue;
-                            }
-                        }
-                    }
-
-                    match check_mutability(ctx, &param.pattern, arg)? {
-                        true => self.unify_mut(ctx, *p, param.t)?,
-                        false => match self.unify(ctx, *p, param.t) {
-                            Ok(_) => {}
-                            Err(error) => reasons.push(error),
-                        },
-                    };
-                }
-
-                if let Some(rest_param) = rest_param {
-                    // We're not mutating `kind` so this should be safe.
-                    let kind: &TypeKind = unsafe { transmute(&self.arena[rest_param.t].kind) };
-                    match kind {
-                        TypeKind::Array(array) => {
-                            if arg_types.len() >= params.len() {
-                                let remaining_arg_types = &arg_types[params.len()..];
-                                let t = array.t;
-                                for (_, p) in remaining_arg_types.iter() {
-                                    match self.unify(ctx, *p, t) {
-                                        Ok(_) => {}
-                                        Err(error) => reasons.push(error),
-                                    }
-                                }
-                            }
-                        }
-                        TypeKind::Tuple(tuple) => {
-                            let remaining_arg_types = &arg_types[params.len()..];
-                            if remaining_arg_types.len() < tuple.types.len() {
-                                return Err(TypeError {
-                                    message: format!(
-                                        "too few arguments to function: expected {}, got {}",
-                                        params.len() + tuple.types.len(),
-                                        params.len() + remaining_arg_types.len()
-                                    ),
-                                });
-                            }
-
-                            for ((_, p), t) in remaining_arg_types.iter().zip(tuple.types.iter()) {
-                                match self.unify(ctx, *p, *t) {
-                                    Ok(_) => {}
-                                    Err(error) => reasons.push(error),
-                                };
-                            }
-                        }
-                        _ => {
-                            return Err(TypeError {
-                                message: format!(
-                                    "rest param must be an array, got {}",
-                                    self.print_type(&rest_param.t)
-                                ),
-                            });
-                        }
-                    }
-                }
-
-                if !reasons.is_empty() {
-                    self.current_report.diagnostics.push(Diagnostic {
-                        code: 1000,
-                        message: "Function arguments are incorrect".to_string(),
-                        reasons,
-                    });
-                }
-
-                self.unify(ctx, ret_type, func.ret)?;
-
-                if let Some(throws) = func.throws {
-                    let throws_type = self.new_type_var(None);
-                    self.unify(ctx, throws_type, throws)?;
-
-                    let throws_type = self.prune(throws_type);
-                    maybe_throws_type = match &self.arena[throws_type].kind {
-                        TypeKind::Keyword(Keyword::Never) => None,
-                        _ => Some(throws_type),
-                    };
-                }
+                maybe_throws_type = self.unify_func_call(ctx, args, type_args, ret_type, func)?;
             }
             TypeKind::KeyOf(KeyOf { t }) => {
                 return Err(TypeError {
@@ -933,7 +858,7 @@ impl Checker {
             TypeKind::IndexedAccess(IndexedAccess { obj, index }) => {
                 let is_mut = true;
                 let t = self.get_prop_value(ctx, obj, index, is_mut)?;
-                self.unify_call(ctx, args, type_args, t)?;
+                self.unify_call(ctx, args, type_args, newable, t)?;
             }
             TypeKind::Conditional(Conditional {
                 check,
@@ -942,8 +867,8 @@ impl Checker {
                 false_type,
             }) => {
                 match self.unify(ctx, check, extends) {
-                    Ok(_) => self.unify_call(ctx, args, type_args, true_type)?,
-                    Err(_) => self.unify_call(ctx, args, type_args, false_type)?,
+                    Ok(_) => self.unify_call(ctx, args, type_args, newable, true_type)?,
+                    Err(_) => self.unify_call(ctx, args, type_args, newable, false_type)?,
                 };
             }
             TypeKind::Infer(Infer { name }) => {
@@ -967,6 +892,157 @@ impl Checker {
         let ret_type = self.prune(ret_type);
 
         Ok((ret_type, maybe_throws_type))
+    }
+
+    pub fn unify_func_call(
+        &mut self,
+        ctx: &mut Context,
+        args: &mut [Expr],
+        type_args: Option<&[Index]>,
+        ret_type: Index,
+        func: Function,
+    ) -> Result<Option<Index>, TypeError> {
+        eprintln!(
+            "unify_func_call - ret_type = {}",
+            self.print_type(&ret_type)
+        );
+
+        let func = if func.type_params.is_some() {
+            self.instantiate_func(&func, type_args)?
+        } else {
+            func
+        };
+
+        let func_params = match func.params.get(0) {
+            Some(param) => {
+                if param.is_self() {
+                    &func.params[1..]
+                } else {
+                    &func.params[..]
+                }
+            }
+            None => &[],
+        };
+
+        let (params, rest_param) = match func_params.last() {
+            Some(param) => match &param.pattern {
+                TPat::Rest(_) => (&func_params[..func_params.len() - 1], Some(param)),
+                _ => (func_params, None),
+            },
+            None => (func_params, None),
+        };
+
+        let required_params = params.iter().filter(|param| !param.optional).collect_vec();
+
+        if args.len() < required_params.len() {
+            return Err(TypeError {
+                message: format!(
+                    "too few arguments to function: expected {}, got {}",
+                    required_params.len(),
+                    args.len()
+                ),
+            });
+        }
+
+        let arg_types = args
+            .iter_mut()
+            .map(|arg| {
+                // TODO: handle spreads
+                let t = self.infer_expression(arg, ctx)?;
+                Ok((arg, t))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let mut reasons: Vec<TypeError> = vec![];
+        for ((arg, p), param) in arg_types.iter().zip(params.iter()) {
+            if param.optional {
+                if let Some(index) = arg.inferred_type {
+                    if let TypeKind::Literal(Lit::Undefined) = &self.arena[index].kind {
+                        continue;
+                    }
+                }
+            }
+
+            match check_mutability(ctx, &param.pattern, arg)? {
+                true => self.unify_mut(ctx, *p, param.t)?,
+                false => match self.unify(ctx, *p, param.t) {
+                    Ok(_) => {}
+                    Err(error) => reasons.push(error),
+                },
+            };
+        }
+
+        if let Some(rest_param) = rest_param {
+            // We're not mutating `kind` so this should be safe.
+            let kind: &TypeKind = unsafe { transmute(&self.arena[rest_param.t].kind) };
+            match kind {
+                TypeKind::Array(array) => {
+                    if arg_types.len() >= params.len() {
+                        let remaining_arg_types = &arg_types[params.len()..];
+                        let t = array.t;
+                        for (_, p) in remaining_arg_types.iter() {
+                            match self.unify(ctx, *p, t) {
+                                Ok(_) => {}
+                                Err(error) => reasons.push(error),
+                            }
+                        }
+                    }
+                }
+                TypeKind::Tuple(tuple) => {
+                    let remaining_arg_types = &arg_types[params.len()..];
+                    if remaining_arg_types.len() < tuple.types.len() {
+                        return Err(TypeError {
+                            message: format!(
+                                "too few arguments to function: expected {}, got {}",
+                                params.len() + tuple.types.len(),
+                                params.len() + remaining_arg_types.len()
+                            ),
+                        });
+                    }
+
+                    for ((_, p), t) in remaining_arg_types.iter().zip(tuple.types.iter()) {
+                        match self.unify(ctx, *p, *t) {
+                            Ok(_) => {}
+                            Err(error) => reasons.push(error),
+                        };
+                    }
+                }
+                _ => {
+                    return Err(TypeError {
+                        message: format!(
+                            "rest param must be an array, got {}",
+                            self.print_type(&rest_param.t)
+                        ),
+                    });
+                }
+            }
+        }
+
+        if !reasons.is_empty() {
+            self.current_report.diagnostics.push(Diagnostic {
+                code: 1000,
+                message: "Function arguments are incorrect".to_string(),
+                reasons,
+            });
+        }
+
+        eprintln!("func.ret = {}", self.print_type(&func.ret));
+        self.unify(ctx, ret_type, func.ret)?;
+
+        let mut maybe_throws_type = None;
+
+        if let Some(throws) = func.throws {
+            let throws_type = self.new_type_var(None);
+            self.unify(ctx, throws_type, throws)?;
+
+            let throws_type = self.prune(throws_type);
+            maybe_throws_type = match &self.arena[throws_type].kind {
+                TypeKind::Keyword(Keyword::Never) => None,
+                _ => Some(throws_type),
+            };
+        }
+
+        Ok(maybe_throws_type)
     }
 
     pub fn bind(&mut self, ctx: &Context, a: Index, b: Index) -> Result<(), TypeError> {
