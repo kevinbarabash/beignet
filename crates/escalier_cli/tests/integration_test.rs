@@ -823,10 +823,7 @@ fn codegen_code_with_type_delcarations() -> Result<(), TypeError> {
         readonly x: number;
         readonly y: number;
     };
-    export declare const point: {
-        x: number;
-        y: number;
-    };
+    export declare const point: ReadonlyPoint;
     "###);
 
     Ok(())
@@ -933,10 +930,7 @@ fn codegen_object_type_with_optional_property() -> Result<(), TypeError> {
         readonly x?: number;
         readonly y: number;
     };
-    export declare const point: {
-        x?: number;
-        y: number;
-    };
+    export declare const point: ReadonlyPoint;
     "###);
 
     Ok(())

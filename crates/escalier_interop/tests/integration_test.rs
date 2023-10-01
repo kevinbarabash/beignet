@@ -780,9 +780,8 @@ fn newing_newables() {
     let (checker, ctx) = infer_prog(src);
 
     let binding = ctx.values.get("str").unwrap();
-    let _result = checker.print_type(&binding.index);
-    // TODO: re-enable after updating unify() to only expand if unification fails
-    // assert_eq!(_result, "String");
+    let result = checker.print_type(&binding.index);
+    assert_eq!(result, "String");
 }
 
 #[test]

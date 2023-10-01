@@ -32,8 +32,6 @@ impl Checker {
         let b = self.prune(t2);
 
         // TODO: only expand if unification fails since it's expensive
-        let a = self.expand(ctx, a)?;
-        let b = self.expand(ctx, b)?;
 
         let a_t = self.arena[a].clone();
         let b_t = self.arena[b].clone();
@@ -616,13 +614,22 @@ impl Checker {
                     }),
                 }
             }
-            _ => Err(TypeError {
-                message: format!(
-                    "type mismatch: unify({}, {}) failed",
-                    self.print_type(&a),
-                    self.print_type(&b),
-                ),
-            }),
+            _ => {
+                let expanded_a = self.expand(ctx, a)?;
+                let expanded_b = self.expand(ctx, b)?;
+
+                if expanded_a != a || expanded_b != b {
+                    return self.unify(ctx, expanded_a, expanded_b);
+                }
+
+                Err(TypeError {
+                    message: format!(
+                        "type mismatch: unify({}, {}) failed",
+                        self.print_type(&a),
+                        self.print_type(&b),
+                    ),
+                })
+            }
         }
     }
 
@@ -812,13 +819,8 @@ impl Checker {
                         type_params: newables[0].type_params.clone(),
                     };
 
-                    eprintln!("ret_type = {}", self.print_type(&ret_type));
-
                     maybe_throws_type =
                         self.unify_func_call(ctx, args, type_args, ret_type, func)?;
-
-                    eprintln!("newables[0].ret = {}", self.print_type(&newables[0].ret));
-                    eprintln!("ret_type = {}", self.print_type(&ret_type));
                 } else {
                     if callables.is_empty() {
                         return Err(TypeError {
@@ -902,11 +904,6 @@ impl Checker {
         ret_type: Index,
         func: Function,
     ) -> Result<Option<Index>, TypeError> {
-        eprintln!(
-            "unify_func_call - ret_type = {}",
-            self.print_type(&ret_type)
-        );
-
         let func = if func.type_params.is_some() {
             self.instantiate_func(&func, type_args)?
         } else {
@@ -1026,7 +1023,6 @@ impl Checker {
             });
         }
 
-        eprintln!("func.ret = {}", self.print_type(&func.ret));
         self.unify(ctx, ret_type, func.ret)?;
 
         let mut maybe_throws_type = None;
