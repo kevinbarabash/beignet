@@ -14,6 +14,9 @@ fn get_prefix_op_info(op: &Token) -> Option<OpInfo> {
         TokenKind::Yield => PRECEDENCE_TABLE.get(&Operator::Yield).cloned(),
         TokenKind::Throw => PRECEDENCE_TABLE.get(&Operator::Throw).cloned(),
         TokenKind::Not => PRECEDENCE_TABLE.get(&Operator::LogicalNot).cloned(),
+        TokenKind::New => PRECEDENCE_TABLE
+            .get(&Operator::NewWithArgumentList)
+            .cloned(),
         _ => None,
     }
 }
@@ -482,6 +485,12 @@ impl<'a> Parser<'a> {
                     TokenKind::Yield => ExprKind::Yield(Yield { arg: Box::new(rhs) }),
                     TokenKind::Throw => ExprKind::Throw(Throw {
                         arg: Box::new(rhs),
+                        throws: None,
+                    }),
+                    TokenKind::New => ExprKind::New(New {
+                        callee: Box::new(rhs),
+                        args: Vec::new(),
+                        type_args: None,
                         throws: None,
                     }),
                     t => panic!("unexpected token: {:?}", t),
@@ -1469,11 +1478,11 @@ mod tests {
             class {
                 x: number
                 pub y: number
-                fn new(x, y) {
+                fn constructor(x, y) {
                     return {x, y}
                 }
                 pub fn make_point(x, y) {
-                    return new Self.constructor(x, y)
+                    return new Self(x, y)
                 }
                 pub get x(self) {
                     return self.x
@@ -1484,5 +1493,11 @@ mod tests {
             }
         "#
         ));
+    }
+
+    #[test]
+    fn parse_new() {
+        insta::assert_debug_snapshot!(parse("new Array(1, 2, 3)"));
+        insta::assert_debug_snapshot!(parse("new Foo.Bar(baz)"));
     }
 }

@@ -174,8 +174,24 @@ pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &Expr) {
             callee,
             type_args,
             args,
-            opt_chain: _,
-            throws: _,
+            opt_chain: _, // TODO
+            throws: _,    // TODO
+        }) => {
+            visitor.visit_expr(callee);
+            if let Some(type_args) = type_args {
+                for type_arg in type_args {
+                    visitor.visit_type_ann(type_arg);
+                }
+            }
+            for arg in args {
+                visitor.visit_expr(arg);
+            }
+        }
+        crate::ExprKind::New(New {
+            callee,
+            type_args,
+            args,
+            throws: _, // TODO
         }) => {
             visitor.visit_expr(callee);
             if let Some(type_args) = type_args {

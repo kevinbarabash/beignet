@@ -359,6 +359,7 @@ fn build_expr(expr: &values::Expr, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> 
                 type_args: None,
             })
         }
+        values::ExprKind::New(_) => todo!(),
         // TODO: Support `Point::new(5, 10)` -> `new Point(5, 10)`.
         // values::ExprKind::New(values::New { expr, args, .. }) => {
         //     let callee = Box::from(build_expr(expr.as_ref(), stmts, ctx));

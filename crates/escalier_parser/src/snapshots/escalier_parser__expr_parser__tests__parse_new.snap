@@ -1,0 +1,65 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(\"new Array(1, 2, 3)\")"
+---
+Expr {
+    kind: New(
+        New {
+            callee: Expr {
+                kind: Call(
+                    Call {
+                        callee: Expr {
+                            kind: Ident(
+                                Ident {
+                                    name: "Array",
+                                    span: 4..9,
+                                },
+                            ),
+                            span: 4..9,
+                            inferred_type: None,
+                        },
+                        type_args: None,
+                        args: [
+                            Expr {
+                                kind: Num(
+                                    Num {
+                                        value: "1",
+                                    },
+                                ),
+                                span: 10..11,
+                                inferred_type: None,
+                            },
+                            Expr {
+                                kind: Num(
+                                    Num {
+                                        value: "2",
+                                    },
+                                ),
+                                span: 13..14,
+                                inferred_type: None,
+                            },
+                            Expr {
+                                kind: Num(
+                                    Num {
+                                        value: "3",
+                                    },
+                                ),
+                                span: 16..17,
+                                inferred_type: None,
+                            },
+                        ],
+                        opt_chain: false,
+                        throws: None,
+                    },
+                ),
+                span: 4..18,
+                inferred_type: None,
+            },
+            type_args: None,
+            args: [],
+            throws: None,
+        },
+    ),
+    span: 0..18,
+    inferred_type: None,
+}

@@ -1,11 +1,11 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(r#\"\n            class {\n                x: number\n                pub y: number\n                fn new(x, y) {\n                    return {x, y}\n                }\n                pub fn make_point(x, y) {\n                    return new Self.constructor(x, y)\n                }\n                pub get x(self) {\n                    return self.x\n                }\n                pub set x(self, value) {\n                    self.x = value\n                }\n            }\n        \"#)"
+expression: "parse(r#\"\n            class {\n                x: number\n                pub y: number\n                fn constructor(x, y) {\n                    return {x, y}\n                }\n                pub fn make_point(x, y) {\n                    return new Self(x, y)\n                }\n                pub get x(self) {\n                    return self.x\n                }\n                pub set x(self, value) {\n                    self.x = value\n                }\n            }\n        \"#)"
 ---
 Expr {
     kind: Class(
         Class {
-            span: 13..467,
+            span: 13..463,
             type_params: None,
             super_class: None,
             super_type_args: None,
@@ -46,21 +46,31 @@ Expr {
                         init: None,
                     },
                 ),
-                Constructor(
-                    Constructor {
-                        span: 93..159,
+                Method(
+                    Method {
+                        span: 93..167,
+                        name: Ident(
+                            Ident {
+                                name: "constructor",
+                                span: 96..107,
+                            },
+                        ),
                         is_public: false,
+                        is_async: false,
+                        is_gen: false,
+                        is_mutating: false,
+                        type_params: None,
                         params: [
                             FuncParam {
                                 pattern: Pattern {
                                     kind: Ident(
                                         BindingIdent {
                                             name: "x",
-                                            span: 100..101,
+                                            span: 108..109,
                                             mutable: false,
                                         },
                                     ),
-                                    span: 100..101,
+                                    span: 108..109,
                                     inferred_type: None,
                                 },
                                 type_ann: None,
@@ -71,11 +81,11 @@ Expr {
                                     kind: Ident(
                                         BindingIdent {
                                             name: "y",
-                                            span: 103..104,
+                                            span: 111..112,
                                             mutable: false,
                                         },
                                     ),
-                                    span: 103..104,
+                                    span: 111..112,
                                     inferred_type: None,
                                 },
                                 type_ann: None,
@@ -83,7 +93,7 @@ Expr {
                             },
                         ],
                         body: Block {
-                            span: 106..159,
+                            span: 114..167,
                             stmts: [
                                 Stmt {
                                     kind: Return(
@@ -97,7 +107,7 @@ Expr {
                                                                     Shorthand(
                                                                         Ident {
                                                                             name: "x",
-                                                                            span: 136..137,
+                                                                            span: 144..145,
                                                                         },
                                                                     ),
                                                                 ),
@@ -105,33 +115,34 @@ Expr {
                                                                     Shorthand(
                                                                         Ident {
                                                                             name: "y",
-                                                                            span: 139..140,
+                                                                            span: 147..148,
                                                                         },
                                                                     ),
                                                                 ),
                                                             ],
                                                         },
                                                     ),
-                                                    span: 135..141,
+                                                    span: 143..149,
                                                     inferred_type: None,
                                                 },
                                             ),
                                         },
                                     ),
-                                    span: 135..141,
+                                    span: 143..149,
                                     inferred_type: None,
                                 },
                             ],
                         },
+                        type_ann: None,
                     },
                 ),
                 Method(
                     Method {
-                        span: 180..273,
+                        span: 188..269,
                         name: Ident(
                             Ident {
                                 name: "make_point",
-                                span: 183..193,
+                                span: 191..201,
                             },
                         ),
                         is_public: true,
@@ -145,11 +156,11 @@ Expr {
                                     kind: Ident(
                                         BindingIdent {
                                             name: "x",
-                                            span: 194..195,
+                                            span: 202..203,
                                             mutable: false,
                                         },
                                     ),
-                                    span: 194..195,
+                                    span: 202..203,
                                     inferred_type: None,
                                 },
                                 type_ann: None,
@@ -160,11 +171,11 @@ Expr {
                                     kind: Ident(
                                         BindingIdent {
                                             name: "y",
-                                            span: 197..198,
+                                            span: 205..206,
                                             mutable: false,
                                         },
                                     ),
-                                    span: 197..198,
+                                    span: 205..206,
                                     inferred_type: None,
                                 },
                                 type_ann: None,
@@ -172,92 +183,70 @@ Expr {
                             },
                         ],
                         body: Block {
-                            span: 200..273,
+                            span: 208..269,
                             stmts: [
                                 Stmt {
                                     kind: Return(
                                         ReturnStmt {
                                             arg: Some(
                                                 Expr {
-                                                    kind: Ident(
-                                                        Ident {
-                                                            name: "new",
-                                                            span: 229..232,
+                                                    kind: New(
+                                                        New {
+                                                            callee: Expr {
+                                                                kind: Call(
+                                                                    Call {
+                                                                        callee: Expr {
+                                                                            kind: Ident(
+                                                                                Ident {
+                                                                                    name: "Self",
+                                                                                    span: 241..245,
+                                                                                },
+                                                                            ),
+                                                                            span: 241..245,
+                                                                            inferred_type: None,
+                                                                        },
+                                                                        type_args: None,
+                                                                        args: [
+                                                                            Expr {
+                                                                                kind: Ident(
+                                                                                    Ident {
+                                                                                        name: "x",
+                                                                                        span: 246..247,
+                                                                                    },
+                                                                                ),
+                                                                                span: 246..247,
+                                                                                inferred_type: None,
+                                                                            },
+                                                                            Expr {
+                                                                                kind: Ident(
+                                                                                    Ident {
+                                                                                        name: "y",
+                                                                                        span: 249..250,
+                                                                                    },
+                                                                                ),
+                                                                                span: 249..250,
+                                                                                inferred_type: None,
+                                                                            },
+                                                                        ],
+                                                                        opt_chain: false,
+                                                                        throws: None,
+                                                                    },
+                                                                ),
+                                                                span: 241..251,
+                                                                inferred_type: None,
+                                                            },
+                                                            type_args: None,
+                                                            args: [],
+                                                            throws: None,
                                                         },
                                                     ),
-                                                    span: 229..232,
+                                                    span: 237..251,
                                                     inferred_type: None,
                                                 },
                                             ),
                                         },
                                     ),
-                                    span: 229..232,
-                                    inferred_type: None,
-                                },
-                                Stmt {
-                                    kind: Expr(
-                                        ExprStmt {
-                                            expr: Expr {
-                                                kind: Call(
-                                                    Call {
-                                                        callee: Expr {
-                                                            kind: Member(
-                                                                Member {
-                                                                    object: Expr {
-                                                                        kind: Ident(
-                                                                            Ident {
-                                                                                name: "Self",
-                                                                                span: 233..237,
-                                                                            },
-                                                                        ),
-                                                                        span: 233..237,
-                                                                        inferred_type: None,
-                                                                    },
-                                                                    property: Ident(
-                                                                        Ident {
-                                                                            name: "constructor",
-                                                                            span: 238..249,
-                                                                        },
-                                                                    ),
-                                                                    opt_chain: false,
-                                                                },
-                                                            ),
-                                                            span: 233..249,
-                                                            inferred_type: None,
-                                                        },
-                                                        type_args: None,
-                                                        args: [
-                                                            Expr {
-                                                                kind: Ident(
-                                                                    Ident {
-                                                                        name: "x",
-                                                                        span: 250..251,
-                                                                    },
-                                                                ),
-                                                                span: 250..251,
-                                                                inferred_type: None,
-                                                            },
-                                                            Expr {
-                                                                kind: Ident(
-                                                                    Ident {
-                                                                        name: "y",
-                                                                        span: 253..254,
-                                                                    },
-                                                                ),
-                                                                span: 253..254,
-                                                                inferred_type: None,
-                                                            },
-                                                        ],
-                                                        opt_chain: false,
-                                                        throws: None,
-                                                    },
-                                                ),
-                                                span: 233..255,
-                                                inferred_type: None,
-                                            },
-                                        },
-                                    ),
-                                    span: 233..255,
+                                    span: 237..251,
                                     inferred_type: None,
                                 },
                             ],
@@ -267,11 +256,11 @@ Expr {
                 ),
                 Getter(
                     Getter {
-                        span: 294..359,
+                        span: 290..355,
                         name: Ident(
                             Ident {
                                 name: "x",
-                                span: 298..299,
+                                span: 294..295,
                             },
                         ),
                         is_public: true,
@@ -282,11 +271,11 @@ Expr {
                                     kind: Ident(
                                         BindingIdent {
                                             name: "self",
-                                            span: 300..304,
+                                            span: 296..300,
                                             mutable: false,
                                         },
                                     ),
-                                    span: 300..304,
+                                    span: 296..300,
                                     inferred_type: None,
                                 },
                                 type_ann: None,
@@ -294,7 +283,7 @@ Expr {
                             },
                         ],
                         body: Block {
-                            span: 306..359,
+                            span: 302..355,
                             stmts: [
                                 Stmt {
                                     kind: Return(
@@ -307,28 +296,28 @@ Expr {
                                                                 kind: Ident(
                                                                     Ident {
                                                                         name: "self",
-                                                                        span: 335..339,
+                                                                        span: 331..335,
                                                                     },
                                                                 ),
-                                                                span: 335..339,
+                                                                span: 331..335,
                                                                 inferred_type: None,
                                                             },
                                                             property: Ident(
                                                                 Ident {
                                                                     name: "x",
-                                                                    span: 340..341,
+                                                                    span: 336..337,
                                                                 },
                                                             ),
                                                             opt_chain: false,
                                                         },
                                                     ),
-                                                    span: 335..341,
+                                                    span: 331..337,
                                                     inferred_type: None,
                                                 },
                                             ),
                                         },
                                     ),
-                                    span: 335..341,
+                                    span: 331..337,
                                     inferred_type: None,
                                 },
                             ],
@@ -337,11 +326,11 @@ Expr {
                 ),
                 Setter(
                     Setter {
-                        span: 380..453,
+                        span: 376..449,
                         name: Ident(
                             Ident {
                                 name: "x",
-                                span: 384..385,
+                                span: 380..381,
                             },
                         ),
                         is_public: true,
@@ -352,11 +341,11 @@ Expr {
                                     kind: Ident(
                                         BindingIdent {
                                             name: "self",
-                                            span: 386..390,
+                                            span: 382..386,
                                             mutable: false,
                                         },
                                     ),
-                                    span: 386..390,
+                                    span: 382..386,
                                     inferred_type: None,
                                 },
                                 type_ann: None,
@@ -367,11 +356,11 @@ Expr {
                                     kind: Ident(
                                         BindingIdent {
                                             name: "value",
-                                            span: 392..397,
+                                            span: 388..393,
                                             mutable: false,
                                         },
                                     ),
-                                    span: 392..397,
+                                    span: 388..393,
                                     inferred_type: None,
                                 },
                                 type_ann: None,
@@ -379,7 +368,7 @@ Expr {
                             },
                         ],
                         body: Block {
-                            span: 399..453,
+                            span: 395..449,
                             stmts: [
                                 Stmt {
                                     kind: Expr(
@@ -394,22 +383,22 @@ Expr {
                                                                         kind: Ident(
                                                                             Ident {
                                                                                 name: "self",
-                                                                                span: 421..425,
+                                                                                span: 417..421,
                                                                             },
                                                                         ),
-                                                                        span: 421..425,
+                                                                        span: 417..421,
                                                                         inferred_type: None,
                                                                     },
                                                                     property: Ident(
                                                                         Ident {
                                                                             name: "x",
-                                                                            span: 426..427,
+                                                                            span: 422..423,
                                                                         },
                                                                     ),
                                                                     opt_chain: false,
                                                                 },
                                                             ),
-                                                            span: 421..427,
+                                                            span: 417..423,
                                                             inferred_type: None,
                                                         },
                                                         op: Assign,
@@ -417,20 +406,20 @@ Expr {
                                                             kind: Ident(
                                                                 Ident {
                                                                     name: "value",
-                                                                    span: 430..435,
+                                                                    span: 426..431,
                                                                 },
                                                             ),
-                                                            span: 430..435,
+                                                            span: 426..431,
                                                             inferred_type: None,
                                                         },
                                                     },
                                                 ),
-                                                span: 421..435,
+                                                span: 417..431,
                                                 inferred_type: None,
                                             },
                                         },
                                     ),
-                                    span: 421..435,
+                                    span: 417..431,
                                     inferred_type: None,
                                 },
                             ],
@@ -440,6 +429,6 @@ Expr {
             ],
         },
     ),
-    span: 13..467,
+    span: 13..463,
     inferred_type: None,
 }
