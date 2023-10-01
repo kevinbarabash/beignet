@@ -1,0 +1,63 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(\"new Foo.Bar(baz)\")"
+---
+Expr {
+    kind: New(
+        New {
+            callee: Expr {
+                kind: Call(
+                    Call {
+                        callee: Expr {
+                            kind: Member(
+                                Member {
+                                    object: Expr {
+                                        kind: Ident(
+                                            Ident {
+                                                name: "Foo",
+                                                span: 4..7,
+                                            },
+                                        ),
+                                        span: 4..7,
+                                        inferred_type: None,
+                                    },
+                                    property: Ident(
+                                        Ident {
+                                            name: "Bar",
+                                            span: 8..11,
+                                        },
+                                    ),
+                                    opt_chain: false,
+                                },
+                            ),
+                            span: 4..11,
+                            inferred_type: None,
+                        },
+                        type_args: None,
+                        args: [
+                            Expr {
+                                kind: Ident(
+                                    Ident {
+                                        name: "baz",
+                                        span: 12..15,
+                                    },
+                                ),
+                                span: 12..15,
+                                inferred_type: None,
+                            },
+                        ],
+                        opt_chain: false,
+                        throws: None,
+                    },
+                ),
+                span: 4..16,
+                inferred_type: None,
+            },
+            type_args: None,
+            args: [],
+            throws: None,
+        },
+    ),
+    span: 0..16,
+    inferred_type: None,
+}

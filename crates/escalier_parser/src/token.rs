@@ -60,6 +60,7 @@ pub enum TokenKind {
     TypeOf,
     KeyOf,
     Infer,
+    New,
 
     // Arithmetic Operators
     Plus,

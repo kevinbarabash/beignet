@@ -362,6 +362,7 @@ impl<'a> Parser<'a> {
             "type" => TokenKind::Type,
             "typeof" => TokenKind::TypeOf,
             "keyof" => TokenKind::KeyOf,
+            "new" => TokenKind::New,
             "_" => TokenKind::Underscore,
             _ => TokenKind::Identifier(ident),
         };

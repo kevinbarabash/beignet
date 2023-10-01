@@ -81,6 +81,7 @@ impl<'a> Visitor for SemanticTokenVisitor<'a> {
         // METHOD = 7
         let token_type: Option<u32> = match &expr.kind {
             ExprKind::Call(_) => None,
+            ExprKind::New(_) => None,
             // ExprKind::New(_) => None,
             // TODO: Figure out how to differentiate identifiers used for different
             // purposes: e.g. parameters, varaibles, properties, etc.

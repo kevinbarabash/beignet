@@ -124,6 +124,14 @@ pub struct Call {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub struct New {
+    pub callee: Box<Expr>,
+    pub type_args: Option<Vec<TypeAnn>>,
+    pub args: Vec<Expr>,
+    pub throws: Option<Index>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Member {
     pub object: Box<Expr>,
     pub property: MemberProp,
@@ -211,6 +219,7 @@ pub enum ExprKind {
     Function(Function),
     Class(Class),
     Call(Call),
+    New(New),
     Member(Member),
     IfElse(IfElse),
     Match(Match),

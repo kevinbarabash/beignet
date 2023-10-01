@@ -179,6 +179,7 @@ impl Checker {
                             false => result,
                         }
                     }
+                    ExprKind::New(_) => todo!(),
                     ExprKind::Function(syntax::Function {
                         params,
                         body,
