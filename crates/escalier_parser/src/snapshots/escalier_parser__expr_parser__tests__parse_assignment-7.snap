@@ -1,6 +1,6 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(\"x /= 2\")"
+expression: "parse(\"x %= 2\")"
 ---
 Expr {
     kind: Assign(
@@ -15,7 +15,7 @@ Expr {
                 span: 0..1,
                 inferred_type: None,
             },
-            op: DivAssign,
+            op: ModAssign,
             right: Expr {
                 kind: Num(
                     Num {

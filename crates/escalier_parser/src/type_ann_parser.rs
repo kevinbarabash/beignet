@@ -2,10 +2,10 @@ use escalier_ast::*;
 
 use crate::parse_error::ParseError;
 use crate::parser::*;
-use crate::precedence::{Associativity, Operator, PRECEDENCE_TABLE};
+use crate::precedence::{Associativity, OpInfo, Operator, Precedence, PRECEDENCE_TABLE};
 use crate::token::*;
 
-fn get_infix_precedence(op: &Token) -> Option<(u8, Associativity)> {
+fn get_infix_op_info(op: &Token) -> Option<OpInfo> {
     match &op.kind {
         // multiplicative
         TokenKind::Times => PRECEDENCE_TABLE.get(&Operator::Multiplication).cloned(),
@@ -16,16 +16,16 @@ fn get_infix_precedence(op: &Token) -> Option<(u8, Associativity)> {
         TokenKind::Plus => PRECEDENCE_TABLE.get(&Operator::Addition).cloned(),
         TokenKind::Minus => PRECEDENCE_TABLE.get(&Operator::Subtraction).cloned(),
 
-        TokenKind::Ampersand => Some((4, Associativity::Left)), // same as LogicalAnd
-        TokenKind::Pipe => Some((3, Associativity::Left)),      // same as LogicalOr
+        TokenKind::Ampersand => Some(OpInfo::new_infix(4, Associativity::Left)), // same as LogicalAnd
+        TokenKind::Pipe => Some(OpInfo::new_infix(3, Associativity::Left)), // same as LogicalOr
 
         _ => None,
     }
 }
 
-fn get_postfix_precedence(op: &Token) -> Option<(u8, Associativity)> {
+fn get_postfix_op_info(op: &Token) -> Option<OpInfo> {
     match &op.kind {
-        TokenKind::LeftBracket => Some((12, Associativity::NotApplicable)),
+        TokenKind::LeftBracket => Some(OpInfo::new_postfix(12)),
         _ => None,
     }
 }
@@ -507,13 +507,9 @@ impl<'a> Parser<'a> {
     fn parse_type_ann_postfix(
         &mut self,
         lhs: TypeAnn,
-        next_precedence: (u8, Associativity),
+        next_op_info: OpInfo,
     ) -> Result<TypeAnn, ParseError> {
-        let _precedence = if next_precedence.1 == Associativity::Left {
-            next_precedence.0
-        } else {
-            next_precedence.0 - 1
-        };
+        let _precedence = next_op_info.infix_postfix_prec();
 
         let token = self.peek().unwrap_or(&EOF).clone();
 
@@ -545,17 +541,6 @@ impl<'a> Parser<'a> {
                         }
                     }
                 }
-                // let next = self.peek().unwrap_or(&EOF);
-                // let merged_span = merge_spans(&lhs.span, &next.span);
-                // assert_eq!(
-                //     self.next().unwrap_or(EOF.clone()).kind,
-                //     TokenKind::RightBracket
-                // );
-                // TypeAnn {
-                //     kind: TypeAnnKind::Array(Box::new(lhs)),
-                //     span: merged_span,
-                //     inferred_type: None,
-                // }
             }
             _ => panic!("unexpected token: {:?}", token),
         };
@@ -563,7 +548,10 @@ impl<'a> Parser<'a> {
         Ok(type_ann)
     }
 
-    fn parse_type_ann_with_precedence(&mut self, precedence: u8) -> Result<TypeAnn, ParseError> {
+    fn parse_type_ann_with_precedence(
+        &mut self,
+        precedence: Precedence,
+    ) -> Result<TypeAnn, ParseError> {
         let mut lhs = self.parse_type_ann_atom()?;
 
         loop {
@@ -576,106 +564,104 @@ impl<'a> Parser<'a> {
                 return Ok(lhs);
             }
 
-            if let Some(next_precedence) = get_postfix_precedence(&next) {
-                if precedence >= next_precedence.0 {
+            if let Some(next_op_info) = get_postfix_op_info(&next) {
+                if precedence < next_op_info.normalized_prec() {
+                    lhs = self.parse_type_ann_postfix(lhs.clone(), next_op_info)?;
+                    continue;
+                } else {
                     return Ok(lhs);
                 }
-
-                lhs = self.parse_type_ann_postfix(lhs.clone(), next_precedence)?;
-
-                continue;
             }
 
-            if let Some(next_precedence) = get_infix_precedence(&next) {
-                if precedence >= next_precedence.0 {
+            if let Some(next_op_info) = get_infix_op_info(&next) {
+                if precedence < next_op_info.normalized_prec() {
+                    lhs = self.parse_type_ann_infix(lhs.clone(), next_op_info)?;
+                    continue;
+                } else {
                     return Ok(lhs);
                 }
-
-                self.next();
-
-                let precedence = if next_precedence.1 == Associativity::Left {
-                    next_precedence.0
-                } else {
-                    next_precedence.0 - 1
-                };
-
-                lhs = match &next.kind {
-                    TokenKind::Ampersand => {
-                        let start = lhs.span.start;
-                        let rhs = self.parse_type_ann_with_precedence(precedence)?;
-                        let mut end = rhs.span.end;
-                        let mut types = vec![lhs, rhs];
-                        while TokenKind::Ampersand == self.peek().unwrap_or(&EOF).kind {
-                            self.next();
-                            let rhs = self.parse_type_ann_with_precedence(precedence)?;
-                            end = rhs.span.end;
-                            types.push(rhs);
-                        }
-                        let span = Span { start, end };
-
-                        TypeAnn {
-                            kind: TypeAnnKind::Intersection(types),
-                            span,
-                            inferred_type: None,
-                        }
-                    }
-                    TokenKind::Pipe => {
-                        let start = lhs.span.start;
-                        let rhs = self.parse_type_ann_with_precedence(precedence)?;
-                        let mut end = rhs.span.end;
-                        let mut types = vec![lhs, rhs];
-                        while TokenKind::Pipe == self.peek().unwrap_or(&EOF).kind {
-                            self.next();
-                            let rhs = self.parse_type_ann_with_precedence(precedence)?;
-                            end = rhs.span.end;
-                            types.push(rhs);
-                        }
-                        let span = Span { start, end };
-
-                        TypeAnn {
-                            kind: TypeAnnKind::Union(types),
-                            span,
-                            inferred_type: None,
-                        }
-                    }
-                    _ => {
-                        let op: BinaryOp = match &next.kind {
-                            TokenKind::Plus => BinaryOp::Plus,
-                            TokenKind::Minus => BinaryOp::Minus,
-                            TokenKind::Times => BinaryOp::Times,
-                            TokenKind::Divide => BinaryOp::Divide,
-                            TokenKind::Modulo => BinaryOp::Modulo,
-                            _ => panic!("unexpected token: {:?}", next),
-                        };
-
-                        let precedence = if next_precedence.1 == Associativity::Left {
-                            next_precedence.0
-                        } else {
-                            next_precedence.0 - 1
-                        };
-
-                        let rhs = self.parse_type_ann_with_precedence(precedence)?;
-                        // let span = merge_spans(&lhs.get_span(), &rhs.get_span());
-
-                        lhs = TypeAnn {
-                            kind: TypeAnnKind::Binary(BinaryTypeAnn {
-                                op,
-                                left: Box::new(lhs),
-                                right: Box::new(rhs),
-                            }),
-                            span: Span { start: 0, end: 0 },
-                            inferred_type: None,
-                        };
-
-                        continue;
-                    }
-                };
-
-                continue;
             }
 
             return Ok(lhs);
         }
+    }
+
+    fn parse_type_ann_infix(
+        &mut self,
+        lhs: TypeAnn,
+        next_op_info: OpInfo,
+    ) -> Result<TypeAnn, ParseError> {
+        let token = self.peek().unwrap_or(&EOF).clone();
+
+        self.next();
+
+        let precedence = next_op_info.infix_postfix_prec();
+
+        let result = match &token.kind {
+            TokenKind::Ampersand => {
+                let start = lhs.span.start;
+                let rhs = self.parse_type_ann_with_precedence(precedence)?;
+                let mut end = rhs.span.end;
+                let mut types = vec![lhs, rhs];
+                while TokenKind::Ampersand == self.peek().unwrap_or(&EOF).kind {
+                    self.next();
+                    let rhs = self.parse_type_ann_with_precedence(precedence)?;
+                    end = rhs.span.end;
+                    types.push(rhs);
+                }
+                let span = Span { start, end };
+
+                TypeAnn {
+                    kind: TypeAnnKind::Intersection(types),
+                    span,
+                    inferred_type: None,
+                }
+            }
+            TokenKind::Pipe => {
+                let start = lhs.span.start;
+                let rhs = self.parse_type_ann_with_precedence(precedence)?;
+                let mut end = rhs.span.end;
+                let mut types = vec![lhs, rhs];
+                while TokenKind::Pipe == self.peek().unwrap_or(&EOF).kind {
+                    self.next();
+                    let rhs = self.parse_type_ann_with_precedence(precedence)?;
+                    end = rhs.span.end;
+                    types.push(rhs);
+                }
+                let span = Span { start, end };
+
+                TypeAnn {
+                    kind: TypeAnnKind::Union(types),
+                    span,
+                    inferred_type: None,
+                }
+            }
+            _ => {
+                let op: BinaryOp = match &token.kind {
+                    TokenKind::Plus => BinaryOp::Plus,
+                    TokenKind::Minus => BinaryOp::Minus,
+                    TokenKind::Times => BinaryOp::Times,
+                    TokenKind::Divide => BinaryOp::Divide,
+                    TokenKind::Modulo => BinaryOp::Modulo,
+                    _ => panic!("unexpected token: {:?}", token),
+                };
+
+                let rhs = self.parse_type_ann_with_precedence(precedence)?;
+                // let span = merge_spans(&lhs.get_span(), &rhs.get_span());
+
+                TypeAnn {
+                    kind: TypeAnnKind::Binary(BinaryTypeAnn {
+                        op,
+                        left: Box::new(lhs),
+                        right: Box::new(rhs),
+                    }),
+                    span: Span { start: 0, end: 0 },
+                    inferred_type: None,
+                }
+            }
+        };
+
+        Ok(result)
     }
 
     fn parse_conditional_type(&mut self) -> Result<TypeAnn, ParseError> {
@@ -721,8 +707,6 @@ impl<'a> Parser<'a> {
                 false_type
             }
         };
-
-        // TODO: allow chaining of if/else
 
         let kind = TypeAnnKind::Condition(ConditionType {
             check: Box::new(check),
