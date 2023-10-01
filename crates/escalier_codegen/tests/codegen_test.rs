@@ -186,14 +186,7 @@ fn pattern_matching_with_disjoint_union() -> Result<(), TypeError> {
         type: "keydown";
         key: string;
     };
-    export declare const event: {
-        type: "mousedown";
-        x: number;
-        y: number;
-    } | {
-        type: "keydown";
-        key: string;
-    };
+    export declare const event: Event;
     export declare const result: string | string;
     "###);
 
@@ -621,7 +614,7 @@ fn generic_function() -> Result<(), TypeError> {
     let result = codegen_d_ts(&program, &ctx, &checker)?;
 
     // TODO: the return type should be `T` not `unknown`
-    insta::assert_snapshot!(result, @"export declare const fst: <T>(a: T, b: T) => unknown;
+    insta::assert_snapshot!(result, @"export declare const fst: <T>(a: T, b: T) => T;
 ");
 
     Ok(())
@@ -645,7 +638,7 @@ fn constrained_generic_function() -> Result<(), TypeError> {
 
     // TODO: The type bound on `T` should be `number | string`, not `number | number`
     // TODO: The return type should be `T`, not `number | string`
-    insta::assert_snapshot!(result, @"export declare const fst: <T extends number | string>(a: T, b: T) => number | string;
+    insta::assert_snapshot!(result, @"export declare const fst: <T extends number | string>(a: T, b: T) => T;
 ");
 
     Ok(())
@@ -970,12 +963,8 @@ fn type_decl_inside_block_with_escape() -> Result<(), TypeError> {
     let result = codegen_d_ts(&program, &ctx, &checker)?;
 
     // TODO: How do we ensure that types defined within a block can't escape?
-    insta::assert_snapshot!(result, @r###"
-    export declare const result: {
-        x: number;
-        y: number;
-    };
-    "###);
+    insta::assert_snapshot!(result, @"export declare const result: Point;
+");
 
     Ok(())
 }

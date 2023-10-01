@@ -358,14 +358,14 @@ fn infer_type_in_module() -> Result<(), TypeError> {
     checker.infer_module(&mut module, &mut my_ctx)?;
 
     let result = checker.print_type(&my_ctx.values.get("p").unwrap().index);
-    insta::assert_snapshot!(result, @"{x: number, y: number}");
+    insta::assert_snapshot!(result, @"Point");
 
     Ok(())
 }
 
 #[test]
 fn top_level_for_loop_in_module_errors() -> Result<(), TypeError> {
-    let (mut checker, mut my_ctx) = test_env();
+    let (_, _) = test_env();
 
     let src = "
     let tuple = [1, 2, 3]
@@ -2756,10 +2756,7 @@ fn type_alias() -> Result<(), TypeError> {
 
     checker.infer_script(&mut script, &mut my_ctx)?;
     let binding = my_ctx.values.get("p").unwrap();
-    assert_eq!(
-        checker.print_type(&binding.index),
-        r#"{x: number, y: number}"#
-    );
+    assert_eq!(checker.print_type(&binding.index), r#"Point"#);
 
     assert_no_errors(&checker)
 }
@@ -2778,7 +2775,7 @@ fn type_alias_with_params_with_destructuring() -> Result<(), TypeError> {
     checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("node").unwrap();
-    assert_eq!(checker.print_type(&binding.index), r#"{value: string}"#);
+    assert_eq!(checker.print_type(&binding.index), r#"Node<string>"#);
     let binding = my_ctx.values.get("value").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string"#);
 
@@ -2799,7 +2796,7 @@ fn type_alias_with_params_with_member_access() -> Result<(), TypeError> {
     checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("node").unwrap();
-    assert_eq!(checker.print_type(&binding.index), r#"{value: string}"#);
+    assert_eq!(checker.print_type(&binding.index), r#"Node<string>"#);
     let binding = my_ctx.values.get("value").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string"#);
 
@@ -2821,7 +2818,7 @@ fn type_alias_with_params_with_computed_member_access() -> Result<(), TypeError>
     checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("node").unwrap();
-    assert_eq!(checker.print_type(&binding.index), r#"{value: string}"#);
+    assert_eq!(checker.print_type(&binding.index), r#"Node<string>"#);
     let binding = my_ctx.values.get("value").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"string"#);
 
@@ -3615,7 +3612,7 @@ fn test_index_access_type_number_mapped() -> Result<(), TypeError> {
     assert_eq!(checker.print_type(&t), r#"string | undefined"#);
 
     let binding = my_ctx.values.get("t").unwrap();
-    assert_eq!(checker.print_type(&binding.index), r#"string | undefined"#);
+    assert_eq!(checker.print_type(&binding.index), r#"T"#);
 
     assert_no_errors(&checker)
 }
@@ -3717,7 +3714,9 @@ fn test_index_access_type_on_tuple() -> Result<(), TypeError> {
     checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("t").unwrap();
-    assert_eq!(checker.print_type(&binding.index), r#"string"#);
+    assert_eq!(checker.print_type(&binding.index), r#"T"#);
+    let t = checker.expand_type(&my_ctx, binding.index)?;
+    assert_eq!(checker.print_type(&t), r#"string"#);
 
     assert_no_errors(&checker)
 }
@@ -3736,8 +3735,10 @@ fn test_index_access_type_on_tuple_with_number_key() -> Result<(), TypeError> {
     checker.infer_script(&mut script, &mut my_ctx)?;
 
     let binding = my_ctx.values.get("t").unwrap();
+    assert_eq!(checker.print_type(&binding.index), r#"T"#);
+    let t = checker.expand_type(&my_ctx, binding.index)?;
     assert_eq!(
-        checker.print_type(&binding.index),
+        checker.print_type(&t),
         r#"number | string | boolean | undefined"#
     );
 
@@ -5422,3 +5423,22 @@ fn higher_rank_type_expected_error() -> Result<(), TypeError> {
 
     assert_no_errors(&checker)
 }
+
+// TODO: If a type param is used for multiple params or if it's
+// used in a spread param, create multiple type variables and unify
+// the params independently.  The result of each can be union-ed
+// together to determine the actual value of `T`.
+// #[test]
+// fn unify_multiple_args_with_same_type_param() -> Result<(), TypeError> {
+//     let (mut checker, mut my_ctx) = test_env();
+
+//     let src = r#"
+//     declare let foo: fn<T>(a: T, b: T, c: T) -> T
+//     foo(1, 2, 3)
+//     "#;
+//     let mut script = parse_script(src).unwrap();
+
+//     checker.infer_script(&mut script, &mut my_ctx)?;
+
+//     assert_no_errors(&checker)
+// }

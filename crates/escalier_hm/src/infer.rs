@@ -125,13 +125,14 @@ impl Checker {
                         checker.new_object_type(&prop_types)
                     }
                     ExprKind::Call(syntax::Call {
-                        callee: func,
+                        callee,
                         args,
                         type_args,
                         opt_chain,
                         throws,
                     }) => {
-                        let mut func_idx = checker.infer_expression(func, ctx)?;
+                        // TODO: Check if the callee in an object with a callable signature.
+                        let mut func_idx = checker.infer_expression(callee, ctx)?;
                         let mut has_undefined = false;
                         if *opt_chain {
                             if let TypeKind::Union(union) = &checker.arena[func_idx].kind {
@@ -148,9 +149,9 @@ impl Checker {
                                     .map(|type_arg| checker.infer_type_ann(type_arg, ctx))
                                     .collect::<Result<Vec<_>, _>>()?;
 
-                                checker.unify_call(ctx, args, Some(&type_args), func_idx)?
+                                checker.unify_call(ctx, args, Some(&type_args), false, func_idx)?
                             }
-                            None => checker.unify_call(ctx, args, None, func_idx)?,
+                            None => checker.unify_call(ctx, args, None, false, func_idx)?,
                         };
 
                         if let Some(new_throws) = new_throws {
@@ -179,7 +180,36 @@ impl Checker {
                             false => result,
                         }
                     }
-                    ExprKind::New(_) => todo!(),
+                    ExprKind::New(New {
+                        callee,
+                        type_args,
+                        args,
+                        throws,
+                    }) => {
+                        // TODO: Check if the callee in an object with a newable signature.
+
+                        let func_idx = checker.infer_expression(callee, ctx)?;
+                        // let func_idx = checker.expand_type(ctx, func_idx)?;
+                        // eprintln!("func_idx = {}", checker.print_type(&func_idx));
+
+                        let (result, new_throws) = match type_args {
+                            Some(type_args) => {
+                                let type_args = type_args
+                                    .iter_mut()
+                                    .map(|type_arg| checker.infer_type_ann(type_arg, ctx))
+                                    .collect::<Result<Vec<_>, _>>()?;
+
+                                checker.unify_call(ctx, args, Some(&type_args), true, func_idx)?
+                            }
+                            None => checker.unify_call(ctx, args, None, true, func_idx)?,
+                        };
+
+                        if let Some(new_throws) = new_throws {
+                            throws.replace(new_throws);
+                        }
+
+                        result
+                    }
                     ExprKind::Function(syntax::Function {
                         params,
                         body,
@@ -607,7 +637,7 @@ impl Checker {
                         args.extend(exprs.clone());
 
                         let (call_result, call_throws) =
-                            checker.unify_call(ctx, &mut args, None, tag)?;
+                            checker.unify_call(ctx, &mut args, None, false, tag)?;
 
                         if let Some(call_throws) = call_throws {
                             throws.replace(call_throws);

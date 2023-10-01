@@ -14,15 +14,5 @@ declare type ReadonlyObj = {
     readonly d?: number;
 };
 declare type PartialObj = Partial<ReadonlyObj>;
-export declare const custom_obj: {
-    a?: number;
-    b?: string;
-    c?: boolean;
-    d?: number;
-};
-export declare const partial_obj: {
-    a?: number;
-    b?: string;
-    c?: boolean;
-    d?: number;
-};
+export declare const custom_obj: Custom<ReadonlyObj>;
+export declare const partial_obj: PartialObj;

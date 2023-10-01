@@ -759,3 +759,39 @@ fn infer_infer_type() {
 //     let result = ctx.lookup_value("result").unwrap();
 //     assert_eq!(result.to_string(), "null | string[]");
 // }
+
+#[test]
+fn parses_constructor_interfaces() {
+    let (mut checker, ctx) = infer_prog("");
+
+    let binding = ctx.values.get("String").unwrap();
+    let result = checker.print_type(&binding.index);
+    assert_eq!(result, "StringConstructor");
+    let def = checker.expand_type(&ctx, binding.index).unwrap();
+    let result = checker.print_type(&def);
+    eprintln!("result = {}", result);
+}
+
+#[test]
+fn newing_newables() {
+    let src = r#"
+    let str = new String(5)
+    "#;
+    let (checker, ctx) = infer_prog(src);
+
+    let binding = ctx.values.get("str").unwrap();
+    let result = checker.print_type(&binding.index);
+    assert_eq!(result, "String");
+}
+
+#[test]
+fn calling_callables() {
+    let src = r#"
+    let str = String(5)
+    "#;
+    let (checker, ctx) = infer_prog(src);
+
+    let binding = ctx.values.get("str").unwrap();
+    let result = checker.print_type(&binding.index);
+    assert_eq!(result, "string");
+}

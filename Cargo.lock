@@ -415,6 +415,7 @@ dependencies = [
  "escalier_hm",
  "escalier_parser",
  "generational-arena",
+ "insta",
  "memoize",
  "swc_atoms",
  "swc_common",

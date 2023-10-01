@@ -487,12 +487,27 @@ impl<'a> Parser<'a> {
                         arg: Box::new(rhs),
                         throws: None,
                     }),
-                    TokenKind::New => ExprKind::New(New {
-                        callee: Box::new(rhs),
-                        args: Vec::new(),
-                        type_args: None,
-                        throws: None,
-                    }),
+                    TokenKind::New => {
+                        if let ExprKind::Call(Call {
+                            callee,
+                            args,
+                            type_args,
+                            throws,
+                            opt_chain: _,
+                        }) = rhs.kind
+                        {
+                            ExprKind::New(New {
+                                callee,
+                                args,
+                                type_args,
+                                throws,
+                            })
+                        } else {
+                            return Err(ParseError {
+                                message: "expected call expression after 'new'".to_owned(),
+                            });
+                        }
+                    }
                     t => panic!("unexpected token: {:?}", t),
                 };
 
