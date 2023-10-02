@@ -755,51 +755,9 @@ impl Checker {
         ctx: &mut Context,
     ) -> Result<Index, TypeError> {
         let idx = match &mut type_ann.kind {
-            TypeAnnKind::Function(FunctionType {
-                span: _,
-                params,
-                ret,
-                type_params,
-                throws,
-            }) => {
-                // NOTE: We clone `ctx` so that type params don't escape the signature
-                let mut sig_ctx = ctx.clone();
-
-                let type_params = self.infer_type_params(type_params, &mut sig_ctx)?;
-
-                let func_params = params
-                    .iter_mut()
-                    .map(|param| {
-                        let t = match &mut param.type_ann {
-                            Some(type_ann) => self.infer_type_ann(type_ann, &mut sig_ctx)?,
-                            None => {
-                                match &param.pattern.kind {
-                                    // TODO: add a check that `self` is only allowed
-                                    // as the first param in a method signature.
-                                    PatternKind::Ident(ident) if ident.name == "self" => {
-                                        self.new_type_ref("Self", &[])
-                                    }
-                                    _ => self.new_type_var(None),
-                                }
-                            }
-                        };
-
-                        Ok(types::FuncParam {
-                            pattern: pattern_to_tpat(&param.pattern, true),
-                            t,
-                            optional: param.optional,
-                        })
-                    })
-                    .collect::<Result<Vec<_>, _>>()?;
-
-                let ret_idx = self.infer_type_ann(ret.as_mut(), &mut sig_ctx)?;
-
-                let throws = throws
-                    .as_mut()
-                    .map(|throws| self.infer_type_ann(throws, &mut sig_ctx))
-                    .transpose()?;
-
-                self.new_func_type(&func_params, ret_idx, &type_params, throws)
+            TypeAnnKind::Function(func_type) => {
+                let function = self.infer_function_type(func_type, ctx)?;
+                self.arena.insert(Type::from(TypeKind::Function(function)))
             }
 
             TypeAnnKind::NumLit(value) => {
@@ -1137,19 +1095,23 @@ impl Checker {
 
         let func_params = params
             .iter_mut()
-            .enumerate()
-            .map(|(i, param)| {
+            .map(|param| {
                 let t = match &mut param.type_ann {
                     Some(type_ann) => self.infer_type_ann(type_ann, &mut sig_ctx)?,
-                    None => self.new_type_var(None),
+                    None => {
+                        match &param.pattern.kind {
+                            // TODO: add a check that `self` is only allowed
+                            // as the first param in a method signature.
+                            PatternKind::Ident(ident) if ident.name == "self" => {
+                                self.new_type_ref("Self", &[])
+                            }
+                            _ => self.new_type_var(None),
+                        }
+                    }
                 };
 
                 Ok(types::FuncParam {
-                    pattern: TPat::Ident(BindingIdent {
-                        name: param.pattern.get_name(&i),
-                        mutable: false,
-                        span: Span { start: 0, end: 0 },
-                    }),
+                    pattern: pattern_to_tpat(&param.pattern, true),
                     t,
                     optional: param.optional,
                 })
