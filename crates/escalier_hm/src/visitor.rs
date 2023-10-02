@@ -39,41 +39,11 @@ pub fn walk_index<V: Visitor>(visitor: &mut V, index: &Index) {
         TypeKind::Keyword(_) => (),
         TypeKind::Primitive(_) => (),
         TypeKind::Literal(_) => (),
-        TypeKind::Function(Function {
-            params,
-            ret,
-            type_params,
-            throws,
-        }) => {
-            walk_func_params(visitor, params);
-            visitor.visit_index(ret);
-            walk_type_params(visitor, type_params);
-            throws.map(|throws| visitor.visit_index(&throws));
-        }
+        TypeKind::Function(function) => walk_function(visitor, function),
         TypeKind::Object(Object { elems }) => {
             elems.iter().for_each(|elem| match elem {
-                TObjElem::Constructor(Function {
-                    params,
-                    ret,
-                    type_params,
-                    throws,
-                }) => {
-                    walk_func_params(visitor, params);
-                    visitor.visit_index(ret);
-                    walk_type_params(visitor, type_params);
-                    throws.map(|throws| visitor.visit_index(&throws));
-                }
-                TObjElem::Call(Function {
-                    params,
-                    ret,
-                    type_params,
-                    throws,
-                }) => {
-                    walk_func_params(visitor, params);
-                    visitor.visit_index(ret);
-                    walk_type_params(visitor, type_params);
-                    throws.map(|throws| visitor.visit_index(&throws));
-                }
+                TObjElem::Constructor(function) => walk_function(visitor, function),
+                TObjElem::Call(function) => walk_function(visitor, function),
                 TObjElem::Mapped(mapped) => {
                     visitor.visit_index(&mapped.key);
                     visitor.visit_index(&mapped.value);
@@ -147,4 +117,18 @@ fn walk_type_param<V: Visitor>(visitor: &mut V, type_param: &TypeParam) {
     if let Some(default) = type_param.default {
         visitor.visit_index(&default);
     }
+}
+
+fn walk_function<V: Visitor>(visitor: &mut V, function: &Function) {
+    let Function {
+        params,
+        ret,
+        type_params,
+        throws,
+    } = function;
+
+    walk_func_params(visitor, params);
+    visitor.visit_index(ret);
+    walk_type_params(visitor, type_params);
+    throws.map(|throws| visitor.visit_index(&throws));
 }
