@@ -8,19 +8,10 @@ use crate::type_param::TypeParam;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ObjectProp {
-    Call(ObjCallable),
-    Constructor(ObjCallable),
+    Call(FunctionType),
+    Constructor(FunctionType),
     Prop(Prop),
     Mapped(Mapped),
-}
-
-// TODO: dedupe with `FunctionType` below
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct ObjCallable {
-    pub span: Span,
-    pub type_params: Option<Vec<TypeParam>>,
-    pub params: Vec<FuncParam>,
-    pub ret: Box<TypeAnn>,
 }
 
 // TODO: dedupe with TPropModifier
@@ -62,8 +53,7 @@ pub struct Mapped {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct FunctionType {
-    // TODO
-    // pub span: Span,
+    pub span: Span,
     pub type_params: Option<Vec<TypeParam>>,
     pub params: Vec<FuncParam>,
     pub ret: Box<TypeAnn>,

@@ -1,3 +1,4 @@
+use escalier_hm::infer::generalize_func;
 use generational_arena::Index;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -14,7 +15,7 @@ use escalier_hm::checker::Checker;
 use escalier_hm::context::{Binding, Context};
 use escalier_hm::types::{
     self, Conditional, FuncParam, Function, IndexedAccess, Keyword, MappedType, Object, Primitive,
-    RestPat, Scheme, TCallable, TObjElem, TPat, TProp, TPropKey, TypeKind, TypeParam, TypeRef,
+    RestPat, Scheme, TObjElem, TPat, TProp, TPropKey, TypeKind, TypeParam, TypeRef,
 };
 
 // use crate::overrides::maybe_override_string_methods;
@@ -522,15 +523,12 @@ fn infer_callable(
     params: &[TsFnParam],
     type_ann: &TsType,
     type_params: &Option<Box<TsTypeParamDecl>>,
-) -> Result<TCallable, String> {
+) -> Result<Function, String> {
     let params = infer_fn_params(checker, ctx, params)?;
     let ret = infer_ts_type_ann(checker, ctx, type_ann)?;
     let type_params = get_type_params(checker, ctx, type_params)?;
 
-    // TODO: check signature to see if there are any free type variables that
-    // can be converted to additional type params.
-
-    Ok(TCallable {
+    let callable = Function {
         params,
         ret,
         type_params: if type_params.is_empty() {
@@ -538,7 +536,10 @@ fn infer_callable(
         } else {
             Some(type_params)
         },
-    })
+        throws: None,
+    };
+
+    Ok(generalize_func(checker, &callable))
 }
 
 fn infer_ts_type_element(

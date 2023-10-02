@@ -383,12 +383,12 @@ impl Checker {
                 // - we should also unify indexers with other named values since
                 //   they can be accessed by name as well but are optional
 
-                let mut calls_1: Vec<&TCallable> = vec![];
-                let mut constructors_1: Vec<&TCallable> = vec![];
+                let mut calls_1: Vec<&Function> = vec![];
+                let mut constructors_1: Vec<&Function> = vec![];
                 let mut mapped_1: Vec<&MappedType> = vec![];
 
-                let mut calls_2: Vec<&TCallable> = vec![];
-                let mut constructors_2: Vec<&TCallable> = vec![];
+                let mut calls_2: Vec<&Function> = vec![];
+                let mut constructors_2: Vec<&Function> = vec![];
                 let mut mapped_2: Vec<&MappedType> = vec![];
 
                 let named_props_1: HashMap<_, _> = object1

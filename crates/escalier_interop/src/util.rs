@@ -3,8 +3,7 @@ use std::collections::HashSet;
 
 use escalier_hm::checker::Checker;
 use escalier_hm::types::{
-    Function, MappedType, Object as TObject, Scheme, TCallable, TObjElem, TPat, TProp, TPropKey,
-    TypeKind,
+    Function, MappedType, Object as TObject, Scheme, TObjElem, TPat, TProp, TPropKey, TypeKind,
 };
 
 pub fn new_merge_schemes(schemes: &[Scheme], checker: &mut Checker) -> Scheme {
@@ -36,7 +35,8 @@ pub fn merge_readonly_and_mutable_schemes(
     checker: &mut Checker,
 ) -> Scheme {
     let mut mapped_types: Vec<MappedType> = vec![];
-    let mut callables: Vec<TCallable> = vec![];
+    let mut callables: Vec<Function> = vec![];
+    let mut newables: Vec<Function> = vec![];
     // BTreeMap is used here to ensure that the props are in alphabetical order
     let mut props: BTreeMap<String, TProp> = BTreeMap::new(); // TODO: figure out how to handle overloads
     let mut mutating_methods: HashSet<String> = HashSet::new();
@@ -64,7 +64,9 @@ pub fn merge_readonly_and_mutable_schemes(
                     };
                     props.insert(key.to_owned(), prop.to_owned());
                 }
-                TObjElem::Constructor(_) => (),
+                TObjElem::Constructor(newable) => {
+                    newables.push(newable.to_owned());
+                }
             }
         }
     }
@@ -109,6 +111,10 @@ pub fn merge_readonly_and_mutable_schemes(
 
     for c in callables {
         elems.push(TObjElem::Call(c));
+    }
+
+    for n in newables {
+        elems.push(TObjElem::Constructor(n));
     }
 
     for m in mapped_types {

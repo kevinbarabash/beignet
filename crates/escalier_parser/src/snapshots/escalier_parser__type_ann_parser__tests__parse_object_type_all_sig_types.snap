@@ -6,8 +6,8 @@ TypeAnn {
     kind: Object(
         [
             Call(
-                ObjCallable {
-                    span: 0..0,
+                FunctionType {
+                    span: 13..55,
                     type_params: None,
                     params: [
                         FuncParam {
@@ -37,6 +37,7 @@ TypeAnn {
                         span: 49..55,
                         inferred_type: None,
                     },
+                    throws: None,
                 },
             ),
             Prop(
@@ -49,6 +50,7 @@ TypeAnn {
                     type_ann: TypeAnn {
                         kind: Function(
                             FunctionType {
+                                span: 78..102,
                                 type_params: None,
                                 params: [
                                     FuncParam {
@@ -96,6 +98,7 @@ TypeAnn {
                     type_ann: TypeAnn {
                         kind: Function(
                             FunctionType {
+                                span: 125..155,
                                 type_params: None,
                                 params: [
                                     FuncParam {
@@ -160,6 +163,7 @@ TypeAnn {
                     type_ann: TypeAnn {
                         kind: Function(
                             FunctionType {
+                                span: 178..198,
                                 type_params: None,
                                 params: [
                                     FuncParam {
@@ -186,7 +190,7 @@ TypeAnn {
                                 throws: None,
                             },
                         ),
-                        span: 0..0,
+                        span: 178..198,
                         inferred_type: None,
                     },
                 },
@@ -203,6 +207,7 @@ TypeAnn {
                     type_ann: TypeAnn {
                         kind: Function(
                             FunctionType {
+                                span: 221..263,
                                 type_params: None,
                                 params: [
                                     FuncParam {
@@ -250,7 +255,7 @@ TypeAnn {
                                 throws: None,
                             },
                         ),
-                        span: 0..0,
+                        span: 221..263,
                         inferred_type: None,
                     },
                 },

@@ -623,10 +623,11 @@ fn build_obj_type(obj: &types::Object, ctx: &Context, checker: &Checker) -> TsTy
     for elem in &obj.elems {
         match elem {
             types::TObjElem::Call(_) => todo!(),
-            types::TObjElem::Constructor(types::TCallable {
+            types::TObjElem::Constructor(types::Function {
                 params,
                 ret,
                 type_params,
+                throws: _, // TODO
             }) => {
                 let type_params =
                     build_type_params_from_type_params(type_params.as_ref(), ctx, checker);

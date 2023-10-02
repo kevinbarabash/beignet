@@ -84,54 +84,15 @@ pub fn walk_index<F: Folder>(folder: &mut F, index: &Index) -> Index {
         TypeKind::Keyword(_) => return *index,
         TypeKind::Primitive(_) => return *index,
         TypeKind::Literal(_) => return *index,
-        TypeKind::Function(Function {
-            params,
-            ret,
-            type_params,
-            throws,
-        }) => {
-            let new_params = walk_func_params(folder, params);
-            let new_ret = folder.fold_index(ret);
-            let new_type_params = walk_type_params(folder, type_params);
-            let new_throws = throws.map(|throws| folder.fold_index(&throws));
-
-            if new_params == *params
-                && new_ret == *ret
-                && new_type_params == *type_params
-                && new_throws == *throws
-            {
-                return *index;
-            }
-
-            TypeKind::Function(Function {
-                params: new_params,
-                ret: new_ret,
-                type_params: new_type_params,
-                throws: new_throws,
-            })
-        }
+        TypeKind::Function(function) => TypeKind::Function(walk_function(folder, function)),
         TypeKind::Object(Object { elems }) => {
             let elems: Vec<_> = elems
                 .iter()
                 .map(|elem| match elem {
-                    TObjElem::Constructor(TCallable {
-                        params,
-                        ret,
-                        type_params,
-                    }) => TObjElem::Constructor(TCallable {
-                        params: walk_func_params(folder, params),
-                        ret: folder.fold_index(ret),
-                        type_params: walk_type_params(folder, type_params),
-                    }),
-                    TObjElem::Call(TCallable {
-                        params,
-                        ret,
-                        type_params,
-                    }) => TObjElem::Call(TCallable {
-                        params: walk_func_params(folder, params),
-                        ret: folder.fold_index(ret),
-                        type_params: walk_type_params(folder, type_params),
-                    }),
+                    TObjElem::Call(function) => TObjElem::Call(walk_function(folder, function)),
+                    TObjElem::Constructor(function) => {
+                        TObjElem::Constructor(walk_function(folder, function))
+                    }
                     TObjElem::Mapped(MappedType {
                         key,
                         value,
@@ -158,10 +119,6 @@ pub fn walk_index<F: Folder>(folder: &mut F, index: &Index) -> Index {
                             extends: new_extends,
                         })
                     }
-                    // TObjElem::Index(index) => TObjElem::Index(TIndex {
-                    //     t: folder.fold_index(&index.t),
-                    //     ..index.clone()
-                    // }),
                     TObjElem::Prop(prop) => TObjElem::Prop(TProp {
                         t: folder.fold_index(&prop.t),
                         ..prop.clone()
@@ -296,5 +253,21 @@ fn walk_type_param<F: Folder>(folder: &mut F, type_param: &TypeParam) -> TypePar
             .default
             .as_ref()
             .map(|default| folder.fold_index(default)),
+    }
+}
+
+fn walk_function<F: Folder>(folder: &mut F, function: &Function) -> Function {
+    let Function {
+        params,
+        ret,
+        type_params,
+        throws,
+    } = function;
+
+    Function {
+        params: walk_func_params(folder, params),
+        ret: folder.fold_index(ret),
+        type_params: walk_type_params(folder, type_params),
+        throws: throws.map(|throws| folder.fold_index(&throws)),
     }
 }

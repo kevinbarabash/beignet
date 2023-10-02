@@ -26,6 +26,7 @@ expression: "parse(r#\"declare let scale: fn (mut p: Point, scale: number) -> vo
                             TypeAnn {
                                 kind: Function(
                                     FunctionType {
+                                        span: 19..59,
                                         type_params: None,
                                         params: [
                                             FuncParam {

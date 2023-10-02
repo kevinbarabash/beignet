@@ -769,7 +769,7 @@ fn parses_constructor_interfaces() {
     assert_eq!(result, "StringConstructor");
     let def = checker.expand_type(&ctx, binding.index).unwrap();
     let result = checker.print_type(&def);
-    eprintln!("result = {}", result);
+    assert_eq!(result, "{new fn<A>(value?: A) -> String, fn<A>(value?: A) -> string, readonly prototype: String, fromCharCode: (...codes: number[]) -> string}");
 }
 
 #[test]

@@ -5358,7 +5358,7 @@ fn test_generalization_inside_function() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("bar").unwrap();
     assert_eq!(
         checker.print_type(&binding.index),
-        r#"[5, "hello", (x: t34) -> t34]"#
+        r#"[5, "hello", (x: t37) -> t37]"#
     );
 
     assert_no_errors(&checker)

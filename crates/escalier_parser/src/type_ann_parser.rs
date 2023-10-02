@@ -107,6 +107,7 @@ impl<'a> Parser<'a> {
                                 };
                             assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
 
+                            let type_span = self.peek().unwrap_or(&EOF).span;
                             let prop = match self.peek().unwrap_or(&EOF).kind {
                                 TokenKind::Get => {
                                     self.next(); // consume `get`
@@ -118,15 +119,17 @@ impl<'a> Parser<'a> {
                                         TokenKind::SingleArrow
                                     );
                                     let ret = self.parse_type_ann()?;
+                                    let type_span = merge_spans(&type_span, &ret.span);
 
                                     let type_ann = TypeAnn {
                                         kind: TypeAnnKind::Function(FunctionType {
+                                            span: type_span,
                                             type_params: None,
                                             params,
                                             ret: Box::new(ret),
                                             throws: None,
                                         }),
-                                        span: Span { start: 0, end: 0 }, // TODO
+                                        span: type_span,
                                         inferred_type: None,
                                     };
 
@@ -150,15 +153,17 @@ impl<'a> Parser<'a> {
                                         TokenKind::SingleArrow
                                     );
                                     let ret = self.parse_type_ann()?;
+                                    let type_span = merge_spans(&type_span, &ret.span);
 
                                     let type_ann = TypeAnn {
                                         kind: TypeAnnKind::Function(FunctionType {
+                                            span: type_span,
                                             type_params: None,
                                             params,
                                             ret: Box::new(ret),
                                             throws: None,
                                         }),
-                                        span: Span { start: 0, end: 0 }, // TODO
+                                        span: type_span,
                                         inferred_type: None,
                                     };
 
@@ -263,13 +268,26 @@ impl<'a> Parser<'a> {
                                         TokenKind::SingleArrow
                                     );
                                     let ret = self.parse_type_ann()?;
+                                    let throws = match self.peek().unwrap_or(&EOF).kind {
+                                        TokenKind::Throws => {
+                                            self.next(); // consume `throws`
+                                            let type_ann = self.parse_type_ann()?;
+                                            Some(Box::new(type_ann))
+                                        }
+                                        _ => None,
+                                    };
 
-                                    props.push(ObjectProp::Call(ObjCallable {
+                                    let end_span = match &throws {
+                                        Some(throws) => throws.span,
+                                        None => ret.span,
+                                    };
+
+                                    props.push(ObjectProp::Call(FunctionType {
+                                        span: merge_spans(&span, &end_span),
                                         type_params,
                                         params,
                                         ret: Box::new(ret),
-                                        // TODO(#642): compute correct spans for type annotations
-                                        span: Span { start: 0, end: 0 },
+                                        throws,
                                     }));
                                 }
                                 _ => {
@@ -398,7 +416,13 @@ impl<'a> Parser<'a> {
                     _ => None,
                 };
 
+                let end_span = match &throws {
+                    Some(throws) => throws.span,
+                    None => return_type.span,
+                };
+
                 TypeAnnKind::Function(FunctionType {
+                    span: merge_spans(&span, &end_span),
                     type_params,
                     params,
                     ret: Box::new(return_type),

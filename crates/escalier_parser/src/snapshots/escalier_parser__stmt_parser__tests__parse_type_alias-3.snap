@@ -23,6 +23,7 @@ expression: "parse(r#\"\n            type ReturnType<T: fn (...args: Array<_>) -
                                     extends: TypeAnn {
                                         kind: Function(
                                             FunctionType {
+                                                span: 87..118,
                                                 type_params: None,
                                                 params: [
                                                     FuncParam {
@@ -106,6 +107,7 @@ expression: "parse(r#\"\n            type ReturnType<T: fn (...args: Array<_>) -
                                         TypeAnn {
                                             kind: Function(
                                                 FunctionType {
+                                                    span: 32..59,
                                                     type_params: None,
                                                     params: [
                                                         FuncParam {

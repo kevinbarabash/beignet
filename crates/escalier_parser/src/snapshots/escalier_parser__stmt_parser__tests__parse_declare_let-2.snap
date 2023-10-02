@@ -26,6 +26,7 @@ expression: "parse(r#\"declare let bar: fn () -> number\"#)"
                             TypeAnn {
                                 kind: Function(
                                     FunctionType {
+                                        span: 17..32,
                                         type_params: None,
                                         params: [],
                                         ret: TypeAnn {
