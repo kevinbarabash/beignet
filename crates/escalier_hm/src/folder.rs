@@ -118,19 +118,23 @@ pub fn walk_index<F: Folder>(folder: &mut F, index: &Index) -> Index {
                         params,
                         ret,
                         type_params,
+                        throws,
                     }) => TObjElem::Constructor(TCallable {
                         params: walk_func_params(folder, params),
                         ret: folder.fold_index(ret),
                         type_params: walk_type_params(folder, type_params),
+                        throws: throws.map(|throws| folder.fold_index(&throws)),
                     }),
                     TObjElem::Call(TCallable {
                         params,
                         ret,
                         type_params,
+                        throws,
                     }) => TObjElem::Call(TCallable {
                         params: walk_func_params(folder, params),
                         ret: folder.fold_index(ret),
                         type_params: walk_type_params(folder, type_params),
+                        throws: throws.map(|throws| folder.fold_index(&throws)),
                     }),
                     TObjElem::Mapped(MappedType {
                         key,

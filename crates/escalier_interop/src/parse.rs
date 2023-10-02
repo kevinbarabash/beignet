@@ -1,3 +1,4 @@
+use escalier_hm::infer::generalize_callable;
 use generational_arena::Index;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -527,10 +528,7 @@ fn infer_callable(
     let ret = infer_ts_type_ann(checker, ctx, type_ann)?;
     let type_params = get_type_params(checker, ctx, type_params)?;
 
-    // TODO: check signature to see if there are any free type variables that
-    // can be converted to additional type params.
-
-    Ok(TCallable {
+    let callable = TCallable {
         params,
         ret,
         type_params: if type_params.is_empty() {
@@ -538,7 +536,10 @@ fn infer_callable(
         } else {
             Some(type_params)
         },
-    })
+        throws: None,
+    };
+
+    Ok(generalize_callable(checker, &callable))
 }
 
 fn infer_ts_type_element(

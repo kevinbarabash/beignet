@@ -250,7 +250,7 @@ pub struct TCallable {
     pub params: Vec<FuncParam>,
     pub ret: Index,
     pub type_params: Option<Vec<TypeParam>>,
-    // TODO: support throws
+    pub throws: Option<Index>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -482,6 +482,7 @@ impl Checker {
                             params,
                             ret,
                             type_params,
+                            throws: _, // TODO
                         }) => {
                             let mut result = "new fn".to_string();
                             match type_params {
@@ -512,6 +513,7 @@ impl Checker {
                             params,
                             ret,
                             type_params,
+                            throws: _, // TODO
                         }) => {
                             let mut result = "fn".to_string();
                             match type_params {

@@ -56,19 +56,23 @@ pub fn walk_index<V: Visitor>(visitor: &mut V, index: &Index) {
                     params,
                     ret,
                     type_params,
+                    throws,
                 }) => {
                     walk_func_params(visitor, params);
                     visitor.visit_index(ret);
                     walk_type_params(visitor, type_params);
+                    throws.map(|throws| visitor.visit_index(&throws));
                 }
                 TObjElem::Call(TCallable {
                     params,
                     ret,
                     type_params,
+                    throws,
                 }) => {
                     walk_func_params(visitor, params);
                     visitor.visit_index(ret);
                     walk_type_params(visitor, type_params);
+                    throws.map(|throws| visitor.visit_index(&throws));
                 }
                 TObjElem::Mapped(mapped) => {
                     visitor.visit_index(&mapped.key);

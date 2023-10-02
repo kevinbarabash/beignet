@@ -949,6 +949,7 @@ impl Checker {
                                 params: func_params,
                                 ret: ret_idx,
                                 type_params,
+                                throws: None, // TODO
                             }))
                         }
                         ObjectProp::Constructor(ObjCallable {
@@ -992,6 +993,7 @@ impl Checker {
                                 params: func_params,
                                 ret: ret_idx,
                                 type_params,
+                                throws: None, // TODO
                             }))
                         }
                     }
@@ -1828,7 +1830,6 @@ pub fn generalize_func(checker: &mut Checker, func: &types::Function) -> Index {
         type_params.extend(explicit_type_params.to_owned());
     }
 
-    eprintln!("mapping = {:#?}", mapping);
     for (_, name) in mapping {
         type_params.push(types::TypeParam {
             name: name.clone(),
@@ -1841,5 +1842,52 @@ pub fn generalize_func(checker: &mut Checker, func: &types::Function) -> Index {
         checker.new_func_type(&params, ret, &None, throws)
     } else {
         checker.new_func_type(&params, ret, &Some(type_params), throws)
+    }
+}
+
+pub fn generalize_callable(checker: &mut Checker, callable: &types::TCallable) -> types::TCallable {
+    // A mapping of TypeVariables to TypeVariables
+    let mut mapping = BTreeMap::default();
+    let mut generalize = Generalize {
+        checker,
+        mapping: &mut mapping,
+    };
+
+    let params = callable
+        .params
+        .iter()
+        .map(|param| types::FuncParam {
+            t: generalize.fold_index(&param.t),
+            ..param.to_owned()
+        })
+        .collect::<Vec<_>>();
+    let ret = generalize.fold_index(&callable.ret);
+    let throws = callable.throws.map(|throws| generalize.fold_index(&throws));
+
+    let mut type_params: Vec<types::TypeParam> = vec![];
+
+    if let Some(explicit_type_params) = &callable.type_params {
+        type_params.extend(explicit_type_params.to_owned());
+    }
+
+    for (_, name) in mapping {
+        type_params.push(types::TypeParam {
+            name: name.clone(),
+            constraint: None,
+            default: None,
+        });
+    }
+
+    let type_params = if type_params.is_empty() {
+        None
+    } else {
+        Some(type_params)
+    };
+
+    types::TCallable {
+        params,
+        ret,
+        type_params,
+        throws,
     }
 }
