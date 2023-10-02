@@ -756,6 +756,7 @@ impl Checker {
     ) -> Result<Index, TypeError> {
         let idx = match &mut type_ann.kind {
             TypeAnnKind::Function(FunctionType {
+                span: _,
                 params,
                 ret,
                 type_params,
@@ -908,94 +909,12 @@ impl Checker {
                                 optional: prop.optional,
                             }));
                         }
-                        ObjectProp::Call(ObjCallable {
-                            span: _,
-                            type_params,
-                            params,
-                            ret,
-                        }) => {
-                            // TODO: dedupe with `Function` inference code above
-                            // NOTE: We clone `ctx` so that type params don't escape the signature
-                            let mut sig_ctx = ctx.clone();
-
-                            let type_params = self.infer_type_params(type_params, &mut sig_ctx)?;
-
-                            let func_params = params
-                                .iter_mut()
-                                .enumerate()
-                                .map(|(i, param)| {
-                                    let t = match &mut param.type_ann {
-                                        Some(type_ann) => {
-                                            self.infer_type_ann(type_ann, &mut sig_ctx)?
-                                        }
-                                        None => self.new_type_var(None),
-                                    };
-
-                                    Ok(types::FuncParam {
-                                        pattern: TPat::Ident(BindingIdent {
-                                            name: param.pattern.get_name(&i),
-                                            mutable: false,
-                                            span: Span { start: 0, end: 0 },
-                                        }),
-                                        t,
-                                        optional: param.optional,
-                                    })
-                                })
-                                .collect::<Result<Vec<_>, _>>()?;
-
-                            let ret_idx = self.infer_type_ann(ret.as_mut(), &mut sig_ctx)?;
-
-                            props.push(TObjElem::Call(types::Function {
-                                params: func_params,
-                                ret: ret_idx,
-                                type_params,
-                                throws: None, // TODO
-                            }))
+                        ObjectProp::Call(func_type) => {
+                            props.push(TObjElem::Call(self.infer_function_type(func_type, ctx)?))
                         }
-                        ObjectProp::Constructor(ObjCallable {
-                            span: _,
-                            type_params,
-                            params,
-                            ret,
-                        }) => {
-                            // TODO: dedupe with `Function` inference code above
-                            // NOTE: We clone `ctx` so that type params don't escape the signature
-                            let mut sig_ctx = ctx.clone();
-
-                            let type_params = self.infer_type_params(type_params, &mut sig_ctx)?;
-
-                            let func_params = params
-                                .iter_mut()
-                                .enumerate()
-                                .map(|(i, param)| {
-                                    let t = match &mut param.type_ann {
-                                        Some(type_ann) => {
-                                            self.infer_type_ann(type_ann, &mut sig_ctx)?
-                                        }
-                                        None => self.new_type_var(None),
-                                    };
-
-                                    Ok(types::FuncParam {
-                                        pattern: TPat::Ident(BindingIdent {
-                                            name: param.pattern.get_name(&i),
-                                            mutable: false,
-                                            span: Span { start: 0, end: 0 },
-                                        }),
-                                        t,
-                                        optional: param.optional,
-                                    })
-                                })
-                                .collect::<Result<Vec<_>, _>>()?;
-
-                            let ret_idx = self.infer_type_ann(ret.as_mut(), &mut sig_ctx)?;
-
-                            props.push(TObjElem::Constructor(types::Function {
-                                params: func_params,
-                                ret: ret_idx,
-                                type_params,
-                                throws: None, // TODO
-                            }))
-                        }
+                        ObjectProp::Constructor(func_type) => props.push(TObjElem::Constructor(
+                            self.infer_function_type(func_type, ctx)?,
+                        )),
                     }
                 }
                 self.new_object_type(&props)
@@ -1195,6 +1114,61 @@ impl Checker {
         type_ann.inferred_type = Some(idx);
 
         Ok(idx)
+    }
+
+    fn infer_function_type(
+        &mut self,
+        func_type: &mut FunctionType,
+        ctx: &mut Context,
+    ) -> Result<types::Function, TypeError> {
+        let FunctionType {
+            span: _,
+            type_params,
+            params,
+            ret,
+            throws,
+        } = func_type;
+
+        // TODO: dedupe with `Function` inference code above
+        // NOTE: We clone `ctx` so that type params don't escape the signature
+        let mut sig_ctx = ctx.clone();
+
+        let type_params = self.infer_type_params(type_params, &mut sig_ctx)?;
+
+        let func_params = params
+            .iter_mut()
+            .enumerate()
+            .map(|(i, param)| {
+                let t = match &mut param.type_ann {
+                    Some(type_ann) => self.infer_type_ann(type_ann, &mut sig_ctx)?,
+                    None => self.new_type_var(None),
+                };
+
+                Ok(types::FuncParam {
+                    pattern: TPat::Ident(BindingIdent {
+                        name: param.pattern.get_name(&i),
+                        mutable: false,
+                        span: Span { start: 0, end: 0 },
+                    }),
+                    t,
+                    optional: param.optional,
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let ret_idx = self.infer_type_ann(ret.as_mut(), &mut sig_ctx)?;
+
+        let throws = throws
+            .as_mut()
+            .map(|throws| self.infer_type_ann(throws, &mut sig_ctx))
+            .transpose()?;
+
+        Ok(types::Function {
+            params: func_params,
+            ret: ret_idx,
+            type_params,
+            throws,
+        })
     }
 
     pub fn infer_statement(

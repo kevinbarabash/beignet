@@ -5,6 +5,7 @@ expression: "parse(\"fn (a: number, b: number) -> number\")"
 TypeAnn {
     kind: Function(
         FunctionType {
+            span: 0..35,
             type_params: None,
             params: [
                 FuncParam {
