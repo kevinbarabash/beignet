@@ -52,7 +52,7 @@ pub fn walk_index<V: Visitor>(visitor: &mut V, index: &Index) {
         }
         TypeKind::Object(Object { elems }) => {
             elems.iter().for_each(|elem| match elem {
-                TObjElem::Constructor(TCallable {
+                TObjElem::Constructor(Function {
                     params,
                     ret,
                     type_params,
@@ -63,7 +63,7 @@ pub fn walk_index<V: Visitor>(visitor: &mut V, index: &Index) {
                     walk_type_params(visitor, type_params);
                     throws.map(|throws| visitor.visit_index(&throws));
                 }
-                TObjElem::Call(TCallable {
+                TObjElem::Call(Function {
                     params,
                     ret,
                     type_params,

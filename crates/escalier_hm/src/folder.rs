@@ -114,23 +114,23 @@ pub fn walk_index<F: Folder>(folder: &mut F, index: &Index) -> Index {
             let elems: Vec<_> = elems
                 .iter()
                 .map(|elem| match elem {
-                    TObjElem::Constructor(TCallable {
+                    TObjElem::Constructor(Function {
                         params,
                         ret,
                         type_params,
                         throws,
-                    }) => TObjElem::Constructor(TCallable {
+                    }) => TObjElem::Constructor(Function {
                         params: walk_func_params(folder, params),
                         ret: folder.fold_index(ret),
                         type_params: walk_type_params(folder, type_params),
                         throws: throws.map(|throws| folder.fold_index(&throws)),
                     }),
-                    TObjElem::Call(TCallable {
+                    TObjElem::Call(Function {
                         params,
                         ret,
                         type_params,
                         throws,
-                    }) => TObjElem::Call(TCallable {
+                    }) => TObjElem::Call(Function {
                         params: walk_func_params(folder, params),
                         ret: folder.fold_index(ret),
                         type_params: walk_type_params(folder, type_params),

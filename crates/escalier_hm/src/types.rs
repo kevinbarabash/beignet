@@ -74,7 +74,7 @@ impl fmt::Display for Primitive {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Function {
     pub params: Vec<FuncParam>,
     pub ret: Index,
@@ -245,13 +245,13 @@ impl TProp {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TCallable {
-    pub params: Vec<FuncParam>,
-    pub ret: Index,
-    pub type_params: Option<Vec<TypeParam>>,
-    pub throws: Option<Index>,
-}
+// #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+// pub struct TCallable {
+//     pub params: Vec<FuncParam>,
+//     pub ret: Index,
+//     pub type_params: Option<Vec<TypeParam>>,
+//     pub throws: Option<Index>,
+// }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum MappedModifier {
@@ -274,10 +274,10 @@ pub struct MappedType {
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TObjElem {
-    Call(TCallable),
+    Call(Function),
     // NOTE: type_params on constructors should be a subset of type_params on
     // the object scheme in which they live
-    Constructor(TCallable),
+    Constructor(Function),
     // Index(TIndex),
     Prop(TProp),
     Mapped(MappedType),
@@ -478,7 +478,7 @@ impl Checker {
                 let mut fields = vec![];
                 for prop in &object.elems {
                     match prop {
-                        TObjElem::Constructor(TCallable {
+                        TObjElem::Constructor(Function {
                             params,
                             ret,
                             type_params,
@@ -509,7 +509,7 @@ impl Checker {
                             ));
                             fields.push(result);
                         }
-                        TObjElem::Call(TCallable {
+                        TObjElem::Call(Function {
                             params,
                             ret,
                             type_params,

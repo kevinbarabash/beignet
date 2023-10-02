@@ -945,7 +945,7 @@ impl Checker {
 
                             let ret_idx = self.infer_type_ann(ret.as_mut(), &mut sig_ctx)?;
 
-                            props.push(TObjElem::Call(TCallable {
+                            props.push(TObjElem::Call(types::Function {
                                 params: func_params,
                                 ret: ret_idx,
                                 type_params,
@@ -989,7 +989,7 @@ impl Checker {
 
                             let ret_idx = self.infer_type_ann(ret.as_mut(), &mut sig_ctx)?;
 
-                            props.push(TObjElem::Constructor(TCallable {
+                            props.push(TObjElem::Constructor(types::Function {
                                 params: func_params,
                                 ret: ret_idx,
                                 type_params,
@@ -1456,7 +1456,8 @@ impl Checker {
             let pruned_index = self.prune(binding.index);
             if let TypeKind::Function(func) = &self.arena[pruned_index].kind.clone() {
                 let func = generalize_func(self, func);
-                self.bind(ctx, binding.index, func)?;
+                let gen_func_index = self.arena.insert(Type::from(TypeKind::Function(func)));
+                self.bind(ctx, binding.index, gen_func_index)?;
             }
         }
 
@@ -1544,7 +1545,9 @@ impl Checker {
                         let pruned_index = self.prune(binding.index);
                         if let TypeKind::Function(func) = &self.arena[pruned_index].kind.clone() {
                             let func = generalize_func(self, func);
-                            self.bind(ctx, binding.index, func)?;
+                            let gen_func_index =
+                                self.arena.insert(Type::from(TypeKind::Function(func)));
+                            self.bind(ctx, binding.index, gen_func_index)?;
                         }
                     }
                 }
@@ -1805,7 +1808,7 @@ impl<'a, 'b> Folder for Generalize<'a, 'b> {
     }
 }
 
-pub fn generalize_func(checker: &mut Checker, func: &types::Function) -> Index {
+pub fn generalize_func(checker: &mut Checker, func: &types::Function) -> types::Function {
     // A mapping of TypeVariables to TypeVariables
     let mut mapping = BTreeMap::default();
     let mut generalize = Generalize {
@@ -1838,53 +1841,13 @@ pub fn generalize_func(checker: &mut Checker, func: &types::Function) -> Index {
         });
     }
 
-    if type_params.is_empty() {
-        checker.new_func_type(&params, ret, &None, throws)
-    } else {
-        checker.new_func_type(&params, ret, &Some(type_params), throws)
-    }
-}
-
-pub fn generalize_callable(checker: &mut Checker, callable: &types::TCallable) -> types::TCallable {
-    // A mapping of TypeVariables to TypeVariables
-    let mut mapping = BTreeMap::default();
-    let mut generalize = Generalize {
-        checker,
-        mapping: &mut mapping,
-    };
-
-    let params = callable
-        .params
-        .iter()
-        .map(|param| types::FuncParam {
-            t: generalize.fold_index(&param.t),
-            ..param.to_owned()
-        })
-        .collect::<Vec<_>>();
-    let ret = generalize.fold_index(&callable.ret);
-    let throws = callable.throws.map(|throws| generalize.fold_index(&throws));
-
-    let mut type_params: Vec<types::TypeParam> = vec![];
-
-    if let Some(explicit_type_params) = &callable.type_params {
-        type_params.extend(explicit_type_params.to_owned());
-    }
-
-    for (_, name) in mapping {
-        type_params.push(types::TypeParam {
-            name: name.clone(),
-            constraint: None,
-            default: None,
-        });
-    }
-
     let type_params = if type_params.is_empty() {
         None
     } else {
         Some(type_params)
     };
 
-    types::TCallable {
+    types::Function {
         params,
         ret,
         type_params,
