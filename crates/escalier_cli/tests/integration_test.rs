@@ -166,10 +166,11 @@ fn infer_i_combinator() {
 fn infer_k_combinator_not_curried() -> Result<(), TypeError> {
     let (script, (ctx, checker)) = infer_script("let K = fn (x, y) => x");
     let result = checker.print_type(&ctx.values.get("K").unwrap().index);
-    insta::assert_snapshot!(result, @"<A, B>(x: A, y: B) -> A");
+    insta::assert_snapshot!(result, @"<B, A>(x: A, y: B) -> A");
 
     let result = codegen_d_ts(&script, &ctx, &checker)?;
-    insta::assert_snapshot!(result, @"export declare const K: <A, B>(x: A, y: B) => A;\n");
+    insta::assert_snapshot!(result, @"export declare const K: <B, A>(x: A, y: B) => A;
+");
 
     Ok(())
 }
@@ -178,14 +179,14 @@ fn infer_k_combinator_not_curried() -> Result<(), TypeError> {
 fn infer_s_combinator_not_curried() {
     let (_, (ctx, checker)) = infer_script("let S = fn (f, g, x) => f(x, g(x))");
     let result = checker.print_type(&ctx.values.get("S").unwrap().index);
-    insta::assert_snapshot!(result, @"<A, C, B>(f: (arg0: A, arg1: B) -> C, g: (arg0: A) -> B, x: A) -> C");
+    insta::assert_snapshot!(result, @"<A, B, C>(f: (arg0: A, arg1: B) -> C, g: (arg0: A) -> B, x: A) -> C");
 }
 
 #[test]
 fn infer_k_combinator_curried() {
     let (_, (ctx, checker)) = infer_script("let K = fn (x) => fn (y) => x");
     let result = checker.print_type(&ctx.values.get("K").unwrap().index);
-    insta::assert_snapshot!(result, @"<A, B>(x: A) -> (y: B) -> A");
+    insta::assert_snapshot!(result, @"<B, A>(x: A) -> (y: B) -> A");
 }
 
 #[test]
@@ -194,7 +195,7 @@ fn infer_s_combinator_curried() {
     let result = checker.print_type(&ctx.values.get("S").unwrap().index);
     insta::assert_snapshot!(
         result,
-        @"<A, C, B>(f: (arg0: A) -> (arg0: B) -> C) -> (g: (arg0: A) -> B) -> (x: A) -> C"
+        @"<A, B, C>(f: (arg0: A) -> (arg0: B) -> C) -> (g: (arg0: A) -> B) -> (x: A) -> C"
     );
 }
 
@@ -207,9 +208,9 @@ fn infer_skk() {
     "#;
     let (_, (ctx, checker)) = infer_script(src);
     let result = checker.print_type(&ctx.values.get("S").unwrap().index);
-    insta::assert_snapshot!(result, @"<A, C, B>(f: (arg0: A) -> (arg0: B) -> C) -> (g: (arg0: A) -> B) -> (x: A) -> C");
+    insta::assert_snapshot!(result, @"<A, B, C>(f: (arg0: A) -> (arg0: B) -> C) -> (g: (arg0: A) -> B) -> (x: A) -> C");
     let result = checker.print_type(&ctx.values.get("K").unwrap().index);
-    insta::assert_snapshot!(result, @"<A, B>(x: A) -> (y: B) -> A");
+    insta::assert_snapshot!(result, @"<B, A>(x: A) -> (y: B) -> A");
     let result = checker.print_type(&ctx.values.get("I").unwrap().index);
     insta::assert_snapshot!(result, @"<A>(x: A) -> A");
 }
