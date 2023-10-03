@@ -52,6 +52,7 @@ impl Checker {
                     let param_types: Vec<_> = call.params.iter().map(|param| param.t).collect();
                     self.occurs_in(v, &param_types) || self.occurs_in_type(v, call.ret)
                 }
+                TObjElem::Method(_) => todo!(),
                 TObjElem::Mapped(mapped) => {
                     self.occurs_in_type(v, mapped.key)
                         || self.occurs_in_type(v, mapped.value)
@@ -329,6 +330,16 @@ impl Checker {
                                 _ => todo!(),
                             }
                         }
+                        TObjElem::Method(TMethod { name, .. }) => match name {
+                            TPropKey::StringKey(name) => {
+                                string_keys
+                                    .push(self.new_lit_type(&Literal::String(name.to_owned())));
+                            }
+                            TPropKey::NumberKey(name) => {
+                                number_keys
+                                    .push(self.new_lit_type(&Literal::Number(name.to_owned())));
+                            }
+                        },
                         TObjElem::Prop(TProp { name, .. }) => match name {
                             TPropKey::StringKey(name) => {
                                 string_keys
@@ -661,7 +672,7 @@ impl Checker {
                                     name,
                                     modifier: None,
                                     optional,
-                                    readonly: false, // TODO
+                                    readonly: false,
                                     t: self.expand_type(ctx, value)?,
                                 }));
                             }
@@ -842,6 +853,7 @@ impl Checker {
                                 }
                                 maybe_mapped = Some(mapped);
                             }
+                            TObjElem::Method(_) => todo!(),
                             TObjElem::Prop(prop) => {
                                 match &prop.name {
                                     TPropKey::StringKey(_) if primitive == &Primitive::String => (),
@@ -900,6 +912,50 @@ impl Checker {
                                     });
                                 }
                                 maybe_mapped = Some(mapped);
+                            }
+                            TObjElem::Method(method) => {
+                                let key = match &method.name {
+                                    TPropKey::StringKey(key) => key,
+                                    TPropKey::NumberKey(key) => key,
+                                };
+                                if key == name {
+                                    let TMethod {
+                                        name: _,
+                                        params,
+                                        ret,
+                                        type_params,
+                                        throws,
+                                        mutates, // TODO: check if the object is a mutable reference
+                                    } = method;
+
+                                    // if let TypeKind::Function(Function { params, .. }) =
+                                    //     &self.arena[prop.t].kind
+                                    // {
+                                    //     if let Some(param) = params.first() {
+                                    //         if param.is_mut_self() && !is_mut {
+                                    //             return Err(TypeError {
+                                    //                 message: format!(
+                                    //                     "Cannot call mutating method {} on a non-mutable object",
+                                    //                     name,
+                                    //                 ),
+                                    //             });
+                                    //         }
+                                    //     }
+                                    // }
+
+                                    if *mutates && !is_mut {
+                                        return Err(TypeError {
+                                            message: format!(
+                                                "Cannot call mutating method {} on a non-mutable object",
+                                                name,
+                                            ),
+                                        });
+                                    }
+
+                                    let func_t =
+                                        self.new_func_type(params, *ret, type_params, *throws);
+                                    return Ok(func_t);
+                                }
                             }
                             TObjElem::Prop(prop) => {
                                 let key = match &prop.name {

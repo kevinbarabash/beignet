@@ -20,7 +20,7 @@ pub struct Class {
 pub struct Method {
     pub span: Span,
     pub name: PropName,
-    pub is_public: bool,
+    pub is_public: bool, // TODO: change to is_private
     pub is_async: bool,
     pub is_gen: bool,
     pub is_mutating: bool,

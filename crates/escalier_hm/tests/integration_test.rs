@@ -77,9 +77,9 @@ fn test_env() -> (Checker, Context) {
         types::TObjElem::Prop(types::TProp {
             name: types::TPropKey::StringKey("push".to_string()),
             modifier: None,
-            t: push_t,
             optional: false,
             readonly: false,
+            t: push_t,
         }),
         // .length: number;
         types::TObjElem::Prop(types::TProp {
@@ -604,7 +604,7 @@ fn test_composition() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(
         checker.print_type(&binding.index),
-        r#"<A, C, B>(f: (arg0: A) -> B) -> (g: (arg0: B) -> C) -> (arg: A) -> C"#
+        r#"<A, B, C>(f: (arg0: A) -> B) -> (g: (arg0: B) -> C) -> (arg: A) -> C"#
     );
     assert_no_errors(&checker)
 }
@@ -625,12 +625,12 @@ fn test_skk() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("S").unwrap();
     assert_eq!(
         checker.print_type(&binding.index),
-        r#"<A, C, B>(f: (arg0: A) -> (arg0: B) -> C) -> (g: (arg0: A) -> B) -> (x: A) -> C"#
+        r#"<A, B, C>(f: (arg0: A) -> (arg0: B) -> C) -> (g: (arg0: A) -> B) -> (x: A) -> C"#
     );
     let binding = my_ctx.values.get("K").unwrap();
     assert_eq!(
         checker.print_type(&binding.index),
-        r#"<A, B>(x: A) -> (y: B) -> A"#
+        r#"<B, A>(x: A) -> (y: B) -> A"#
     );
     let binding = my_ctx.values.get("I").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"<A>(x: A) -> A"#);
@@ -1523,7 +1523,7 @@ fn test_program_with_generic_func_multiple_type_params() -> Result<(), TypeError
     let binding = my_ctx.values.get("fst").unwrap();
     assert_eq!(
         checker.print_type(&binding.index),
-        r#"<A, B>(x: A, y: B) -> A"#
+        r#"<B, A>(x: A, y: B) -> A"#
     );
 
     let binding = my_ctx.values.get("snd").unwrap();
@@ -5358,7 +5358,7 @@ fn test_generalization_inside_function() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("bar").unwrap();
     assert_eq!(
         checker.print_type(&binding.index),
-        r#"[5, "hello", (x: t37) -> t37]"#
+        r#"[5, "hello", (x: t39) -> t39]"#
     );
 
     assert_no_errors(&checker)

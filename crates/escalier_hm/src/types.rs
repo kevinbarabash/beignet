@@ -175,14 +175,15 @@ pub struct Call {
     pub ret: Index,
 }
 
-// #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-// pub struct TMethod {
-//     pub name: TPropKey,
-//     pub params: Vec<FuncParam>,
-//     pub ret: Index,
-//     pub type_params: Option<Vec<TypeParam>>,
-//     pub is_mutating: bool,
-// }
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TMethod {
+    pub name: TPropKey,
+    pub params: Vec<FuncParam>,
+    pub ret: Index,
+    pub type_params: Option<Vec<TypeParam>>,
+    pub throws: Option<Index>,
+    pub mutates: bool,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TIndexKey {
@@ -278,9 +279,9 @@ pub enum TObjElem {
     // NOTE: type_params on constructors should be a subset of type_params on
     // the object scheme in which they live
     Constructor(Function),
-    // Index(TIndex),
-    Prop(TProp),
+    Method(TMethod),
     Mapped(MappedType),
+    Prop(TProp),
     // RestSpread - we can use this instead of converting {a, ...x} to {a} & tvar
 }
 
@@ -556,6 +557,54 @@ impl Checker {
 
                             let result = format!("[{key}]: {value} for {target} in {source}",);
                             fields.push(result);
+                        }
+                        TObjElem::Method(TMethod {
+                            name,
+                            type_params,
+                            params,
+                            ret,
+                            throws,
+                            mutates,
+                        }) => {
+                            let name = match name {
+                                TPropKey::StringKey(s) => s,
+                                TPropKey::NumberKey(n) => n,
+                            };
+                            let type_params = match type_params {
+                                Some(type_params) if !type_params.is_empty() => {
+                                    let type_params = type_params
+                                        .iter()
+                                        .map(|tp| match &tp.constraint {
+                                            Some(constraint) => {
+                                                format!(
+                                                    "{}:{}",
+                                                    tp.name.clone(),
+                                                    self.print_type(constraint)
+                                                )
+                                            }
+                                            None => tp.name.clone(),
+                                        })
+                                        .collect::<Vec<_>>();
+                                    format!("<{}>", type_params.join(", "))
+                                }
+                                _ => "".to_string(),
+                            };
+
+                            let throws = match throws {
+                                Some(throws) => format!(" throws {}", self.print_type(throws)),
+                                None => "".to_string(),
+                            };
+
+                            let mut params = self.print_params(params);
+                            match mutates {
+                                true => params.insert(0, "mut self".to_string()),
+                                false => params.insert(0, "self".to_string()),
+                            }
+                            let params = params.join(", ");
+
+                            let ret = self.print_type(ret);
+                            let field = format!("{name}{type_params}({params}) -> {ret}{throws}",);
+                            fields.push(field);
                         }
                         TObjElem::Prop(TProp {
                             name,

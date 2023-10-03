@@ -119,6 +119,23 @@ pub fn walk_index<F: Folder>(folder: &mut F, index: &Index) -> Index {
                             extends: new_extends,
                         })
                     }
+                    TObjElem::Method(TMethod {
+                        name,
+                        params,
+                        ret,
+                        type_params,
+                        throws,
+                        mutates,
+                    }) => TObjElem::Method(TMethod {
+                        name: name.to_owned(),
+                        // replace with `fucntion: Fucntion` - START>
+                        params: walk_func_params(folder, params),
+                        ret: folder.fold_index(ret),
+                        type_params: walk_type_params(folder, type_params),
+                        throws: throws.map(|throws| folder.fold_index(&throws)),
+                        // <END - replace with `fucntion: Fucntion`
+                        mutates: *mutates,
+                    }),
                     TObjElem::Prop(prop) => TObjElem::Prop(TProp {
                         t: folder.fold_index(&prop.t),
                         ..prop.clone()

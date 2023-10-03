@@ -166,7 +166,7 @@ pub fn infer_ts_type_ann(
             let elems: Vec<TObjElem> = members
                 .iter()
                 .filter_map(|elem| {
-                    let prop = infer_ts_type_element(checker, ctx, elem, false);
+                    let prop = infer_ts_type_element(checker, ctx, elem);
 
                     match prop {
                         Ok(prop) => Some(prop),
@@ -397,27 +397,27 @@ fn infer_method_sig(
     checker: &'_ mut Checker,
     ctx: &mut Context,
     sig: &TsMethodSignature,
-    is_static: bool,
+    // is_static: bool,
 ) -> Result<TObjElem, String> {
     if sig.computed {
         panic!("unexpected computed property in TypElement")
     }
 
-    let mut params = infer_fn_params(checker, ctx, &sig.params)?;
-    if !is_static {
-        params.insert(
-            0,
-            FuncParam {
-                pattern: TPat::Ident(identifier::BindingIdent {
-                    span: Span { start: 0, end: 0 },
-                    name: "self".to_string(),
-                    mutable: false,
-                }),
-                t: checker.new_type_ref("Self", &[]), // TODO: add `Self` type
-                optional: false,
-            },
-        );
-    }
+    let params = infer_fn_params(checker, ctx, &sig.params)?;
+    // if !is_static {
+    //     params.insert(
+    //         0,
+    //         FuncParam {
+    //             pattern: TPat::Ident(identifier::BindingIdent {
+    //                 span: Span { start: 0, end: 0 },
+    //                 name: "self".to_string(),
+    //                 mutable: false,
+    //             }),
+    //             t: checker.new_type_ref("Self", &[]), // TODO: add `Self` type
+    //             optional: false,
+    //         },
+    //     );
+    // }
     let ret = match &sig.type_ann {
         Some(type_ann) => infer_ts_type_ann(checker, ctx, &type_ann.type_ann),
         None => Err(String::from("method has no return type")),
@@ -458,23 +458,35 @@ fn infer_method_sig(
 
     let name = get_key_name(sig.key.as_ref())?;
 
-    let t = checker.from_type_kind(TypeKind::Function(Function {
+    // let t = checker.from_type_kind(TypeKind::Function(Function {
+    //     type_params: if type_params.is_empty() {
+    //         None
+    //     } else {
+    //         Some(type_params)
+    //     },
+    //     params,
+    //     ret,
+    //     throws: None,
+    // }));
+
+    // let elem = types::TObjElem::Prop(TProp {
+    //     name: TPropKey::StringKey(name),
+    //     modifier: None,
+    //     optional: false,
+    //     readonly: false,
+    //     t,
+    // });
+    let elem = types::TObjElem::Method(types::TMethod {
+        name: TPropKey::StringKey(name),
+        params,
+        ret,
         type_params: if type_params.is_empty() {
             None
         } else {
             Some(type_params)
         },
-        params,
-        ret,
-        throws: None,
-    }));
-
-    let elem = types::TObjElem::Prop(TProp {
-        name: TPropKey::StringKey(name),
-        modifier: None,
-        optional: false,
-        readonly: false,
-        t,
+        throws: None, // TODO - difficult to infer
+        mutates: false,
     });
 
     Ok(elem)
@@ -546,7 +558,6 @@ fn infer_ts_type_element(
     checker: &'_ mut Checker,
     ctx: &mut Context,
     elem: &TsTypeElement,
-    is_static: bool,
 ) -> Result<TObjElem, String> {
     match elem {
         TsTypeElement::TsCallSignatureDecl(decl) => match &decl.type_ann {
@@ -592,7 +603,7 @@ fn infer_ts_type_element(
             let key = get_key_name(sig.key.as_ref())?;
             Err(format!("TsSetterSignature: {key}"))
         }
-        TsTypeElement::TsMethodSignature(sig) => infer_method_sig(checker, ctx, sig, is_static),
+        TsTypeElement::TsMethodSignature(sig) => infer_method_sig(checker, ctx, sig),
         TsTypeElement::TsIndexSignature(sig) => match &sig.type_ann {
             Some(type_ann) => {
                 let t = infer_ts_type_ann(checker, ctx, &type_ann.type_ann)?;
@@ -667,7 +678,6 @@ fn infer_interface_decl(
     checker: &'_ mut Checker,
     ctx: &mut Context,
     decl: &TsInterfaceDecl,
-    is_constructor: bool,
 ) -> Result<Scheme, String> {
     let mut sig_ctx = ctx.clone();
 
@@ -694,7 +704,7 @@ fn infer_interface_decl(
         .body
         .iter()
         .filter_map(|elem| {
-            let elem = infer_ts_type_element(checker, &mut sig_ctx, elem, is_constructor);
+            let elem = infer_ts_type_element(checker, &mut sig_ctx, elem);
 
             match elem {
                 Ok(elem) => Some(elem),
@@ -898,13 +908,7 @@ pub fn parse_dts(d_ts_source: &str) -> Result<(Checker, Context), Error> {
         let schemes = decls
             .iter()
             .filter_map(|decl| {
-                let is_static = decl.id.sym.to_string().ends_with("Constructor");
-                match infer_interface_decl(
-                    &mut collector.checker,
-                    &mut collector.ctx,
-                    decl,
-                    is_static,
-                ) {
+                match infer_interface_decl(&mut collector.checker, &mut collector.ctx, decl) {
                     Ok(scheme) => Some(scheme),
                     Err(_) => {
                         eprintln!("couldn't infer {name}");

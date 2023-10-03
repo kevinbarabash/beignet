@@ -398,6 +398,7 @@ impl Checker {
                         TObjElem::Call(_) => None,
                         TObjElem::Constructor(_) => None,
                         TObjElem::Mapped(_) => None,
+                        TObjElem::Method(_) => None,
                         TObjElem::Prop(prop) => {
                             // TODO: handle getters/setters properly
                             Some((prop.name.to_string(), prop))
@@ -412,6 +413,7 @@ impl Checker {
                         TObjElem::Call(_) => None,
                         TObjElem::Constructor(_) => None,
                         TObjElem::Mapped(_) => None,
+                        TObjElem::Method(_) => None,
                         TObjElem::Prop(prop) => {
                             // TODO: handle getters/setters properly
                             Some((prop.name.to_string(), prop))
@@ -1147,6 +1149,7 @@ pub fn simplify_intersection(checker: &mut Checker, in_types: &[Index]) -> Index
                 TObjElem::Call(_) => todo!(),
                 TObjElem::Constructor(_) => todo!(),
                 TObjElem::Mapped(_) => todo!(),
+                TObjElem::Method(_) => todo!(),
                 TObjElem::Prop(prop) => {
                     let key = match &prop.name {
                         TPropKey::StringKey(key) => key.to_owned(),
@@ -1186,6 +1189,7 @@ pub fn simplify_intersection(checker: &mut Checker, in_types: &[Index]) -> Index
         TObjElem::Call(_) => todo!(),
         TObjElem::Constructor(_) => todo!(),
         TObjElem::Mapped(_) => todo!(),
+        TObjElem::Method(_) => todo!(),
         TObjElem::Prop(prop) => prop.name.clone(),
     }); // ensure a stable order
 

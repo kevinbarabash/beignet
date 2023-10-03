@@ -649,6 +649,9 @@ fn build_obj_type(obj: &types::Object, ctx: &Context, checker: &Checker) -> TsTy
 
                 members.push(type_elem);
             }
+            types::TObjElem::Method(method) => {
+                todo!();
+            }
             types::TObjElem::Prop(prop) => {
                 let key = match &prop.name {
                     types::TPropKey::StringKey(key) => key.to_owned(),
@@ -770,8 +773,11 @@ pub fn immutable_obj_type(obj: &types::Object) -> Option<types::Object> {
         .map(|elem| match elem {
             types::TObjElem::Call(_) => elem.to_owned(),
             types::TObjElem::Constructor(_) => elem.to_owned(),
+            types::TObjElem::Method(_) => {
+                // TODO: Remove mutating methods.
+                elem.to_owned()
+            }
             types::TObjElem::Mapped(_) => elem.to_owned(),
-            // TODO: Remove mutating methods.
             types::TObjElem::Prop(prop) => {
                 if !prop.readonly {
                     changed = true;
