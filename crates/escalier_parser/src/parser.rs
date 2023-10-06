@@ -301,6 +301,10 @@ impl<'a> Parser<'a> {
                 // 'fn' is special because it's used to introduce a callable
                 // signature.
                 "fn" => TokenKind::Fn,
+                // 'get' and 'set' are special because they introduce getters
+                // and setters respectively.
+                "get" => TokenKind::Get,
+                "set" => TokenKind::Set,
                 // 'mut' is special because it can be used to modify bindings
                 // introduced by patterns
                 "mut" => TokenKind::Mut,

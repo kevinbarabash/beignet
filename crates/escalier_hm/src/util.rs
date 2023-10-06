@@ -52,7 +52,18 @@ impl Checker {
                     let param_types: Vec<_> = call.params.iter().map(|param| param.t).collect();
                     self.occurs_in(v, &param_types) || self.occurs_in_type(v, call.ret)
                 }
-                TObjElem::Method(_) => todo!(),
+                TObjElem::Method(TMethod {
+                    name: _,
+                    params,
+                    ret,
+                    type_params: _, // TODO
+                    throws: _,      // TODO
+                    mutates: _,
+                }) => {
+                    // TODO: check constraints and default on type_params
+                    let param_types: Vec<_> = params.iter().map(|param| param.t).collect();
+                    self.occurs_in(v, &param_types) || self.occurs_in_type(v, *ret)
+                }
                 TObjElem::Mapped(mapped) => {
                     self.occurs_in_type(v, mapped.key)
                         || self.occurs_in_type(v, mapped.value)

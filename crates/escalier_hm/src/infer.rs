@@ -840,6 +840,60 @@ impl Checker {
                                 extends,
                             }));
                         }
+                        ObjectProp::Method(method) => {
+                            let params = method
+                                .params
+                                .iter_mut()
+                                .map(|param| {
+                                    let t =
+                                        self.infer_type_ann(&mut param.type_ann, &mut obj_ctx)?;
+                                    Ok(types::FuncParam {
+                                        pattern: pattern_to_tpat(&param.pattern, true),
+                                        t,
+                                        optional: param.optional,
+                                    })
+                                })
+                                .collect::<Result<Vec<_>, _>>()?;
+
+                            let type_params =
+                                self.infer_type_params(&mut method.type_params, &mut obj_ctx)?;
+
+                            let ret = self.infer_type_ann(&mut method.ret, &mut obj_ctx)?;
+
+                            let throws = match &mut method.throws {
+                                Some(throws) => Some(self.infer_type_ann(throws, &mut obj_ctx)?),
+                                None => None,
+                            };
+
+                            props.push(types::TObjElem::Method(types::TMethod {
+                                name: TPropKey::StringKey(method.name.to_owned()),
+                                params,
+                                ret,
+                                throws,
+                                type_params,
+                                mutates: method.mutates,
+                            }));
+                        }
+                        ObjectProp::Getter(getter) => {
+                            // TODO: replace this with an actually getter type struct
+                            props.push(types::TObjElem::Prop(types::TProp {
+                                name: TPropKey::StringKey(getter.name.to_owned()),
+                                modifier: Some(TPropModifier::Getter),
+                                readonly: false,
+                                optional: false,
+                                t: self.infer_type_ann(&mut getter.ret, &mut obj_ctx)?,
+                            }));
+                        }
+                        ObjectProp::Setter(setter) => {
+                            // TODO: replace this with an actually setter type struct
+                            props.push(types::TObjElem::Prop(types::TProp {
+                                name: TPropKey::StringKey(setter.name.to_owned()),
+                                modifier: Some(TPropModifier::Setter),
+                                readonly: false,
+                                optional: false,
+                                t: self.infer_type_ann(&mut setter.param.type_ann, &mut obj_ctx)?,
+                            }));
+                        }
                         ObjectProp::Prop(prop) => {
                             let modifier = prop.modifier.as_ref().map(|modifier| match modifier {
                                 PropModifier::Getter => TPropModifier::Getter,
@@ -1081,19 +1135,7 @@ impl Checker {
         let func_params = params
             .iter_mut()
             .map(|param| {
-                let t = match &mut param.type_ann {
-                    Some(type_ann) => self.infer_type_ann(type_ann, &mut sig_ctx)?,
-                    None => {
-                        match &param.pattern.kind {
-                            // TODO: add a check that `self` is only allowed
-                            // as the first param in a method signature.
-                            PatternKind::Ident(ident) if ident.name == "self" => {
-                                self.new_type_ref("Self", &[])
-                            }
-                            _ => self.new_type_var(None),
-                        }
-                    }
-                };
+                let t = self.infer_type_ann(&mut param.type_ann, &mut sig_ctx)?;
 
                 Ok(types::FuncParam {
                     pattern: pattern_to_tpat(&param.pattern, true),

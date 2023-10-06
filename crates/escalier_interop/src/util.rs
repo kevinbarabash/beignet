@@ -149,16 +149,14 @@ mod tests {
         parser.parse_script()
     }
 
-    // TODO: parse methods in object types
     #[test]
-    #[ignore]
     fn if_obj_is_not_mutating_all_methods_are_not_mutating() {
         let src = r#"
         type A = {
-            foo: fn (self) -> boolean,
+            fn foo(self) -> boolean,
         }
         type B = {
-            bar: fn (self) -> boolean,
+            fn bar(self) -> boolean,
         }
         "#;
         let mut checker = Checker::default();
@@ -173,7 +171,7 @@ mod tests {
 
         assert_eq!(
             checker.print_scheme(&result),
-            "{bar: (mut self: Self) -> boolean, foo: (self: Self) -> boolean}"
+            "{bar(mut self) -> boolean, foo(self) -> boolean}"
         );
     }
 

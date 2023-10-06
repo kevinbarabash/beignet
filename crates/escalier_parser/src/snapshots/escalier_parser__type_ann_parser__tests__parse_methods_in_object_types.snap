@@ -1,0 +1,118 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: result
+---
+TypeAnn {
+    kind: Object(
+        [
+            Method(
+                MethodType {
+                    span: 13..64,
+                    name: "foo",
+                    type_params: None,
+                    params: [
+                        TypeAnnFuncParam {
+                            pattern: Pattern {
+                                kind: Ident(
+                                    BindingIdent {
+                                        name: "a",
+                                        span: 44..45,
+                                        mutable: false,
+                                    },
+                                ),
+                                span: 44..45,
+                                inferred_type: None,
+                            },
+                            type_ann: TypeAnn {
+                                kind: Number,
+                                span: 47..53,
+                                inferred_type: None,
+                            },
+                            optional: false,
+                        },
+                    ],
+                    ret: TypeAnn {
+                        kind: String,
+                        span: 58..64,
+                        inferred_type: None,
+                    },
+                    throws: None,
+                    mutates: false,
+                },
+            ),
+            Method(
+                MethodType {
+                    span: 13..119,
+                    name: "bar",
+                    type_params: None,
+                    params: [
+                        TypeAnnFuncParam {
+                            pattern: Pattern {
+                                kind: Ident(
+                                    BindingIdent {
+                                        name: "a",
+                                        span: 99..100,
+                                        mutable: false,
+                                    },
+                                ),
+                                span: 99..100,
+                                inferred_type: None,
+                            },
+                            type_ann: TypeAnn {
+                                kind: Number,
+                                span: 102..108,
+                                inferred_type: None,
+                            },
+                            optional: false,
+                        },
+                    ],
+                    ret: TypeAnn {
+                        kind: String,
+                        span: 113..119,
+                        inferred_type: None,
+                    },
+                    throws: None,
+                    mutates: true,
+                },
+            ),
+            Getter(
+                GetterType {
+                    span: 13..14,
+                    name: "baz",
+                    ret: TypeAnn {
+                        kind: String,
+                        span: 154..160,
+                        inferred_type: None,
+                    },
+                },
+            ),
+            Setter(
+                SetterType {
+                    span: 13..14,
+                    name: "baz",
+                    param: TypeAnnFuncParam {
+                        pattern: Pattern {
+                            kind: Ident(
+                                BindingIdent {
+                                    name: "value",
+                                    span: 196..201,
+                                    mutable: false,
+                                },
+                            ),
+                            span: 196..201,
+                            inferred_type: None,
+                        },
+                        type_ann: TypeAnn {
+                            kind: String,
+                            span: 203..209,
+                            inferred_type: None,
+                        },
+                        optional: false,
+                    },
+                },
+            ),
+        ],
+    ),
+    span: 13..238,
+    inferred_type: None,
+}

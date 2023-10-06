@@ -8,7 +8,7 @@ TypeAnn {
             span: 0..35,
             type_params: None,
             params: [
-                FuncParam {
+                TypeAnnFuncParam {
                     pattern: Pattern {
                         kind: Ident(
                             BindingIdent {
@@ -20,16 +20,14 @@ TypeAnn {
                         span: 4..5,
                         inferred_type: None,
                     },
-                    type_ann: Some(
-                        TypeAnn {
-                            kind: Number,
-                            span: 7..13,
-                            inferred_type: None,
-                        },
-                    ),
+                    type_ann: TypeAnn {
+                        kind: Number,
+                        span: 7..13,
+                        inferred_type: None,
+                    },
                     optional: false,
                 },
-                FuncParam {
+                TypeAnnFuncParam {
                     pattern: Pattern {
                         kind: Ident(
                             BindingIdent {
@@ -41,13 +39,11 @@ TypeAnn {
                         span: 15..16,
                         inferred_type: None,
                     },
-                    type_ann: Some(
-                        TypeAnn {
-                            kind: Number,
-                            span: 18..24,
-                            inferred_type: None,
-                        },
-                    ),
+                    type_ann: TypeAnn {
+                        kind: Number,
+                        span: 18..24,
+                        inferred_type: None,
+                    },
                     optional: false,
                 },
             ],

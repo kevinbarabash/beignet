@@ -1,17 +1,53 @@
 use generational_arena::Index;
 
 use crate::expr::BinaryOp;
-use crate::func_param::FuncParam;
+// use crate::func_param::FuncParam;
 use crate::identifier::Ident;
+use crate::pattern::Pattern;
 use crate::span::*;
 use crate::type_param::TypeParam;
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct TypeAnnFuncParam {
+    pub pattern: Pattern,
+    pub type_ann: TypeAnn,
+    pub optional: bool,
+}
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ObjectProp {
     Call(FunctionType),
     Constructor(FunctionType),
-    Prop(Prop),
+    Method(MethodType),
+    Getter(GetterType),
+    Setter(SetterType),
     Mapped(Mapped),
+    Prop(Prop),
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct MethodType {
+    pub span: Span,
+    pub name: String,
+    pub type_params: Option<Vec<TypeParam>>,
+    pub params: Vec<TypeAnnFuncParam>,
+    pub ret: Box<TypeAnn>,
+    pub throws: Option<Box<TypeAnn>>,
+    pub mutates: bool,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct GetterType {
+    pub span: Span,
+    pub name: String,
+    pub ret: Box<TypeAnn>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct SetterType {
+    pub span: Span,
+    pub name: String,
+    pub param: Box<TypeAnnFuncParam>,
 }
 
 // TODO: dedupe with TPropModifier
@@ -55,7 +91,7 @@ pub struct Mapped {
 pub struct FunctionType {
     pub span: Span,
     pub type_params: Option<Vec<TypeParam>>,
-    pub params: Vec<FuncParam>,
+    pub params: Vec<TypeAnnFuncParam>,
     pub ret: Box<TypeAnn>,
     pub throws: Option<Box<TypeAnn>>,
 }

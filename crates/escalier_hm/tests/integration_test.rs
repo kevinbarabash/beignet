@@ -1121,9 +1121,9 @@ fn object_signatures() -> Result<(), TypeError> {
     declare let obj: {
         fn (a: number) -> string,
         foo: fn (a: number) -> string,
-        bar: fn (self, a: number) -> string,
-        baz: get (self) -> string,
-        baz: set (mut self, value: string) -> undefined,
+        fn bar(self, a: number) -> string,
+        get baz(self) -> string,
+        set baz(mut self, value: string) -> undefined,
         [P]: number for P in string,
         qux: string,
     }
@@ -1135,7 +1135,7 @@ fn object_signatures() -> Result<(), TypeError> {
 
     assert_eq!(
         checker.print_type(&binding.index),
-        "{fn(a: number) -> string, foo: (a: number) -> string, bar: (self: Self, a: number) -> string, get baz: (self: Self) -> string, set baz: (mut self: Self, value: string) -> undefined, [P]: number for P in string, qux: string}".to_string(),
+        "{fn(a: number) -> string, foo: (a: number) -> string, bar(self, a: number) -> string, get baz: string, set baz: string, [P]: number for P in string, qux: string}".to_string(),
     );
 
     assert_no_errors(&checker)
@@ -1147,10 +1147,10 @@ fn object_callable_subtyping() -> Result<(), TypeError> {
 
     let src = r#"
     declare let foo: {
-        fn (self, a: number | string) -> string,
+        fn (a: number | string) -> string,
     }
     let bar: {
-        fn (self, a: number) -> number | string,
+        fn (a: number) -> number | string,
     } = foo
     "#;
     let mut script = parse_script(src).unwrap();
@@ -1195,10 +1195,10 @@ fn object_method_subtyping() -> Result<(), TypeError> {
 
     let src = r#"
     declare let foo: {
-        method: fn (self, a: number | string) -> string,
+        fn method(self, a: number | string) -> string,
     }
     let bar: {
-        method: fn (self, a: number) -> number | string,
+        fn method(self, a: number) -> number | string,
     } = foo
     "#;
     let mut script = parse_script(src).unwrap();
@@ -1214,12 +1214,12 @@ fn object_property_subtyping() -> Result<(), TypeError> {
 
     let src = r#"
     declare let foo: {
-        method: fn (self, a: number) -> string,
+        fn method(self, a: number) -> string,
         x: number,
         y: boolean,
     }
     let bar: {
-        method: fn (self, a: number) -> string,
+        fn method(self, a: number) -> string,
         x: number | string,
     } = foo
     "#;
@@ -1255,7 +1255,7 @@ fn object_methods_and_properties_should_unify() -> Result<(), TypeError> {
 
     let src = r#"
     declare let foo: {
-        foo: fn (self, a: number) -> string,
+        fn foo(self, a: number) -> string,
     }
     let bar: {
         foo: fn (a: number) -> string,
@@ -1276,8 +1276,8 @@ fn object_mappeds_should_unify_with_all_named_obj_elems() -> Result<(), TypeErro
     declare let foo: {
         a: fn () -> number,
         b?: fn () -> number,
-        c: get (self) -> (fn () -> number),
-        d: fn (self) -> number,
+        get c(self) -> (fn () -> number),
+        fn d(self) -> number,
     }
     let bar: {
         [P]: fn () -> number for P in string,
@@ -1324,7 +1324,7 @@ fn object_properties_and_getter_should_unify() -> Result<(), TypeError> {
 
     let src = r#"
     declare let foo: {
-        foo: get (self) -> number,
+        get foo(self) -> number,
     }
     let bar: {
         foo: number,

@@ -26,7 +26,7 @@ expression: "parse(r#\"\n            type ReturnType<T: fn (...args: Array<_>) -
                                                 span: 87..118,
                                                 type_params: None,
                                                 params: [
-                                                    FuncParam {
+                                                    TypeAnnFuncParam {
                                                         pattern: Pattern {
                                                             kind: Rest(
                                                                 RestPat {
@@ -46,24 +46,22 @@ expression: "parse(r#\"\n            type ReturnType<T: fn (...args: Array<_>) -
                                                             span: 91..94,
                                                             inferred_type: None,
                                                         },
-                                                        type_ann: Some(
-                                                            TypeAnn {
-                                                                kind: TypeRef(
-                                                                    "Array",
-                                                                    Some(
-                                                                        [
-                                                                            TypeAnn {
-                                                                                kind: Wildcard,
-                                                                                span: 106..107,
-                                                                                inferred_type: None,
-                                                                            },
-                                                                        ],
-                                                                    ),
+                                                        type_ann: TypeAnn {
+                                                            kind: TypeRef(
+                                                                "Array",
+                                                                Some(
+                                                                    [
+                                                                        TypeAnn {
+                                                                            kind: Wildcard,
+                                                                            span: 106..107,
+                                                                            inferred_type: None,
+                                                                        },
+                                                                    ],
                                                                 ),
-                                                                span: 100..108,
-                                                                inferred_type: None,
-                                                            },
-                                                        ),
+                                                            ),
+                                                            span: 100..108,
+                                                            inferred_type: None,
+                                                        },
                                                         optional: false,
                                                     },
                                                 ],
@@ -110,7 +108,7 @@ expression: "parse(r#\"\n            type ReturnType<T: fn (...args: Array<_>) -
                                                     span: 32..59,
                                                     type_params: None,
                                                     params: [
-                                                        FuncParam {
+                                                        TypeAnnFuncParam {
                                                             pattern: Pattern {
                                                                 kind: Rest(
                                                                     RestPat {
@@ -130,24 +128,22 @@ expression: "parse(r#\"\n            type ReturnType<T: fn (...args: Array<_>) -
                                                                 span: 36..39,
                                                                 inferred_type: None,
                                                             },
-                                                            type_ann: Some(
-                                                                TypeAnn {
-                                                                    kind: TypeRef(
-                                                                        "Array",
-                                                                        Some(
-                                                                            [
-                                                                                TypeAnn {
-                                                                                    kind: Wildcard,
-                                                                                    span: 51..52,
-                                                                                    inferred_type: None,
-                                                                                },
-                                                                            ],
-                                                                        ),
+                                                            type_ann: TypeAnn {
+                                                                kind: TypeRef(
+                                                                    "Array",
+                                                                    Some(
+                                                                        [
+                                                                            TypeAnn {
+                                                                                kind: Wildcard,
+                                                                                span: 51..52,
+                                                                                inferred_type: None,
+                                                                            },
+                                                                        ],
                                                                     ),
-                                                                    span: 45..53,
-                                                                    inferred_type: None,
-                                                                },
-                                                            ),
+                                                                ),
+                                                                span: 45..53,
+                                                                inferred_type: None,
+                                                            },
                                                             optional: false,
                                                         },
                                                     ],

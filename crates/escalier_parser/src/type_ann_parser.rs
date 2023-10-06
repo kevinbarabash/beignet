@@ -113,7 +113,7 @@ impl<'a> Parser<'a> {
                                     self.next(); // consume `get`
 
                                     // TODO - `params` should only be `self`
-                                    let params = self.parse_params()?;
+                                    let params = self.parse_type_ann_func_params()?;
                                     assert_eq!(
                                         self.next().unwrap_or(EOF.clone()).kind,
                                         TokenKind::SingleArrow
@@ -147,7 +147,7 @@ impl<'a> Parser<'a> {
                                     self.next(); // consume `set`
 
                                     // TODO - `params` should only be `mut self, value`
-                                    let params = self.parse_params()?;
+                                    let params = self.parse_type_ann_func_params()?;
                                     assert_eq!(
                                         self.next().unwrap_or(EOF.clone()).kind,
                                         TokenKind::SingleArrow
@@ -260,9 +260,46 @@ impl<'a> Parser<'a> {
                         }
                         TokenKind::Fn => {
                             match self.peek().unwrap_or(&EOF).kind.clone() {
+                                // Method
+                                TokenKind::Identifier(name) => {
+                                    self.next(); // consume identifier
+
+                                    let type_params = self.maybe_parse_type_params()?;
+
+                                    let (params, mutates) = self.parse_type_ann_method_params()?;
+                                    assert_eq!(
+                                        self.next().unwrap_or(EOF.clone()).kind,
+                                        TokenKind::SingleArrow
+                                    );
+                                    let ret = self.parse_type_ann()?;
+                                    let throws = match self.peek().unwrap_or(&EOF).kind {
+                                        TokenKind::Throws => {
+                                            self.next(); // consume `throws`
+                                            let type_ann = self.parse_type_ann()?;
+                                            Some(Box::new(type_ann))
+                                        }
+                                        _ => None,
+                                    };
+
+                                    let end_span = match &throws {
+                                        Some(throws) => throws.span,
+                                        None => ret.span,
+                                    };
+
+                                    props.push(ObjectProp::Method(type_ann::MethodType {
+                                        span: merge_spans(&span, &end_span),
+                                        name,
+                                        type_params,
+                                        params,
+                                        ret: Box::new(ret),
+                                        throws,
+                                        mutates,
+                                    }));
+                                }
+                                // Callable
                                 TokenKind::LeftParen => {
                                     let type_params = self.maybe_parse_type_params()?;
-                                    let params = self.parse_params()?;
+                                    let params = self.parse_type_ann_func_params()?;
                                     assert_eq!(
                                         self.next().unwrap_or(EOF.clone()).kind,
                                         TokenKind::SingleArrow
@@ -296,6 +333,98 @@ impl<'a> Parser<'a> {
                                     })
                                 }
                             }
+                        }
+                        TokenKind::Get => {
+                            let name = match self.next().unwrap_or(EOF.clone()).kind {
+                                TokenKind::Identifier(name) => name,
+                                _ => {
+                                    return Err(ParseError {
+                                        message: "expected identifier".to_string(),
+                                    })
+                                }
+                            };
+
+                            assert_eq!(
+                                self.next().unwrap_or(EOF.clone()).kind,
+                                TokenKind::LeftParen
+                            );
+
+                            assert_eq!(
+                                self.next().unwrap_or(EOF.clone()).kind,
+                                TokenKind::Identifier("self".to_string())
+                            );
+
+                            assert_eq!(
+                                self.next().unwrap_or(EOF.clone()).kind,
+                                TokenKind::RightParen
+                            );
+
+                            assert_eq!(
+                                self.next().unwrap_or(EOF.clone()).kind,
+                                TokenKind::SingleArrow
+                            );
+
+                            let ret = self.parse_type_ann()?;
+
+                            props.push(ObjectProp::Getter(GetterType {
+                                span,
+                                name,
+                                ret: Box::new(ret),
+                            }));
+                        }
+                        TokenKind::Set => {
+                            let name = match self.next().unwrap_or(EOF.clone()).kind {
+                                TokenKind::Identifier(name) => name,
+                                _ => {
+                                    return Err(ParseError {
+                                        message: "expected identifier".to_string(),
+                                    })
+                                }
+                            };
+
+                            assert_eq!(
+                                self.next().unwrap_or(EOF.clone()).kind,
+                                TokenKind::LeftParen
+                            );
+
+                            assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Mut,);
+
+                            assert_eq!(
+                                self.next().unwrap_or(EOF.clone()).kind,
+                                TokenKind::Identifier("self".to_string())
+                            );
+
+                            assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Comma);
+
+                            let pattern = self.parse_pattern()?;
+
+                            assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
+
+                            let param = TypeAnnFuncParam {
+                                pattern,
+                                type_ann: self.parse_type_ann()?,
+                                optional: false,
+                            };
+
+                            assert_eq!(
+                                self.next().unwrap_or(EOF.clone()).kind,
+                                TokenKind::RightParen
+                            );
+
+                            assert_eq!(
+                                self.next().unwrap_or(EOF.clone()).kind,
+                                TokenKind::SingleArrow
+                            );
+
+                            let ret = self.parse_type_ann()?;
+
+                            assert_eq!(ret.kind, TypeAnnKind::Undefined);
+
+                            props.push(ObjectProp::Setter(SetterType {
+                                span,
+                                name,
+                                param: Box::new(param),
+                            }));
                         }
                         token => {
                             eprintln!("token: {:?}", token);
@@ -400,7 +529,7 @@ impl<'a> Parser<'a> {
                 self.next(); // consumes 'fn'
 
                 let type_params = self.maybe_parse_type_params()?;
-                let params = self.parse_params()?;
+                let params = self.parse_type_ann_func_params()?;
                 assert_eq!(
                     self.next().unwrap_or(EOF.clone()).kind,
                     TokenKind::SingleArrow
@@ -526,6 +655,118 @@ impl<'a> Parser<'a> {
         };
 
         Ok(atom)
+    }
+
+    pub fn parse_type_ann_func_params(&mut self) -> Result<Vec<TypeAnnFuncParam>, ParseError> {
+        assert_eq!(
+            self.next().unwrap_or(EOF.clone()).kind,
+            TokenKind::LeftParen
+        );
+
+        let mut params: Vec<TypeAnnFuncParam> = Vec::new();
+        while self.peek().unwrap_or(&EOF).kind != TokenKind::RightParen {
+            let pattern = self.parse_pattern()?;
+
+            let optional = if let TokenKind::Question = self.peek().unwrap_or(&EOF).kind {
+                self.next().unwrap_or(EOF.clone());
+                true
+            } else {
+                false
+            };
+
+            assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
+
+            params.push(TypeAnnFuncParam {
+                pattern,
+                type_ann: self.parse_type_ann()?,
+                optional,
+            });
+
+            // TODO: param defaults
+
+            match self.peek().unwrap_or(&EOF).kind {
+                TokenKind::RightParen => break,
+                TokenKind::Comma => {
+                    self.next().unwrap_or(EOF.clone());
+                }
+                _ => panic!(
+                    "Expected comma or right paren, got {:?}",
+                    self.peek().unwrap_or(&EOF)
+                ),
+            }
+        }
+
+        assert_eq!(
+            self.next().unwrap_or(EOF.clone()).kind,
+            TokenKind::RightParen
+        );
+
+        Ok(params)
+    }
+
+    pub fn parse_type_ann_method_params(
+        &mut self,
+    ) -> Result<(Vec<TypeAnnFuncParam>, bool), ParseError> {
+        assert_eq!(
+            self.next().unwrap_or(EOF.clone()).kind,
+            TokenKind::LeftParen
+        );
+
+        let mutates = if let TokenKind::Mut = self.peek().unwrap_or(&EOF).kind {
+            self.next(); // consume 'mut'
+            true
+        } else {
+            false
+        };
+
+        assert_eq!(
+            self.next().unwrap_or(EOF.clone()).kind,
+            TokenKind::Identifier("self".to_string())
+        );
+
+        if self.peek().unwrap_or(&EOF).kind == TokenKind::Comma {
+            self.next(); // consume ','
+        }
+
+        let mut params: Vec<TypeAnnFuncParam> = Vec::new();
+        while self.peek().unwrap_or(&EOF).kind != TokenKind::RightParen {
+            let pattern = self.parse_pattern()?;
+
+            let optional = if let TokenKind::Question = self.peek().unwrap_or(&EOF).kind {
+                self.next().unwrap_or(EOF.clone());
+                true
+            } else {
+                false
+            };
+
+            assert_eq!(self.next().unwrap_or(EOF.clone()).kind, TokenKind::Colon);
+
+            params.push(TypeAnnFuncParam {
+                pattern,
+                type_ann: self.parse_type_ann()?,
+                optional,
+            });
+
+            // TODO: param defaults
+
+            match self.peek().unwrap_or(&EOF).kind {
+                TokenKind::RightParen => break,
+                TokenKind::Comma => {
+                    self.next().unwrap_or(EOF.clone());
+                }
+                _ => panic!(
+                    "Expected comma or right paren, got {:?}",
+                    self.peek().unwrap_or(&EOF)
+                ),
+            }
+        }
+
+        assert_eq!(
+            self.next().unwrap_or(EOF.clone()).kind,
+            TokenKind::RightParen
+        );
+
+        Ok((params, mutates))
     }
 
     fn parse_type_ann_postfix(
@@ -792,16 +1033,30 @@ mod tests {
     }
 
     #[test]
-    fn parse_object_type_all_sig_types() -> Result<(), ParseError> {
+    fn parse_object_properties() -> Result<(), ParseError> {
         let input = r#"
             {
                 fn (a: number) -> string,
                 foo: fn (a: number) -> string,
-                bar: fn (self, a: number) -> string,
-                baz: get (self) -> string,
-                baz: set (mut self, value: string) -> undefined,
-                qux: string,
+                bar: string,
                 [P]: number for P in string,
+            }
+        "#;
+        let mut parser = Parser::new(input);
+        let result = parser.parse_type_ann()?;
+        insta::assert_debug_snapshot!(result);
+
+        Ok(())
+    }
+
+    #[test]
+    fn parse_methods_in_object_types() -> Result<(), ParseError> {
+        let input = r#"
+            {
+                fn foo(self, a: number) -> string,
+                fn bar(mut self, a: number) -> string,
+                get baz(self) -> string,
+                set baz(mut self, value: string) -> undefined,
             }
         "#;
         let mut parser = Parser::new(input);
