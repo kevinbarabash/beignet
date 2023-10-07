@@ -8,7 +8,7 @@ TypeAnn {
             span: 0..27,
             type_params: None,
             params: [
-                FuncParam {
+                TypeAnnFuncParam {
                     pattern: Pattern {
                         kind: Rest(
                             RestPat {
@@ -28,24 +28,22 @@ TypeAnn {
                         span: 4..7,
                         inferred_type: None,
                     },
-                    type_ann: Some(
-                        TypeAnn {
-                            kind: TypeRef(
-                                "Array",
-                                Some(
-                                    [
-                                        TypeAnn {
-                                            kind: Wildcard,
-                                            span: 19..20,
-                                            inferred_type: None,
-                                        },
-                                    ],
-                                ),
+                    type_ann: TypeAnn {
+                        kind: TypeRef(
+                            "Array",
+                            Some(
+                                [
+                                    TypeAnn {
+                                        kind: Wildcard,
+                                        span: 19..20,
+                                        inferred_type: None,
+                                    },
+                                ],
                             ),
-                            span: 13..21,
-                            inferred_type: None,
-                        },
-                    ),
+                        ),
+                        span: 13..21,
+                        inferred_type: None,
+                    },
                     optional: false,
                 },
             ],

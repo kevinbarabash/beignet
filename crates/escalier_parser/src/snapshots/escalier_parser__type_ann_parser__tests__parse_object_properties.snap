@@ -1,0 +1,131 @@
+---
+source: crates/escalier_parser/src/type_ann_parser.rs
+expression: result
+---
+TypeAnn {
+    kind: Object(
+        [
+            Call(
+                FunctionType {
+                    span: 13..55,
+                    type_params: None,
+                    params: [
+                        TypeAnnFuncParam {
+                            pattern: Pattern {
+                                kind: Ident(
+                                    BindingIdent {
+                                        name: "a",
+                                        span: 35..36,
+                                        mutable: false,
+                                    },
+                                ),
+                                span: 35..36,
+                                inferred_type: None,
+                            },
+                            type_ann: TypeAnn {
+                                kind: Number,
+                                span: 38..44,
+                                inferred_type: None,
+                            },
+                            optional: false,
+                        },
+                    ],
+                    ret: TypeAnn {
+                        kind: String,
+                        span: 49..55,
+                        inferred_type: None,
+                    },
+                    throws: None,
+                },
+            ),
+            Prop(
+                Prop {
+                    span: 0..0,
+                    name: "foo",
+                    modifier: None,
+                    optional: false,
+                    readonly: false,
+                    type_ann: TypeAnn {
+                        kind: Function(
+                            FunctionType {
+                                span: 78..102,
+                                type_params: None,
+                                params: [
+                                    TypeAnnFuncParam {
+                                        pattern: Pattern {
+                                            kind: Ident(
+                                                BindingIdent {
+                                                    name: "a",
+                                                    span: 82..83,
+                                                    mutable: false,
+                                                },
+                                            ),
+                                            span: 82..83,
+                                            inferred_type: None,
+                                        },
+                                        type_ann: TypeAnn {
+                                            kind: Number,
+                                            span: 85..91,
+                                            inferred_type: None,
+                                        },
+                                        optional: false,
+                                    },
+                                ],
+                                ret: TypeAnn {
+                                    kind: String,
+                                    span: 96..102,
+                                    inferred_type: None,
+                                },
+                                throws: None,
+                            },
+                        ),
+                        span: 78..80,
+                        inferred_type: None,
+                    },
+                },
+            ),
+            Prop(
+                Prop {
+                    span: 0..0,
+                    name: "bar",
+                    modifier: None,
+                    optional: false,
+                    readonly: false,
+                    type_ann: TypeAnn {
+                        kind: String,
+                        span: 125..131,
+                        inferred_type: None,
+                    },
+                },
+            ),
+            Mapped(
+                Mapped {
+                    key: TypeAnn {
+                        kind: TypeRef(
+                            "P",
+                            None,
+                        ),
+                        span: 150..151,
+                        inferred_type: None,
+                    },
+                    value: TypeAnn {
+                        kind: Number,
+                        span: 154..160,
+                        inferred_type: None,
+                    },
+                    target: "P",
+                    source: TypeAnn {
+                        kind: String,
+                        span: 170..176,
+                        inferred_type: None,
+                    },
+                    optional: None,
+                    check: None,
+                    extends: None,
+                },
+            ),
+        ],
+    ),
+    span: 13..191,
+    inferred_type: None,
+}

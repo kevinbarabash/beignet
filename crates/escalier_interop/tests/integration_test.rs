@@ -83,7 +83,7 @@ fn infer_method_on_readonly_array() {
     let result = checker.print_type(&binding.index);
     assert_eq!(
         result,
-        "<U, A>(self: Self, callbackfn: (value: string, index: number, array: string[]) -> U, thisArg?: A) -> U[]"
+        "<U, A>(callbackfn: (value: string, index: number, array: string[]) -> U, thisArg?: A) -> U[]"
     );
 }
 
@@ -95,7 +95,12 @@ fn infer_mutable_method_on_readonly_array_errors() {
     let splice = arr.splice
     "#;
 
-    infer_prog(src);
+    let (mut checker, ctx) = infer_prog(src);
+
+    let scheme = ctx.get_scheme("Array").unwrap();
+    let t = checker.expand_type(&ctx, scheme.t).unwrap();
+    let Array = checker.print_type(&t);
+    eprintln!("Array = {}", Array);
 }
 
 #[test]
@@ -112,14 +117,14 @@ fn infer_method_on_readonly_arrays_of_different_things() {
     let result = checker.print_type(&binding.index);
     assert_eq!(
         result,
-        "<U, A>(self: Self, callbackfn: (value: string, index: number, array: string[]) -> U, thisArg?: A) -> U[]"
+        "<U, A>(callbackfn: (value: string, index: number, array: string[]) -> U, thisArg?: A) -> U[]"
     );
 
     let binding = ctx.get_binding("map2").unwrap();
     let result = checker.print_type(&binding.index);
     assert_eq!(
         result,
-        "<U, A>(self: Self, callbackfn: (value: number, index: number, array: number[]) -> U, thisArg?: A) -> U[]"
+        "<U, A>(callbackfn: (value: number, index: number, array: number[]) -> U, thisArg?: A) -> U[]"
     );
 }
 
@@ -137,14 +142,11 @@ fn infer_method_on_mutable_array() {
     let result = checker.print_type(&binding.index);
     assert_eq!(
         result,
-        "(mut self: Self, compareFn?: (a: string, b: string) -> number) -> Array<string>"
+        "(compareFn?: (a: string, b: string) -> number) -> Array<string>"
     );
     let binding = ctx.get_binding("splice").unwrap();
     let result = checker.print_type(&binding.index);
-    assert_eq!(
-        result,
-        "(mut self: Self, start: number, deleteCount?: number) -> string[]"
-    );
+    assert_eq!(result, "(start: number, deleteCount?: number) -> string[]");
     // TODO: Don't expand the type unless required
     // let binding = ctx.get_binding("sorted_arr").unwrap();
     // let result = checker.print_type(&binding.index);
@@ -163,7 +165,7 @@ fn infer_array_method_on_tuple() {
     assert_eq!(
         result,
         // TODO: add parens around a union when it's the child of an arry
-        "<U, A>(self: Self, callbackfn: (value: 5 | \"hello\" | true, index: number, array: 5 | \"hello\" | true[]) -> U, thisArg?: A) -> U[]"
+        "<U, A>(callbackfn: (value: 5 | \"hello\" | true, index: number, array: 5 | \"hello\" | true[]) -> U, thisArg?: A) -> U[]"
     );
 }
 
@@ -319,7 +321,7 @@ fn instantiating_generic_interfaces() -> Result<(), String> {
 
     let binding = ctx.values.get("bar").unwrap();
     let result = checker.print_type(&binding.index);
-    assert_eq!(result, "<A>(self: Self, x: number) -> A");
+    assert_eq!(result, "<A>(x: number) -> A");
 
     Ok(())
 }
@@ -343,7 +345,7 @@ fn interface_with_generic_method() -> Result<(), String> {
 
     let binding = ctx.values.get("bar").unwrap();
     let result = checker.print_type(&binding.index);
-    assert_eq!(result, "<U>(self: Self, x: U) -> U");
+    assert_eq!(result, "<U>(x: U) -> U");
 
     Ok(())
 }
@@ -371,11 +373,14 @@ fn merging_generic_interfaces() -> Result<(), String> {
     let result = checker.print_scheme(scheme);
     assert_eq!(
         result,
-        "<T>{bar: (self: Self, x: T) -> number, baz: (self: Self, x: T) -> string}"
+        "<T>{bar(self, x: T) -> number, baz(self, x: T) -> string}"
     );
 
     Ok(())
 }
+
+// TODO: merge interfaces where a property and a method have the same name
+// It seems that TS only allows merging of methods in interfaces and not properties
 
 #[test]
 fn infer_partial() {
@@ -603,7 +608,7 @@ fn infer_method_type_with_indexed_access() {
     let t = checker.expand_type(&ctx, scheme.t).unwrap();
     let result = checker.print_type(&t);
 
-    assert_eq!(result, "(self: Self, pos: number) -> string");
+    assert_eq!(result, "(pos: number) -> string");
 }
 
 // #[test]
@@ -769,7 +774,7 @@ fn parses_constructor_interfaces() {
     assert_eq!(result, "StringConstructor");
     let def = checker.expand_type(&ctx, binding.index).unwrap();
     let result = checker.print_type(&def);
-    assert_eq!(result, "{new fn<A>(value?: A) -> String, fn<A>(value?: A) -> string, readonly prototype: String, fromCharCode: (...codes: number[]) -> string}");
+    assert_eq!(result, "{new fn<A>(value?: A) -> String, fn<A>(value?: A) -> string, readonly prototype: String, fromCharCode(self, ...codes: number[]) -> string}");
 }
 
 #[test]

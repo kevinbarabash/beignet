@@ -106,7 +106,7 @@ expression: "parse(r#\"let add: fn (a: number, b: number) -> number = fn (a, b) 
                                         span: 9..44,
                                         type_params: None,
                                         params: [
-                                            FuncParam {
+                                            TypeAnnFuncParam {
                                                 pattern: Pattern {
                                                     kind: Ident(
                                                         BindingIdent {
@@ -118,16 +118,14 @@ expression: "parse(r#\"let add: fn (a: number, b: number) -> number = fn (a, b) 
                                                     span: 13..14,
                                                     inferred_type: None,
                                                 },
-                                                type_ann: Some(
-                                                    TypeAnn {
-                                                        kind: Number,
-                                                        span: 16..22,
-                                                        inferred_type: None,
-                                                    },
-                                                ),
+                                                type_ann: TypeAnn {
+                                                    kind: Number,
+                                                    span: 16..22,
+                                                    inferred_type: None,
+                                                },
                                                 optional: false,
                                             },
-                                            FuncParam {
+                                            TypeAnnFuncParam {
                                                 pattern: Pattern {
                                                     kind: Ident(
                                                         BindingIdent {
@@ -139,13 +137,11 @@ expression: "parse(r#\"let add: fn (a: number, b: number) -> number = fn (a, b) 
                                                     span: 24..25,
                                                     inferred_type: None,
                                                 },
-                                                type_ann: Some(
-                                                    TypeAnn {
-                                                        kind: Number,
-                                                        span: 27..33,
-                                                        inferred_type: None,
-                                                    },
-                                                ),
+                                                type_ann: TypeAnn {
+                                                    kind: Number,
+                                                    span: 27..33,
+                                                    inferred_type: None,
+                                                },
                                                 optional: false,
                                             },
                                         ],

@@ -64,7 +64,6 @@ impl Checker {
 
                                 elems.push(types::TObjElem::Prop(types::TProp {
                                     name: TPropKey::StringKey(key.name.to_owned()),
-                                    modifier: None,
                                     optional: false,
                                     readonly: false,
                                     t: value_type,
@@ -91,7 +90,6 @@ impl Checker {
 
                                 elems.push(types::TObjElem::Prop(types::TProp {
                                     name: TPropKey::StringKey(ident.name.to_owned()),
-                                    modifier: None,
                                     optional: false,
                                     readonly: false,
                                     t,

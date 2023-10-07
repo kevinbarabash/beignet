@@ -43,7 +43,6 @@ fn test_env() -> (Checker, Context) {
         // .push(item: T) -> number;
         types::TObjElem::Prop(types::TProp {
             name: types::TPropKey::StringKey("push".to_string()),
-            modifier: None,
             t: push_t,
             optional: false,
             readonly: false,
@@ -51,7 +50,6 @@ fn test_env() -> (Checker, Context) {
         // .length: number;
         types::TObjElem::Prop(types::TProp {
             name: types::TPropKey::StringKey("length".to_string()),
-            modifier: None,
             optional: false,
             readonly: false,
             t: number,

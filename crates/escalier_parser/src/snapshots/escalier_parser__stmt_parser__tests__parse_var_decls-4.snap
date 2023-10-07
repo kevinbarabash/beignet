@@ -29,7 +29,7 @@ expression: "parse(r#\"declare let scale: fn (mut p: Point, scale: number) -> vo
                                         span: 19..59,
                                         type_params: None,
                                         params: [
-                                            FuncParam {
+                                            TypeAnnFuncParam {
                                                 pattern: Pattern {
                                                     kind: Ident(
                                                         BindingIdent {
@@ -41,19 +41,17 @@ expression: "parse(r#\"declare let scale: fn (mut p: Point, scale: number) -> vo
                                                     span: 23..26,
                                                     inferred_type: None,
                                                 },
-                                                type_ann: Some(
-                                                    TypeAnn {
-                                                        kind: TypeRef(
-                                                            "Point",
-                                                            None,
-                                                        ),
-                                                        span: 30..35,
-                                                        inferred_type: None,
-                                                    },
-                                                ),
+                                                type_ann: TypeAnn {
+                                                    kind: TypeRef(
+                                                        "Point",
+                                                        None,
+                                                    ),
+                                                    span: 30..35,
+                                                    inferred_type: None,
+                                                },
                                                 optional: false,
                                             },
-                                            FuncParam {
+                                            TypeAnnFuncParam {
                                                 pattern: Pattern {
                                                     kind: Ident(
                                                         BindingIdent {
@@ -65,13 +63,11 @@ expression: "parse(r#\"declare let scale: fn (mut p: Point, scale: number) -> vo
                                                     span: 37..42,
                                                     inferred_type: None,
                                                 },
-                                                type_ann: Some(
-                                                    TypeAnn {
-                                                        kind: Number,
-                                                        span: 44..50,
-                                                        inferred_type: None,
-                                                    },
-                                                ),
+                                                type_ann: TypeAnn {
+                                                    kind: Number,
+                                                    span: 44..50,
+                                                    inferred_type: None,
+                                                },
                                                 optional: false,
                                             },
                                         ],

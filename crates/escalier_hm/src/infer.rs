@@ -86,34 +86,30 @@ impl Checker {
                                     expr::Prop::Shorthand(Ident { name, span: _ }) => {
                                         prop_types.push(types::TObjElem::Prop(types::TProp {
                                             name: TPropKey::StringKey(name.to_owned()),
-                                            modifier: None,
-                                            t: checker.get_type(name, ctx)?,
                                             readonly: false,
                                             optional: false,
+                                            t: checker.get_type(name, ctx)?,
                                         }));
                                     }
                                     expr::Prop::Property { key, value } => {
                                         let prop = match key {
                                             ObjectKey::Ident(ident) => types::TProp {
                                                 name: TPropKey::StringKey(ident.name.to_owned()),
-                                                modifier: None,
-                                                t: checker.infer_expression(value, ctx)?,
                                                 readonly: false,
                                                 optional: false,
+                                                t: checker.infer_expression(value, ctx)?,
                                             },
                                             ObjectKey::String(name) => types::TProp {
                                                 name: TPropKey::StringKey(name.to_owned()),
-                                                modifier: None,
-                                                t: checker.infer_expression(value, ctx)?,
                                                 readonly: false,
                                                 optional: false,
+                                                t: checker.infer_expression(value, ctx)?,
                                             },
                                             ObjectKey::Number(name) => types::TProp {
                                                 name: TPropKey::StringKey(name.to_owned()),
-                                                modifier: None,
-                                                t: checker.infer_expression(value, ctx)?,
                                                 readonly: false,
                                                 optional: false,
+                                                t: checker.infer_expression(value, ctx)?,
                                             },
                                             ObjectKey::Computed(_) => todo!(),
                                         };
@@ -315,6 +311,13 @@ impl Checker {
                             (None, None) => None,
                         };
 
+                        let ret_t = match return_type {
+                            Some(return_type) => {
+                                checker.infer_type_ann(return_type, &mut sig_ctx)?
+                            }
+                            None => checker.new_type_var(None),
+                        };
+
                         // TODO: Make the return type `Promise<body_t, throws>` if the function
                         // is async.  Async functions cannot throw.  They can only return a
                         // rejected promise.
@@ -323,38 +326,17 @@ impl Checker {
                             let throws_t = throws.unwrap_or(never);
                             body_t = checker.new_type_ref("Promise", &[body_t, throws_t]);
 
-                            match return_type {
-                                Some(return_type) => {
-                                    let ret_t =
-                                        checker.infer_type_ann(return_type, &mut sig_ctx)?;
-                                    // TODO: add sig_ctx which is a copy of ctx but with all of
-                                    // the type params added to sig_ctx.schemes so that they can
-                                    // be looked up.
-                                    checker.unify(&sig_ctx, body_t, ret_t)?;
-                                    checker.new_func_type(&func_params, ret_t, &type_params, None)
-                                }
-                                None => {
-                                    checker.new_func_type(&func_params, body_t, &type_params, None)
-                                }
-                            }
+                            // TODO: add sig_ctx which is a copy of ctx but with all of
+                            // the type params added to sig_ctx.schemes so that they can
+                            // be looked up.
+                            checker.unify(&sig_ctx, body_t, ret_t)?;
+                            checker.new_func_type(&func_params, ret_t, &type_params, None)
                         } else {
-                            match return_type {
-                                Some(return_type) => {
-                                    let ret_t =
-                                        checker.infer_type_ann(return_type, &mut sig_ctx)?;
-                                    // TODO: add sig_ctx which is a copy of ctx but with all of
-                                    // the type params added to sig_ctx.schemes so that they can
-                                    // be looked up.
-                                    checker.unify(&sig_ctx, body_t, ret_t)?;
-                                    checker.new_func_type(&func_params, ret_t, &type_params, throws)
-                                }
-                                None => checker.new_func_type(
-                                    &func_params,
-                                    body_t,
-                                    &type_params,
-                                    throws,
-                                ),
-                            }
+                            // TODO: add sig_ctx which is a copy of ctx but with all of
+                            // the type params added to sig_ctx.schemes so that they can
+                            // be looked up.
+                            checker.unify(&sig_ctx, body_t, ret_t)?;
+                            checker.new_func_type(&func_params, ret_t, &type_params, throws)
                         }
                     }
                     ExprKind::IfElse(IfElse {
@@ -683,7 +665,7 @@ impl Checker {
 
                         checker.new_union_type(&body_types)
                     }
-                    ExprKind::Class(_) => todo!(),
+                    ExprKind::Class(class) => checker.infer_class(class, ctx)?,
                     ExprKind::Do(Do { body }) => checker.infer_block(body, ctx)?,
                     ExprKind::Try(Try {
                         body,
@@ -854,17 +836,71 @@ impl Checker {
                                 extends,
                             }));
                         }
+                        ObjectProp::Method(method) => {
+                            let params = method
+                                .params
+                                .iter_mut()
+                                .map(|param| {
+                                    let t =
+                                        self.infer_type_ann(&mut param.type_ann, &mut obj_ctx)?;
+                                    Ok(types::FuncParam {
+                                        pattern: pattern_to_tpat(&param.pattern, true),
+                                        t,
+                                        optional: param.optional,
+                                    })
+                                })
+                                .collect::<Result<Vec<_>, _>>()?;
+
+                            let type_params =
+                                self.infer_type_params(&mut method.type_params, &mut obj_ctx)?;
+
+                            let ret = self.infer_type_ann(&mut method.ret, &mut obj_ctx)?;
+
+                            let throws = match &mut method.throws {
+                                Some(throws) => Some(self.infer_type_ann(throws, &mut obj_ctx)?),
+                                None => None,
+                            };
+
+                            props.push(types::TObjElem::Method(types::TMethod {
+                                name: TPropKey::StringKey(method.name.to_owned()),
+                                params,
+                                ret,
+                                throws,
+                                type_params,
+                                mutates: method.mutates,
+                            }));
+                        }
+                        ObjectProp::Getter(getter) => {
+                            props.push(types::TObjElem::Getter(types::TGetter {
+                                name: TPropKey::StringKey(getter.name.to_owned()),
+                                ret: self.infer_type_ann(&mut getter.ret, &mut obj_ctx)?,
+                                throws: None, // TODO
+                            }));
+                        }
+                        ObjectProp::Setter(SetterType {
+                            span: _,
+                            name,
+                            param,
+                        }) => {
+                            // TODO: create an `infer_func_param` function
+                            let t = self.infer_type_ann(&mut param.type_ann, &mut obj_ctx)?;
+                            let param = types::FuncParam {
+                                pattern: pattern_to_tpat(&param.pattern, true),
+                                t,
+                                optional: param.optional,
+                            };
+                            props.push(types::TObjElem::Setter(types::TSetter {
+                                name: TPropKey::StringKey(name.to_owned()),
+                                param,
+                                throws: None, // TODO
+                            }));
+                        }
                         ObjectProp::Prop(prop) => {
-                            let modifier = prop.modifier.as_ref().map(|modifier| match modifier {
-                                PropModifier::Getter => TPropModifier::Getter,
-                                PropModifier::Setter => TPropModifier::Setter,
-                            });
                             props.push(types::TObjElem::Prop(types::TProp {
                                 name: TPropKey::StringKey(prop.name.to_owned()),
-                                modifier,
-                                t: self.infer_type_ann(&mut prop.type_ann, &mut obj_ctx)?,
                                 readonly: prop.readonly,
                                 optional: prop.optional,
+                                t: self.infer_type_ann(&mut prop.type_ann, &mut obj_ctx)?,
                             }));
                         }
                         ObjectProp::Call(func_type) => {
@@ -1087,7 +1123,6 @@ impl Checker {
             throws,
         } = func_type;
 
-        // TODO: dedupe with `Function` inference code above
         // NOTE: We clone `ctx` so that type params don't escape the signature
         let mut sig_ctx = ctx.clone();
 
@@ -1096,19 +1131,7 @@ impl Checker {
         let func_params = params
             .iter_mut()
             .map(|param| {
-                let t = match &mut param.type_ann {
-                    Some(type_ann) => self.infer_type_ann(type_ann, &mut sig_ctx)?,
-                    None => {
-                        match &param.pattern.kind {
-                            // TODO: add a check that `self` is only allowed
-                            // as the first param in a method signature.
-                            PatternKind::Ident(ident) if ident.name == "self" => {
-                                self.new_type_ref("Self", &[])
-                            }
-                            _ => self.new_type_var(None),
-                        }
-                    }
-                };
+                let t = self.infer_type_ann(&mut param.type_ann, &mut sig_ctx)?;
 
                 Ok(types::FuncParam {
                     pattern: pattern_to_tpat(&param.pattern, true),
@@ -1570,7 +1593,7 @@ impl Checker {
         }
     }
 
-    fn infer_type_params(
+    pub fn infer_type_params(
         &mut self,
         type_params: &mut Option<Vec<syntax::TypeParam>>,
         sig_ctx: &mut Context,

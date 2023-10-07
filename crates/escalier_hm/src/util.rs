@@ -52,6 +52,45 @@ impl Checker {
                     let param_types: Vec<_> = call.params.iter().map(|param| param.t).collect();
                     self.occurs_in(v, &param_types) || self.occurs_in_type(v, call.ret)
                 }
+                TObjElem::Method(TMethod {
+                    name: _,
+                    params,
+                    ret,
+                    type_params: _, // TODO
+                    throws,
+                    mutates: _,
+                }) => {
+                    // TODO: check constraints and default on type_params
+                    let param_types: Vec<_> = params.iter().map(|param| param.t).collect();
+                    self.occurs_in(v, &param_types)
+                        || self.occurs_in_type(v, *ret)
+                        || match throws {
+                            Some(throws) => self.occurs_in_type(v, *throws),
+                            None => false,
+                        }
+                }
+                TObjElem::Getter(TGetter {
+                    name: _,
+                    ret,
+                    throws,
+                }) => {
+                    self.occurs_in_type(v, *ret)
+                        || match throws {
+                            Some(throws) => self.occurs_in_type(v, *throws),
+                            None => false,
+                        }
+                }
+                TObjElem::Setter(TSetter {
+                    name: _,
+                    param,
+                    throws,
+                }) => {
+                    self.occurs_in_type(v, param.t)
+                        || match throws {
+                            Some(throws) => self.occurs_in_type(v, *throws),
+                            None => false,
+                        }
+                }
                 TObjElem::Mapped(mapped) => {
                     self.occurs_in_type(v, mapped.key)
                         || self.occurs_in_type(v, mapped.value)
@@ -329,6 +368,36 @@ impl Checker {
                                 _ => todo!(),
                             }
                         }
+                        TObjElem::Method(TMethod { name, .. }) => match name {
+                            TPropKey::StringKey(name) => {
+                                string_keys
+                                    .push(self.new_lit_type(&Literal::String(name.to_owned())));
+                            }
+                            TPropKey::NumberKey(name) => {
+                                number_keys
+                                    .push(self.new_lit_type(&Literal::Number(name.to_owned())));
+                            }
+                        },
+                        TObjElem::Getter(TGetter { name, .. }) => match name {
+                            TPropKey::StringKey(name) => {
+                                string_keys
+                                    .push(self.new_lit_type(&Literal::String(name.to_owned())));
+                            }
+                            TPropKey::NumberKey(name) => {
+                                number_keys
+                                    .push(self.new_lit_type(&Literal::Number(name.to_owned())));
+                            }
+                        },
+                        TObjElem::Setter(TSetter { name, .. }) => match name {
+                            TPropKey::StringKey(name) => {
+                                string_keys
+                                    .push(self.new_lit_type(&Literal::String(name.to_owned())));
+                            }
+                            TPropKey::NumberKey(name) => {
+                                number_keys
+                                    .push(self.new_lit_type(&Literal::Number(name.to_owned())));
+                            }
+                        },
                         TObjElem::Prop(TProp { name, .. }) => match name {
                             TPropKey::StringKey(name) => {
                                 string_keys
@@ -659,9 +728,8 @@ impl Checker {
 
                                 new_elems.push(TObjElem::Prop(TProp {
                                     name,
-                                    modifier: None,
                                     optional,
-                                    readonly: false, // TODO
+                                    readonly: false,
                                     t: self.expand_type(ctx, value)?,
                                 }));
                             }
@@ -819,6 +887,9 @@ impl Checker {
 
         if let TypeKind::Object(object) = &obj_type.kind {
             match &key_type.kind {
+                // If the key is a primitive like `number`, `string`, or
+                // `symbol`, collect all of the properties that match and
+                // union their types together.
                 TypeKind::Primitive(primitive)
                     if primitive == &Primitive::Number
                         || primitive == &Primitive::String
@@ -841,6 +912,35 @@ impl Checker {
                                     });
                                 }
                                 maybe_mapped = Some(mapped);
+                            }
+                            TObjElem::Method(_) => {
+                                // TODO construct a function type and push it on
+                                // to `values`.
+                                todo!();
+                            }
+                            TObjElem::Getter(TGetter {
+                                name,
+                                ret,
+                                throws: _,
+                            }) => {
+                                match &name {
+                                    TPropKey::StringKey(_) if primitive == &Primitive::String => (),
+                                    TPropKey::NumberKey(_) if primitive == &Primitive::Number => (),
+                                    _ => continue,
+                                };
+                                values.push(*ret);
+                            }
+                            TObjElem::Setter(TSetter {
+                                name,
+                                param,
+                                throws: _,
+                            }) => {
+                                match &name {
+                                    TPropKey::StringKey(_) if primitive == &Primitive::String => (),
+                                    TPropKey::NumberKey(_) if primitive == &Primitive::Number => (),
+                                    _ => continue,
+                                };
+                                values.push(param.t);
                             }
                             TObjElem::Prop(prop) => {
                                 match &prop.name {
@@ -900,6 +1000,70 @@ impl Checker {
                                     });
                                 }
                                 maybe_mapped = Some(mapped);
+                            }
+                            TObjElem::Method(method) => {
+                                let key = match &method.name {
+                                    TPropKey::StringKey(key) => key,
+                                    TPropKey::NumberKey(key) => key,
+                                };
+                                if key == name {
+                                    let TMethod {
+                                        name: _,
+                                        params,
+                                        ret,
+                                        type_params,
+                                        throws,
+                                        mutates, // TODO: check if the object is a mutable reference
+                                    } = method;
+
+                                    // if let TypeKind::Function(Function { params, .. }) =
+                                    //     &self.arena[prop.t].kind
+                                    // {
+                                    //     if let Some(param) = params.first() {
+                                    //         if param.is_mut_self() && !is_mut {
+                                    //             return Err(TypeError {
+                                    //                 message: format!(
+                                    //                     "Cannot call mutating method {} on a non-mutable object",
+                                    //                     name,
+                                    //                 ),
+                                    //             });
+                                    //         }
+                                    //     }
+                                    // }
+
+                                    if *mutates && !is_mut {
+                                        return Err(TypeError {
+                                            message: format!(
+                                                "Cannot call mutating method {} on a non-mutable object",
+                                                name,
+                                            ),
+                                        });
+                                    }
+
+                                    let func_t =
+                                        self.new_func_type(params, *ret, type_params, *throws);
+                                    return Ok(func_t);
+                                }
+                            }
+                            TObjElem::Getter(getter) => {
+                                let key = match &getter.name {
+                                    TPropKey::StringKey(key) => key,
+                                    TPropKey::NumberKey(key) => key,
+                                };
+
+                                if key == name {
+                                    return Ok(getter.ret);
+                                }
+                            }
+                            TObjElem::Setter(setter) => {
+                                let key = match &setter.name {
+                                    TPropKey::StringKey(key) => key,
+                                    TPropKey::NumberKey(key) => key,
+                                };
+
+                                if key == name {
+                                    return Ok(setter.param.t);
+                                }
                             }
                             TObjElem::Prop(prop) => {
                                 let key = match &prop.name {

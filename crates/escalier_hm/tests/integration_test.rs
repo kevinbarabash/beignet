@@ -76,15 +76,13 @@ fn test_env() -> (Checker, Context) {
         // .push(item: T) -> number;
         types::TObjElem::Prop(types::TProp {
             name: types::TPropKey::StringKey("push".to_string()),
-            modifier: None,
-            t: push_t,
             optional: false,
             readonly: false,
+            t: push_t,
         }),
         // .length: number;
         types::TObjElem::Prop(types::TProp {
             name: types::TPropKey::StringKey("length".to_string()),
-            modifier: None,
             optional: false,
             readonly: false,
             t: number,
@@ -604,7 +602,7 @@ fn test_composition() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("result").unwrap();
     assert_eq!(
         checker.print_type(&binding.index),
-        r#"<A, C, B>(f: (arg0: A) -> B) -> (g: (arg0: B) -> C) -> (arg: A) -> C"#
+        r#"<A, B, C>(f: (arg0: A) -> B) -> (g: (arg0: B) -> C) -> (arg: A) -> C"#
     );
     assert_no_errors(&checker)
 }
@@ -625,12 +623,12 @@ fn test_skk() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("S").unwrap();
     assert_eq!(
         checker.print_type(&binding.index),
-        r#"<A, C, B>(f: (arg0: A) -> (arg0: B) -> C) -> (g: (arg0: A) -> B) -> (x: A) -> C"#
+        r#"<A, B, C>(f: (arg0: A) -> (arg0: B) -> C) -> (g: (arg0: A) -> B) -> (x: A) -> C"#
     );
     let binding = my_ctx.values.get("K").unwrap();
     assert_eq!(
         checker.print_type(&binding.index),
-        r#"<A, B>(x: A) -> (y: B) -> A"#
+        r#"<B, A>(x: A) -> (y: B) -> A"#
     );
     let binding = my_ctx.values.get("I").unwrap();
     assert_eq!(checker.print_type(&binding.index), r#"<A>(x: A) -> A"#);
@@ -1121,9 +1119,9 @@ fn object_signatures() -> Result<(), TypeError> {
     declare let obj: {
         fn (a: number) -> string,
         foo: fn (a: number) -> string,
-        bar: fn (self, a: number) -> string,
-        baz: get (self) -> string,
-        baz: set (mut self, value: string) -> undefined,
+        fn bar(self, a: number) -> string,
+        get baz(self) -> string,
+        set baz(mut self, value: string) -> undefined,
         [P]: number for P in string,
         qux: string,
     }
@@ -1135,7 +1133,7 @@ fn object_signatures() -> Result<(), TypeError> {
 
     assert_eq!(
         checker.print_type(&binding.index),
-        "{fn(a: number) -> string, foo: (a: number) -> string, bar: (self: Self, a: number) -> string, get baz: (self: Self) -> string, set baz: (mut self: Self, value: string) -> undefined, [P]: number for P in string, qux: string}".to_string(),
+        "{fn(a: number) -> string, foo: (a: number) -> string, bar(self, a: number) -> string, get baz(self) -> string, set baz(mut self, string), [P]: number for P in string, qux: string}".to_string(),
     );
 
     assert_no_errors(&checker)
@@ -1147,10 +1145,10 @@ fn object_callable_subtyping() -> Result<(), TypeError> {
 
     let src = r#"
     declare let foo: {
-        fn (self, a: number | string) -> string,
+        fn (a: number | string) -> string,
     }
     let bar: {
-        fn (self, a: number) -> number | string,
+        fn (a: number) -> number | string,
     } = foo
     "#;
     let mut script = parse_script(src).unwrap();
@@ -1160,8 +1158,8 @@ fn object_callable_subtyping() -> Result<(), TypeError> {
     assert_no_errors(&checker)
 }
 
-// TODO: This fail, we need to check unify callable siagntures in
-// object types
+// TODO: This should fail but doesn't, we need to check unify callable
+// signatures in object types
 #[test]
 #[ignore]
 fn object_callable_subtyping_failure_case() -> Result<(), TypeError> {
@@ -1169,10 +1167,10 @@ fn object_callable_subtyping_failure_case() -> Result<(), TypeError> {
 
     let src = r#"
     declare let foo: {
-        fn (self, a: string) -> string,
+        fn (a: string) -> string,
     }
     let bar: {
-        fn (self, a: number) -> number,
+        fn (a: number) -> number,
     } = foo
     "#;
     let mut script = parse_script(src).unwrap();
@@ -1195,10 +1193,10 @@ fn object_method_subtyping() -> Result<(), TypeError> {
 
     let src = r#"
     declare let foo: {
-        method: fn (self, a: number | string) -> string,
+        fn method(self, a: number | string) -> string,
     }
     let bar: {
-        method: fn (self, a: number) -> number | string,
+        fn method(self, a: number) -> number | string,
     } = foo
     "#;
     let mut script = parse_script(src).unwrap();
@@ -1214,12 +1212,12 @@ fn object_property_subtyping() -> Result<(), TypeError> {
 
     let src = r#"
     declare let foo: {
-        method: fn (self, a: number) -> string,
+        fn method(self, a: number) -> string,
         x: number,
         y: boolean,
     }
     let bar: {
-        method: fn (self, a: number) -> string,
+        fn method(self, a: number) -> string,
         x: number | string,
     } = foo
     "#;
@@ -1255,7 +1253,7 @@ fn object_methods_and_properties_should_unify() -> Result<(), TypeError> {
 
     let src = r#"
     declare let foo: {
-        foo: fn (self, a: number) -> string,
+        fn foo(self, a: number) -> string,
     }
     let bar: {
         foo: fn (a: number) -> string,
@@ -1276,8 +1274,8 @@ fn object_mappeds_should_unify_with_all_named_obj_elems() -> Result<(), TypeErro
     declare let foo: {
         a: fn () -> number,
         b?: fn () -> number,
-        c: get (self) -> (fn () -> number),
-        d: fn (self) -> number,
+        get c(self) -> (fn () -> number),
+        fn d(self) -> number,
     }
     let bar: {
         [P]: fn () -> number for P in string,
@@ -1318,13 +1316,16 @@ fn object_mappeds_and_properties_unify_failure() -> Result<(), TypeError> {
     assert_no_errors(&checker)
 }
 
+// NOTE: Getters are readonly while bar.foo is not readonly so this
+// assignment should not be allowed, but we're not handling readonly-ness
+// yet.
 #[test]
 fn object_properties_and_getter_should_unify() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
     declare let foo: {
-        foo: get (self) -> number,
+        get foo(self) -> number,
     }
     let bar: {
         foo: number,
@@ -1337,7 +1338,6 @@ fn object_properties_and_getter_should_unify() -> Result<(), TypeError> {
     assert_no_errors(&checker)
 }
 
-// TODO
 #[test]
 #[ignore]
 fn mutable_object_properties_unify_with_getters_setters() -> Result<(), TypeError> {
@@ -1348,8 +1348,8 @@ fn mutable_object_properties_unify_with_getters_setters() -> Result<(), TypeErro
         x: number,
     }
     let mut bar: {
-        x: get (self) -> number,
-        x: set (mut self, value: number) -> undefined,
+        get x(self) -> number,
+        set x(mut self, value: number) -> undefined,
     } = foo
     "#;
     let mut script = parse_script(src).unwrap();
@@ -1523,7 +1523,7 @@ fn test_program_with_generic_func_multiple_type_params() -> Result<(), TypeError
     let binding = my_ctx.values.get("fst").unwrap();
     assert_eq!(
         checker.print_type(&binding.index),
-        r#"<A, B>(x: A, y: B) -> A"#
+        r#"<B, A>(x: A, y: B) -> A"#
     );
 
     let binding = my_ctx.values.get("snd").unwrap();
@@ -3145,12 +3145,11 @@ fn properties_on_tuple() -> Result<(), TypeError> {
 }
 
 #[test]
-#[ignore]
 fn set_array_element() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
-    declare let array: Array<number>
+    declare let mut array: Array<number>
     array[0] = 5
     array[1] = 10
     "#;
@@ -4701,7 +4700,6 @@ fn unify_tuple_and_array() -> Result<(), TypeError> {
 }
 
 #[test]
-#[ignore]
 fn conditional_type_with_function_subtyping() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
@@ -5358,7 +5356,7 @@ fn test_generalization_inside_function() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("bar").unwrap();
     assert_eq!(
         checker.print_type(&binding.index),
-        r#"[5, "hello", (x: t37) -> t37]"#
+        r#"[5, "hello", (x: t39) -> t39]"#
     );
 
     assert_no_errors(&checker)

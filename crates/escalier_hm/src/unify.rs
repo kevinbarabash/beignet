@@ -391,6 +391,11 @@ impl Checker {
                 let mut constructors_2: Vec<&Function> = vec![];
                 let mut mapped_2: Vec<&MappedType> = vec![];
 
+                // NOTE:
+                // - methods and getters are readonly
+                // - properties are can be read and written (unless marked as 'readonly')
+                // - setters can only be written
+
                 let named_props_1: HashMap<_, _> = object1
                     .elems
                     .iter()
@@ -398,9 +403,36 @@ impl Checker {
                         TObjElem::Call(_) => None,
                         TObjElem::Constructor(_) => None,
                         TObjElem::Mapped(_) => None,
+                        TObjElem::Method(method) => {
+                            let func_type = self.new_func_type(
+                                &method.params,
+                                method.ret,
+                                &method.type_params,
+                                method.throws,
+                            );
+                            Some((
+                                method.name.to_string(),
+                                TProp {
+                                    name: TPropKey::StringKey(method.name.to_string()),
+                                    t: func_type,
+                                    optional: false,
+                                    readonly: false,
+                                },
+                            ))
+                        }
+                        TObjElem::Getter(getter) => Some((
+                            getter.name.to_string(),
+                            TProp {
+                                name: getter.name.to_owned(),
+                                t: getter.ret,
+                                optional: false,
+                                readonly: true, // TODO: check if there's a setter
+                            },
+                        )),
+                        TObjElem::Setter(_) => None, // TODO
                         TObjElem::Prop(prop) => {
                             // TODO: handle getters/setters properly
-                            Some((prop.name.to_string(), prop))
+                            Some((prop.name.to_string(), prop.to_owned()))
                         }
                     })
                     .collect();
@@ -412,9 +444,36 @@ impl Checker {
                         TObjElem::Call(_) => None,
                         TObjElem::Constructor(_) => None,
                         TObjElem::Mapped(_) => None,
+                        TObjElem::Method(method) => {
+                            let func_type = self.new_func_type(
+                                &method.params,
+                                method.ret,
+                                &method.type_params,
+                                method.throws,
+                            );
+                            Some((
+                                method.name.to_string(),
+                                TProp {
+                                    name: TPropKey::StringKey(method.name.to_string()),
+                                    t: func_type,
+                                    optional: false,
+                                    readonly: false,
+                                },
+                            ))
+                        }
+                        TObjElem::Getter(getter) => Some((
+                            getter.name.to_string(),
+                            TProp {
+                                name: getter.name.to_owned(),
+                                t: getter.ret,
+                                optional: false,
+                                readonly: true, // TODO: check if there's a setter
+                            },
+                        )),
+                        TObjElem::Setter(_) => None, // TODO
                         TObjElem::Prop(prop) => {
                             // TODO: handle getters/setters properly
-                            Some((prop.name.to_string(), prop))
+                            Some((prop.name.to_string(), prop.to_owned()))
                         }
                     })
                     .collect();
@@ -1147,6 +1206,9 @@ pub fn simplify_intersection(checker: &mut Checker, in_types: &[Index]) -> Index
                 TObjElem::Call(_) => todo!(),
                 TObjElem::Constructor(_) => todo!(),
                 TObjElem::Mapped(_) => todo!(),
+                TObjElem::Method(_) => todo!(),
+                TObjElem::Getter(_) => todo!(),
+                TObjElem::Setter(_) => todo!(),
                 TObjElem::Prop(prop) => {
                     let key = match &prop.name {
                         TPropKey::StringKey(key) => key.to_owned(),
@@ -1171,7 +1233,6 @@ pub fn simplify_intersection(checker: &mut Checker, in_types: &[Index]) -> Index
             };
             TObjElem::Prop(TProp {
                 name: TPropKey::StringKey(name.to_owned()),
-                modifier: None,
                 // TODO: determine this field from all of the TProps with
                 // the same name.  This should only be optional if all of
                 // the TProps with the current name are optional.
@@ -1186,6 +1247,9 @@ pub fn simplify_intersection(checker: &mut Checker, in_types: &[Index]) -> Index
         TObjElem::Call(_) => todo!(),
         TObjElem::Constructor(_) => todo!(),
         TObjElem::Mapped(_) => todo!(),
+        TObjElem::Method(_) => todo!(),
+        TObjElem::Getter(_) => todo!(),
+        TObjElem::Setter(_) => todo!(),
         TObjElem::Prop(prop) => prop.name.clone(),
     }); // ensure a stable order
 

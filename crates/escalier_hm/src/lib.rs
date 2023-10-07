@@ -1,6 +1,7 @@
 // Based on https://github.com/tcr/rust-hindley-milner/blob/master/src/lib.rs
 mod ast_utils;
 mod folder;
+mod infer_class;
 mod infer_pattern;
 mod key_value_store;
 mod provenance;

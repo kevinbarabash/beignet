@@ -649,31 +649,27 @@ fn build_obj_type(obj: &types::Object, ctx: &Context, checker: &Checker) -> TsTy
 
                 members.push(type_elem);
             }
+            types::TObjElem::Method(_) => todo!(), // TODO
+            types::TObjElem::Getter(_) => todo!(), // TODO
+            types::TObjElem::Setter(_) => todo!(), // TODO
             types::TObjElem::Prop(prop) => {
                 let key = match &prop.name {
                     types::TPropKey::StringKey(key) => key.to_owned(),
                     types::TPropKey::NumberKey(key) => key.to_owned(),
                 };
 
-                match prop.modifier {
-                    // TODO: have separate node types so that we don't have to
-                    // check whether props with modifiers are functions or not
-                    Some(_) => todo!(),
-                    None => {
-                        let type_elem = TsTypeElement::TsPropertySignature(TsPropertySignature {
-                            span: DUMMY_SP,
-                            readonly: prop.readonly,
-                            key: Box::from(Expr::from(build_ident(&key))),
-                            computed: false,
-                            optional: prop.optional,
-                            init: None,
-                            params: vec![],
-                            type_ann: Some(Box::from(build_type_ann(&prop.t, ctx, checker))),
-                            type_params: None,
-                        });
-                        members.push(type_elem);
-                    }
-                };
+                let type_elem = TsTypeElement::TsPropertySignature(TsPropertySignature {
+                    span: DUMMY_SP,
+                    readonly: prop.readonly,
+                    key: Box::from(Expr::from(build_ident(&key))),
+                    computed: false,
+                    optional: prop.optional,
+                    init: None,
+                    params: vec![],
+                    type_ann: Some(Box::from(build_type_ann(&prop.t, ctx, checker))),
+                    type_params: None,
+                });
+                members.push(type_elem);
             }
             types::TObjElem::Mapped(types::MappedType {
                 key,
@@ -767,19 +763,30 @@ pub fn immutable_obj_type(obj: &types::Object) -> Option<types::Object> {
     let elems: Vec<types::TObjElem> = obj
         .elems
         .iter()
-        .map(|elem| match elem {
-            types::TObjElem::Call(_) => elem.to_owned(),
-            types::TObjElem::Constructor(_) => elem.to_owned(),
-            types::TObjElem::Mapped(_) => elem.to_owned(),
-            // TODO: Remove mutating methods.
-            types::TObjElem::Prop(prop) => {
-                if !prop.readonly {
+        .filter_map(|elem| match elem {
+            types::TObjElem::Call(_) => Some(elem.to_owned()),
+            types::TObjElem::Constructor(_) => Some(elem.to_owned()),
+            types::TObjElem::Method(method) => {
+                if method.mutates {
                     changed = true;
+                    None
+                } else {
+                    Some(elem.to_owned())
                 }
-                types::TObjElem::Prop(types::TProp {
-                    readonly: true,
-                    ..prop.to_owned()
-                })
+            }
+            types::TObjElem::Getter(_) => Some(elem.to_owned()),
+            types::TObjElem::Setter(_) => None,
+            types::TObjElem::Mapped(_) => Some(elem.to_owned()),
+            types::TObjElem::Prop(prop) => {
+                if prop.readonly {
+                    Some(elem.to_owned())
+                } else {
+                    changed = true;
+                    Some(types::TObjElem::Prop(types::TProp {
+                        readonly: true,
+                        ..prop.to_owned()
+                    }))
+                }
             }
         })
         .collect();

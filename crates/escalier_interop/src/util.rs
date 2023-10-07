@@ -3,7 +3,8 @@ use std::collections::HashSet;
 
 use escalier_hm::checker::Checker;
 use escalier_hm::types::{
-    Function, MappedType, Object as TObject, Scheme, TObjElem, TPat, TProp, TPropKey, TypeKind,
+    Function, MappedType, Object as TObject, Scheme, TGetter, TMethod, TObjElem, TProp, TPropKey,
+    TSetter, TypeKind,
 };
 
 pub fn new_merge_schemes(schemes: &[Scheme], checker: &mut Checker) -> Scheme {
@@ -34,12 +35,17 @@ pub fn merge_readonly_and_mutable_schemes(
     mutable_scheme: &Scheme,
     checker: &mut Checker,
 ) -> Scheme {
+    // BTreeMap is used here to ensure that the props are in alphabetical order
+    // TODO: figure out how to handle overloads
+    let mut methods: BTreeMap<String, TMethod> = BTreeMap::new();
+    let mut mutating_methods: HashSet<String> = HashSet::new();
+
     let mut mapped_types: Vec<MappedType> = vec![];
     let mut callables: Vec<Function> = vec![];
     let mut newables: Vec<Function> = vec![];
-    // BTreeMap is used here to ensure that the props are in alphabetical order
-    let mut props: BTreeMap<String, TProp> = BTreeMap::new(); // TODO: figure out how to handle overloads
-    let mut mutating_methods: HashSet<String> = HashSet::new();
+    let mut props: Vec<TProp> = vec![];
+    let mut getters: BTreeMap<String, TGetter> = BTreeMap::new();
+    let mut setters: BTreeMap<String, TSetter> = BTreeMap::new();
 
     // TODO: check that the type params are the same for both schemes
     let type_params = mutable_scheme.type_params.to_owned();
@@ -51,21 +57,44 @@ pub fn merge_readonly_and_mutable_schemes(
     if let TypeKind::Object(TObject { elems }) = &checker.arena[readonly_scheme.t].kind {
         for elem in elems {
             match elem {
-                TObjElem::Mapped(mapped_type) => {
-                    mapped_types.push(mapped_type.to_owned());
-                }
                 TObjElem::Call(callable) => {
                     callables.push(callable.to_owned());
                 }
-                TObjElem::Prop(prop) => {
-                    let key = match &prop.name {
+                TObjElem::Constructor(newable) => {
+                    newables.push(newable.to_owned());
+                }
+                TObjElem::Mapped(mapped_type) => {
+                    mapped_types.push(mapped_type.to_owned());
+                }
+                TObjElem::Method(method) => {
+                    let key = match &method.name {
                         TPropKey::StringKey(key) => key,
                         TPropKey::NumberKey(key) => key,
                     };
-                    props.insert(key.to_owned(), prop.to_owned());
+                    methods.insert(key.to_owned(), method.to_owned());
                 }
-                TObjElem::Constructor(newable) => {
-                    newables.push(newable.to_owned());
+                // TODO: Check if there's already a getter for this, if so,
+                // raise an error
+                TObjElem::Getter(getter) => {
+                    let key = match &getter.name {
+                        TPropKey::StringKey(key) => key,
+                        TPropKey::NumberKey(key) => key,
+                    };
+                    getters.insert(key.to_owned(), getter.to_owned());
+                }
+                // TODO: Check if there's already a setter for this, if so,
+                // raise an error
+                TObjElem::Setter(setter) => {
+                    let key = match &setter.name {
+                        TPropKey::StringKey(key) => key,
+                        TPropKey::NumberKey(key) => key,
+                    };
+                    setters.insert(key.to_owned(), setter.to_owned());
+                }
+                // TODO: TS doesn't support merging interfaces with properties
+                // that have different types
+                TObjElem::Prop(prop) => {
+                    props.push(prop.to_owned());
                 }
             }
         }
@@ -73,21 +102,15 @@ pub fn merge_readonly_and_mutable_schemes(
 
     if let TypeKind::Object(TObject { elems }) = &checker.arena[mutable_scheme.t].kind {
         for elem in elems {
-            if let TObjElem::Prop(prop) = elem {
-                let key = match &prop.name {
+            if let TObjElem::Method(method) = elem {
+                let key = match &method.name {
                     TPropKey::StringKey(key) => key,
                     TPropKey::NumberKey(key) => key,
                 };
-                if !props.contains_key(key) {
-                    if let TypeKind::Function(Function { params, .. }) = &checker.arena[prop.t].kind
-                    {
-                        if let Some(param) = params.get(0) {
-                            if param.is_self() {
-                                mutating_methods.insert(key.to_owned());
-                            }
-                        }
-                    }
-                    props.insert(key.to_owned(), prop.to_owned());
+
+                if !methods.contains_key(key) {
+                    mutating_methods.insert(key.to_owned());
+                    methods.insert(key.to_owned(), method.to_owned());
                 }
             }
         }
@@ -95,15 +118,9 @@ pub fn merge_readonly_and_mutable_schemes(
 
     // NOTE: we need to update methods that should have a `mut self` param after
     // iterating over the props in order to avoid borrowing `checker` as mut twice.
-    for (key, prop) in props.iter_mut() {
+    for (key, method) in methods.iter_mut() {
         if mutating_methods.contains(key) {
-            if let TypeKind::Function(Function { params, .. }) = &mut checker.arena[prop.t].kind {
-                if let Some(param) = params.get_mut(0) {
-                    if let TPat::Ident(binding) = &mut param.pattern {
-                        binding.mutable = true;
-                    }
-                }
-            }
+            method.mutates = true;
         }
     }
 
@@ -121,8 +138,20 @@ pub fn merge_readonly_and_mutable_schemes(
         elems.push(TObjElem::Mapped(m));
     }
 
-    for (_, prop) in props {
-        elems.push(TObjElem::Prop(prop));
+    for p in props {
+        elems.push(TObjElem::Prop(p));
+    }
+
+    for method in methods.values() {
+        elems.push(TObjElem::Method(method.to_owned()));
+    }
+
+    for getter in getters.values() {
+        elems.push(TObjElem::Getter(getter.to_owned()));
+    }
+
+    for setter in setters.values() {
+        elems.push(TObjElem::Setter(setter.to_owned()));
     }
 
     let t = checker.from_type_kind(TypeKind::Object(TObject {
@@ -154,10 +183,10 @@ mod tests {
     fn if_obj_is_not_mutating_all_methods_are_not_mutating() {
         let src = r#"
         type A = {
-            foo: fn (self) -> boolean,
+            fn foo(self) -> boolean,
         }
         type B = {
-            bar: fn (self) -> boolean,
+            fn bar(self) -> boolean,
         }
         "#;
         let mut checker = Checker::default();
@@ -172,7 +201,7 @@ mod tests {
 
         assert_eq!(
             checker.print_scheme(&result),
-            "{bar: (mut self: Self) -> boolean, foo: (self: Self) -> boolean}"
+            "{bar(mut self) -> boolean, foo(self) -> boolean}"
         );
     }
 
