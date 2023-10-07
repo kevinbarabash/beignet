@@ -490,7 +490,6 @@ impl Checker {
                             name,
                             throws: _, // TODO
                         }) => {
-                            let mut result = "set".to_string();
                             let param = self.print_type(&param.t);
                             fields.push(format!("set {name}(mut self, {param})"))
                         }

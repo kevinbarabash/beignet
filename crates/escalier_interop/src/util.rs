@@ -3,8 +3,8 @@ use std::collections::HashSet;
 
 use escalier_hm::checker::Checker;
 use escalier_hm::types::{
-    Function, MappedType, Object as TObject, Scheme, TGetter, TMethod, TObjElem, TPat, TProp,
-    TPropKey, TSetter, TypeKind,
+    Function, MappedType, Object as TObject, Scheme, TGetter, TMethod, TObjElem, TProp, TPropKey,
+    TSetter, TypeKind,
 };
 
 pub fn new_merge_schemes(schemes: &[Scheme], checker: &mut Checker) -> Scheme {

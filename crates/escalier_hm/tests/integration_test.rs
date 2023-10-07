@@ -1158,8 +1158,8 @@ fn object_callable_subtyping() -> Result<(), TypeError> {
     assert_no_errors(&checker)
 }
 
-// TODO: This fail, we need to check unify callable siagntures in
-// object types
+// TODO: This should fail but doesn't, we need to check unify callable
+// signatures in object types
 #[test]
 #[ignore]
 fn object_callable_subtyping_failure_case() -> Result<(), TypeError> {
@@ -1167,10 +1167,10 @@ fn object_callable_subtyping_failure_case() -> Result<(), TypeError> {
 
     let src = r#"
     declare let foo: {
-        fn (self, a: string) -> string,
+        fn (a: string) -> string,
     }
     let bar: {
-        fn (self, a: number) -> number,
+        fn (a: number) -> number,
     } = foo
     "#;
     let mut script = parse_script(src).unwrap();
@@ -1316,6 +1316,9 @@ fn object_mappeds_and_properties_unify_failure() -> Result<(), TypeError> {
     assert_no_errors(&checker)
 }
 
+// NOTE: Getters are readonly while bar.foo is not readonly so this
+// assignment should not be allowed, but we're not handling readonly-ness
+// yet.
 #[test]
 fn object_properties_and_getter_should_unify() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
@@ -1335,7 +1338,6 @@ fn object_properties_and_getter_should_unify() -> Result<(), TypeError> {
     assert_no_errors(&checker)
 }
 
-// TODO
 #[test]
 #[ignore]
 fn mutable_object_properties_unify_with_getters_setters() -> Result<(), TypeError> {
@@ -1346,8 +1348,8 @@ fn mutable_object_properties_unify_with_getters_setters() -> Result<(), TypeErro
         x: number,
     }
     let mut bar: {
-        x: get (self) -> number,
-        x: set (mut self, value: number) -> undefined,
+        get x(self) -> number,
+        set x(mut self, value: number) -> undefined,
     } = foo
     "#;
     let mut script = parse_script(src).unwrap();
@@ -3143,12 +3145,11 @@ fn properties_on_tuple() -> Result<(), TypeError> {
 }
 
 #[test]
-#[ignore]
 fn set_array_element() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
     let src = r#"
-    declare let array: Array<number>
+    declare let mut array: Array<number>
     array[0] = 5
     array[1] = 10
     "#;
@@ -4699,7 +4700,6 @@ fn unify_tuple_and_array() -> Result<(), TypeError> {
 }
 
 #[test]
-#[ignore]
 fn conditional_type_with_function_subtyping() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
