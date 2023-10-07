@@ -403,12 +403,36 @@ impl Checker {
                         TObjElem::Call(_) => None,
                         TObjElem::Constructor(_) => None,
                         TObjElem::Mapped(_) => None,
-                        TObjElem::Method(_) => None, // TODO
-                        TObjElem::Getter(_) => None, // TODO
+                        TObjElem::Method(method) => {
+                            let func_type = self.new_func_type(
+                                &method.params,
+                                method.ret,
+                                &method.type_params,
+                                method.throws,
+                            );
+                            Some((
+                                method.name.to_string(),
+                                TProp {
+                                    name: TPropKey::StringKey(method.name.to_string()),
+                                    t: func_type,
+                                    optional: false,
+                                    readonly: false,
+                                },
+                            ))
+                        }
+                        TObjElem::Getter(getter) => Some((
+                            getter.name.to_string(),
+                            TProp {
+                                name: getter.name.to_owned(),
+                                t: getter.ret,
+                                optional: false,
+                                readonly: true, // TODO: check if there's a setter
+                            },
+                        )),
                         TObjElem::Setter(_) => None, // TODO
                         TObjElem::Prop(prop) => {
                             // TODO: handle getters/setters properly
-                            Some((prop.name.to_string(), prop))
+                            Some((prop.name.to_string(), prop.to_owned()))
                         }
                     })
                     .collect();
@@ -420,12 +444,36 @@ impl Checker {
                         TObjElem::Call(_) => None,
                         TObjElem::Constructor(_) => None,
                         TObjElem::Mapped(_) => None,
-                        TObjElem::Method(_) => None, // TODO
-                        TObjElem::Getter(_) => None, // TODO
+                        TObjElem::Method(method) => {
+                            let func_type = self.new_func_type(
+                                &method.params,
+                                method.ret,
+                                &method.type_params,
+                                method.throws,
+                            );
+                            Some((
+                                method.name.to_string(),
+                                TProp {
+                                    name: TPropKey::StringKey(method.name.to_string()),
+                                    t: func_type,
+                                    optional: false,
+                                    readonly: false,
+                                },
+                            ))
+                        }
+                        TObjElem::Getter(getter) => Some((
+                            getter.name.to_string(),
+                            TProp {
+                                name: getter.name.to_owned(),
+                                t: getter.ret,
+                                optional: false,
+                                readonly: true, // TODO: check if there's a setter
+                            },
+                        )),
                         TObjElem::Setter(_) => None, // TODO
                         TObjElem::Prop(prop) => {
                             // TODO: handle getters/setters properly
-                            Some((prop.name.to_string(), prop))
+                            Some((prop.name.to_string(), prop.to_owned()))
                         }
                     })
                     .collect();
