@@ -589,7 +589,6 @@ fn infer_ts_type_element(
                     optional: sig.optional,
                     readonly: sig.readonly,
                     t,
-                    modifier: None,
                 }))
             }
             None => Err(String::from("Property is missing type annotation")),

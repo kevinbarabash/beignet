@@ -64,6 +64,16 @@ impl Checker {
                     let param_types: Vec<_> = params.iter().map(|param| param.t).collect();
                     self.occurs_in(v, &param_types) || self.occurs_in_type(v, *ret)
                 }
+                TObjElem::Getter(TGetter {
+                    name,
+                    ret,
+                    throws: _, // TODO
+                }) => self.occurs_in_type(v, *ret),
+                TObjElem::Setter(TSetter {
+                    name,
+                    param,
+                    throws: _, // TODO
+                }) => self.occurs_in_type(v, param.t),
                 TObjElem::Mapped(mapped) => {
                     self.occurs_in_type(v, mapped.key)
                         || self.occurs_in_type(v, mapped.value)
@@ -342,6 +352,30 @@ impl Checker {
                             }
                         }
                         TObjElem::Method(TMethod { name, .. }) => match name {
+                            TPropKey::StringKey(name) => {
+                                string_keys
+                                    .push(self.new_lit_type(&Literal::String(name.to_owned())));
+                            }
+                            TPropKey::NumberKey(name) => {
+                                number_keys
+                                    .push(self.new_lit_type(&Literal::Number(name.to_owned())));
+                            }
+                        },
+                        TObjElem::Getter(TGetter { name, ret, throws }) => match name {
+                            TPropKey::StringKey(name) => {
+                                string_keys
+                                    .push(self.new_lit_type(&Literal::String(name.to_owned())));
+                            }
+                            TPropKey::NumberKey(name) => {
+                                number_keys
+                                    .push(self.new_lit_type(&Literal::Number(name.to_owned())));
+                            }
+                        },
+                        TObjElem::Setter(TSetter {
+                            name,
+                            param,
+                            throws,
+                        }) => match name {
                             TPropKey::StringKey(name) => {
                                 string_keys
                                     .push(self.new_lit_type(&Literal::String(name.to_owned())));
@@ -681,7 +715,6 @@ impl Checker {
 
                                 new_elems.push(TObjElem::Prop(TProp {
                                     name,
-                                    modifier: None,
                                     optional,
                                     readonly: false,
                                     t: self.expand_type(ctx, value)?,
@@ -841,6 +874,9 @@ impl Checker {
 
         if let TypeKind::Object(object) = &obj_type.kind {
             match &key_type.kind {
+                // If the key is a primitive like `number`, `string`, or
+                // `symbol`, collect all of the properties that match and
+                // union their types together.
                 TypeKind::Primitive(primitive)
                     if primitive == &Primitive::Number
                         || primitive == &Primitive::String
@@ -864,7 +900,31 @@ impl Checker {
                                 }
                                 maybe_mapped = Some(mapped);
                             }
-                            TObjElem::Method(_) => todo!(),
+                            TObjElem::Method(_) => {
+                                // TODO construct a function type and push it on
+                                // to `values`.
+                                todo!();
+                            }
+                            TObjElem::Getter(TGetter { name, ret, throws }) => {
+                                match &name {
+                                    TPropKey::StringKey(_) if primitive == &Primitive::String => (),
+                                    TPropKey::NumberKey(_) if primitive == &Primitive::Number => (),
+                                    _ => continue,
+                                };
+                                values.push(*ret);
+                            }
+                            TObjElem::Setter(TSetter {
+                                name,
+                                param,
+                                throws,
+                            }) => {
+                                match &name {
+                                    TPropKey::StringKey(_) if primitive == &Primitive::String => (),
+                                    TPropKey::NumberKey(_) if primitive == &Primitive::Number => (),
+                                    _ => continue,
+                                };
+                                values.push(param.t);
+                            }
                             TObjElem::Prop(prop) => {
                                 match &prop.name {
                                     TPropKey::StringKey(_) if primitive == &Primitive::String => (),
@@ -967,6 +1027,26 @@ impl Checker {
                                         self.new_func_type(params, *ret, type_params, *throws);
                                     return Ok(func_t);
                                 }
+                            }
+                            TObjElem::Getter(TGetter { name, ret, throws }) => {
+                                let key = match &name {
+                                    TPropKey::StringKey(key) => key,
+                                    TPropKey::NumberKey(key) => key,
+                                };
+
+                                return Ok(*ret);
+                            }
+                            TObjElem::Setter(TSetter {
+                                name,
+                                param,
+                                throws,
+                            }) => {
+                                let key = match &name {
+                                    TPropKey::StringKey(key) => key,
+                                    TPropKey::NumberKey(key) => key,
+                                };
+
+                                return Ok(param.t);
                             }
                             TObjElem::Prop(prop) => {
                                 let key = match &prop.name {

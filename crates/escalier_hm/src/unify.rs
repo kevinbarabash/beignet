@@ -391,6 +391,11 @@ impl Checker {
                 let mut constructors_2: Vec<&Function> = vec![];
                 let mut mapped_2: Vec<&MappedType> = vec![];
 
+                // NOTE:
+                // - methods and getters are readonly
+                // - properties are can be read and written (unless marked as 'readonly')
+                // - setters can only be written
+
                 let named_props_1: HashMap<_, _> = object1
                     .elems
                     .iter()
@@ -398,7 +403,9 @@ impl Checker {
                         TObjElem::Call(_) => None,
                         TObjElem::Constructor(_) => None,
                         TObjElem::Mapped(_) => None,
-                        TObjElem::Method(_) => None,
+                        TObjElem::Method(_) => None, // TODO
+                        TObjElem::Getter(_) => None, // TODO
+                        TObjElem::Setter(_) => None, // TODO
                         TObjElem::Prop(prop) => {
                             // TODO: handle getters/setters properly
                             Some((prop.name.to_string(), prop))
@@ -413,7 +420,9 @@ impl Checker {
                         TObjElem::Call(_) => None,
                         TObjElem::Constructor(_) => None,
                         TObjElem::Mapped(_) => None,
-                        TObjElem::Method(_) => None,
+                        TObjElem::Method(_) => None, // TODO
+                        TObjElem::Getter(_) => None, // TODO
+                        TObjElem::Setter(_) => None, // TODO
                         TObjElem::Prop(prop) => {
                             // TODO: handle getters/setters properly
                             Some((prop.name.to_string(), prop))
@@ -1150,6 +1159,8 @@ pub fn simplify_intersection(checker: &mut Checker, in_types: &[Index]) -> Index
                 TObjElem::Constructor(_) => todo!(),
                 TObjElem::Mapped(_) => todo!(),
                 TObjElem::Method(_) => todo!(),
+                TObjElem::Getter(_) => todo!(),
+                TObjElem::Setter(_) => todo!(),
                 TObjElem::Prop(prop) => {
                     let key = match &prop.name {
                         TPropKey::StringKey(key) => key.to_owned(),
@@ -1174,7 +1185,6 @@ pub fn simplify_intersection(checker: &mut Checker, in_types: &[Index]) -> Index
             };
             TObjElem::Prop(TProp {
                 name: TPropKey::StringKey(name.to_owned()),
-                modifier: None,
                 // TODO: determine this field from all of the TProps with
                 // the same name.  This should only be optional if all of
                 // the TProps with the current name are optional.
@@ -1190,6 +1200,8 @@ pub fn simplify_intersection(checker: &mut Checker, in_types: &[Index]) -> Index
         TObjElem::Constructor(_) => todo!(),
         TObjElem::Mapped(_) => todo!(),
         TObjElem::Method(_) => todo!(),
+        TObjElem::Getter(_) => todo!(),
+        TObjElem::Setter(_) => todo!(),
         TObjElem::Prop(prop) => prop.name.clone(),
     }); // ensure a stable order
 

@@ -3,8 +3,8 @@ use std::collections::HashSet;
 
 use escalier_hm::checker::Checker;
 use escalier_hm::types::{
-    Function, MappedType, Object as TObject, Scheme, TMethod, TObjElem, TPat, TProp, TPropKey,
-    TypeKind,
+    Function, MappedType, Object as TObject, Scheme, TGetter, TMethod, TObjElem, TPat, TProp,
+    TPropKey, TSetter, TypeKind,
 };
 
 pub fn new_merge_schemes(schemes: &[Scheme], checker: &mut Checker) -> Scheme {
@@ -44,6 +44,8 @@ pub fn merge_readonly_and_mutable_schemes(
     let mut callables: Vec<Function> = vec![];
     let mut newables: Vec<Function> = vec![];
     let mut props: Vec<TProp> = vec![];
+    let mut getters: BTreeMap<String, TGetter> = BTreeMap::new();
+    let mut setters: BTreeMap<String, TSetter> = BTreeMap::new();
 
     // TODO: check that the type params are the same for both schemes
     let type_params = mutable_scheme.type_params.to_owned();
@@ -71,6 +73,26 @@ pub fn merge_readonly_and_mutable_schemes(
                     };
                     methods.insert(key.to_owned(), method.to_owned());
                 }
+                // TODO: Check if there's already a getter for this, if so,
+                // raise an error
+                TObjElem::Getter(getter) => {
+                    let key = match &getter.name {
+                        TPropKey::StringKey(key) => key,
+                        TPropKey::NumberKey(key) => key,
+                    };
+                    getters.insert(key.to_owned(), getter.to_owned());
+                }
+                // TODO: Check if there's already a setter for this, if so,
+                // raise an error
+                TObjElem::Setter(setter) => {
+                    let key = match &setter.name {
+                        TPropKey::StringKey(key) => key,
+                        TPropKey::NumberKey(key) => key,
+                    };
+                    setters.insert(key.to_owned(), setter.to_owned());
+                }
+                // TODO: TS doesn't support merging interfaces with properties
+                // that have different types
                 TObjElem::Prop(prop) => {
                     props.push(prop.to_owned());
                 }
@@ -120,8 +142,16 @@ pub fn merge_readonly_and_mutable_schemes(
         elems.push(TObjElem::Prop(p));
     }
 
-    for (_, method) in methods {
-        elems.push(TObjElem::Method(method));
+    for method in methods.values() {
+        elems.push(TObjElem::Method(method.to_owned()));
+    }
+
+    for getter in getters.values() {
+        elems.push(TObjElem::Getter(getter.to_owned()));
+    }
+
+    for setter in setters.values() {
+        elems.push(TObjElem::Setter(setter.to_owned()));
     }
 
     let t = checker.from_type_kind(TypeKind::Object(TObject {

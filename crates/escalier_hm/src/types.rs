@@ -185,6 +185,20 @@ pub struct TMethod {
     pub mutates: bool,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TGetter {
+    pub name: TPropKey,
+    pub ret: Index,
+    pub throws: Option<Index>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct TSetter {
+    pub name: TPropKey,
+    pub param: FuncParam,
+    pub throws: Option<Index>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TIndexKey {
     pub name: String,
@@ -206,17 +220,9 @@ impl fmt::Display for TPropKey {
     }
 }
 
-// TODO: dedupe with PropModifier
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum TPropModifier {
-    Getter,
-    Setter,
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TProp {
     pub name: TPropKey,
-    pub modifier: Option<TPropModifier>,
     pub optional: bool,
     pub readonly: bool,
     pub t: Index,
@@ -224,17 +230,7 @@ pub struct TProp {
 
 impl TProp {
     pub fn get_type(&self, checker: &mut Checker) -> Index {
-        let t = match self.modifier {
-            Some(TPropModifier::Getter) => {
-                if let TypeKind::Function(func) = &checker.arena[self.t].kind {
-                    func.ret
-                } else {
-                    todo!()
-                }
-            }
-            Some(TPropModifier::Setter) => todo!(),
-            None => self.t,
-        };
+        let t = self.t;
 
         match self.optional {
             true => {
@@ -280,6 +276,8 @@ pub enum TObjElem {
     // the object scheme in which they live
     Constructor(Function),
     Method(TMethod),
+    Getter(TGetter),
+    Setter(TSetter),
     Mapped(MappedType),
     Prop(TProp),
     // RestSpread - we can use this instead of converting {a, ...x} to {a} & tvar
@@ -479,6 +477,23 @@ impl Checker {
                 let mut fields = vec![];
                 for prop in &object.elems {
                     match prop {
+                        TObjElem::Getter(TGetter {
+                            ret,
+                            name,
+                            throws: _,
+                        }) => {
+                            let ret_type = self.print_type(ret);
+                            fields.push(format!("get {name}(self) -> {ret_type}"));
+                        }
+                        TObjElem::Setter(TSetter {
+                            param,
+                            name,
+                            throws: _, // TODO
+                        }) => {
+                            let mut result = "set".to_string();
+                            let param = self.print_type(&param.t);
+                            fields.push(format!("set {name}(mut self, {param})"))
+                        }
                         TObjElem::Constructor(Function {
                             params,
                             ret,
@@ -608,7 +623,6 @@ impl Checker {
                         }
                         TObjElem::Prop(TProp {
                             name,
-                            modifier, // TODO
                             optional,
                             readonly,
                             t,
@@ -621,13 +635,6 @@ impl Checker {
                             let mut str = "".to_string();
                             if *readonly {
                                 str += "readonly ";
-                            }
-
-                            if let Some(modifier) = modifier {
-                                match modifier {
-                                    TPropModifier::Getter => str += "get ",
-                                    TPropModifier::Setter => str += "set ",
-                                }
                             }
 
                             str += name;

@@ -76,7 +76,6 @@ fn test_env() -> (Checker, Context) {
         // .push(item: T) -> number;
         types::TObjElem::Prop(types::TProp {
             name: types::TPropKey::StringKey("push".to_string()),
-            modifier: None,
             optional: false,
             readonly: false,
             t: push_t,
@@ -84,7 +83,6 @@ fn test_env() -> (Checker, Context) {
         // .length: number;
         types::TObjElem::Prop(types::TProp {
             name: types::TPropKey::StringKey("length".to_string()),
-            modifier: None,
             optional: false,
             readonly: false,
             t: number,
@@ -1135,7 +1133,7 @@ fn object_signatures() -> Result<(), TypeError> {
 
     assert_eq!(
         checker.print_type(&binding.index),
-        "{fn(a: number) -> string, foo: (a: number) -> string, bar(self, a: number) -> string, get baz: string, set baz: string, [P]: number for P in string, qux: string}".to_string(),
+        "{fn(a: number) -> string, foo: (a: number) -> string, bar(self, a: number) -> string, get baz(self) -> string, set baz(mut self, string), [P]: number for P in string, qux: string}".to_string(),
     );
 
     assert_no_errors(&checker)

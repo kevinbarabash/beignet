@@ -86,7 +86,6 @@ impl Checker {
                                     expr::Prop::Shorthand(Ident { name, span: _ }) => {
                                         prop_types.push(types::TObjElem::Prop(types::TProp {
                                             name: TPropKey::StringKey(name.to_owned()),
-                                            modifier: None,
                                             readonly: false,
                                             optional: false,
                                             t: checker.get_type(name, ctx)?,
@@ -96,21 +95,18 @@ impl Checker {
                                         let prop = match key {
                                             ObjectKey::Ident(ident) => types::TProp {
                                                 name: TPropKey::StringKey(ident.name.to_owned()),
-                                                modifier: None,
                                                 readonly: false,
                                                 optional: false,
                                                 t: checker.infer_expression(value, ctx)?,
                                             },
                                             ObjectKey::String(name) => types::TProp {
                                                 name: TPropKey::StringKey(name.to_owned()),
-                                                modifier: None,
                                                 readonly: false,
                                                 optional: false,
                                                 t: checker.infer_expression(value, ctx)?,
                                             },
                                             ObjectKey::Number(name) => types::TProp {
                                                 name: TPropKey::StringKey(name.to_owned()),
-                                                modifier: None,
                                                 readonly: false,
                                                 optional: false,
                                                 t: checker.infer_expression(value, ctx)?,
@@ -875,33 +871,33 @@ impl Checker {
                             }));
                         }
                         ObjectProp::Getter(getter) => {
-                            // TODO: replace this with an actually getter type struct
-                            props.push(types::TObjElem::Prop(types::TProp {
+                            props.push(types::TObjElem::Getter(types::TGetter {
                                 name: TPropKey::StringKey(getter.name.to_owned()),
-                                modifier: Some(TPropModifier::Getter),
-                                readonly: false,
-                                optional: false,
-                                t: self.infer_type_ann(&mut getter.ret, &mut obj_ctx)?,
+                                ret: self.infer_type_ann(&mut getter.ret, &mut obj_ctx)?,
+                                throws: None, // TODO
                             }));
                         }
-                        ObjectProp::Setter(setter) => {
-                            // TODO: replace this with an actually setter type struct
-                            props.push(types::TObjElem::Prop(types::TProp {
-                                name: TPropKey::StringKey(setter.name.to_owned()),
-                                modifier: Some(TPropModifier::Setter),
-                                readonly: false,
-                                optional: false,
-                                t: self.infer_type_ann(&mut setter.param.type_ann, &mut obj_ctx)?,
+                        ObjectProp::Setter(SetterType {
+                            span: _,
+                            name,
+                            param,
+                        }) => {
+                            // TODO: create an `infer_func_param` function
+                            let t = self.infer_type_ann(&mut param.type_ann, &mut obj_ctx)?;
+                            let param = types::FuncParam {
+                                pattern: pattern_to_tpat(&param.pattern, true),
+                                t,
+                                optional: param.optional,
+                            };
+                            props.push(types::TObjElem::Setter(types::TSetter {
+                                name: TPropKey::StringKey(name.to_owned()),
+                                param,
+                                throws: None, // TODO
                             }));
                         }
                         ObjectProp::Prop(prop) => {
-                            let modifier = prop.modifier.as_ref().map(|modifier| match modifier {
-                                PropModifier::Getter => TPropModifier::Getter,
-                                PropModifier::Setter => TPropModifier::Setter,
-                            });
                             props.push(types::TObjElem::Prop(types::TProp {
                                 name: TPropKey::StringKey(prop.name.to_owned()),
-                                modifier,
                                 readonly: prop.readonly,
                                 optional: prop.optional,
                                 t: self.infer_type_ann(&mut prop.type_ann, &mut obj_ctx)?,

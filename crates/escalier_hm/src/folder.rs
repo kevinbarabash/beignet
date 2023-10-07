@@ -128,13 +128,27 @@ pub fn walk_index<F: Folder>(folder: &mut F, index: &Index) -> Index {
                         mutates,
                     }) => TObjElem::Method(TMethod {
                         name: name.to_owned(),
-                        // replace with `fucntion: Fucntion` - START>
+                        // replace with `function: Fucntion` - START>
                         params: walk_func_params(folder, params),
                         ret: folder.fold_index(ret),
                         type_params: walk_type_params(folder, type_params),
                         throws: throws.map(|throws| folder.fold_index(&throws)),
-                        // <END - replace with `fucntion: Fucntion`
+                        // <END - replace with `fucntion: Function`
                         mutates: *mutates,
+                    }),
+                    TObjElem::Getter(TGetter { name, ret, throws }) => TObjElem::Getter(TGetter {
+                        name: name.to_owned(),
+                        ret: folder.fold_index(ret),
+                        throws: throws.map(|throws| folder.fold_index(&throws)),
+                    }),
+                    TObjElem::Setter(TSetter {
+                        name,
+                        param,
+                        throws,
+                    }) => TObjElem::Setter(TSetter {
+                        name: name.to_owned(),
+                        param: walk_func_param(folder, param),
+                        throws: throws.map(|throws| folder.fold_index(&throws)),
                     }),
                     TObjElem::Prop(prop) => TObjElem::Prop(TProp {
                         t: folder.fold_index(&prop.t),

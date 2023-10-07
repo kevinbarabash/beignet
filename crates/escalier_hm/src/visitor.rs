@@ -61,6 +61,22 @@ pub fn walk_index<V: Visitor>(visitor: &mut V, index: &Index) {
                     walk_type_params(visitor, &method.type_params);
                     method.throws.map(|throws| visitor.visit_index(&throws));
                 }
+                TObjElem::Getter(TGetter {
+                    name: _,
+                    ret,
+                    throws,
+                }) => {
+                    visitor.visit_index(ret);
+                    throws.map(|throws| visitor.visit_index(&throws));
+                }
+                TObjElem::Setter(TSetter {
+                    name: _,
+                    param,
+                    throws,
+                }) => {
+                    walk_func_param(visitor, param);
+                    throws.map(|throws| visitor.visit_index(&throws));
+                }
                 TObjElem::Prop(prop) => visitor.visit_index(&prop.t),
             });
         }
