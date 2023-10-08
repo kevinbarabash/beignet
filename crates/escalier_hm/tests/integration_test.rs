@@ -5484,3 +5484,47 @@ fn infer_simple_class() -> Result<(), TypeError> {
 
     assert_no_errors(&checker)
 }
+
+#[test]
+fn infer_simple_class_and_param_types() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    // TODO: Allow comments in class bodies
+    let src = r#"
+    let Point = class {
+        x: number
+        y: number
+        fn constructor(mut self, x, y) {
+            self.x = x
+            self.y = y
+        }
+        fn add(mut self, other: Self) {
+            self.x += other.x
+            self.y += other.y
+            return self
+        }
+    }
+    let mut p = new Point(5, 10)
+    let q = new Point(1, 0)
+    let {x, y} = p
+    // TODO: store a reference to the underlying type on type references
+    // let r = p.add(q)
+    "#;
+    let mut script = parse_script(src).unwrap();
+
+    checker.infer_script(&mut script, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("Point").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"{new fn(x: number, y: number) -> {x: number, y: number, add(mut self, other: Self) -> Self}}"#
+    );
+
+    let binding = my_ctx.values.get("p").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"{x: number, y: number, add(mut self, other: Self) -> Self}"#
+    );
+
+    assert_no_errors(&checker)
+}

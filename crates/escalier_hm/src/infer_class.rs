@@ -48,7 +48,7 @@ impl Checker {
 
                     if !*is_static {
                         let binding = Binding {
-                            index: instance_scheme.t,
+                            index: self.new_type_ref("Self", &[]),
                             is_mut: *is_mutating,
                         };
                         sig_ctx.values.insert("self".to_string(), binding);
@@ -89,6 +89,7 @@ impl Checker {
                             body_ctx = body_ctx.clone();
                             self.infer_statement(stmt, &mut body_ctx)?;
                             if let StmtKind::Return(_) = stmt.kind {
+                                // TODO: handle unreachable return statements
                                 let ret_types: Vec<Index> = find_returns(body)
                                     .iter()
                                     .filter_map(|ret| ret.inferred_type)
