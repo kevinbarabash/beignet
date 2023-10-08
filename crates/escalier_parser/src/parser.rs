@@ -298,13 +298,17 @@ impl<'a> Parser<'a> {
 
         if mode == IdentMode::PropName {
             let kind = match ident.as_ref() {
-                // 'fn' is special because it's used to introduce a callable
-                // signature.
+                // All of these can be used to introduce a method so we can't
+                // use these as property names.
+                // TODO: parse these as identifiers first and if there isn't a
+                // colon after them then parse them as tokens.
                 "fn" => TokenKind::Fn,
-                // 'get' and 'set' are special because they introduce getters
-                // and setters respectively.
                 "get" => TokenKind::Get,
                 "set" => TokenKind::Set,
+                "static" => TokenKind::Static,
+                "async" => TokenKind::Async,
+                "gen" => TokenKind::Gen,
+                "private" => TokenKind::Private,
                 // 'mut' is special because it can be used to modify bindings
                 // introduced by patterns
                 "mut" => TokenKind::Mut,
@@ -329,6 +333,8 @@ impl<'a> Parser<'a> {
             "get" => TokenKind::Get,
             "set" => TokenKind::Set,
             "pub" => TokenKind::Pub,
+            "private" => TokenKind::Private,
+            "static" => TokenKind::Static,
             "async" => TokenKind::Async,
             "await" => TokenKind::Await,
             "gen" => TokenKind::Gen,

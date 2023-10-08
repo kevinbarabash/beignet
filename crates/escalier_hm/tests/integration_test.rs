@@ -5440,3 +5440,39 @@ fn higher_rank_type_expected_error() -> Result<(), TypeError> {
 
 //     assert_no_errors(&checker)
 // }
+
+#[test]
+fn infer_simple_class() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    // TODO: Allow comments in class bodies
+    let src = r#"
+    let Point = class {
+        x: number
+        y: number
+        fn constructor(mut self, x: number, y: number) {
+            self.x = x
+            self.y = y
+        }
+    }
+    let point = new Point(5, 10)
+    let {x, y} = point
+    "#;
+    let mut script = parse_script(src).unwrap();
+
+    checker.infer_script(&mut script, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("Point").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"{new fn(x: number, y: number) -> {x: number, y: number}}"#
+    );
+
+    let binding = my_ctx.values.get("point").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"{x: number, y: number}"#
+    );
+
+    assert_no_errors(&checker)
+}

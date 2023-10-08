@@ -1,11 +1,11 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(r#\"\n            class<T> extends Foo {\n                fn bar<A>(self, a: A): T {}\n            }\n        \"#)"
+expression: "parse(r#\"\n            class<T> extends Foo {\n                fn bar<A>(self, a: A) -> T {}\n            }\n        \"#)"
 ---
 Expr {
     kind: Class(
         Class {
-            span: 13..93,
+            span: 13..95,
             type_params: Some(
                 [
                     TypeParam {
@@ -26,7 +26,7 @@ Expr {
             body: [
                 Method(
                     Method {
-                        span: 52..79,
+                        span: 52..81,
                         name: Ident(
                             Ident {
                                 name: "bar",
@@ -37,6 +37,7 @@ Expr {
                         is_async: false,
                         is_gen: false,
                         is_mutating: false,
+                        is_static: false,
                         type_params: Some(
                             [
                                 TypeParam {
@@ -48,21 +49,6 @@ Expr {
                             ],
                         ),
                         params: [
-                            FuncParam {
-                                pattern: Pattern {
-                                    kind: Ident(
-                                        BindingIdent {
-                                            name: "self",
-                                            span: 62..66,
-                                            mutable: false,
-                                        },
-                                    ),
-                                    span: 62..66,
-                                    inferred_type: None,
-                                },
-                                type_ann: None,
-                                optional: false,
-                            },
                             FuncParam {
                                 pattern: Pattern {
                                     kind: Ident(
@@ -89,7 +75,7 @@ Expr {
                             },
                         ],
                         body: Block {
-                            span: 77..79,
+                            span: 79..81,
                             stmts: [],
                         },
                         type_ann: Some(
@@ -98,7 +84,7 @@ Expr {
                                     "T",
                                     None,
                                 ),
-                                span: 75..76,
+                                span: 77..78,
                                 inferred_type: None,
                             },
                         ),
@@ -107,6 +93,6 @@ Expr {
             ],
         },
     ),
-    span: 13..93,
+    span: 13..95,
     inferred_type: None,
 }

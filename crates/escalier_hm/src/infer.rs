@@ -215,8 +215,9 @@ impl Checker {
                         type_ann: return_type,
                         throws: sig_throws,
                     }) => {
-                        let mut func_params: Vec<types::FuncParam> = vec![];
                         let mut sig_ctx = ctx.clone();
+
+                        let mut func_params: Vec<types::FuncParam> = vec![];
 
                         let type_params = checker.infer_type_params(type_params, &mut sig_ctx)?;
 

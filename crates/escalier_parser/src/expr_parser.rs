@@ -1480,7 +1480,7 @@ mod tests {
         insta::assert_debug_snapshot!(parse(
             r#"
             class<T> extends Foo {
-                fn bar<A>(self, a: A): T {}
+                fn bar<A>(self, a: A) -> T {}
             }
         "#
         ));
@@ -1492,17 +1492,18 @@ mod tests {
             r#"
             class {
                 x: number
-                pub y: number
-                fn constructor(x, y) {
-                    return {x, y}
+                y: number
+                fn constructor(self, x, y) {
+                    self.x = x
+                    self.y = y
                 }
-                pub fn make_point(x, y) {
+                static fn make_point(x, y) {
                     return new Self(x, y)
                 }
-                pub get x(self) {
+                get x(self) {
                     return self.x
                 }
-                pub set x(self, value) {
+                set x(mut self, value) {
                     self.x = value
                 }
             }
