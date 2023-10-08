@@ -225,7 +225,10 @@ impl<'a> Folder for Instantiate<'a> {
         let t = self.get_type(index);
 
         match &t.kind {
-            TypeKind::TypeRef(TypeRef { name, types }) => {
+            TypeKind::TypeRef(TypeRef {
+                name,
+                type_args: types,
+            }) => {
                 let new_types = folder::walk_indexes(self, types);
 
                 match self.mapping.get(name) {

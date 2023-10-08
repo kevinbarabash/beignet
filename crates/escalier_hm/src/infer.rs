@@ -1559,7 +1559,11 @@ impl Checker {
                     Ok(self.new_union_type(&result_types))
                 }
             }
-            TypeKind::TypeRef(types::TypeRef { name, types, .. }) => {
+            TypeKind::TypeRef(types::TypeRef {
+                name,
+                type_args: types,
+                ..
+            }) => {
                 let obj_idx = self.expand_alias(ctx, name, types)?;
                 self.get_ident_member(ctx, obj_idx, key_idx, is_mut)
             }

@@ -451,9 +451,7 @@ pub fn build_type(
         }
         types::TypeKind::Object(obj) => build_obj_type(obj, ctx, checker),
         types::TypeKind::TypeRef(types::TypeRef {
-            name,
-            types: type_args,
-            ..
+            name, type_args, ..
         }) => {
             let mut sym = JsWord::from(name.to_owned());
             let use_readonly_utility = false;

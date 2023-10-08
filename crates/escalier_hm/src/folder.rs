@@ -33,7 +33,10 @@ pub fn walk_index<F: Folder>(folder: &mut F, index: &Index) -> Index {
                 constraint: new_constraint,
             })
         }
-        TypeKind::TypeRef(TypeRef { name, types }) => {
+        TypeKind::TypeRef(TypeRef {
+            name,
+            type_args: types,
+        }) => {
             let new_types = walk_indexes(folder, types);
 
             if new_types == *types {
@@ -42,7 +45,7 @@ pub fn walk_index<F: Folder>(folder: &mut F, index: &Index) -> Index {
 
             TypeKind::TypeRef(TypeRef {
                 name: name.to_owned(),
-                types: new_types,
+                type_args: new_types,
             })
         }
         TypeKind::Union(Union { types }) => {
