@@ -39,6 +39,8 @@ pub enum TokenKind {
     Get,
     Set,
     Pub,
+    Private,
+    Static,
     Async,
     Await,
     Gen,

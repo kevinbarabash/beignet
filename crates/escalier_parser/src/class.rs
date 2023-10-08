@@ -71,19 +71,33 @@ impl<'a> Parser<'a> {
             false
         };
 
+        let is_static = if self.peek().unwrap_or(&EOF).kind == TokenKind::Static {
+            self.next(); // consumes 'static'
+            true
+        } else {
+            false
+        };
+
         let token = self.peek().unwrap_or(&EOF);
         match token.kind {
-            TokenKind::Identifier(_) => self.parse_field(is_public),
-            TokenKind::Fn => self.parse_method(is_public),
-            TokenKind::Gen => self.parse_method(is_public),
-            TokenKind::Async => self.parse_method(is_public),
-            TokenKind::Get => self.parse_getter(is_public),
-            TokenKind::Set => self.parse_setter(is_public),
+            TokenKind::Identifier(_) => self.parse_field(is_public, is_static),
+            TokenKind::Fn => self.parse_method(is_public, is_static),
+            TokenKind::Gen => self.parse_method(is_public, is_static),
+            TokenKind::Async => self.parse_method(is_public, is_static),
+            TokenKind::Get => match is_static {
+                true => panic!("static getter"),
+                false => self.parse_getter(is_public),
+            },
+            TokenKind::Set => match is_static {
+                true => panic!("static setter"),
+                false => self.parse_setter(is_public),
+            },
             _ => panic!("unexpected token {:?}", token),
         }
     }
 
-    fn parse_field(&mut self, is_public: bool) -> Result<ClassMember, ParseError> {
+    fn parse_field(&mut self, is_public: bool, is_static: bool) -> Result<ClassMember, ParseError> {
+        // TODO: how do we include `pub` and `static` in the span?
         let token = self.next().unwrap_or(EOF.clone());
         let start = token.span.start;
 
@@ -108,6 +122,7 @@ impl<'a> Parser<'a> {
                     span,
                     name,
                     is_public,
+                    is_static,
                     init: None,
                     type_ann: Some(type_ann),
                 })
@@ -123,6 +138,7 @@ impl<'a> Parser<'a> {
                     span,
                     name,
                     is_public,
+                    is_static,
                     init: Some(Box::new(init)),
                     type_ann: None,
                 })
@@ -183,7 +199,12 @@ impl<'a> Parser<'a> {
         Ok(setter)
     }
 
-    fn parse_method(&mut self, is_public: bool) -> Result<ClassMember, ParseError> {
+    fn parse_method(
+        &mut self,
+        is_public: bool,
+        is_static: bool,
+    ) -> Result<ClassMember, ParseError> {
+        // TODO: how do we include `pub` and `static` in the span?
         let start = self.peek().unwrap_or(&EOF).span.start;
 
         let is_async = if self.peek().unwrap_or(&EOF).kind == TokenKind::Async {
@@ -204,9 +225,12 @@ impl<'a> Parser<'a> {
 
         let name = self.parse_name()?;
         let type_params = self.maybe_parse_type_params()?;
-        let params = self.parse_params()?;
-        let type_ann = if self.peek().unwrap_or(&EOF).kind == TokenKind::Colon {
-            self.next(); // consumes ':'
+        let (params, is_mutating) = match is_static {
+            true => (self.parse_params()?, false),
+            false => self.parse_method_params()?,
+        };
+        let type_ann = if self.peek().unwrap_or(&EOF).kind == TokenKind::SingleArrow {
+            self.next(); // consumes '->'
             Some(self.parse_type_ann()?)
         } else {
             None
@@ -231,7 +255,8 @@ impl<'a> Parser<'a> {
                 is_public,
                 is_async,
                 is_gen,
-                is_mutating: false, // TODO
+                is_mutating,
+                is_static,
                 params,
                 body,
                 type_params,

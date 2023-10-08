@@ -18,6 +18,7 @@ Expr {
                             span: 37..40,
                         },
                         is_public: false,
+                        is_static: false,
                         type_ann: Some(
                             TypeAnn {
                                 kind: String,
@@ -36,6 +37,7 @@ Expr {
                             span: 65..67,
                         },
                         is_public: false,
+                        is_static: false,
                         type_ann: None,
                         init: Some(
                             Expr {
@@ -63,24 +65,9 @@ Expr {
                         is_async: false,
                         is_gen: false,
                         is_mutating: false,
+                        is_static: false,
                         type_params: None,
-                        params: [
-                            FuncParam {
-                                pattern: Pattern {
-                                    kind: Ident(
-                                        BindingIdent {
-                                            name: "self",
-                                            span: 95..99,
-                                            mutable: false,
-                                        },
-                                    ),
-                                    span: 95..99,
-                                    inferred_type: None,
-                                },
-                                type_ann: None,
-                                optional: false,
-                            },
-                        ],
+                        params: [],
                         body: Block {
                             span: 101..103,
                             stmts: [],
@@ -101,23 +88,9 @@ Expr {
                         is_async: true,
                         is_gen: false,
                         is_mutating: false,
+                        is_static: false,
                         type_params: None,
                         params: [
-                            FuncParam {
-                                pattern: Pattern {
-                                    kind: Ident(
-                                        BindingIdent {
-                                            name: "self",
-                                            span: 135..139,
-                                            mutable: false,
-                                        },
-                                    ),
-                                    span: 135..139,
-                                    inferred_type: None,
-                                },
-                                type_ann: None,
-                                optional: false,
-                            },
                             FuncParam {
                                 pattern: Pattern {
                                     kind: Ident(
@@ -181,24 +154,9 @@ Expr {
                         is_async: false,
                         is_gen: true,
                         is_mutating: false,
+                        is_static: false,
                         type_params: None,
-                        params: [
-                            FuncParam {
-                                pattern: Pattern {
-                                    kind: Ident(
-                                        BindingIdent {
-                                            name: "self",
-                                            span: 198..202,
-                                            mutable: false,
-                                        },
-                                    ),
-                                    span: 198..202,
-                                    inferred_type: None,
-                                },
-                                type_ann: None,
-                                optional: false,
-                            },
-                        ],
+                        params: [],
                         body: Block {
                             span: 204..206,
                             stmts: [],

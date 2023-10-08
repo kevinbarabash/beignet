@@ -24,10 +24,12 @@ pub struct Method {
     pub is_async: bool,
     pub is_gen: bool,
     pub is_mutating: bool,
+    pub is_static: bool,
     pub type_params: Option<Vec<TypeParam>>,
     pub params: Vec<FuncParam>,
     pub body: Block,
     pub type_ann: Option<TypeAnn>, // return type
+                                   // TODO: handle throws
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -71,6 +73,7 @@ pub struct Field {
     pub span: Span,
     pub name: Ident,
     pub is_public: bool,
+    pub is_static: bool,
     pub type_ann: Option<TypeAnn>,
     pub init: Option<Box<Expr>>,
     // TODO: add `is_static` and `is_optional` fields
