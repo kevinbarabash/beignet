@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use generational_arena::Index;
 
 use escalier_ast::{self as syntax, *};
@@ -50,7 +48,7 @@ impl Checker {
 
                     if !*is_static {
                         let binding = Binding {
-                            index: instance_scheme.t,
+                            index: self.new_type_ref("Self", &[]),
                             is_mut: *is_mutating,
                         };
                         sig_ctx.values.insert("self".to_string(), binding);
@@ -91,6 +89,7 @@ impl Checker {
                             body_ctx = body_ctx.clone();
                             self.infer_statement(stmt, &mut body_ctx)?;
                             if let StmtKind::Return(_) = stmt.kind {
+                                // TODO: handle unreachable return statements
                                 let ret_types: Vec<Index> = find_returns(body)
                                     .iter()
                                     .filter_map(|ret| ret.inferred_type)
@@ -181,8 +180,8 @@ impl Checker {
                 ClassMember::Constructor(Constructor {
                     span: _,
                     is_public: _,
-                    params,
-                    body,
+                    params: _,
+                    body: _,
                 }) => {
                     eprintln!("inferring constuctor");
                 }
@@ -209,6 +208,17 @@ impl Checker {
         let mut instance_elems: Vec<TObjElem> = vec![];
         let mut static_elems: Vec<TObjElem> = vec![];
 
+        let self_type = self.new_type_var(None);
+
+        let mut cls_ctx = ctx.clone();
+        cls_ctx.schemes.insert(
+            "Self".to_string(),
+            Scheme {
+                t: self_type,
+                type_params: None,
+            },
+        );
+
         // TODO:
         // - add `Self` type to `sig_ctx` so that it can be referenced in
         //   type annotations
@@ -223,7 +233,7 @@ impl Checker {
                     params,
                     body: _,
                 }) => {
-                    let mut sig_ctx = ctx.clone();
+                    let mut sig_ctx = cls_ctx.clone();
 
                     let func_params = self.infer_func_params(params, &mut sig_ctx)?;
 
@@ -253,7 +263,7 @@ impl Checker {
                     body: _,
                     type_ann: return_type,
                 }) => {
-                    let mut sig_ctx = ctx.clone();
+                    let mut sig_ctx = cls_ctx.clone();
 
                     let type_params = self.infer_type_params(type_params, &mut sig_ctx)?;
                     let func_params = params
@@ -318,7 +328,7 @@ impl Checker {
                     params: _, // should be empty for getters
                     body: _,   // TODO: unify in `infer_class`
                 }) => {
-                    let mut sig_ctx = ctx.clone();
+                    let mut sig_ctx = cls_ctx.clone();
 
                     let type_ann_t = match type_ann {
                         Some(type_ann) => self.infer_type_ann(type_ann, &mut sig_ctx)?,
@@ -347,7 +357,7 @@ impl Checker {
                     params,
                     body: _, // TODO: unify in `infer_class`
                 }) => {
-                    let mut sig_ctx = ctx.clone();
+                    let mut sig_ctx = cls_ctx.clone();
 
                     let name: TPropKey = match name {
                         PropName::Ident(Ident { name, span: _ }) => {
@@ -371,7 +381,7 @@ impl Checker {
                     type_ann,
                     init: _, // TODO: unify in `infer_class`
                 }) => {
-                    let mut sig_ctx = ctx.clone();
+                    let mut sig_ctx = cls_ctx.clone();
 
                     let type_ann_t = match type_ann {
                         Some(type_ann) => self.infer_type_ann(type_ann, &mut sig_ctx)?,

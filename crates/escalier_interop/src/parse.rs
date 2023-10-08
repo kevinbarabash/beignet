@@ -152,12 +152,12 @@ pub fn infer_ts_type_ann(
                     Ok(checker.from_type_kind(TypeKind::TypeRef(TypeRef {
                         name,
                         // TODO: Update TypeRef's .types field to be Option<Vec<Index>>
-                        types: result.ok().unwrap(),
+                        type_args: result.ok().unwrap(),
                     })))
                 }
                 None => Ok(checker.from_type_kind(TypeKind::TypeRef(TypeRef {
                     name,
-                    types: vec![],
+                    type_args: vec![],
                 }))),
             }
         }

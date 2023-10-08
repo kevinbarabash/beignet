@@ -169,7 +169,7 @@ impl Checker {
             }
             (TypeKind::TypeRef(con_a), TypeKind::TypeRef(con_b)) => {
                 // TODO: support type constructors with optional and default type params
-                if con_a.name != con_b.name || con_a.types.len() != con_b.types.len() {
+                if con_a.name != con_b.name || con_a.type_args.len() != con_b.type_args.len() {
                     return Err(TypeError {
                         message: format!(
                             "type mismatch: {} != {}",
@@ -178,7 +178,7 @@ impl Checker {
                         ),
                     });
                 }
-                for (p, q) in con_a.types.iter().zip(con_b.types.iter()) {
+                for (p, q) in con_a.type_args.iter().zip(con_b.type_args.iter()) {
                     self.unify(ctx, *p, *q)?;
                 }
                 Ok(())
@@ -811,10 +811,7 @@ impl Checker {
                     message: "array is not callable".to_string(),
                 })
             }
-            TypeKind::TypeRef(TypeRef {
-                name,
-                types: type_args,
-            }) => {
+            TypeKind::TypeRef(TypeRef { name, type_args }) => {
                 let scheme = ctx.get_scheme(&name)?;
                 let mut mapping: HashMap<String, Index> = HashMap::new();
                 if let Some(type_params) = &scheme.type_params {

@@ -114,7 +114,9 @@ impl Checker {
             TypeKind::Intersection(Intersection { types }) => self.occurs_in(v, &types),
             TypeKind::Tuple(Tuple { types }) => self.occurs_in(v, &types),
             TypeKind::Array(Array { t }) => self.occurs_in_type(v, t),
-            TypeKind::TypeRef(TypeRef { types, .. }) => self.occurs_in(v, &types),
+            TypeKind::TypeRef(TypeRef {
+                type_args: types, ..
+            }) => self.occurs_in(v, &types),
             TypeKind::KeyOf(KeyOf { t }) => self.occurs_in_type(v, t),
             TypeKind::IndexedAccess(IndexedAccess { obj, index }) => {
                 self.occurs_in_type(v, obj) || self.occurs_in_type(v, index)
@@ -320,9 +322,11 @@ impl Checker {
                 self.get_computed_member(ctx, *obj, *index, is_mut)?
             }
             TypeKind::Conditional(conditional) => self.expand_conditional(ctx, conditional)?,
-            TypeKind::TypeRef(TypeRef { name, types, .. }) => {
-                self.expand_alias(ctx, name, types)?
-            }
+            TypeKind::TypeRef(TypeRef {
+                name,
+                type_args: types,
+                ..
+            }) => self.expand_alias(ctx, name, types)?,
             TypeKind::Binary(binary) => self.expand_binary(ctx, binary)?,
             TypeKind::Object(object) => return self.expand_object(ctx, object),
             _ => return Ok(t), // Early return to avoid infinite loop
@@ -445,7 +449,7 @@ impl Checker {
                 Ok(self.new_union_type(&keys))
             }
             TypeKind::TypeRef(constructor) => {
-                let idx = self.expand_alias(ctx, &constructor.name, &constructor.types)?;
+                let idx = self.expand_alias(ctx, &constructor.name, &constructor.type_args)?;
                 self.expand_keyof(ctx, idx)
             }
             TypeKind::Intersection(Intersection { types }) => {
@@ -859,7 +863,11 @@ impl Checker {
                     Ok(self.new_union_type(&result_types))
                 }
             }
-            TypeKind::TypeRef(TypeRef { name, types, .. }) => {
+            TypeKind::TypeRef(TypeRef {
+                name,
+                type_args: types,
+                ..
+            }) => {
                 let idx = self.expand_alias(ctx, name, types)?;
                 self.get_computed_member(ctx, idx, key_idx, is_mut)
             }

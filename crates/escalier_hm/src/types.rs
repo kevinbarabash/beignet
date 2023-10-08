@@ -21,8 +21,7 @@ pub struct TypeVar {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TypeRef {
     pub name: String,
-    // TODO: rename this to type_args
-    pub types: Vec<Index>,
+    pub type_args: Vec<Index>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -463,11 +462,11 @@ impl Checker {
                 format!("[{}]", self.print_types(types).join(", "))
             }
             TypeKind::Array(Array { t }) => format!("{}[]", self.print_type(t)),
-            TypeKind::TypeRef(TypeRef { name, types }) => {
-                if types.is_empty() {
+            TypeKind::TypeRef(TypeRef { name, type_args }) => {
+                if type_args.is_empty() {
                     name.to_string()
                 } else {
-                    format!("{}<{}>", name, self.print_types(types).join(", "))
+                    format!("{}<{}>", name, self.print_types(type_args).join(", "))
                 }
             }
             TypeKind::Keyword(keyword) => keyword.to_string(),
@@ -795,7 +794,7 @@ impl Checker {
                 (None, None) => v1.id == v2.id,
             },
             (TypeKind::TypeRef(c1), TypeKind::TypeRef(c2)) => {
-                c1.name == c2.name && self.types_equal(&c1.types, &c2.types)
+                c1.name == c2.name && self.types_equal(&c1.type_args, &c2.type_args)
             }
             (TypeKind::Union(union1), TypeKind::Union(union2)) => {
                 self.types_equal(&union1.types, &union2.types)
@@ -914,7 +913,7 @@ impl Checker {
     pub fn new_type_ref(&mut self, name: &str, types: &[Index]) -> Index {
         self.arena.insert(Type::from(TypeKind::TypeRef(TypeRef {
             name: name.to_string(),
-            types: types.to_vec(),
+            type_args: types.to_vec(),
         })))
     }
 
