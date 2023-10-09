@@ -11,7 +11,7 @@ fn test_env() -> (Checker, Context) {
     let mut context = Context::default();
 
     let number = checker.new_primitive(Primitive::Number);
-    let type_param_t = checker.new_type_ref("T", &[]);
+    let type_param_t = checker.new_type_ref("T", None, &[]);
 
     let push_t = checker.new_func_type(
         &[types::FuncParam {
@@ -30,8 +30,8 @@ fn test_env() -> (Checker, Context) {
 
     // [P]: T for P in number;
     let mapped = types::TObjElem::Mapped(types::MappedType {
-        key: checker.new_type_ref("P", &[]),
-        value: checker.new_type_ref("T", &[]),
+        key: checker.new_type_ref("P", None, &[]),
+        value: checker.new_type_ref("T", None, &[]),
         target: "P".to_string(),
         source: checker.new_primitive(Primitive::Number),
         optional: None,

@@ -811,8 +811,15 @@ impl Checker {
                     message: "array is not callable".to_string(),
                 })
             }
-            TypeKind::TypeRef(TypeRef { name, type_args }) => {
-                let scheme = ctx.get_scheme(&name)?;
+            TypeKind::TypeRef(TypeRef {
+                name,
+                scheme,
+                type_args,
+            }) => {
+                let scheme = match scheme {
+                    Some(scheme) => scheme,
+                    None => ctx.get_scheme(&name)?,
+                };
                 let mut mapping: HashMap<String, Index> = HashMap::new();
                 if let Some(type_params) = &scheme.type_params {
                     for (param, arg) in type_params.iter().zip(type_args.iter()) {

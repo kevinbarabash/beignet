@@ -325,7 +325,9 @@ impl Checker {
                         if *is_async && !is_promise(&checker.arena[body_t]) {
                             let never = checker.new_keyword(Keyword::Never);
                             let throws_t = throws.unwrap_or(never);
-                            body_t = checker.new_type_ref("Promise", &[body_t, throws_t]);
+                            // NOTE: `None` means that we'll need to look up the
+                            // type whenever it's used.
+                            body_t = checker.new_type_ref("Promise", None, &[body_t, throws_t]);
 
                             // TODO: add sig_ctx which is a copy of ctx but with all of
                             // the type params added to sig_ctx.schemes so that they can
@@ -579,7 +581,9 @@ impl Checker {
                         // TODO: Merge Constructor and TypeRef
                         // NOTE: This isn't quite right because we can await non-promise values.
                         // That being said, we should avoid doing so.
-                        let promise_t = checker.new_type_ref("Promise", &[inner_t, throws_t]);
+                        // NOTE: `None` means that we'll need to look up the
+                        // type whenever it's used.
+                        let promise_t = checker.new_type_ref("Promise", None, &[inner_t, throws_t]);
                         checker.unify(ctx, expr_t, promise_t)?;
                         *throws = Some(throws_t);
 
@@ -974,7 +978,13 @@ impl Checker {
                     }
                 }
 
-                self.new_type_ref(name, &type_args)
+                // TODO: We can be setting the type ref's scheme as long as the
+                // type ref doesn't appear inside of a type param.  Once possible
+                // solution to this is to replace the type refs completely with
+                // their type args instead.
+                // let scheme = ctx.get_scheme(name)?;
+                // self.new_type_ref(name, Some(scheme), &type_args)
+                self.new_type_ref(name, None, &type_args)
             }
             TypeAnnKind::Union(types) => {
                 let mut idxs = Vec::new();
@@ -1234,6 +1244,12 @@ impl Checker {
                 let idx = match type_ann {
                     Some(type_ann) => {
                         let type_ann_idx = self.infer_type_ann(type_ann, ctx)?;
+
+                        if let TypeKind::TypeRef(tref) = &mut self.arena[type_ann_idx].kind {
+                            // TODO: raise an error if the type name is not in scope
+                            tref.scheme =
+                                ctx.schemes.get(&tref.name).map(|scheme| scheme.to_owned());
+                        }
 
                         // The initializer must conform to the type annotation's
                         // inferred type.
@@ -1561,10 +1577,14 @@ impl Checker {
             }
             TypeKind::TypeRef(types::TypeRef {
                 name,
-                type_args: types,
+                scheme,
+                type_args,
                 ..
             }) => {
-                let obj_idx = self.expand_alias(ctx, name, types)?;
+                let obj_idx = match scheme {
+                    Some(scheme) => self.expand_scheme(ctx, scheme, type_args, name)?,
+                    None => self.expand_alias(ctx, name, type_args)?,
+                };
                 self.get_ident_member(ctx, obj_idx, key_idx, is_mut)
             }
             TypeKind::Array(types::Array { t }) => {
@@ -1603,6 +1623,12 @@ impl Checker {
         type_params: &mut Option<Vec<syntax::TypeParam>>,
         sig_ctx: &mut Context,
     ) -> Result<Option<Vec<types::TypeParam>>, TypeError> {
+        // Foo<T, U : T> = ...
+        // We don't want these type references to point to themselves
+        // but if a constraint references a type outside of the type params
+        // then we do want to reference it.  The reason being is that we
+        // want to look up the type of `T` which is instantiate the type
+        // declaration.
         if let Some(type_params) = type_params {
             for tp in type_params.iter_mut() {
                 let constraint = match &mut tp.bound {
@@ -1765,7 +1791,10 @@ impl<'a, 'b> Folder for Generalize<'a, 'b> {
                         name
                     }
                 };
-                self.checker.new_type_ref(&name, &[])
+                // NOTE: we're replacing type variables with type references
+                // which will later be re-replaced with new type variables
+                // when instantiating the type.
+                self.checker.new_type_ref(&name, None, &[])
             }
             _ => folder::walk_index(self, &index),
         }

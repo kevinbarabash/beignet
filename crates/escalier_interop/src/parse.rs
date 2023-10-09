@@ -151,12 +151,14 @@ pub fn infer_ts_type_ann(
                         .collect();
                     Ok(checker.from_type_kind(TypeKind::TypeRef(TypeRef {
                         name,
+                        scheme: None,
                         // TODO: Update TypeRef's .types field to be Option<Vec<Index>>
                         type_args: result.ok().unwrap(),
                     })))
                 }
                 None => Ok(checker.from_type_kind(TypeKind::TypeRef(TypeRef {
                     name,
+                    scheme: None,
                     type_args: vec![],
                 }))),
             }
@@ -311,7 +313,7 @@ pub fn infer_ts_type_ann(
             let name = type_param.name.sym.to_string();
 
             let elems = vec![TObjElem::Mapped(MappedType {
-                key: checker.new_type_ref(&name, &[]),
+                key: checker.new_type_ref(&name, None, &[]),
                 target: name,
                 source: constraint,
                 value: type_ann,
@@ -611,7 +613,7 @@ fn infer_ts_type_element(
 
                 if let TPat::Ident(identifier::BindingIdent { name, .. }) = &key.pattern {
                     Ok(TObjElem::Mapped(MappedType {
-                        key: checker.new_type_ref(name.as_str(), &[]),
+                        key: checker.new_type_ref(name.as_str(), None, &[]),
                         target: name.to_owned(),
                         value: t,
                         source: key.t,
@@ -684,10 +686,10 @@ fn infer_interface_decl(
 
     if let Some(type_params) = &decl.type_params {
         for param in &type_params.as_ref().params {
-            type_args.push(checker.new_type_ref(&param.name.sym, &[]));
+            type_args.push(checker.new_type_ref(&param.name.sym, None, &[]));
         }
     }
-    let self_type = checker.new_type_ref(&decl.id.sym, &type_args);
+    let self_type = checker.new_type_ref(&decl.id.sym, None, &type_args);
 
     sig_ctx.schemes.insert(
         "Self".to_string(),

@@ -35,6 +35,7 @@ pub fn walk_index<F: Folder>(folder: &mut F, index: &Index) -> Index {
         }
         TypeKind::TypeRef(TypeRef {
             name,
+            scheme,
             type_args: types,
         }) => {
             let new_types = walk_indexes(folder, types);
@@ -45,6 +46,16 @@ pub fn walk_index<F: Folder>(folder: &mut F, index: &Index) -> Index {
 
             TypeKind::TypeRef(TypeRef {
                 name: name.to_owned(),
+                scheme: match scheme {
+                    None => None,
+                    Some(scheme) => {
+                        let t = folder.fold_index(&scheme.t);
+                        Some(Scheme {
+                            t,
+                            ..scheme.to_owned()
+                        })
+                    }
+                },
                 type_args: new_types,
             })
         }

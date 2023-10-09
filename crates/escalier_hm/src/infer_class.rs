@@ -16,7 +16,8 @@ impl Checker {
     ) -> Result<Index, TypeError> {
         let mut cls_ctx = ctx.clone();
 
-        let (instance_scheme, static_type) = self.infer_class_interface(class, &mut cls_ctx)?;
+        // TODO: unify _static_type with the static type of the class
+        let (instance_scheme, _static_type) = self.infer_class_interface(class, &mut cls_ctx)?;
 
         cls_ctx
             .schemes
@@ -48,7 +49,7 @@ impl Checker {
 
                     if !*is_static {
                         let binding = Binding {
-                            index: self.new_type_ref("Self", &[]),
+                            index: self.new_type_ref("Self", Some(instance_scheme.clone()), &[]),
                             is_mut: *is_mutating,
                         };
                         sig_ctx.values.insert("self".to_string(), binding);
@@ -146,8 +147,8 @@ impl Checker {
                     if &name == "constructor" {
                         static_elems.push(TObjElem::Constructor(types::Function {
                             params: func_params,
-                            // ret: self.new_type_ref("Self", &[]),
-                            ret: instance_scheme.t,
+                            ret: self.new_type_ref("Self", Some(instance_scheme.clone()), &[]),
+                            // ret: instance_scheme.t,
                             type_params,
                             throws: None, // TODO
                         }));
@@ -237,7 +238,14 @@ impl Checker {
 
                     let func_params = self.infer_func_params(params, &mut sig_ctx)?;
 
-                    let ret = self.new_type_ref("Self", &[]);
+                    let ret = self.new_type_ref(
+                        "Self",
+                        Some(Scheme {
+                            t: self_type,
+                            type_params: None,
+                        }),
+                        &[],
+                    );
 
                     let constructor = TObjElem::Constructor(types::Function {
                         params: func_params,

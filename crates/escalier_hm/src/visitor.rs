@@ -23,9 +23,10 @@ pub fn walk_index<V: Visitor>(visitor: &mut V, index: &Index) {
         }
         TypeKind::TypeRef(TypeRef {
             name: _,
-            type_args: types,
+            scheme: _, // TODO: walk the scheme's types as well
+            type_args,
         }) => {
-            walk_indexes(visitor, types);
+            walk_indexes(visitor, type_args);
         }
         TypeKind::Union(Union { types }) => {
             walk_indexes(visitor, types);

@@ -207,7 +207,16 @@ impl Checker {
         type_args: &[Index],
     ) -> Result<Index, TypeError> {
         let scheme = ctx.get_scheme(name)?;
+        self.expand_scheme(ctx, &scheme, type_args, name)
+    }
 
+    pub fn expand_scheme(
+        &mut self,
+        ctx: &Context,
+        scheme: &Scheme,
+        type_args: &[Index],
+        name: &str,
+    ) -> Result<Index, TypeError> {
         match &scheme.type_params {
             Some(type_params) => {
                 if type_params.len() != type_args.len() {
@@ -225,6 +234,7 @@ impl Checker {
                     // We're not mutating `kind` so this should be safe.
                     let check_kind: &TypeKind = unsafe { transmute(&self.arena[check].kind) };
                     if let TypeKind::TypeRef(tref) = check_kind {
+                        eprintln!("tref = {:#?}", tref);
                         if let Some((index_of_check_type, _)) = type_params
                             .iter()
                             .find_position(|type_param| type_param.name == tref.name)
@@ -324,9 +334,12 @@ impl Checker {
             TypeKind::Conditional(conditional) => self.expand_conditional(ctx, conditional)?,
             TypeKind::TypeRef(TypeRef {
                 name,
-                type_args: types,
-                ..
-            }) => self.expand_alias(ctx, name, types)?,
+                scheme,
+                type_args,
+            }) => match scheme {
+                Some(scheme) => self.expand_scheme(ctx, scheme, type_args, name)?,
+                None => self.expand_alias(ctx, name, type_args)?,
+            },
             TypeKind::Binary(binary) => self.expand_binary(ctx, binary)?,
             TypeKind::Object(object) => return self.expand_object(ctx, object),
             _ => return Ok(t), // Early return to avoid infinite loop
@@ -448,8 +461,8 @@ impl Checker {
                     .collect();
                 Ok(self.new_union_type(&keys))
             }
-            TypeKind::TypeRef(constructor) => {
-                let idx = self.expand_alias(ctx, &constructor.name, &constructor.type_args)?;
+            TypeKind::TypeRef(tref) => {
+                let idx = self.expand_alias(ctx, &tref.name, &tref.type_args)?;
                 self.expand_keyof(ctx, idx)
             }
             TypeKind::Intersection(Intersection { types }) => {
@@ -705,7 +718,6 @@ impl Checker {
                                                     // where optional fields are
                                                     // given type `T | undefined`
                                                     value = prop.t;
-                                                    eprintln!("prop = {prop:#?}");
                                                 }
                                             }
                                         }

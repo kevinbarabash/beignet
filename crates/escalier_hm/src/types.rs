@@ -21,6 +21,9 @@ pub struct TypeVar {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TypeRef {
     pub name: String,
+    // NOTE: if `scheme` is `None` then we need to look up the type in the
+    // current Context to see if it exists.  If it doesn't, that's a type error.
+    pub scheme: Option<Scheme>,
     pub type_args: Vec<Index>,
 }
 
@@ -462,7 +465,11 @@ impl Checker {
                 format!("[{}]", self.print_types(types).join(", "))
             }
             TypeKind::Array(Array { t }) => format!("{}[]", self.print_type(t)),
-            TypeKind::TypeRef(TypeRef { name, type_args }) => {
+            TypeKind::TypeRef(TypeRef {
+                name,
+                scheme: _, // TODO
+                type_args,
+            }) => {
                 if type_args.is_empty() {
                     name.to_string()
                 } else {
@@ -910,9 +917,10 @@ impl Checker {
         })))
     }
 
-    pub fn new_type_ref(&mut self, name: &str, types: &[Index]) -> Index {
+    pub fn new_type_ref(&mut self, name: &str, scheme: Option<Scheme>, types: &[Index]) -> Index {
         self.arena.insert(Type::from(TypeKind::TypeRef(TypeRef {
             name: name.to_string(),
+            scheme,
             type_args: types.to_vec(),
         })))
     }
