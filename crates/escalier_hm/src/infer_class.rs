@@ -178,14 +178,6 @@ impl Checker {
                 }
                 ClassMember::Getter(_) => todo!(),
                 ClassMember::Setter(_) => todo!(),
-                ClassMember::Constructor(Constructor {
-                    span: _,
-                    is_public: _,
-                    params: _,
-                    body: _,
-                }) => {
-                    eprintln!("inferring constuctor");
-                }
                 ClassMember::Field(_) => {
                     // If there's an initializer, infer its type and then
                     // unify with the type annotation of the field.
@@ -221,43 +213,8 @@ impl Checker {
             },
         );
 
-        // TODO:
-        // - add `Self` type to `sig_ctx` so that it can be referenced in
-        //   type annotations
-        // - `Self` should expand to whatever the class name is + type params
-
         for member in &mut class.body {
             match member {
-                // Constructors are part of statics and thus not part of the interface
-                ClassMember::Constructor(Constructor {
-                    span: _,
-                    is_public: _,
-                    params,
-                    body: _,
-                }) => {
-                    let mut sig_ctx = cls_ctx.clone();
-
-                    let func_params = self.infer_func_params(params, &mut sig_ctx)?;
-
-                    let ret = self.new_type_ref(
-                        "Self",
-                        Some(Scheme {
-                            t: self_type,
-                            type_params: None,
-                            is_type_param: false,
-                        }),
-                        &[],
-                    );
-
-                    let constructor = TObjElem::Constructor(types::Function {
-                        params: func_params,
-                        ret,
-                        type_params: None,
-                        throws: None, // TODO: constructors can throw
-                    });
-
-                    static_elems.push(constructor);
-                }
                 // TODO: update Method {} to contain `name` and `function` fields
                 // so that we can reuse some of the logic around function inference
                 ClassMember::Method(Method {
@@ -426,19 +383,6 @@ impl Checker {
 
         // TODO: How do we keep track of the relationship between these two?
         Ok((instance_scheme, static_type))
-    }
-
-    fn infer_func_params(
-        &mut self,
-        params: &mut [syntax::FuncParam],
-        sig_ctx: &mut Context,
-    ) -> Result<Vec<types::FuncParam>, TypeError> {
-        let func_params = params
-            .iter_mut()
-            .map(|func_param| self.infer_func_param(func_param, sig_ctx))
-            .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(func_params)
     }
 
     fn infer_func_param(
