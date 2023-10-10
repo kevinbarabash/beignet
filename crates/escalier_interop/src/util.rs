@@ -27,7 +27,11 @@ pub fn new_merge_schemes(schemes: &[Scheme], checker: &mut Checker) -> Scheme {
 
     let t = checker.from_type_kind(TypeKind::Object(TObject { elems }));
 
-    Scheme { t, type_params }
+    Scheme {
+        t,
+        type_params,
+        is_type_param: false,
+    }
 }
 
 pub fn merge_readonly_and_mutable_schemes(
@@ -163,7 +167,11 @@ pub fn merge_readonly_and_mutable_schemes(
         // is_interface: true,
     }));
 
-    Scheme { t, type_params }
+    Scheme {
+        t,
+        type_params,
+        is_type_param: false,
+    }
 }
 
 #[cfg(test)]

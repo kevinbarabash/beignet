@@ -670,7 +670,11 @@ fn infer_type_alias_decl(
         None => None,
     };
 
-    let scheme = Scheme { t, type_params };
+    let scheme = Scheme {
+        t,
+        type_params,
+        is_type_param: false,
+    };
 
     Ok(scheme)
 }
@@ -696,6 +700,7 @@ fn infer_interface_decl(
         Scheme {
             t: self_type,
             type_params: None,
+            is_type_param: false,
         },
     );
 
@@ -773,7 +778,11 @@ fn infer_interface_decl(
         ])
     }
 
-    let scheme = Scheme { t, type_params };
+    let scheme = Scheme {
+        t,
+        type_params,
+        is_type_param: false,
+    };
 
     Ok(scheme)
 }

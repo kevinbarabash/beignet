@@ -217,6 +217,7 @@ impl Checker {
             Scheme {
                 t: self_type,
                 type_params: None,
+                is_type_param: false,
             },
         );
 
@@ -243,6 +244,7 @@ impl Checker {
                         Some(Scheme {
                             t: self_type,
                             type_params: None,
+                            is_type_param: false,
                         }),
                         &[],
                     );
@@ -417,6 +419,7 @@ impl Checker {
             // I don't think this is something that can be inferred, by
             // default, each function gets its own type params
             type_params: None,
+            is_type_param: false,
         };
 
         let static_type = self.new_object_type(&static_elems);

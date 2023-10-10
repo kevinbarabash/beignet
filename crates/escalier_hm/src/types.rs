@@ -422,6 +422,7 @@ impl From<TypeKind> for Type {
 pub struct Scheme {
     pub t: Index,
     pub type_params: Option<Vec<TypeParam>>,
+    pub is_type_param: bool,
 }
 
 /// A type variable standing for an arbitrary type.

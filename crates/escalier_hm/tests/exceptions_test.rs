@@ -63,6 +63,7 @@ fn test_env() -> (Checker, Context) {
             default: None,
         }]),
         t: array_interface,
+        is_type_param: false,
     };
 
     context.schemes.insert("Array".to_string(), array_scheme);

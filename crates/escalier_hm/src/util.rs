@@ -291,6 +291,7 @@ impl Checker {
                         Scheme {
                             type_params: None,
                             t: *arg,
+                            is_type_param: false,
                         },
                     );
                 }

@@ -792,6 +792,7 @@ impl Checker {
                     Scheme {
                         type_params: None,
                         t: self_idx,
+                        is_type_param: false,
                     },
                 );
                 for elem in obj.iter_mut() {
@@ -811,6 +812,7 @@ impl Checker {
                             let scheme = Scheme {
                                 type_params: None,
                                 t: source,
+                                is_type_param: false,
                             };
                             type_ctx.schemes.insert(target.to_owned(), scheme);
 
@@ -968,6 +970,7 @@ impl Checker {
                         Scheme {
                             type_params: None,
                             t: *arg,
+                            is_type_param: false,
                         },
                     );
                 }
@@ -978,13 +981,15 @@ impl Checker {
                     }
                 }
 
-                // TODO: We can be setting the type ref's scheme as long as the
-                // type ref doesn't appear inside of a type param.  Once possible
-                // solution to this is to replace the type refs completely with
-                // their type args instead.
-                // let scheme = ctx.get_scheme(name)?;
-                // self.new_type_ref(name, Some(scheme), &type_args)
-                self.new_type_ref(name, None, &type_args)
+                // NOTE: If the scheme we get was created from a type param
+                // we can't use it as the new type ref's scheme because it
+                // need to be able to lookup the type param's type arg.
+                let scheme = ctx.get_scheme(name)?;
+                if scheme.is_type_param {
+                    self.new_type_ref(name, None, &type_args)
+                } else {
+                    self.new_type_ref(name, Some(scheme), &type_args)
+                }
             }
             TypeAnnKind::Union(types) => {
                 let mut idxs = Vec::new();
@@ -1051,6 +1056,7 @@ impl Checker {
                     let scheme = Scheme {
                         type_params: None,
                         t: tp,
+                        is_type_param: false,
                     };
                     cond_ctx.schemes.insert(infer.name, scheme);
                     // QUESTION: Do we need to do something with ctx.non_generic here?
@@ -1245,12 +1251,6 @@ impl Checker {
                     Some(type_ann) => {
                         let type_ann_idx = self.infer_type_ann(type_ann, ctx)?;
 
-                        if let TypeKind::TypeRef(tref) = &mut self.arena[type_ann_idx].kind {
-                            // TODO: raise an error if the type name is not in scope
-                            tref.scheme =
-                                ctx.schemes.get(&tref.name).map(|scheme| scheme.to_owned());
-                        }
-
                         // The initializer must conform to the type annotation's
                         // inferred type.
                         match mutability {
@@ -1335,7 +1335,11 @@ impl Checker {
         let t = self.infer_type_ann(type_ann, &mut sig_ctx)?;
 
         // TODO: generalize type `t` into a scheme
-        let scheme = Scheme { t, type_params };
+        let scheme = Scheme {
+            t,
+            type_params,
+            is_type_param: false,
+        };
 
         ctx.schemes.insert(name.to_owned(), scheme);
 
@@ -1359,6 +1363,7 @@ impl Checker {
                         let placeholder_scheme = Scheme {
                             t: self.new_keyword(Keyword::Unknown),
                             type_params: None,
+                            is_type_param: false,
                         };
                         let name = name.to_owned();
                         if ctx
@@ -1461,6 +1466,7 @@ impl Checker {
                         let placeholder_scheme = Scheme {
                             t: self.new_keyword(Keyword::Unknown),
                             type_params: None,
+                            is_type_param: false,
                         };
                         let name = name.to_owned();
                         if ctx
@@ -1623,12 +1629,10 @@ impl Checker {
         type_params: &mut Option<Vec<syntax::TypeParam>>,
         sig_ctx: &mut Context,
     ) -> Result<Option<Vec<types::TypeParam>>, TypeError> {
-        // Foo<T, U : T> = ...
-        // We don't want these type references to point to themselves
-        // but if a constraint references a type outside of the type params
-        // then we do want to reference it.  The reason being is that we
-        // want to look up the type of `T` which is instantiate the type
-        // declaration.
+        // TODO: Allow type params with bounds to be specified in any order as
+        // long as they're are no cycles in the constraints.  The code as written
+        // requires that type params that are used as part of a constraint to
+        // appear before the type param that is constrained.
         if let Some(type_params) = type_params {
             for tp in type_params.iter_mut() {
                 let constraint = match &mut tp.bound {
@@ -1644,6 +1648,7 @@ impl Checker {
                         None => self.new_keyword(Keyword::Unknown),
                     },
                     type_params: None,
+                    is_type_param: true,
                 };
                 sig_ctx.schemes.insert(tp.name.to_owned(), scheme);
             }
