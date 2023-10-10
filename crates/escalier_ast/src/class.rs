@@ -84,6 +84,5 @@ pub enum ClassMember {
     Method(Method),
     Getter(Getter),
     Setter(Setter),
-    Constructor(Constructor),
     Field(Field), // TODO: rename to property?
 }

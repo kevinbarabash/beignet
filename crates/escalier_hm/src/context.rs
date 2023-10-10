@@ -227,6 +227,7 @@ impl<'a> Folder for Instantiate<'a> {
         match &t.kind {
             TypeKind::TypeRef(TypeRef {
                 name,
+                scheme, // TODO: walk the scheme's types as well
                 type_args: types,
             }) => {
                 let new_types = folder::walk_indexes(self, types);
@@ -239,7 +240,8 @@ impl<'a> Folder for Instantiate<'a> {
                     }
                     None => {
                         if &new_types != types {
-                            self.checker.new_type_ref(name, &new_types)
+                            self.checker
+                                .new_type_ref(name, scheme.to_owned(), &new_types)
                         } else {
                             *index
                         }

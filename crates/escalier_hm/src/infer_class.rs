@@ -16,7 +16,8 @@ impl Checker {
     ) -> Result<Index, TypeError> {
         let mut cls_ctx = ctx.clone();
 
-        let (instance_scheme, static_type) = self.infer_class_interface(class, &mut cls_ctx)?;
+        // TODO: unify _static_type with the static type of the class
+        let (instance_scheme, _static_type) = self.infer_class_interface(class, &mut cls_ctx)?;
 
         cls_ctx
             .schemes
@@ -48,7 +49,7 @@ impl Checker {
 
                     if !*is_static {
                         let binding = Binding {
-                            index: self.new_type_ref("Self", &[]),
+                            index: self.new_type_ref("Self", Some(instance_scheme.clone()), &[]),
                             is_mut: *is_mutating,
                         };
                         sig_ctx.values.insert("self".to_string(), binding);
@@ -146,8 +147,8 @@ impl Checker {
                     if &name == "constructor" {
                         static_elems.push(TObjElem::Constructor(types::Function {
                             params: func_params,
-                            // ret: self.new_type_ref("Self", &[]),
-                            ret: instance_scheme.t,
+                            ret: self.new_type_ref("Self", Some(instance_scheme.clone()), &[]),
+                            // ret: instance_scheme.t,
                             type_params,
                             throws: None, // TODO
                         }));
@@ -177,14 +178,6 @@ impl Checker {
                 }
                 ClassMember::Getter(_) => todo!(),
                 ClassMember::Setter(_) => todo!(),
-                ClassMember::Constructor(Constructor {
-                    span: _,
-                    is_public: _,
-                    params: _,
-                    body: _,
-                }) => {
-                    eprintln!("inferring constuctor");
-                }
                 ClassMember::Field(_) => {
                     // If there's an initializer, infer its type and then
                     // unify with the type annotation of the field.
@@ -216,38 +209,12 @@ impl Checker {
             Scheme {
                 t: self_type,
                 type_params: None,
+                is_type_param: false,
             },
         );
 
-        // TODO:
-        // - add `Self` type to `sig_ctx` so that it can be referenced in
-        //   type annotations
-        // - `Self` should expand to whatever the class name is + type params
-
         for member in &mut class.body {
             match member {
-                // Constructors are part of statics and thus not part of the interface
-                ClassMember::Constructor(Constructor {
-                    span: _,
-                    is_public: _,
-                    params,
-                    body: _,
-                }) => {
-                    let mut sig_ctx = cls_ctx.clone();
-
-                    let func_params = self.infer_func_params(params, &mut sig_ctx)?;
-
-                    let ret = self.new_type_ref("Self", &[]);
-
-                    let constructor = TObjElem::Constructor(types::Function {
-                        params: func_params,
-                        ret,
-                        type_params: None,
-                        throws: None, // TODO: constructors can throw
-                    });
-
-                    static_elems.push(constructor);
-                }
                 // TODO: update Method {} to contain `name` and `function` fields
                 // so that we can reuse some of the logic around function inference
                 ClassMember::Method(Method {
@@ -409,25 +376,13 @@ impl Checker {
             // I don't think this is something that can be inferred, by
             // default, each function gets its own type params
             type_params: None,
+            is_type_param: false,
         };
 
         let static_type = self.new_object_type(&static_elems);
 
         // TODO: How do we keep track of the relationship between these two?
         Ok((instance_scheme, static_type))
-    }
-
-    fn infer_func_params(
-        &mut self,
-        params: &mut [syntax::FuncParam],
-        sig_ctx: &mut Context,
-    ) -> Result<Vec<types::FuncParam>, TypeError> {
-        let func_params = params
-            .iter_mut()
-            .map(|func_param| self.infer_func_param(func_param, sig_ctx))
-            .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(func_params)
     }
 
     fn infer_func_param(

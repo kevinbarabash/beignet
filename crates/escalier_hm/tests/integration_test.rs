@@ -44,7 +44,7 @@ fn test_env() -> (Checker, Context) {
     let mut context = Context::default();
 
     let number = checker.new_primitive(Primitive::Number);
-    let type_param_t = checker.new_type_ref("T", &[]);
+    let type_param_t = checker.new_type_ref("T", None, &[]);
 
     let push_t = checker.new_func_type(
         &[types::FuncParam {
@@ -63,8 +63,8 @@ fn test_env() -> (Checker, Context) {
 
     // [P]: T for P in number;
     let mapped = types::TObjElem::Mapped(types::MappedType {
-        key: checker.new_type_ref("P", &[]),
-        value: checker.new_type_ref("T", &[]),
+        key: checker.new_type_ref("P", None, &[]),
+        value: checker.new_type_ref("T", None, &[]),
         target: "P".to_string(),
         source: checker.new_primitive(Primitive::Number),
         optional: None,
@@ -96,6 +96,7 @@ fn test_env() -> (Checker, Context) {
             default: None,
         }]),
         t: array_interface,
+        is_type_param: false,
     };
 
     context.schemes.insert("Array".to_string(), array_scheme);
@@ -3620,7 +3621,6 @@ fn test_index_access_type_number_mapped() -> Result<(), TypeError> {
 fn test_mapped_type_pick() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 
-    // TODO: replace `T` in type variable constraints as well
     let src = r#"   
     type Pick<T, K : keyof T> = {[P]: T[P] for P in K}
     type Obj = {a?: string, b: number, c: boolean}
@@ -5463,8 +5463,7 @@ fn infer_simple_class() -> Result<(), TypeError> {
     let mut p = new Point(5, 10)
     let q = new Point(1, 0)
     let {x, y} = p
-    // TODO: store a reference to the underlying type on type references
-    // let r = p.add(q)
+    let r = p.add(q)
     "#;
     let mut script = parse_script(src).unwrap();
 
@@ -5473,12 +5472,14 @@ fn infer_simple_class() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("Point").unwrap();
     assert_eq!(
         checker.print_type(&binding.index),
-        r#"{new fn(x: number, y: number) -> {x: number, y: number, add(mut self, other: Self) -> Self}}"#
+        r#"{new fn(x: number, y: number) -> Self}"#
     );
 
     let binding = my_ctx.values.get("p").unwrap();
+    assert_eq!(checker.print_type(&binding.index), r#"Self"#);
+    let t = checker.expand_type(&my_ctx, binding.index)?;
     assert_eq!(
-        checker.print_type(&binding.index),
+        checker.print_type(&t),
         r#"{x: number, y: number, add(mut self, other: Self) -> Self}"#
     );
 
@@ -5507,8 +5508,7 @@ fn infer_simple_class_and_param_types() -> Result<(), TypeError> {
     let mut p = new Point(5, 10)
     let q = new Point(1, 0)
     let {x, y} = p
-    // TODO: store a reference to the underlying type on type references
-    // let r = p.add(q)
+    let r = p.add(q)
     "#;
     let mut script = parse_script(src).unwrap();
 
@@ -5517,14 +5517,68 @@ fn infer_simple_class_and_param_types() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("Point").unwrap();
     assert_eq!(
         checker.print_type(&binding.index),
-        r#"{new fn(x: number, y: number) -> {x: number, y: number, add(mut self, other: Self) -> Self}}"#
+        r#"{new fn(x: number, y: number) -> Self}"#
     );
 
     let binding = my_ctx.values.get("p").unwrap();
+    assert_eq!(checker.print_type(&binding.index), r#"Self"#);
+    let t = checker.expand_type(&my_ctx, binding.index)?;
     assert_eq!(
-        checker.print_type(&binding.index),
+        checker.print_type(&t),
         r#"{x: number, y: number, add(mut self, other: Self) -> Self}"#
     );
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn use_value_with_private_type() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    // TODO: Allow comments in class bodies
+    let src = r#"
+    let make_point = fn () {
+        type Point = {x: number, y: number}
+        let p: Point = {x: 5, y: 10}
+        return p
+    }
+    let p = make_point()
+    let {x, y} = p
+    "#;
+    let mut script = parse_script(src).unwrap();
+
+    checker.infer_script(&mut script, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("p").unwrap();
+    assert_eq!(checker.print_type(&binding.index), r#"Point"#);
+    let t = checker.expand_type(&my_ctx, binding.index)?;
+    assert_eq!(checker.print_type(&t), r#"{x: number, y: number}"#);
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn use_value_with_private_type_on_obj() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    // TODO: Allow comments in class bodies
+    let src = r#"
+    let make_point = fn () {
+        type Point = {x: number, y: number}
+        let obj: {p: Point} = {p: {x: 5, y: 10}}
+        return obj
+    }
+    let {p} = make_point()
+    let {x, y} = p
+    "#;
+    let mut script = parse_script(src).unwrap();
+
+    checker.infer_script(&mut script, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("p").unwrap();
+    assert_eq!(checker.print_type(&binding.index), r#"Point"#);
+    let t = checker.expand_type(&my_ctx, binding.index)?;
+    assert_eq!(checker.print_type(&t), r#"{x: number, y: number}"#);
 
     assert_no_errors(&checker)
 }

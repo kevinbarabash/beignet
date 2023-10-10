@@ -165,7 +165,6 @@ pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &Expr) {
                     ClassMember::Method(_) => {}
                     ClassMember::Getter(_) => {}
                     ClassMember::Setter(_) => {}
-                    ClassMember::Constructor(_) => {}
                     ClassMember::Field(_) => {}
                 }
             }

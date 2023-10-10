@@ -240,29 +240,19 @@ impl<'a> Parser<'a> {
         let end = self.scanner.cursor();
         let span = Span { start, end };
 
-        let method = match name {
-            PropName::Ident(ident) if ident.name == "new" => {
-                ClassMember::Constructor(Constructor {
-                    span,
-                    is_public,
-                    params,
-                    body,
-                })
-            }
-            _ => ClassMember::Method(Method {
-                span,
-                name,
-                is_public,
-                is_async,
-                is_gen,
-                is_mutating,
-                is_static,
-                params,
-                body,
-                type_params,
-                type_ann,
-            }),
-        };
+        let method = ClassMember::Method(Method {
+            span,
+            name,
+            is_public,
+            is_async,
+            is_gen,
+            is_mutating,
+            is_static,
+            params,
+            body,
+            type_params,
+            type_ann,
+        });
 
         Ok(method)
     }

@@ -1174,64 +1174,13 @@ fn build_jsx_element(
     elem
 }
 
-// fn build_lit(lit: &values::Lit) -> Lit {
-//     match lit {
-//         values::Lit::Num(n) => Lit::Num(Number {
-//             span: DUMMY_SP,
-//             value: n.value.parse().unwrap(),
-//             raw: None,
-//         }),
-//         values::Lit::Bool(b) => Lit::Bool(Bool {
-//             span: DUMMY_SP,
-//             value: b.value,
-//         }),
-//         values::Lit::Str(s) => Lit::Str(Str {
-//             span: DUMMY_SP,
-//             value: JsWord::from(s.value.to_owned()),
-//             raw: None,
-//             // Some would include the quotes around the string
-//             // Some(JsWord::from(s.value.to_owned())),
-//         }),
-//     }
-// }
-
 fn build_class(class: &values::Class, stmts: &mut Vec<Stmt>, ctx: &mut Context) -> Class {
     let body: Vec<ClassMember> = class
         .body
         .iter()
         .filter_map(|member| match member {
-            values::ClassMember::Constructor(constructor) => {
-                let body = build_body_block_stmt(&constructor.body, &BlockFinalizer::ExprStmt, ctx);
-                // In Crochet, `self` is always the first param in methods, but
-                // it represents `this` in JavaScript which is implicit so we
-                // ignore it here.
-                let mut iter = constructor.params.iter();
-                iter.next();
-                let params: Vec<ParamOrTsParamProp> = iter
-                    .map(|param| {
-                        let pat = build_pattern(&param.pattern, stmts, ctx).unwrap();
-                        ParamOrTsParamProp::Param(Param {
-                            span: DUMMY_SP,
-                            decorators: vec![],
-                            pat,
-                        })
-                    })
-                    .collect();
-
-                Some(ClassMember::Constructor(Constructor {
-                    span: DUMMY_SP, // TODO
-                    key: PropName::Ident(Ident {
-                        span: DUMMY_SP, // TODO
-                        sym: swc_atoms::JsWord::from(String::from("constructor")),
-                        optional: false,
-                    }),
-                    params,
-                    body: Some(body),
-                    accessibility: None,
-                    is_optional: false,
-                }))
-            }
             values::ClassMember::Method(method) => {
+                // TODO: check if `name` is `constructor`
                 let body = build_body_block_stmt(&method.body, &BlockFinalizer::ExprStmt, ctx);
 
                 // In Escalier, `self` is always the first param in non-static

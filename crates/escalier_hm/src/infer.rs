@@ -325,7 +325,9 @@ impl Checker {
                         if *is_async && !is_promise(&checker.arena[body_t]) {
                             let never = checker.new_keyword(Keyword::Never);
                             let throws_t = throws.unwrap_or(never);
-                            body_t = checker.new_type_ref("Promise", &[body_t, throws_t]);
+                            // NOTE: `None` means that we'll need to look up the
+                            // type whenever it's used.
+                            body_t = checker.new_type_ref("Promise", None, &[body_t, throws_t]);
 
                             // TODO: add sig_ctx which is a copy of ctx but with all of
                             // the type params added to sig_ctx.schemes so that they can
@@ -579,7 +581,9 @@ impl Checker {
                         // TODO: Merge Constructor and TypeRef
                         // NOTE: This isn't quite right because we can await non-promise values.
                         // That being said, we should avoid doing so.
-                        let promise_t = checker.new_type_ref("Promise", &[inner_t, throws_t]);
+                        // NOTE: `None` means that we'll need to look up the
+                        // type whenever it's used.
+                        let promise_t = checker.new_type_ref("Promise", None, &[inner_t, throws_t]);
                         checker.unify(ctx, expr_t, promise_t)?;
                         *throws = Some(throws_t);
 
@@ -788,6 +792,7 @@ impl Checker {
                     Scheme {
                         type_params: None,
                         t: self_idx,
+                        is_type_param: false,
                     },
                 );
                 for elem in obj.iter_mut() {
@@ -807,6 +812,7 @@ impl Checker {
                             let scheme = Scheme {
                                 type_params: None,
                                 t: source,
+                                is_type_param: false,
                             };
                             type_ctx.schemes.insert(target.to_owned(), scheme);
 
@@ -964,6 +970,7 @@ impl Checker {
                         Scheme {
                             type_params: None,
                             t: *arg,
+                            is_type_param: false,
                         },
                     );
                 }
@@ -974,7 +981,15 @@ impl Checker {
                     }
                 }
 
-                self.new_type_ref(name, &type_args)
+                // NOTE: If the scheme we get was created from a type param
+                // we can't use it as the new type ref's scheme because it
+                // need to be able to lookup the type param's type arg.
+                let scheme = ctx.get_scheme(name)?;
+                if scheme.is_type_param {
+                    self.new_type_ref(name, None, &type_args)
+                } else {
+                    self.new_type_ref(name, Some(scheme), &type_args)
+                }
             }
             TypeAnnKind::Union(types) => {
                 let mut idxs = Vec::new();
@@ -1041,6 +1056,7 @@ impl Checker {
                     let scheme = Scheme {
                         type_params: None,
                         t: tp,
+                        is_type_param: false,
                     };
                     cond_ctx.schemes.insert(infer.name, scheme);
                     // QUESTION: Do we need to do something with ctx.non_generic here?
@@ -1319,7 +1335,11 @@ impl Checker {
         let t = self.infer_type_ann(type_ann, &mut sig_ctx)?;
 
         // TODO: generalize type `t` into a scheme
-        let scheme = Scheme { t, type_params };
+        let scheme = Scheme {
+            t,
+            type_params,
+            is_type_param: false,
+        };
 
         ctx.schemes.insert(name.to_owned(), scheme);
 
@@ -1343,6 +1363,7 @@ impl Checker {
                         let placeholder_scheme = Scheme {
                             t: self.new_keyword(Keyword::Unknown),
                             type_params: None,
+                            is_type_param: false,
                         };
                         let name = name.to_owned();
                         if ctx
@@ -1445,6 +1466,7 @@ impl Checker {
                         let placeholder_scheme = Scheme {
                             t: self.new_keyword(Keyword::Unknown),
                             type_params: None,
+                            is_type_param: false,
                         };
                         let name = name.to_owned();
                         if ctx
@@ -1561,10 +1583,14 @@ impl Checker {
             }
             TypeKind::TypeRef(types::TypeRef {
                 name,
-                type_args: types,
+                scheme,
+                type_args,
                 ..
             }) => {
-                let obj_idx = self.expand_alias(ctx, name, types)?;
+                let obj_idx = match scheme {
+                    Some(scheme) => self.expand_scheme(ctx, scheme, type_args, name)?,
+                    None => self.expand_alias(ctx, name, type_args)?,
+                };
                 self.get_ident_member(ctx, obj_idx, key_idx, is_mut)
             }
             TypeKind::Array(types::Array { t }) => {
@@ -1603,6 +1629,10 @@ impl Checker {
         type_params: &mut Option<Vec<syntax::TypeParam>>,
         sig_ctx: &mut Context,
     ) -> Result<Option<Vec<types::TypeParam>>, TypeError> {
+        // TODO: Allow type params with bounds to be specified in any order as
+        // long as they're are no cycles in the constraints.  The code as written
+        // requires that type params that are used as part of a constraint to
+        // appear before the type param that is constrained.
         if let Some(type_params) = type_params {
             for tp in type_params.iter_mut() {
                 let constraint = match &mut tp.bound {
@@ -1618,6 +1648,7 @@ impl Checker {
                         None => self.new_keyword(Keyword::Unknown),
                     },
                     type_params: None,
+                    is_type_param: true,
                 };
                 sig_ctx.schemes.insert(tp.name.to_owned(), scheme);
             }
@@ -1765,7 +1796,10 @@ impl<'a, 'b> Folder for Generalize<'a, 'b> {
                         name
                     }
                 };
-                self.checker.new_type_ref(&name, &[])
+                // NOTE: we're replacing type variables with type references
+                // which will later be re-replaced with new type variables
+                // when instantiating the type.
+                self.checker.new_type_ref(&name, None, &[])
             }
             _ => folder::walk_index(self, &index),
         }
