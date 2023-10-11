@@ -863,11 +863,13 @@ impl Checker {
 
                             props.push(types::TObjElem::Method(types::TMethod {
                                 name: TPropKey::StringKey(method.name.to_owned()),
-                                params,
-                                ret,
-                                throws,
-                                type_params,
                                 mutates: method.mutates,
+                                function: types::Function {
+                                    params,
+                                    ret,
+                                    throws,
+                                    type_params,
+                                },
                             }));
                         }
                         ObjectProp::Getter(getter) => {

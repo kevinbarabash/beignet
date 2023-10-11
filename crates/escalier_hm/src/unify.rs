@@ -403,17 +403,17 @@ impl Checker {
                         TObjElem::Call(_) => None,
                         TObjElem::Constructor(_) => None,
                         TObjElem::Mapped(_) => None,
-                        TObjElem::Method(method) => {
+                        TObjElem::Method(TMethod { function, name, .. }) => {
                             let func_type = self.new_func_type(
-                                &method.params,
-                                method.ret,
-                                &method.type_params,
-                                method.throws,
+                                &function.params,
+                                function.ret,
+                                &function.type_params,
+                                function.throws,
                             );
                             Some((
-                                method.name.to_string(),
+                                name.to_string(),
                                 TProp {
-                                    name: TPropKey::StringKey(method.name.to_string()),
+                                    name: TPropKey::StringKey(name.to_string()),
                                     t: func_type,
                                     optional: false,
                                     readonly: false,
@@ -444,17 +444,17 @@ impl Checker {
                         TObjElem::Call(_) => None,
                         TObjElem::Constructor(_) => None,
                         TObjElem::Mapped(_) => None,
-                        TObjElem::Method(method) => {
+                        TObjElem::Method(TMethod { function, name, .. }) => {
                             let func_type = self.new_func_type(
-                                &method.params,
-                                method.ret,
-                                &method.type_params,
-                                method.throws,
+                                &function.params,
+                                function.ret,
+                                &function.type_params,
+                                function.throws,
                             );
                             Some((
-                                method.name.to_string(),
+                                name.to_string(),
                                 TProp {
-                                    name: TPropKey::StringKey(method.name.to_string()),
+                                    name: TPropKey::StringKey(name.to_string()),
                                     t: func_type,
                                     optional: false,
                                     readonly: false,

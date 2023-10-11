@@ -54,11 +54,14 @@ impl Checker {
                 }
                 TObjElem::Method(TMethod {
                     name: _,
-                    params,
-                    ret,
-                    type_params: _, // TODO
-                    throws,
                     mutates: _,
+                    function:
+                        Function {
+                            params,
+                            ret,
+                            type_params: _, // TODO
+                            throws,
+                        },
                 }) => {
                     // TODO: check constraints and default on type_params
                     let param_types: Vec<_> = params.iter().map(|param| param.t).collect();
@@ -1030,11 +1033,14 @@ impl Checker {
                                 if key == name {
                                     let TMethod {
                                         name: _,
-                                        params,
-                                        ret,
-                                        type_params,
-                                        throws,
                                         mutates, // TODO: check if the object is a mutable reference
+                                        function:
+                                            Function {
+                                                params,
+                                                ret,
+                                                type_params,
+                                                throws,
+                                            },
                                     } = method;
 
                                     // if let TypeKind::Function(Function { params, .. }) =

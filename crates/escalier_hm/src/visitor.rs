@@ -60,12 +60,7 @@ pub fn walk_index<V: Visitor>(visitor: &mut V, index: &Index) {
                     }
                 }
                 TObjElem::Method(method) => {
-                    walk_func_params(visitor, &method.params);
-                    visitor.visit_index(&method.ret);
-                    walk_type_params(visitor, &method.type_params);
-                    if let Some(throws) = method.throws {
-                        visitor.visit_index(&throws)
-                    }
+                    walk_function(visitor, &method.function);
                 }
                 TObjElem::Getter(TGetter {
                     name: _,

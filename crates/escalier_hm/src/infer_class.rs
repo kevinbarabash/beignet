@@ -171,11 +171,13 @@ impl Checker {
 
                     let method = TObjElem::Method(TMethod {
                         name: TPropKey::StringKey(name),
-                        type_params,
-                        params: func_params,
-                        ret: ret_t,
-                        throws,
                         mutates: *is_mutating,
+                        function: types::Function {
+                            type_params,
+                            params: func_params,
+                            ret: ret_t,
+                            throws,
+                        },
                     });
 
                     // TODO: generalize method
@@ -289,13 +291,13 @@ impl Checker {
 
                     let method = TObjElem::Method(TMethod {
                         name,
-                        // replace with `fucntion: Fucntion` - START>
-                        type_params,
-                        params: func_params,
-                        ret,
-                        throws: None, // TODO: methods can throw
-                        // <END - replace with `fucntion: Fucntion`
                         mutates: *is_mutating,
+                        function: types::Function {
+                            type_params,
+                            params: func_params,
+                            ret,
+                            throws: None, // TODO: methods can throw
+                        },
                     });
 
                     match is_static {
@@ -387,6 +389,19 @@ impl Checker {
         }
 
         // TODO: iterate over instance_elems and generalize all methods
+        for elem in instance_elems.iter_mut() {
+            // if let TObjElem::Method(method) = elem {
+            //     let func = generalize_func(self, &method.function);
+            //     method.function = func;
+            // }
+
+            // let pruned_index = self.prune(binding.index);
+            // if let TypeKind::Function(func) = &self.arena[pruned_index].kind.clone() {
+            //     let func = generalize_func(self, func);
+            //     let gen_func_index = self.arena.insert(Type::from(TypeKind::Function(func)));
+            //     self.bind(ctx, binding.index, gen_func_index)?;
+            // }
+        }
 
         let instance_scheme = Scheme {
             t: self.new_object_type(&instance_elems),

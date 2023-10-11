@@ -62,17 +62,22 @@ Expr {
                             },
                         ),
                         is_public: false,
-                        is_async: false,
-                        is_gen: false,
                         is_mutating: false,
                         is_static: false,
-                        type_params: None,
-                        params: [],
-                        body: Block {
-                            span: 101..103,
-                            stmts: [],
+                        function: Function {
+                            type_params: None,
+                            params: [],
+                            body: Block(
+                                Block {
+                                    span: 101..103,
+                                    stmts: [],
+                                },
+                            ),
+                            type_ann: None,
+                            throws: None,
+                            is_async: false,
+                            is_gen: false,
                         },
-                        type_ann: None,
                     },
                 ),
                 Method(
@@ -85,39 +90,44 @@ Expr {
                             },
                         ),
                         is_public: false,
-                        is_async: true,
-                        is_gen: false,
                         is_mutating: false,
                         is_static: false,
-                        type_params: None,
-                        params: [
-                            FuncParam {
-                                pattern: Pattern {
-                                    kind: Ident(
-                                        BindingIdent {
-                                            name: "url",
-                                            span: 141..144,
-                                            mutable: false,
-                                        },
-                                    ),
-                                    span: 141..144,
-                                    inferred_type: None,
-                                },
-                                type_ann: Some(
-                                    TypeAnn {
-                                        kind: String,
-                                        span: 146..152,
+                        function: Function {
+                            type_params: None,
+                            params: [
+                                FuncParam {
+                                    pattern: Pattern {
+                                        kind: Ident(
+                                            BindingIdent {
+                                                name: "url",
+                                                span: 141..144,
+                                                mutable: false,
+                                            },
+                                        ),
+                                        span: 141..144,
                                         inferred_type: None,
                                     },
-                                ),
-                                optional: false,
-                            },
-                        ],
-                        body: Block {
-                            span: 154..156,
-                            stmts: [],
+                                    type_ann: Some(
+                                        TypeAnn {
+                                            kind: String,
+                                            span: 146..152,
+                                            inferred_type: None,
+                                        },
+                                    ),
+                                    optional: false,
+                                },
+                            ],
+                            body: Block(
+                                Block {
+                                    span: 154..156,
+                                    stmts: [],
+                                },
+                            ),
+                            type_ann: None,
+                            throws: None,
+                            is_async: true,
+                            is_gen: false,
                         },
-                        type_ann: None,
                     },
                 ),
                 Method(
@@ -151,17 +161,22 @@ Expr {
                             },
                         ),
                         is_public: false,
-                        is_async: false,
-                        is_gen: true,
                         is_mutating: false,
                         is_static: false,
-                        type_params: None,
-                        params: [],
-                        body: Block {
-                            span: 204..206,
-                            stmts: [],
+                        function: Function {
+                            type_params: None,
+                            params: [],
+                            body: Block(
+                                Block {
+                                    span: 204..206,
+                                    stmts: [],
+                                },
+                            ),
+                            type_ann: None,
+                            throws: None,
+                            is_async: false,
+                            is_gen: true,
                         },
-                        type_ann: None,
                     },
                 ),
             ],

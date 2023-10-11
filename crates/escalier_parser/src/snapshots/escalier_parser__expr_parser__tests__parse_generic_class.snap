@@ -1,0 +1,49 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(r#\"\n            class <T>{\n                foo: T\n            }\n        \"#)"
+---
+Expr {
+    kind: Class(
+        Class {
+            span: 13..60,
+            type_params: Some(
+                [
+                    TypeParam {
+                        span: 21..22,
+                        name: "T",
+                        bound: None,
+                        default: None,
+                    },
+                ],
+            ),
+            super_class: None,
+            super_type_args: None,
+            body: [
+                Field(
+                    Field {
+                        span: 40..60,
+                        name: Ident {
+                            name: "foo",
+                            span: 40..43,
+                        },
+                        is_public: false,
+                        is_static: false,
+                        type_ann: Some(
+                            TypeAnn {
+                                kind: TypeRef(
+                                    "T",
+                                    None,
+                                ),
+                                span: 45..46,
+                                inferred_type: None,
+                            },
+                        ),
+                        init: None,
+                    },
+                ),
+            ],
+        },
+    ),
+    span: 13..60,
+    inferred_type: None,
+}
