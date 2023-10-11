@@ -4,8 +4,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 use escalier_ast::{self as syntax, *};
 
-use crate::ast_utils::find_returns;
-use crate::ast_utils::{find_throws, find_throws_in_block};
+use crate::ast_utils::{find_returns, find_throws, find_throws_in_block};
 use crate::checker::Checker;
 use crate::context::*;
 use crate::folder::{self, Folder};

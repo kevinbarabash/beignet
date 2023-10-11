@@ -258,15 +258,17 @@ impl<'a> Parser<'a> {
             span,
             name,
             is_public,
-            is_async,
-            is_gen,
             is_mutating,
             is_static,
-            params,
-            body,
-            type_params,
-            type_ann,
-            throws,
+            function: Function {
+                is_async,
+                is_gen,
+                params,
+                body: BlockOrExpr::Block(body),
+                type_params,
+                type_ann,
+                throws,
+            },
         });
 
         Ok(method)

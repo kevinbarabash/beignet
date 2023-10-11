@@ -3,7 +3,7 @@ use itertools::Itertools;
 
 use escalier_ast::{self as syntax, *};
 
-use crate::ast_utils::find_throws;
+use crate::ast_utils::{find_returns, find_throws};
 use crate::checker::Checker;
 use crate::context::*;
 use crate::infer_pattern::pattern_to_tpat;
@@ -34,15 +34,18 @@ impl Checker {
                     span: _,
                     name,
                     is_public: _, // TODO
-                    is_async,
-                    is_gen: _, // TODO
                     is_mutating,
                     is_static,
-                    type_params,
-                    params,
-                    body,
-                    type_ann: return_type,
-                    throws: sig_throws,
+                    function:
+                        syntax::Function {
+                            type_params,
+                            params,
+                            body,
+                            type_ann: return_type,
+                            throws: sig_throws,
+                            is_async,
+                            is_gen: _,
+                        },
                 }) => {
                     let mut sig_ctx = cls_ctx.clone();
 
@@ -88,28 +91,36 @@ impl Checker {
                     let mut body_ctx = sig_ctx.clone();
                     body_ctx.is_async = *is_async;
 
+                    // TODO: dedupe with infer_expression
                     let body_t = 'outer: {
-                        for stmt in body.stmts.iter_mut() {
-                            body_ctx = body_ctx.clone();
-                            self.infer_statement(stmt, &mut body_ctx)?;
-                            if let StmtKind::Return(_) = stmt.kind {
-                                // TODO: handle unreachable return statements
-                                let ret_types: Vec<Index> = find_returns(body)
-                                    .iter()
-                                    .filter_map(|ret| ret.inferred_type)
-                                    .collect();
+                        match body {
+                            BlockOrExpr::Block(Block { stmts, .. }) => {
+                                for stmt in stmts.iter_mut() {
+                                    body_ctx = body_ctx.clone();
+                                    self.infer_statement(stmt, &mut body_ctx)?;
+                                    if let StmtKind::Return(_) = stmt.kind {
+                                        let ret_types: Vec<Index> = find_returns(body)
+                                            .iter()
+                                            .filter_map(|ret| ret.inferred_type)
+                                            .collect();
 
-                                // TODO: warn about unreachable code.
-                                break 'outer self.new_union_type(&ret_types);
+                                        // TODO: warn about unreachable code.
+                                        break 'outer self.new_union_type(&ret_types);
+                                    }
+                                }
+
+                                // If we don't encounter a return statement, we assume
+                                // the return type is `undefined`.
+                                self.new_lit_type(&Literal::Undefined)
+                            }
+                            BlockOrExpr::Expr(expr) => {
+                                // TODO: use `find_returns` here as well
+                                self.infer_expression(expr, &mut body_ctx)?
                             }
                         }
-
-                        // If we don't encounter a return statement, we assume
-                        // the return type is `undefined`.
-                        self.new_lit_type(&Literal::Undefined)
                     };
 
-                    let body_throws = find_throws(&BlockOrExpr::Block(body.to_owned()));
+                    let body_throws = find_throws(body);
                     let body_throws = if body_throws.is_empty() {
                         None
                     } else {
@@ -219,15 +230,18 @@ impl Checker {
                     span: _,
                     name,
                     is_public: _,
-                    is_async: _, // return type is a promise
-                    is_gen: _,   // return type is a generator
                     is_mutating,
                     is_static,
-                    type_params,
-                    params,
-                    body: _,
-                    type_ann: return_type,
-                    throws: _,
+                    function:
+                        syntax::Function {
+                            type_params,
+                            params,
+                            body: _,
+                            type_ann: return_type,
+                            throws: _,   // TODO: include in signature
+                            is_async: _, // return type is a promise
+                            is_gen: _,   // return type is a generator
+                        },
                 }) => {
                     let mut sig_ctx = cls_ctx.clone();
 
@@ -414,35 +428,4 @@ impl Checker {
             optional: param.optional,
         })
     }
-}
-
-struct ReturnVisitor {
-    pub returns: Vec<Expr>,
-}
-
-impl Visitor for ReturnVisitor {
-    fn visit_stmt(&mut self, stmt: &Stmt) {
-        if let StmtKind::Return(ReturnStmt { arg: Some(arg) }) = &stmt.kind {
-            self.returns.push(arg.to_owned());
-        }
-        walk_stmt(self, stmt);
-    }
-    fn visit_expr(&mut self, expr: &Expr) {
-        match &expr.kind {
-            // Don't walk into functions, since we don't want to include returns
-            // from nested functions
-            ExprKind::Function(_) => {}
-            _ => walk_expr(self, expr),
-        }
-    }
-}
-
-pub fn find_returns(block: &Block) -> Vec<Expr> {
-    let mut visitor = ReturnVisitor { returns: vec![] };
-
-    for stmt in &block.stmts {
-        visitor.visit_stmt(stmt);
-    }
-
-    visitor.returns
 }
