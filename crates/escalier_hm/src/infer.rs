@@ -279,12 +279,6 @@ impl Checker {
                             }
                         };
 
-                        // let until = body_ctx.get_binding("until").unwrap();
-                        // eprintln!("until = {}", checker.print_type(&until.index));
-
-                        // TODO: search for `throw` expressions in the body and include
-                        // them in the throws type.
-
                         let body_throws = find_throws(body);
                         let body_throws = if body_throws.is_empty() {
                             None

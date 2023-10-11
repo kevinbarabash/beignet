@@ -85,14 +85,20 @@ impl<'a> Parser<'a> {
             TokenKind::Gen => self.parse_method(is_public, is_static),
             TokenKind::Async => self.parse_method(is_public, is_static),
             TokenKind::Get => match is_static {
-                true => panic!("static getter"),
+                true => Err(ParseError {
+                    message: "static getters are not allowed".to_string(),
+                }),
                 false => self.parse_getter(is_public),
             },
             TokenKind::Set => match is_static {
-                true => panic!("static setter"),
+                true => Err(ParseError {
+                    message: "static setters are not allowed".to_string(),
+                }),
                 false => self.parse_setter(is_public),
             },
-            _ => panic!("unexpected token {:?}", token),
+            _ => Err(ParseError {
+                message: format!("unexpected token {:?}", token),
+            }),
         }
     }
 
@@ -236,6 +242,14 @@ impl<'a> Parser<'a> {
             None
         };
 
+        let throws = match self.peek().unwrap_or(&EOF).kind {
+            TokenKind::Throws => {
+                self.next();
+                Some(self.parse_type_ann()?)
+            }
+            _ => None,
+        };
+
         let body = self.parse_block()?;
         let end = self.scanner.cursor();
         let span = Span { start, end };
@@ -252,6 +266,7 @@ impl<'a> Parser<'a> {
             body,
             type_params,
             type_ann,
+            throws,
         });
 
         Ok(method)

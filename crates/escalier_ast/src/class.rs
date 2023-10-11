@@ -29,7 +29,7 @@ pub struct Method {
     pub params: Vec<FuncParam>,
     pub body: Block,
     pub type_ann: Option<TypeAnn>, // return type
-                                   // TODO: handle throws
+    pub throws: Option<TypeAnn>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

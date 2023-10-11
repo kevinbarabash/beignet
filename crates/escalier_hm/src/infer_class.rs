@@ -1,7 +1,9 @@
 use generational_arena::Index;
+use itertools::Itertools;
 
 use escalier_ast::{self as syntax, *};
 
+use crate::ast_utils::find_throws;
 use crate::checker::Checker;
 use crate::context::*;
 use crate::infer_pattern::pattern_to_tpat;
@@ -40,6 +42,7 @@ impl Checker {
                     params,
                     body,
                     type_ann: return_type,
+                    throws: sig_throws,
                 }) => {
                     let mut sig_ctx = cls_ctx.clone();
 
@@ -106,38 +109,32 @@ impl Checker {
                         self.new_lit_type(&Literal::Undefined)
                     };
 
-                    // let until = body_ctx.get_binding("until").unwrap();
-                    // eprintln!("until = {}", self.print_type(&until.index));
+                    let body_throws = find_throws(&BlockOrExpr::Block(body.to_owned()));
+                    let body_throws = if body_throws.is_empty() {
+                        None
+                    } else {
+                        Some(self.new_union_type(
+                            // TODO: compare string reps of the types for deduplication
+                            &body_throws.into_iter().unique().collect_vec(),
+                        ))
+                    };
 
-                    // TODO: search for `throw` expressions in the body and include
-                    // them in the throws type.
+                    let sig_throws = sig_throws
+                        .as_mut()
+                        .map(|t| self.infer_type_ann(t, &mut sig_ctx))
+                        .transpose()?;
 
-                    // let body_throws = find_throws(body);
-                    // let body_throws = if body_throws.is_empty() {
-                    //     None
-                    // } else {
-                    //     Some(self.new_union_type(
-                    //         // TODO: compare string reps of the types for deduplication
-                    //         &body_throws.into_iter().unique().collect_vec(),
-                    //     ))
-                    // };
-
-                    // let sig_throws = sig_throws
-                    //     .as_mut()
-                    //     .map(|t| self.infer_type_ann(t, &mut sig_ctx))
-                    //     .transpose()?;
-
-                    // let throws = match (body_throws, sig_throws) {
-                    //     (Some(call_throws), Some(sig_throws)) => {
-                    //         self.unify(&sig_ctx, call_throws, sig_throws)?;
-                    //         Some(sig_throws)
-                    //     }
-                    //     (Some(call_throws), None) => Some(call_throws),
-                    //     // This should probably be a warning.  If the function doesn't
-                    //     // throw anything, then it shouldn't be marked as such.
-                    //     (None, Some(sig_throws)) => Some(sig_throws),
-                    //     (None, None) => None,
-                    // };
+                    let throws = match (body_throws, sig_throws) {
+                        (Some(call_throws), Some(sig_throws)) => {
+                            self.unify(&sig_ctx, call_throws, sig_throws)?;
+                            Some(sig_throws)
+                        }
+                        (Some(call_throws), None) => Some(call_throws),
+                        // This should probably be a warning.  If the function doesn't
+                        // throw anything, then it shouldn't be marked as such.
+                        (None, Some(sig_throws)) => Some(sig_throws),
+                        (None, None) => None,
+                    };
 
                     let name = match name {
                         PropName::Ident(Ident { name, span: _ }) => name.to_owned(),
@@ -148,9 +145,8 @@ impl Checker {
                         static_elems.push(TObjElem::Constructor(types::Function {
                             params: func_params,
                             ret: self.new_type_ref("Self", Some(instance_scheme.clone()), &[]),
-                            // ret: instance_scheme.t,
                             type_params,
-                            throws: None, // TODO
+                            throws,
                         }));
                         continue;
                     }
@@ -167,9 +163,11 @@ impl Checker {
                         type_params,
                         params: func_params,
                         ret: ret_t,
-                        throws: None, // TODO
+                        throws,
                         mutates: *is_mutating,
                     });
+
+                    // TODO: generalize method
 
                     match is_static {
                         true => static_elems.push(method),
@@ -229,21 +227,25 @@ impl Checker {
                     params,
                     body: _,
                     type_ann: return_type,
+                    throws: _,
                 }) => {
                     let mut sig_ctx = cls_ctx.clone();
 
                     let type_params = self.infer_type_params(type_params, &mut sig_ctx)?;
                     let func_params = params
-                        .iter()
+                        .iter_mut()
                         .map(|param| {
-                            let t = self.new_type_var(None);
-                            types::FuncParam {
+                            let t = match &mut param.type_ann {
+                                Some(type_ann) => self.infer_type_ann(type_ann, &mut sig_ctx)?,
+                                None => self.new_type_var(None),
+                            };
+                            Ok(types::FuncParam {
                                 pattern: pattern_to_tpat(&param.pattern, true),
                                 t,
                                 optional: param.optional,
-                            }
+                            })
                         })
-                        .collect::<Vec<_>>();
+                        .collect::<Result<Vec<_>, _>>()?;
 
                     let ret = match return_type {
                         Some(return_type) => self.infer_type_ann(return_type, &mut sig_ctx)?,
@@ -369,6 +371,8 @@ impl Checker {
                 }
             }
         }
+
+        // TODO: iterate over instance_elems and generalize all methods
 
         let instance_scheme = Scheme {
             t: self.new_object_type(&instance_elems),
