@@ -1,4 +1,4 @@
-mod class;
+mod class_parser;
 mod expr_parser;
 mod func_param;
 mod jsx_parser;

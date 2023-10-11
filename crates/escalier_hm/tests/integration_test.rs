@@ -5482,6 +5482,11 @@ fn infer_simple_class() -> Result<(), TypeError> {
         checker.print_type(&t),
         r#"{x: number, y: number, add(mut self, other: Self) -> Self}"#
     );
+    let binding = my_ctx.values.get("Point").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"{new fn(x: number, y: number) -> Self}"#
+    );
 
     assert_no_errors(&checker)
 }
@@ -5526,6 +5531,11 @@ fn infer_simple_class_and_param_types() -> Result<(), TypeError> {
     assert_eq!(
         checker.print_type(&t),
         r#"{x: number, y: number, add(mut self, other: Self) -> Self}"#
+    );
+    let binding = my_ctx.values.get("Point").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"{new fn(x: number, y: number) -> Self}"#
     );
 
     assert_no_errors(&checker)
