@@ -1,12 +1,17 @@
-use generational_arena::Index;
+use generational_arena::{Arena, Index};
+use itertools::Itertools;
 
 use escalier_ast::{self as syntax, *};
 
+use crate::ast_utils::{find_returns, find_throws};
 use crate::checker::Checker;
 use crate::context::*;
+use crate::infer::generalize_func;
 use crate::infer_pattern::pattern_to_tpat;
+use crate::key_value_store::KeyValueStore;
 use crate::type_error::TypeError;
 use crate::types::{self, *};
+use crate::visitor::{walk_index, Visitor};
 
 impl Checker {
     pub fn infer_class(
@@ -16,6 +21,8 @@ impl Checker {
     ) -> Result<Index, TypeError> {
         let mut cls_ctx = ctx.clone();
 
+        // TODO: mutate the instance_scheme since only the methods need
+        // further type checking.
         // TODO: unify _static_type with the static type of the class
         let (instance_scheme, _static_type) = self.infer_class_interface(class, &mut cls_ctx)?;
 
@@ -32,14 +39,18 @@ impl Checker {
                     span: _,
                     name,
                     is_public: _, // TODO
-                    is_async,
-                    is_gen: _, // TODO
                     is_mutating,
                     is_static,
-                    type_params,
-                    params,
-                    body,
-                    type_ann: return_type,
+                    function:
+                        syntax::Function {
+                            type_params,
+                            params,
+                            body,
+                            type_ann: return_type,
+                            throws: sig_throws,
+                            is_async,
+                            is_gen: _,
+                        },
                 }) => {
                     let mut sig_ctx = cls_ctx.clone();
 
@@ -85,59 +96,61 @@ impl Checker {
                     let mut body_ctx = sig_ctx.clone();
                     body_ctx.is_async = *is_async;
 
+                    // TODO: dedupe with infer_expression
                     let body_t = 'outer: {
-                        for stmt in body.stmts.iter_mut() {
-                            body_ctx = body_ctx.clone();
-                            self.infer_statement(stmt, &mut body_ctx)?;
-                            if let StmtKind::Return(_) = stmt.kind {
-                                // TODO: handle unreachable return statements
-                                let ret_types: Vec<Index> = find_returns(body)
-                                    .iter()
-                                    .filter_map(|ret| ret.inferred_type)
-                                    .collect();
+                        match body {
+                            BlockOrExpr::Block(Block { stmts, .. }) => {
+                                for stmt in stmts.iter_mut() {
+                                    body_ctx = body_ctx.clone();
+                                    self.infer_statement(stmt, &mut body_ctx)?;
+                                    if let StmtKind::Return(_) = stmt.kind {
+                                        let ret_types: Vec<Index> = find_returns(body)
+                                            .iter()
+                                            .filter_map(|ret| ret.inferred_type)
+                                            .collect();
 
-                                // TODO: warn about unreachable code.
-                                break 'outer self.new_union_type(&ret_types);
+                                        // TODO: warn about unreachable code.
+                                        break 'outer self.new_union_type(&ret_types);
+                                    }
+                                }
+
+                                // If we don't encounter a return statement, we assume
+                                // the return type is `undefined`.
+                                self.new_lit_type(&Literal::Undefined)
+                            }
+                            BlockOrExpr::Expr(expr) => {
+                                // TODO: use `find_returns` here as well
+                                self.infer_expression(expr, &mut body_ctx)?
                             }
                         }
-
-                        // If we don't encounter a return statement, we assume
-                        // the return type is `undefined`.
-                        self.new_lit_type(&Literal::Undefined)
                     };
 
-                    // let until = body_ctx.get_binding("until").unwrap();
-                    // eprintln!("until = {}", self.print_type(&until.index));
+                    let body_throws = find_throws(body);
+                    let body_throws = if body_throws.is_empty() {
+                        None
+                    } else {
+                        Some(self.new_union_type(
+                            // TODO: compare string reps of the types for deduplication
+                            &body_throws.into_iter().unique().collect_vec(),
+                        ))
+                    };
 
-                    // TODO: search for `throw` expressions in the body and include
-                    // them in the throws type.
+                    let sig_throws = sig_throws
+                        .as_mut()
+                        .map(|t| self.infer_type_ann(t, &mut sig_ctx))
+                        .transpose()?;
 
-                    // let body_throws = find_throws(body);
-                    // let body_throws = if body_throws.is_empty() {
-                    //     None
-                    // } else {
-                    //     Some(self.new_union_type(
-                    //         // TODO: compare string reps of the types for deduplication
-                    //         &body_throws.into_iter().unique().collect_vec(),
-                    //     ))
-                    // };
-
-                    // let sig_throws = sig_throws
-                    //     .as_mut()
-                    //     .map(|t| self.infer_type_ann(t, &mut sig_ctx))
-                    //     .transpose()?;
-
-                    // let throws = match (body_throws, sig_throws) {
-                    //     (Some(call_throws), Some(sig_throws)) => {
-                    //         self.unify(&sig_ctx, call_throws, sig_throws)?;
-                    //         Some(sig_throws)
-                    //     }
-                    //     (Some(call_throws), None) => Some(call_throws),
-                    //     // This should probably be a warning.  If the function doesn't
-                    //     // throw anything, then it shouldn't be marked as such.
-                    //     (None, Some(sig_throws)) => Some(sig_throws),
-                    //     (None, None) => None,
-                    // };
+                    let throws = match (body_throws, sig_throws) {
+                        (Some(call_throws), Some(sig_throws)) => {
+                            self.unify(&sig_ctx, call_throws, sig_throws)?;
+                            Some(sig_throws)
+                        }
+                        (Some(call_throws), None) => Some(call_throws),
+                        // This should probably be a warning.  If the function doesn't
+                        // throw anything, then it shouldn't be marked as such.
+                        (None, Some(sig_throws)) => Some(sig_throws),
+                        (None, None) => None,
+                    };
 
                     let name = match name {
                         PropName::Ident(Ident { name, span: _ }) => name.to_owned(),
@@ -148,9 +161,8 @@ impl Checker {
                         static_elems.push(TObjElem::Constructor(types::Function {
                             params: func_params,
                             ret: self.new_type_ref("Self", Some(instance_scheme.clone()), &[]),
-                            // ret: instance_scheme.t,
                             type_params,
-                            throws: None, // TODO
+                            throws,
                         }));
                         continue;
                     }
@@ -164,12 +176,16 @@ impl Checker {
 
                     let method = TObjElem::Method(TMethod {
                         name: TPropKey::StringKey(name),
-                        type_params,
-                        params: func_params,
-                        ret: ret_t,
-                        throws: None, // TODO
                         mutates: *is_mutating,
+                        function: types::Function {
+                            type_params,
+                            params: func_params,
+                            ret: ret_t,
+                            throws,
+                        },
                     });
+
+                    // TODO: generalize method
 
                     match is_static {
                         true => static_elems.push(method),
@@ -178,15 +194,58 @@ impl Checker {
                 }
                 ClassMember::Getter(_) => todo!(),
                 ClassMember::Setter(_) => todo!(),
-                ClassMember::Field(_) => {
-                    // If there's an initializer, infer its type and then
-                    // unify with the type annotation of the field.
+                ClassMember::Field(Field {
+                    span: _,
+                    name,
+                    is_public: _, // TODO
+                    is_static,
+                    type_ann,
+                    init: _, // TODO: unify in `infer_class`
+                             // If there's an initializer, infer its type and then
+                             // unify with the type annotation of the field.
+                }) => {
+                    let mut sig_ctx = cls_ctx.clone();
+
+                    let type_ann_t = match type_ann {
+                        Some(type_ann) => self.infer_type_ann(type_ann, &mut sig_ctx)?,
+                        None => self.new_type_var(None),
+                    };
+
+                    let field = TObjElem::Prop(TProp {
+                        name: TPropKey::StringKey(name.name.to_owned()),
+                        t: type_ann_t,
+                        optional: false, // TODO
+                        readonly: false, // TODO
+                    });
+
+                    match is_static {
+                        true => static_elems.push(field),
+                        false => instance_elems.push(field),
+                    };
                 }
+            }
+        }
+
+        // We generalize methods after all of them have been inferred so
+        // that mutually recursive method calls can be handled correctly.
+        for elem in instance_elems.iter_mut() {
+            if let TObjElem::Method(method) = elem {
+                let func = generalize_func(self, &method.function);
+                method.function = func;
             }
         }
 
         let instance_type = self.new_object_type(&instance_elems);
         let static_type = self.new_object_type(&static_elems);
+
+        let self_scheme = Scheme {
+            type_params: None,
+            t: instance_type,
+            is_type_param: false,
+        };
+
+        replace_self_type_refs(&mut self.arena, &instance_type, &self_scheme);
+        replace_self_type_refs(&mut self.arena, &static_type, &self_scheme);
 
         self.unify(&cls_ctx, instance_scheme.t, instance_type)?;
 
@@ -221,29 +280,36 @@ impl Checker {
                     span: _,
                     name,
                     is_public: _,
-                    is_async: _, // return type is a promise
-                    is_gen: _,   // return type is a generator
                     is_mutating,
                     is_static,
-                    type_params,
-                    params,
-                    body: _,
-                    type_ann: return_type,
+                    function:
+                        syntax::Function {
+                            type_params,
+                            params,
+                            body: _,
+                            type_ann: return_type,
+                            throws: _,   // TODO: include in signature
+                            is_async: _, // return type is a promise
+                            is_gen: _,   // return type is a generator
+                        },
                 }) => {
                     let mut sig_ctx = cls_ctx.clone();
 
                     let type_params = self.infer_type_params(type_params, &mut sig_ctx)?;
                     let func_params = params
-                        .iter()
+                        .iter_mut()
                         .map(|param| {
-                            let t = self.new_type_var(None);
-                            types::FuncParam {
+                            let t = match &mut param.type_ann {
+                                Some(type_ann) => self.infer_type_ann(type_ann, &mut sig_ctx)?,
+                                None => self.new_type_var(None),
+                            };
+                            Ok(types::FuncParam {
                                 pattern: pattern_to_tpat(&param.pattern, true),
                                 t,
                                 optional: param.optional,
-                            }
+                            })
                         })
-                        .collect::<Vec<_>>();
+                        .collect::<Result<Vec<_>, _>>()?;
 
                     let ret = match return_type {
                         Some(return_type) => self.infer_type_ann(return_type, &mut sig_ctx)?,
@@ -273,13 +339,13 @@ impl Checker {
 
                     let method = TObjElem::Method(TMethod {
                         name,
-                        // replace with `fucntion: Fucntion` - START>
-                        type_params,
-                        params: func_params,
-                        ret,
-                        throws: None, // TODO: methods can throw
-                        // <END - replace with `fucntion: Fucntion`
                         mutates: *is_mutating,
+                        function: types::Function {
+                            type_params,
+                            params: func_params,
+                            ret,
+                            throws: None, // TODO: methods can throw
+                        },
                     });
 
                     match is_static {
@@ -412,33 +478,35 @@ impl Checker {
     }
 }
 
-struct ReturnVisitor {
-    pub returns: Vec<Expr>,
+pub struct ReplaceVisitor<'a> {
+    pub arena: &'a mut Arena<Type>,
+    pub scheme: &'a Scheme,
 }
 
-impl Visitor for ReturnVisitor {
-    fn visit_stmt(&mut self, stmt: &Stmt) {
-        if let StmtKind::Return(ReturnStmt { arg: Some(arg) }) = &stmt.kind {
-            self.returns.push(arg.to_owned());
-        }
-        walk_stmt(self, stmt);
+impl<'a> KeyValueStore<Index, Type> for ReplaceVisitor<'a> {
+    fn get_type(&mut self, idx: &Index) -> Type {
+        self.arena[*idx].clone()
     }
-    fn visit_expr(&mut self, expr: &Expr) {
-        match &expr.kind {
-            // Don't walk into functions, since we don't want to include returns
-            // from nested functions
-            ExprKind::Function(_) => {}
-            _ => walk_expr(self, expr),
-        }
+    fn put_type(&mut self, t: Type) -> Index {
+        self.arena.insert(t)
     }
 }
 
-pub fn find_returns(block: &Block) -> Vec<Expr> {
-    let mut visitor = ReturnVisitor { returns: vec![] };
-
-    for stmt in &block.stmts {
-        visitor.visit_stmt(stmt);
+impl<'a> Visitor for ReplaceVisitor<'a> {
+    fn visit_index(&mut self, index: &Index) {
+        match &mut self.arena[*index].kind {
+            TypeKind::TypeRef(tref) => {
+                if tref.name == "Self" {
+                    tref.scheme = Some(self.scheme.clone());
+                }
+            }
+            _ => walk_index(self, index),
+        }
     }
+}
 
-    visitor.returns
+pub fn replace_self_type_refs(arena: &mut Arena<Type>, t: &Index, scheme: &Scheme) {
+    let mut replace_visitor = ReplaceVisitor { arena, scheme };
+
+    replace_visitor.visit_index(t)
 }

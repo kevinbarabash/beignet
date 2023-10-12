@@ -1,36 +1,22 @@
 ---
 source: crates/escalier_parser/src/expr_parser.rs
-expression: "parse(r#\"\n            class<T> extends Foo {\n                fn bar<A>(self, a: A) -> T {}\n            }\n        \"#)"
+expression: "parse(r#\"\n            class {\n                fn foo<T>(self, x: T) -> T {\n                    return x\n                }\n            }\n        \"#)"
 ---
 Expr {
     kind: Class(
         Class {
-            span: 13..95,
-            type_params: Some(
-                [
-                    TypeParam {
-                        span: 20..21,
-                        name: "T",
-                        bound: None,
-                        default: None,
-                    },
-                ],
-            ),
-            super_class: Some(
-                Ident {
-                    name: "Foo",
-                    span: 30..33,
-                },
-            ),
+            span: 13..126,
+            type_params: None,
+            super_class: None,
             super_type_args: None,
             body: [
                 Method(
                     Method {
-                        span: 52..81,
+                        span: 37..112,
                         name: Ident(
                             Ident {
-                                name: "bar",
-                                span: 55..58,
+                                name: "foo",
+                                span: 40..43,
                             },
                         ),
                         is_public: false,
@@ -40,8 +26,8 @@ Expr {
                             type_params: Some(
                                 [
                                     TypeParam {
-                                        span: 60..61,
-                                        name: "A",
+                                        span: 45..46,
+                                        name: "T",
                                         bound: None,
                                         default: None,
                                     },
@@ -52,21 +38,21 @@ Expr {
                                     pattern: Pattern {
                                         kind: Ident(
                                             BindingIdent {
-                                                name: "a",
-                                                span: 68..69,
+                                                name: "x",
+                                                span: 53..54,
                                                 mutable: false,
                                             },
                                         ),
-                                        span: 68..69,
+                                        span: 53..54,
                                         inferred_type: None,
                                     },
                                     type_ann: Some(
                                         TypeAnn {
                                             kind: TypeRef(
-                                                "A",
+                                                "T",
                                                 None,
                                             ),
-                                            span: 71..72,
+                                            span: 56..57,
                                             inferred_type: None,
                                         },
                                     ),
@@ -75,8 +61,29 @@ Expr {
                             ],
                             body: Block(
                                 Block {
-                                    span: 79..81,
-                                    stmts: [],
+                                    span: 64..112,
+                                    stmts: [
+                                        Stmt {
+                                            kind: Return(
+                                                ReturnStmt {
+                                                    arg: Some(
+                                                        Expr {
+                                                            kind: Ident(
+                                                                Ident {
+                                                                    name: "x",
+                                                                    span: 93..94,
+                                                                },
+                                                            ),
+                                                            span: 93..94,
+                                                            inferred_type: None,
+                                                        },
+                                                    ),
+                                                },
+                                            ),
+                                            span: 93..94,
+                                            inferred_type: None,
+                                        },
+                                    ],
                                 },
                             ),
                             type_ann: Some(
@@ -85,7 +92,7 @@ Expr {
                                         "T",
                                         None,
                                     ),
-                                    span: 77..78,
+                                    span: 62..63,
                                     inferred_type: None,
                                 },
                             ),
@@ -98,6 +105,6 @@ Expr {
             ],
         },
     ),
-    span: 13..95,
+    span: 13..126,
     inferred_type: None,
 }

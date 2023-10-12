@@ -21,15 +21,9 @@ pub struct Method {
     pub span: Span,
     pub name: PropName,
     pub is_public: bool, // TODO: change to is_private
-    pub is_async: bool,
-    pub is_gen: bool,
     pub is_mutating: bool,
     pub is_static: bool,
-    pub type_params: Option<Vec<TypeParam>>,
-    pub params: Vec<FuncParam>,
-    pub body: Block,
-    pub type_ann: Option<TypeAnn>, // return type
-                                   // TODO: handle throws
+    pub function: Function,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

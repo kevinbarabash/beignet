@@ -4,8 +4,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 use escalier_ast::{self as syntax, *};
 
-use crate::ast_utils::find_returns;
-use crate::ast_utils::{find_throws, find_throws_in_block};
+use crate::ast_utils::{find_returns, find_throws, find_throws_in_block};
 use crate::checker::Checker;
 use crate::context::*;
 use crate::folder::{self, Folder};
@@ -278,12 +277,6 @@ impl Checker {
                                 }
                             }
                         };
-
-                        // let until = body_ctx.get_binding("until").unwrap();
-                        // eprintln!("until = {}", checker.print_type(&until.index));
-
-                        // TODO: search for `throw` expressions in the body and include
-                        // them in the throws type.
 
                         let body_throws = find_throws(body);
                         let body_throws = if body_throws.is_empty() {
@@ -870,11 +863,13 @@ impl Checker {
 
                             props.push(types::TObjElem::Method(types::TMethod {
                                 name: TPropKey::StringKey(method.name.to_owned()),
-                                params,
-                                ret,
-                                throws,
-                                type_params,
                                 mutates: method.mutates,
+                                function: types::Function {
+                                    params,
+                                    ret,
+                                    throws,
+                                    type_params,
+                                },
                             }));
                         }
                         ObjectProp::Getter(getter) => {

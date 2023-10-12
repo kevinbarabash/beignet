@@ -480,15 +480,17 @@ fn infer_method_sig(
     // });
     let elem = types::TObjElem::Method(types::TMethod {
         name: TPropKey::StringKey(name),
-        params,
-        ret,
-        type_params: if type_params.is_empty() {
-            None
-        } else {
-            Some(type_params)
-        },
-        throws: None, // TODO - difficult to infer
         mutates: false,
+        function: Function {
+            params,
+            ret,
+            type_params: if type_params.is_empty() {
+                None
+            } else {
+                Some(type_params)
+            },
+            throws: None, // TODO - difficult to infer
+        },
     });
 
     Ok(elem)

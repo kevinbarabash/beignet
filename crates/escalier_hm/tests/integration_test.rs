@@ -5541,6 +5541,167 @@ fn infer_simple_class_and_param_types() -> Result<(), TypeError> {
     assert_no_errors(&checker)
 }
 
+// TODO: class without an explicit constructor
+
+#[test]
+fn infer_class_with_generic_method() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    // TODO: Allow comments in class bodies
+    let src = r#"
+    let Foo = class {
+        x: number
+        fn constructor(mut self) {
+            self.x = 0
+        }
+        fn fst(self, a, b) {
+            return a
+        }
+        fn inc(mut self) {
+            self.x += 1
+            return self
+        }
+    }
+    let mut foo = new Foo()
+    let bar = foo.inc()
+    let x = foo.inc().fst(5, "hello")
+    "#;
+    let mut script = parse_script(src).unwrap();
+
+    checker.infer_script(&mut script, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("foo").unwrap();
+    assert_eq!(checker.print_type(&binding.index), r#"Self"#);
+    let t = checker.expand_type(&my_ctx, binding.index)?;
+    assert_eq!(
+        checker.print_type(&t),
+        r#"{x: number, fst<B, A>(self, a: A, b: B) -> A, inc(mut self) -> Self}"#
+    );
+
+    let binding = my_ctx.values.get("bar").unwrap();
+    assert_eq!(checker.print_type(&binding.index), r#"Self"#);
+    let t = checker.expand_type(&my_ctx, binding.index)?;
+    assert_eq!(
+        checker.print_type(&t),
+        r#"{x: number, fst<B, A>(self, a: A, b: B) -> A, inc(mut self) -> Self}"#
+    );
+
+    let binding = my_ctx.values.get("x").unwrap();
+    assert_eq!(checker.print_type(&binding.index), r#"5"#);
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn infer_class_with_generic_method_with_type_anns() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    // TODO: Allow comments in class bodies
+    let src = r#"
+    let Foo = class {
+        fn constructor(mut self) {}
+        fn fst<T, U>(self, a: T, b: U) -> T {
+            return a
+        }
+    }
+    let foo = new Foo()
+    let x = foo.fst(5, "hello")
+    "#;
+    let mut script = parse_script(src).unwrap();
+
+    checker.infer_script(&mut script, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("foo").unwrap();
+    assert_eq!(checker.print_type(&binding.index), r#"Self"#);
+    let t = checker.expand_type(&my_ctx, binding.index)?;
+    assert_eq!(
+        checker.print_type(&t),
+        r#"{fst<T, U>(self, a: T, b: U) -> T}"#
+    );
+
+    let binding = my_ctx.values.get("x").unwrap();
+    assert_eq!(checker.print_type(&binding.index), r#"5"#);
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn infer_generic_func_with_type_ann() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    // TODO: Allow comments in class bodies
+    let src = r#"
+    let fst = fn<T, U>(a: T, b: U) -> T {
+        return a
+    }
+    "#;
+    let mut script = parse_script(src).unwrap();
+
+    checker.infer_script(&mut script, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("fst").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"<T, U>(a: T, b: U) -> T"#
+    );
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn infer_generic_that_call_each_other_in_script() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    // TODO: Allow comments in class bodies
+    let src = r#"
+    let fst2 = fn (a, b) => fst1(a, b)
+    let fst1 = fn (a, b) => a
+    "#;
+    let mut script = parse_script(src).unwrap();
+
+    checker.infer_script(&mut script, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("fst1").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"<A, B>(a: A, b: B) -> A"#
+    );
+    let binding = my_ctx.values.get("fst2").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"<A, B, C>(a: A, b: B) -> C"#
+    );
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn infer_generic_that_call_each_other_in_module() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    // TODO: Allow comments in class bodies
+    let src = r#"
+    let fst2 = fn (a, b) => fst1(a, b)
+    let fst1 = fn (a, b) => a
+    "#;
+    let mut module = parse_module(src).unwrap();
+
+    checker.infer_module(&mut module, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("fst1").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"<A, B>(a: A, b: B) -> A"#
+    );
+    let binding = my_ctx.values.get("fst2").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"<A, B>(a: A, b: B) -> A"#
+    );
+
+    assert_no_errors(&checker)
+}
+
 #[test]
 fn use_value_with_private_type() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();

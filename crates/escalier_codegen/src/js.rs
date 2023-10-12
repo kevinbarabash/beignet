@@ -1181,12 +1181,17 @@ fn build_class(class: &values::Class, stmts: &mut Vec<Stmt>, ctx: &mut Context) 
         .filter_map(|member| match member {
             values::ClassMember::Method(method) => {
                 // TODO: check if `name` is `constructor`
-                let body = build_body_block_stmt(&method.body, &BlockFinalizer::ExprStmt, ctx);
+                let body = match &method.function.body {
+                    values::BlockOrExpr::Block(block) => {
+                        build_body_block_stmt(block, &BlockFinalizer::ExprStmt, ctx)
+                    }
+                    values::BlockOrExpr::Expr(_) => todo!(),
+                };
 
                 // In Escalier, `self` is always the first param in non-static
                 // methods, but it represents `this` in JavaScript which is
                 // implicit so we ignore it here.
-                let iter = method.params.iter();
+                let iter = method.function.params.iter();
                 // TODO: Check if the first param is `self` and skip over it if it is
                 // if !method.is_static {
                 //     iter.next();

@@ -1512,6 +1512,30 @@ mod tests {
     }
 
     #[test]
+    fn parse_generic_class() {
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            class <T>{
+                foo: T
+            }
+        "#
+        ));
+    }
+
+    #[test]
+    fn parse_class_with_generic_method() {
+        insta::assert_debug_snapshot!(parse(
+            r#"
+            class {
+                fn foo<T>(self, x: T) -> T {
+                    return x
+                }
+            }
+        "#
+        ));
+    }
+
+    #[test]
     fn parse_new() {
         insta::assert_debug_snapshot!(parse("new Array(1, 2, 3)"));
         insta::assert_debug_snapshot!(parse("new Foo.Bar(baz)"));

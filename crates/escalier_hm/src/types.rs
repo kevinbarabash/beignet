@@ -177,14 +177,12 @@ pub struct Call {
     pub ret: Index,
 }
 
+// TODO: update this struct to use `Function` internally
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TMethod {
     pub name: TPropKey,
-    pub params: Vec<FuncParam>,
-    pub ret: Index,
-    pub type_params: Option<Vec<TypeParam>>,
-    pub throws: Option<Index>,
     pub mutates: bool,
+    pub function: Function,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -581,11 +579,14 @@ impl Checker {
                         }
                         TObjElem::Method(TMethod {
                             name,
-                            type_params,
-                            params,
-                            ret,
-                            throws,
                             mutates,
+                            function:
+                                Function {
+                                    type_params,
+                                    params,
+                                    ret,
+                                    throws,
+                                },
                         }) => {
                             let name = match name {
                                 TPropKey::StringKey(s) => s,
