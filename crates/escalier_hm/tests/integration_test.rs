@@ -5626,6 +5626,221 @@ fn infer_class_with_generic_method_with_type_anns() -> Result<(), TypeError> {
 }
 
 #[test]
+#[ignore]
+fn infer_class_async_and_throw() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    // TODO: Allow comments in class bodies
+    let src = r#"
+    let Foo = class {
+        fn constructor(mut self) {}
+        fn bar(self, a: number) -> number throws "RangeError" {
+            if (a < 0) {
+                throw "RangeError"
+            }
+            return a
+        }
+        fn baz(self, a) {
+            return self.bar(a)
+        }
+        fn qux(self, a) {
+            return self.baz(a)
+        }
+    }
+    let foo = new Foo()
+    "#;
+    let mut script = parse_script(src).unwrap();
+
+    checker.infer_script(&mut script, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("foo").unwrap();
+    assert_eq!(checker.print_type(&binding.index), r#"Self"#);
+    let t = checker.expand_type(&my_ctx, binding.index)?;
+    assert_eq!(
+        checker.print_type(&t),
+        r#"{bar(self, a: number) -> number throws "RangeError", baz(self, a: number) -> number throws "RangeError"}"#
+    );
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn infer_many_methods() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    // TODO: Allow comments in class bodies
+    let src = r#"
+    let Foo = class {
+        fn constructor(mut self) {}
+        fn bar(self, a: number) {
+            return a
+        }
+        fn baz(self, a) {
+            return self.bar(a)
+        }
+        fn qux(self, a) {
+            return self.baz(a)
+        }
+    }
+    let foo = new Foo()
+    "#;
+    let mut script = parse_script(src).unwrap();
+
+    checker.infer_script(&mut script, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("foo").unwrap();
+    assert_eq!(checker.print_type(&binding.index), r#"Self"#);
+    let t = checker.expand_type(&my_ctx, binding.index)?;
+    assert_eq!(
+        checker.print_type(&t),
+        r#"{bar(self, a: number) -> number, baz(self, a: number) -> number, qux(self, a: number) -> number}"#
+    );
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn infer_many_functions() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    let bar = fn(a: number) {
+        return a
+    }
+    let baz = fn(a) {
+        return bar(a)
+    }
+    let qux = fn(a) {
+        return baz(a)
+    }
+    "#;
+    let mut module = parse_module(src).unwrap();
+
+    checker.infer_module(&mut module, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("bar").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"(a: number) -> number"#
+    );
+    let binding = my_ctx.values.get("baz").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"(a: number) -> number"#
+    );
+    let binding = my_ctx.values.get("qux").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"(a: number) -> number"#
+    );
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn infer_many_functions_with_throw() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    let bar = fn(a: number) throws "RangeError" {
+        return a
+    }
+    let baz = fn(a) {
+        return bar(a)
+    }
+    let qux = fn(a) {
+        return baz(a)
+    }
+    "#;
+    let mut module = parse_module(src).unwrap();
+
+    checker.infer_module(&mut module, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("bar").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"(a: number) -> number throws "RangeError""#
+    );
+    let binding = my_ctx.values.get("baz").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"(a: number) -> number throws "RangeError""#
+    );
+    let binding = my_ctx.values.get("qux").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"(a: number) -> number throws "RangeError""#
+    );
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+#[ignore]
+fn infer_many_functions_on_object() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    let src = r#"
+    let foo = {
+        bar: fn(a: number) {
+            return a
+        },
+        baz: fn(a) {
+            return foo.bar(a)
+        },
+        qux: fn(a) {
+            return foo.baz(a)
+        }
+    }
+    "#;
+    let mut module = parse_module(src).unwrap();
+
+    checker.infer_module(&mut module, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("foo").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"(a: number) -> number"#
+    );
+
+    assert_no_errors(&checker)
+}
+
+#[test]
+fn typecheck_simple_throws() -> Result<(), TypeError> {
+    let (mut checker, mut my_ctx) = test_env();
+
+    // TODO: Allow comments in class bodies
+    let src = r#"
+    let bar = fn(a: number) -> number throws "RangeError" {
+        if (a < 0) {
+            throw "RangeError"
+        }
+        return a
+    }
+    let baz = fn(a) {
+        return bar(a)
+    }
+    "#;
+    let mut script = parse_script(src).unwrap();
+
+    checker.infer_script(&mut script, &mut my_ctx)?;
+
+    let binding = my_ctx.values.get("bar").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"(a: number) -> number throws "RangeError""#
+    );
+    let binding = my_ctx.values.get("baz").unwrap();
+    assert_eq!(
+        checker.print_type(&binding.index),
+        r#"(a: number) -> number throws "RangeError""#
+    );
+
+    assert_no_errors(&checker)
+}
+
+#[test]
 fn infer_generic_func_with_type_ann() -> Result<(), TypeError> {
     let (mut checker, mut my_ctx) = test_env();
 

@@ -1540,4 +1540,9 @@ mod tests {
         insta::assert_debug_snapshot!(parse("new Array(1, 2, 3)"));
         insta::assert_debug_snapshot!(parse("new Foo.Bar(baz)"));
     }
+
+    #[test]
+    fn parse_ambiguous_generics() {
+        insta::assert_debug_snapshot!(parse("F(G<A, B>(7))"));
+    }
 }

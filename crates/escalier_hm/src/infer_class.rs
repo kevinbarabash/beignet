@@ -1,5 +1,6 @@
 use generational_arena::{Arena, Index};
 use itertools::Itertools;
+use std::collections::HashMap;
 
 use escalier_ast::{self as syntax, *};
 
@@ -175,7 +176,7 @@ impl Checker {
                     self.unify(&sig_ctx, body_t, ret_t)?;
 
                     let method = TObjElem::Method(TMethod {
-                        name: TPropKey::StringKey(name),
+                        name: TPropKey::StringKey(name.clone()),
                         mutates: *is_mutating,
                         function: types::Function {
                             type_params,
@@ -185,7 +186,9 @@ impl Checker {
                         },
                     });
 
-                    // TODO: generalize method
+                    // if let Some(m) = map.get(&name) {
+                    //     // TODO
+                    // }
 
                     match is_static {
                         true => static_elems.push(method),
@@ -226,16 +229,49 @@ impl Checker {
             }
         }
 
-        // We generalize methods after all of them have been inferred so
-        // that mutually recursive method calls can be handled correctly.
-        for elem in instance_elems.iter_mut() {
-            if let TObjElem::Method(method) = elem {
-                let func = generalize_func(self, &method.function);
-                method.function = func;
+        let mut map: HashMap<String, &TMethod> = HashMap::new();
+
+        let instance_kind: &TypeKind = &self.arena[instance_scheme.t].kind.clone();
+        if let TypeKind::Object(obj) = instance_kind {
+            for elem in &obj.elems {
+                if let TObjElem::Method(method) = elem {
+                    if let TPropKey::StringKey(name) = &method.name {
+                        map.insert(name.to_owned(), method);
+                    }
+                }
             }
         }
 
-        let instance_type = self.new_object_type(&instance_elems);
+        // Unify methods
+        for elem in instance_elems.iter_mut() {
+            if let TObjElem::Method(method) = elem {
+                let m = map.get_mut(&method.name.to_string()).unwrap();
+
+                for (param_1, param_2) in
+                    method.function.params.iter().zip(m.function.params.iter())
+                {
+                    self.unify(ctx, param_1.t, param_2.t)?;
+                }
+
+                self.unify(ctx, method.function.ret, m.function.ret)?;
+
+                // TODO: handle throws
+            }
+        }
+
+        // We generalize methods after all of them have been inferred so
+        // that mutually recursive method calls can be handled correctly.
+        let mut instance_type = self.arena[instance_scheme.t].clone();
+        if let TypeKind::Object(obj) = &mut instance_type.kind {
+            for elem in obj.elems.iter_mut() {
+                if let TObjElem::Method(method) = elem {
+                    let func = generalize_func(self, &method.function);
+                    method.function = func;
+                }
+            }
+        }
+
+        let instance_type = self.arena.insert(instance_type);
         let static_type = self.new_object_type(&static_elems);
 
         let self_scheme = Scheme {
@@ -246,8 +282,6 @@ impl Checker {
 
         replace_self_type_refs(&mut self.arena, &instance_type, &self_scheme);
         replace_self_type_refs(&mut self.arena, &static_type, &self_scheme);
-
-        self.unify(&cls_ctx, instance_scheme.t, instance_type)?;
 
         Ok(static_type)
     }
@@ -288,7 +322,7 @@ impl Checker {
                             params,
                             body: _,
                             type_ann: return_type,
-                            throws: _,   // TODO: include in signature
+                            throws,      // TODO: include in signature
                             is_async: _, // return type is a promise
                             is_gen: _,   // return type is a generator
                         },
@@ -316,6 +350,11 @@ impl Checker {
                         None => self.new_type_var(None),
                     };
 
+                    let throws = throws
+                        .as_mut()
+                        .map(|t| self.infer_type_ann(t, &mut sig_ctx))
+                        .transpose()?;
+
                     let mut is_constructor = false;
                     let name: TPropKey = match name {
                         PropName::Ident(Ident { name, span: _ }) => {
@@ -332,7 +371,7 @@ impl Checker {
                             params: func_params,
                             ret,
                             type_params,
-                            throws: None, // TODO
+                            throws,
                         }));
                         continue;
                     }
@@ -344,7 +383,7 @@ impl Checker {
                             type_params,
                             params: func_params,
                             ret,
-                            throws: None, // TODO: methods can throw
+                            throws,
                         },
                     });
 

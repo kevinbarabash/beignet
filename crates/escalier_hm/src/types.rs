@@ -81,6 +81,8 @@ pub struct Function {
     pub params: Vec<FuncParam>,
     pub ret: Index,
     pub type_params: Option<Vec<TypeParam>>,
+    // TODO: make this `Index` and if the function doesn't throw,
+    // this should be `never`.
     pub throws: Option<Index>,
 }
 
