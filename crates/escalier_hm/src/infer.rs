@@ -1421,10 +1421,6 @@ impl Checker {
             };
         }
 
-        for (name, binding) in &bindings {
-            eprintln!("{name} = {}", self.print_type(&binding.index));
-        }
-
         // Unify each binding with its prebinding
         for (name, binding) in &bindings {
             let prebinding = prebindings.get_mut(name).unwrap();

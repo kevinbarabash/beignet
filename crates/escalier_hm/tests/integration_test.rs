@@ -5750,11 +5750,11 @@ fn infer_many_functions_with_throw() -> Result<(), TypeError> {
         }
         return a
     }
-    let baz = fn(a) {
-        return bar(a)
-    }
     let qux = fn(a) {
         return baz(a)
+    }
+    let baz = fn(a) {
+        return bar(a)
     }
     "#;
     let mut module = parse_module(src).unwrap();
