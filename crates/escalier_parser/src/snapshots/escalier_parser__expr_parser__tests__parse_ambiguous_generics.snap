@@ -1,0 +1,78 @@
+---
+source: crates/escalier_parser/src/expr_parser.rs
+expression: "parse(\"F(G<A, B>(7))\")"
+---
+Expr {
+    kind: Call(
+        Call {
+            callee: Expr {
+                kind: Ident(
+                    Ident {
+                        name: "F",
+                        span: 0..1,
+                    },
+                ),
+                span: 0..1,
+                inferred_type: None,
+            },
+            type_args: None,
+            args: [
+                Expr {
+                    kind: Call(
+                        Call {
+                            callee: Expr {
+                                kind: Ident(
+                                    Ident {
+                                        name: "G",
+                                        span: 2..3,
+                                    },
+                                ),
+                                span: 2..3,
+                                inferred_type: None,
+                            },
+                            type_args: Some(
+                                [
+                                    TypeAnn {
+                                        kind: TypeRef(
+                                            "A",
+                                            None,
+                                        ),
+                                        span: 4..5,
+                                        inferred_type: None,
+                                    },
+                                    TypeAnn {
+                                        kind: TypeRef(
+                                            "B",
+                                            None,
+                                        ),
+                                        span: 7..8,
+                                        inferred_type: None,
+                                    },
+                                ],
+                            ),
+                            args: [
+                                Expr {
+                                    kind: Num(
+                                        Num {
+                                            value: "7",
+                                        },
+                                    ),
+                                    span: 10..11,
+                                    inferred_type: None,
+                                },
+                            ],
+                            opt_chain: false,
+                            throws: None,
+                        },
+                    ),
+                    span: 2..12,
+                    inferred_type: None,
+                },
+            ],
+            opt_chain: false,
+            throws: None,
+        },
+    ),
+    span: 0..13,
+    inferred_type: None,
+}
