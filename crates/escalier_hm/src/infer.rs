@@ -149,8 +149,11 @@ impl Checker {
                             None => checker.unify_call(ctx, args, None, false, func_idx)?,
                         };
 
-                        if let Some(new_throws) = new_throws {
-                            throws.replace(new_throws);
+                        match &checker.arena[new_throws].kind {
+                            TypeKind::Keyword(Keyword::Never) => (),
+                            _ => {
+                                throws.replace(new_throws);
+                            }
                         }
 
                         match *opt_chain && has_undefined {
@@ -199,8 +202,11 @@ impl Checker {
                             None => checker.unify_call(ctx, args, None, true, func_idx)?,
                         };
 
-                        if let Some(new_throws) = new_throws {
-                            throws.replace(new_throws);
+                        match &checker.arena[new_throws].kind {
+                            TypeKind::Keyword(Keyword::Never) => (),
+                            _ => {
+                                throws.replace(new_throws);
+                            }
                         }
 
                         result
@@ -280,30 +286,34 @@ impl Checker {
 
                         let body_throws = find_throws(body);
                         let body_throws = if body_throws.is_empty() {
-                            None
+                            checker.new_keyword(Keyword::Never)
                         } else {
-                            Some(checker.new_union_type(
+                            checker.new_union_type(
                                 // TODO: compare string reps of the types for deduplication
                                 &body_throws.into_iter().unique().collect_vec(),
-                            ))
+                            )
                         };
 
-                        let sig_throws = sig_throws
-                            .as_mut()
-                            .map(|t| checker.infer_type_ann(t, &mut sig_ctx))
-                            .transpose()?;
-
-                        let throws = match (body_throws, sig_throws) {
-                            (Some(call_throws), Some(sig_throws)) => {
-                                checker.unify(&sig_ctx, call_throws, sig_throws)?;
-                                Some(sig_throws)
-                            }
-                            (Some(call_throws), None) => Some(call_throws),
-                            // This should probably be a warning.  If the function doesn't
-                            // throw anything, then it shouldn't be marked as such.
-                            (None, Some(sig_throws)) => Some(sig_throws),
-                            (None, None) => None,
+                        let sig_throws = match sig_throws {
+                            Some(sig_throws) => checker.infer_type_ann(sig_throws, &mut sig_ctx)?,
+                            None => checker.new_type_var(None),
                         };
+
+                        checker.unify(&sig_ctx, body_throws, sig_throws)?;
+
+                        let throws = sig_throws;
+
+                        // let throws = match (body_throws, sig_throws) {
+                        //     (Some(call_throws), Some(sig_throws)) => {
+                        //         checker.unify(&sig_ctx, call_throws, sig_throws)?;
+                        //         Some(sig_throws)
+                        //     }
+                        //     (Some(call_throws), None) => Some(call_throws),
+                        //     // This should probably be a warning.  If the function doesn't
+                        //     // throw anything, then it shouldn't be marked as such.
+                        //     (None, Some(sig_throws)) => Some(sig_throws),
+                        //     (None, None) => None,
+                        // };
 
                         let ret_t = match return_type {
                             Some(return_type) => {
@@ -317,22 +327,21 @@ impl Checker {
                         // rejected promise.
                         if *is_async && !is_promise(&checker.arena[body_t]) {
                             let never = checker.new_keyword(Keyword::Never);
-                            let throws_t = throws.unwrap_or(never);
                             // NOTE: `None` means that we'll need to look up the
                             // type whenever it's used.
-                            body_t = checker.new_type_ref("Promise", None, &[body_t, throws_t]);
+                            body_t = checker.new_type_ref("Promise", None, &[body_t, throws]);
 
                             // TODO: add sig_ctx which is a copy of ctx but with all of
                             // the type params added to sig_ctx.schemes so that they can
                             // be looked up.
                             checker.unify(&sig_ctx, body_t, ret_t)?;
-                            checker.new_func_type(&func_params, ret_t, &type_params, None)
+                            checker.new_func_type(&func_params, ret_t, &type_params, &never)
                         } else {
                             // TODO: add sig_ctx which is a copy of ctx but with all of
                             // the type params added to sig_ctx.schemes so that they can
                             // be looked up.
                             checker.unify(&sig_ctx, body_t, ret_t)?;
-                            checker.new_func_type(&func_params, ret_t, &type_params, throws)
+                            checker.new_func_type(&func_params, ret_t, &type_params, &throws)
                         }
                     }
                     ExprKind::IfElse(IfElse {
@@ -619,8 +628,11 @@ impl Checker {
                         let (call_result, call_throws) =
                             checker.unify_call(ctx, &mut args, None, false, tag)?;
 
-                        if let Some(call_throws) = call_throws {
-                            throws.replace(call_throws);
+                        match &checker.arena[call_throws].kind {
+                            TypeKind::Keyword(Keyword::Never) => (),
+                            _ => {
+                                throws.replace(call_throws);
+                            }
                         }
 
                         call_result
@@ -857,8 +869,9 @@ impl Checker {
                             let ret = self.infer_type_ann(&mut method.ret, &mut obj_ctx)?;
 
                             let throws = match &mut method.throws {
-                                Some(throws) => Some(self.infer_type_ann(throws, &mut obj_ctx)?),
-                                None => None,
+                                Some(throws) => self.infer_type_ann(throws, &mut obj_ctx)?,
+                                // TODO: Change this to a type variable
+                                None => self.new_keyword(Keyword::Never),
                             };
 
                             props.push(types::TObjElem::Method(types::TMethod {
@@ -1155,10 +1168,10 @@ impl Checker {
 
         let ret_idx = self.infer_type_ann(ret.as_mut(), &mut sig_ctx)?;
 
-        let throws = throws
-            .as_mut()
-            .map(|throws| self.infer_type_ann(throws, &mut sig_ctx))
-            .transpose()?;
+        let throws = match throws {
+            Some(throws) => self.infer_type_ann(throws, &mut sig_ctx)?,
+            None => self.new_keyword(Keyword::Never),
+        };
 
         Ok(types::Function {
             params: func_params,
@@ -1818,7 +1831,7 @@ pub fn generalize_func(checker: &mut Checker, func: &types::Function) -> types::
         })
         .collect::<Vec<_>>();
     let ret = generalize.fold_index(&func.ret);
-    let throws = func.throws.map(|throws| generalize.fold_index(&throws));
+    let throws = generalize.fold_index(&func.throws);
 
     let mut type_params: Vec<types::TypeParam> = vec![];
 

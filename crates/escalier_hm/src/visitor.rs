@@ -153,5 +153,5 @@ fn walk_function<V: Visitor>(visitor: &mut V, function: &Function) {
     walk_func_params(visitor, params);
     visitor.visit_index(ret);
     walk_type_params(visitor, type_params);
-    throws.map(|throws| visitor.visit_index(&throws));
+    visitor.visit_index(throws);
 }

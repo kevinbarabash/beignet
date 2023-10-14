@@ -67,10 +67,7 @@ impl Checker {
                     let param_types: Vec<_> = params.iter().map(|param| param.t).collect();
                     self.occurs_in(v, &param_types)
                         || self.occurs_in_type(v, *ret)
-                        || match throws {
-                            Some(throws) => self.occurs_in_type(v, *throws),
-                            None => false,
-                        }
+                        || self.occurs_in_type(v, *throws)
                 }
                 TObjElem::Getter(TGetter {
                     name: _,
@@ -1068,7 +1065,7 @@ impl Checker {
                                     }
 
                                     let func_t =
-                                        self.new_func_type(params, *ret, type_params, *throws);
+                                        self.new_func_type(params, *ret, type_params, throws);
                                     return Ok(func_t);
                                 }
                             }

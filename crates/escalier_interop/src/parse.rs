@@ -118,11 +118,12 @@ pub fn infer_ts_type_ann(
                     None => None,
                 };
 
+                let never = checker.new_keyword(Keyword::Never);
                 let t = checker.from_type_kind(TypeKind::Function(Function {
                     type_params,
                     params,
                     ret,
-                    throws: None,
+                    throws: never,
                 }));
 
                 Ok(t)
@@ -478,6 +479,7 @@ fn infer_method_sig(
     //     readonly: false,
     //     t,
     // });
+    let never = checker.new_keyword(Keyword::Never);
     let elem = types::TObjElem::Method(types::TMethod {
         name: TPropKey::StringKey(name),
         mutates: false,
@@ -489,7 +491,7 @@ fn infer_method_sig(
             } else {
                 Some(type_params)
             },
-            throws: None, // TODO - difficult to infer
+            throws: never, // TODO - difficult to infer
         },
     });
 
@@ -544,6 +546,7 @@ fn infer_callable(
     let ret = infer_ts_type_ann(checker, ctx, type_ann)?;
     let type_params = get_type_params(checker, ctx, type_params)?;
 
+    let never = checker.new_keyword(Keyword::Never);
     let callable = Function {
         params,
         ret,
@@ -552,7 +555,7 @@ fn infer_callable(
         } else {
             Some(type_params)
         },
-        throws: None,
+        throws: never,
     };
 
     Ok(generalize_func(checker, &callable))

@@ -145,8 +145,7 @@ impl Checker {
             .collect::<Vec<_>>();
 
         let ret = instantiate.fold_index(&func.ret);
-
-        let throws = func.throws.map(|t| instantiate.fold_index(&t));
+        let throws = instantiate.fold_index(&func.throws);
 
         Ok(Function {
             params,

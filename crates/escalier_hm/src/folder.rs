@@ -305,6 +305,6 @@ fn walk_function<F: Folder>(folder: &mut F, function: &Function) -> Function {
         params: walk_func_params(folder, params),
         ret: folder.fold_index(ret),
         type_params: walk_type_params(folder, type_params),
-        throws: throws.map(|throws| folder.fold_index(&throws)),
+        throws: folder.fold_index(throws),
     }
 }
