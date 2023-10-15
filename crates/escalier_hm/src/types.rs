@@ -882,17 +882,19 @@ impl Checker {
 
     // TODO: flatten union types
     pub fn new_union_type(&mut self, types: &[Index]) -> Index {
+        let types: Vec<Index> = types
+            .to_owned()
+            .iter()
+            .filter(|t| !matches!(self.arena[**t].kind, TypeKind::Keyword(Keyword::Never)))
+            .cloned()
+            .collect();
+
         match types.len() {
             0 => self.new_keyword(Keyword::Never),
             1 => types[0],
-            _ => self.arena.insert(Type::from(TypeKind::Union(Union {
-                types: types
-                    .to_owned()
-                    .iter()
-                    .filter(|t| !matches!(self.arena[**t].kind, TypeKind::Keyword(Keyword::Never)))
-                    .cloned()
-                    .collect(),
-            }))),
+            _ => self
+                .arena
+                .insert(Type::from(TypeKind::Union(Union { types }))),
         }
     }
 

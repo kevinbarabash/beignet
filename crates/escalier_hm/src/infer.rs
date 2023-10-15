@@ -1,4 +1,4 @@
-use generational_arena::Index;
+use generational_arena::{Arena, Index};
 use itertools::Itertools;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
@@ -7,7 +7,7 @@ use escalier_ast::{self as syntax, *};
 use crate::ast_utils::{find_returns, find_throws, find_throws_in_block};
 use crate::checker::Checker;
 use crate::context::*;
-use crate::folder::{self, Folder};
+use crate::folder::{self, walk_function, walk_index, Folder};
 use crate::infer_pattern::*;
 use crate::key_value_store::KeyValueStore;
 use crate::provenance::Provenance;
@@ -1530,9 +1530,14 @@ impl Checker {
                     for binding in bindings.values() {
                         let pruned_index = self.prune(binding.index);
                         if let TypeKind::Function(func) = &self.arena[pruned_index].kind.clone() {
+                            eprintln!("generalizing {}", self.print_type(&binding.index));
+
                             let func = generalize_func(self, func);
                             let gen_func_index =
                                 self.arena.insert(Type::from(TypeKind::Function(func)));
+
+                            eprintln!("generalized func = {}", self.print_type(&gen_func_index));
+
                             self.bind(ctx, binding.index, gen_func_index)?;
                         }
                     }
@@ -1813,21 +1818,33 @@ impl<'a, 'b> Folder for Generalize<'a, 'b> {
 pub fn generalize_func(checker: &mut Checker, func: &types::Function) -> types::Function {
     // A mapping of TypeVariables to TypeVariables
     let mut mapping = BTreeMap::default();
+
+    let mut params = vec![];
+    for param in &func.params {
+        params.push(types::FuncParam {
+            t: replace_throws_type_var_with_never(checker, &param.t),
+            ..param.to_owned()
+        });
+    }
+    let ret = replace_throws_type_var_with_never(checker, &func.ret);
+
     let mut generalize = Generalize {
         checker,
         mapping: &mut mapping,
     };
 
-    let params = func
-        .params
+    let params = params
         .iter()
         .map(|param| types::FuncParam {
             t: generalize.fold_index(&param.t),
             ..param.to_owned()
         })
         .collect::<Vec<_>>();
-    let ret = generalize.fold_index(&func.ret);
-    let throws = generalize.fold_index(&func.throws);
+    let ret = generalize.fold_index(&ret);
+
+    let throws = checker.prune(func.throws);
+    let throws = replace_type_vars_with_never(&mut checker.arena, &throws);
+    let throws = simplify_union(checker, throws);
 
     let mut type_params: Vec<types::TypeParam> = vec![];
 
@@ -1855,4 +1872,78 @@ pub fn generalize_func(checker: &mut Checker, func: &types::Function) -> types::
         type_params,
         throws,
     }
+}
+
+pub fn simplify_union(checker: &mut Checker, index: Index) -> Index {
+    if let TypeKind::Union(Union { types }) = &checker.arena[index].kind.clone() {
+        checker.new_union_type(types.as_slice())
+    } else {
+        index
+    }
+}
+
+pub struct ReplaceFolder<'a> {
+    pub arena: &'a mut Arena<Type>,
+}
+
+impl<'a> KeyValueStore<Index, Type> for ReplaceFolder<'a> {
+    fn get_type(&mut self, idx: &Index) -> Type {
+        self.arena[*idx].clone()
+    }
+    fn put_type(&mut self, t: Type) -> Index {
+        self.arena.insert(t)
+    }
+}
+
+impl<'a> Folder for ReplaceFolder<'a> {
+    fn fold_index(&mut self, index: &Index) -> Index {
+        match &mut self.arena[*index].kind {
+            TypeKind::TypeVar(_) => self.put_type(Type::from(TypeKind::Keyword(Keyword::Never))),
+            _ => walk_index(self, index),
+        }
+    }
+}
+
+pub fn replace_type_vars_with_never(arena: &mut Arena<Type>, t: &Index) -> Index {
+    let mut replace_visitor = ReplaceFolder { arena };
+
+    replace_visitor.fold_index(t)
+}
+
+pub struct ReplaceThrowsFolder<'a> {
+    pub checker: &'a mut Checker,
+}
+
+impl<'a> KeyValueStore<Index, Type> for ReplaceThrowsFolder<'a> {
+    fn get_type(&mut self, idx: &Index) -> Type {
+        self.checker.arena[*idx].clone()
+    }
+    fn put_type(&mut self, t: Type) -> Index {
+        self.checker.arena.insert(t)
+    }
+}
+
+impl<'a> Folder for ReplaceThrowsFolder<'a> {
+    fn fold_index(&mut self, index: &Index) -> Index {
+        match &self.get_type(index).kind {
+            TypeKind::Function(func) => {
+                let func = walk_function(self, func);
+
+                let throws = replace_type_vars_with_never(&mut self.checker.arena, &func.throws);
+                let throws = simplify_union(self.checker, throws);
+
+                self.put_type(Type {
+                    kind: TypeKind::Function(types::Function { throws, ..func }),
+                    provenance: None, // TODO
+                })
+            }
+            _ => walk_index(self, index),
+        }
+    }
+}
+
+pub fn replace_throws_type_var_with_never(checker: &mut Checker, t: &Index) -> Index {
+    let mut replace_visitor = ReplaceThrowsFolder { checker };
+
+    replace_visitor.fold_index(t)
 }

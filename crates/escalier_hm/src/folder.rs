@@ -293,7 +293,7 @@ fn walk_type_param<F: Folder>(folder: &mut F, type_param: &TypeParam) -> TypePar
     }
 }
 
-fn walk_function<F: Folder>(folder: &mut F, function: &Function) -> Function {
+pub fn walk_function<'a, F: Folder>(folder: &'a mut F, function: &Function) -> Function {
     let Function {
         params,
         ret,
