@@ -293,7 +293,7 @@ fn walk_type_param<F: Folder>(folder: &mut F, type_param: &TypeParam) -> TypePar
     }
 }
 
-fn walk_function<F: Folder>(folder: &mut F, function: &Function) -> Function {
+pub fn walk_function<'a, F: Folder>(folder: &'a mut F, function: &Function) -> Function {
     let Function {
         params,
         ret,
@@ -305,6 +305,6 @@ fn walk_function<F: Folder>(folder: &mut F, function: &Function) -> Function {
         params: walk_func_params(folder, params),
         ret: folder.fold_index(ret),
         type_params: walk_type_params(folder, type_params),
-        throws: throws.map(|throws| folder.fold_index(&throws)),
+        throws: folder.fold_index(throws),
     }
 }

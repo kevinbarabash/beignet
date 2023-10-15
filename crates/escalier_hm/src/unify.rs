@@ -319,12 +319,7 @@ impl Checker {
                 }
 
                 self.unify(ctx, func_a.ret, func_b.ret)?;
-
-                let never = self.new_keyword(Keyword::Never);
-                let throws_a = func_a.throws.unwrap_or(never);
-                let throws_b = func_b.throws.unwrap_or(never);
-
-                self.unify(ctx, throws_a, throws_b)?;
+                self.unify(ctx, func_a.throws, func_b.throws)?;
 
                 Ok(())
             }
@@ -408,7 +403,7 @@ impl Checker {
                                 &function.params,
                                 function.ret,
                                 &function.type_params,
-                                function.throws,
+                                &function.throws,
                             );
                             Some((
                                 name.to_string(),
@@ -449,7 +444,7 @@ impl Checker {
                                 &function.params,
                                 function.ret,
                                 &function.type_params,
-                                function.throws,
+                                &function.throws,
                             );
                             Some((
                                 name.to_string(),
@@ -721,10 +716,9 @@ impl Checker {
         type_args: Option<&[Index]>,
         newable: bool,
         t2: Index,
-    ) -> Result<(Index, Option<Index>), TypeError> {
+    ) -> Result<(Index, Index), TypeError> {
         let ret_type = self.new_type_var(None);
-        let mut maybe_throws_type: Option<Index> = None;
-        // let throws_type = new_var_type(arena, None);
+        let throws_type = self.new_type_var(None);
 
         let b = self.prune(t2);
         let b_t = self.arena.get(b).unwrap().clone();
@@ -750,7 +744,7 @@ impl Checker {
                         Ok(param)
                     })
                     .collect::<Result<Vec<_>, _>>()?;
-                let call_type = self.new_func_type(&arg_types, ret_type, &None, None);
+                let call_type = self.new_func_type(&arg_types, ret_type, &None, &throws_type);
                 self.bind(ctx, b, call_type)?
             }
             TypeKind::Union(Union { types }) => {
@@ -760,18 +754,14 @@ impl Checker {
                     let (ret_type, throws_type) =
                         self.unify_call(ctx, args, type_args, newable, *t)?;
                     ret_types.push(ret_type);
-                    if let Some(throws_type) = throws_type {
-                        throws_types.push(throws_type);
+                    match &self.arena[throws_type].kind {
+                        TypeKind::Keyword(Keyword::Never) => (),
+                        _ => throws_types.push(throws_type),
                     }
                 }
 
                 let ret = self.new_union_type(&ret_types.into_iter().unique().collect_vec());
                 let throws = self.new_union_type(&throws_types.into_iter().unique().collect_vec());
-
-                let throws = match &self.arena[throws].kind {
-                    TypeKind::Keyword(Keyword::Never) => None,
-                    _ => Some(throws),
-                };
 
                 return Ok((ret, throws));
             }
@@ -781,12 +771,12 @@ impl Checker {
 
                     // TODO: if there are multiple overloads that unify, pick the
                     // best one.
-                    let (ret_type, maybe_throws_type) =
+                    let (ret_type, throws_type) =
                         self.unify_call(ctx, args, type_args, newable, *t)?;
 
                     if self.current_report.diagnostics.is_empty() {
                         self.pop_report();
-                        return Ok((ret_type, maybe_throws_type));
+                        return Ok((ret_type, throws_type));
                     }
 
                     // We just throw away reports that don't unify until we find
@@ -878,12 +868,11 @@ impl Checker {
                     let func = Function {
                         params: newables[0].params.clone(),
                         ret: newables[0].ret,
-                        throws: None, // newables[0].throws,
+                        throws: self.new_keyword(Keyword::Never), // newables[0].throws,
                         type_params: newables[0].type_params.clone(),
                     };
 
-                    maybe_throws_type =
-                        self.unify_func_call(ctx, args, type_args, ret_type, func)?;
+                    self.unify_func_call(ctx, args, type_args, ret_type, throws_type, func)?;
                 } else {
                     if callables.is_empty() {
                         return Err(TypeError {
@@ -897,12 +886,11 @@ impl Checker {
                     let func = Function {
                         params: callables[0].params.clone(),
                         ret: callables[0].ret,
-                        throws: None, // callables[0].throws,
+                        throws: self.new_keyword(Keyword::Never), // callables[0].throws,
                         type_params: callables[0].type_params.clone(),
                     };
 
-                    maybe_throws_type =
-                        self.unify_func_call(ctx, args, type_args, ret_type, func)?;
+                    self.unify_func_call(ctx, args, type_args, ret_type, throws_type, func)?;
                 }
             }
             TypeKind::Rest(_) => {
@@ -913,7 +901,7 @@ impl Checker {
             // TODO: extract this into a helper function so that it can
             // be reused when unifying callables/newables.
             TypeKind::Function(func) => {
-                maybe_throws_type = self.unify_func_call(ctx, args, type_args, ret_type, func)?;
+                self.unify_func_call(ctx, args, type_args, ret_type, throws_type, func)?;
             }
             TypeKind::KeyOf(KeyOf { t }) => {
                 return Err(TypeError {
@@ -955,8 +943,12 @@ impl Checker {
 
         // We need to prune the return type, because it might be a type variable.
         let ret_type = self.prune(ret_type);
+        let throws_type = self.prune(throws_type);
 
-        Ok((ret_type, maybe_throws_type))
+        // QUESTION: Do we need to prun the throws type as well?  We do this in
+        // `unify_func_call` so we should probably do it here as well.
+
+        Ok((ret_type, throws_type))
     }
 
     pub fn unify_func_call(
@@ -965,8 +957,9 @@ impl Checker {
         args: &mut [Expr],
         type_args: Option<&[Index]>,
         ret_type: Index,
+        throws_type: Index,
         func: Function,
-    ) -> Result<Option<Index>, TypeError> {
+    ) -> Result<(), TypeError> {
         let func = if func.type_params.is_some() {
             self.instantiate_func(&func, type_args)?
         } else {
@@ -1087,21 +1080,9 @@ impl Checker {
         }
 
         self.unify(ctx, ret_type, func.ret)?;
+        self.unify(ctx, throws_type, func.throws)?;
 
-        let mut maybe_throws_type = None;
-
-        if let Some(throws) = func.throws {
-            let throws_type = self.new_type_var(None);
-            self.unify(ctx, throws_type, throws)?;
-
-            let throws_type = self.prune(throws_type);
-            maybe_throws_type = match &self.arena[throws_type].kind {
-                TypeKind::Keyword(Keyword::Never) => None,
-                _ => Some(throws_type),
-            };
-        }
-
-        Ok(maybe_throws_type)
+        Ok(())
     }
 
     pub fn bind(&mut self, ctx: &Context, a: Index, b: Index) -> Result<(), TypeError> {

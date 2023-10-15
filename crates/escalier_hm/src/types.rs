@@ -83,7 +83,7 @@ pub struct Function {
     pub type_params: Option<Vec<TypeParam>>,
     // TODO: make this `Index` and if the function doesn't throw,
     // this should be `never`.
-    pub throws: Option<Index>,
+    pub throws: Index,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -614,9 +614,9 @@ impl Checker {
                                 _ => "".to_string(),
                             };
 
-                            let throws = match throws {
-                                Some(throws) => format!(" throws {}", self.print_type(throws)),
-                                None => "".to_string(),
+                            let throws = match self.print_type(throws).as_str() {
+                                "never" => "".to_string(),
+                                throws => format!(" throws {}", throws),
                             };
 
                             let mut params = self.print_params(params);
@@ -677,10 +677,12 @@ impl Checker {
                     }
                     _ => "".to_string(),
                 };
-                let throws = match func.throws {
-                    Some(throws) => format!(" throws {}", self.print_type(&throws)),
-                    None => "".to_string(),
+
+                let throws = match self.print_type(&func.throws).as_str() {
+                    "never" => "".to_string(),
+                    throws => format!(" throws {}", throws),
                 };
+
                 format!(
                     "{type_params}({}) -> {}{throws}",
                     self.print_params(&func.params).join(", "),
@@ -868,29 +870,31 @@ impl Checker {
         params: &[FuncParam],
         ret: Index,
         type_params: &Option<Vec<TypeParam>>,
-        throws: Option<Index>,
+        throws: &Index,
     ) -> Index {
         self.arena.insert(Type::from(TypeKind::Function(Function {
             params: params.to_vec(),
             ret: ret.to_owned(),
             type_params: type_params.to_owned(),
-            throws,
+            throws: throws.to_owned(),
         })))
     }
 
     // TODO: flatten union types
     pub fn new_union_type(&mut self, types: &[Index]) -> Index {
+        let types: Vec<Index> = types
+            .to_owned()
+            .iter()
+            .filter(|t| !matches!(self.arena[**t].kind, TypeKind::Keyword(Keyword::Never)))
+            .cloned()
+            .collect();
+
         match types.len() {
             0 => self.new_keyword(Keyword::Never),
             1 => types[0],
-            _ => self.arena.insert(Type::from(TypeKind::Union(Union {
-                types: types
-                    .to_owned()
-                    .iter()
-                    .filter(|t| !matches!(self.arena[**t].kind, TypeKind::Keyword(Keyword::Never)))
-                    .cloned()
-                    .collect(),
-            }))),
+            _ => self
+                .arena
+                .insert(Type::from(TypeKind::Union(Union { types }))),
         }
     }
 

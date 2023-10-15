@@ -46,6 +46,7 @@ fn test_env() -> (Checker, Context) {
     let number = checker.new_primitive(Primitive::Number);
     let type_param_t = checker.new_type_ref("T", None, &[]);
 
+    let never = checker.new_keyword(Keyword::Never);
     let push_t = checker.new_func_type(
         &[types::FuncParam {
             pattern: TPat::Ident(BindingIdent {
@@ -58,7 +59,7 @@ fn test_env() -> (Checker, Context) {
         }],
         number,
         &None,
-        None,
+        &never,
     );
 
     // [P]: T for P in number;
@@ -772,8 +773,9 @@ fn test_calling_a_union() -> Result<(), TypeError> {
 
     let bool = checker.new_primitive(Primitive::Boolean);
     let str = checker.new_primitive(Primitive::String);
-    let fn1 = checker.new_func_type(&[], bool, &None, None);
-    let fn2 = checker.new_func_type(&[], str, &None, None);
+    let never = checker.new_keyword(Keyword::Never);
+    let fn1 = checker.new_func_type(&[], bool, &None, &never);
+    let fn2 = checker.new_func_type(&[], str, &None, &never);
     my_ctx.values.insert(
         "foo".to_string(),
         Binding {
@@ -1826,7 +1828,7 @@ fn test_await_non_promise() -> Result<(), TypeError> {
     assert_eq!(
         result,
         Err(TypeError {
-            message: "type mismatch: unify(5, Promise<t10, t11>) failed".to_string()
+            message: "type mismatch: unify(5, Promise<t11, t12>) failed".to_string()
         })
     );
 
@@ -2257,7 +2259,7 @@ fn member_access_on_type_variable() -> Result<(), TypeError> {
     assert_eq!(
         result,
         Err(TypeError {
-            message: "Can't access properties on t9".to_string()
+            message: "Can't access properties on t10".to_string()
         })
     );
 
@@ -5356,7 +5358,7 @@ fn test_generalization_inside_function() -> Result<(), TypeError> {
     let binding = my_ctx.values.get("bar").unwrap();
     assert_eq!(
         checker.print_type(&binding.index),
-        r#"[5, "hello", (x: t39) -> t39]"#
+        r#"[5, "hello", (x: t50) -> t50]"#
     );
 
     assert_no_errors(&checker)
@@ -5743,13 +5745,16 @@ fn infer_many_functions_with_throw() -> Result<(), TypeError> {
 
     let src = r#"
     let bar = fn(a: number) throws "RangeError" {
+        if (a < 0) {
+            throw "RangeError"
+        }
         return a
-    }
-    let baz = fn(a) {
-        return bar(a)
     }
     let qux = fn(a) {
         return baz(a)
+    }
+    let baz = fn(a) {
+        return bar(a)
     }
     "#;
     let mut module = parse_module(src).unwrap();

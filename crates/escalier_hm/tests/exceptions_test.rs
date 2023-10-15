@@ -13,6 +13,7 @@ fn test_env() -> (Checker, Context) {
     let number = checker.new_primitive(Primitive::Number);
     let type_param_t = checker.new_type_ref("T", None, &[]);
 
+    let never = checker.new_keyword(Keyword::Never);
     let push_t = checker.new_func_type(
         &[types::FuncParam {
             pattern: TPat::Ident(BindingIdent {
@@ -25,7 +26,7 @@ fn test_env() -> (Checker, Context) {
         }],
         number,
         &None,
-        None,
+        &never,
     );
 
     // [P]: T for P in number;

@@ -128,30 +128,37 @@ impl Checker {
 
                     let body_throws = find_throws(body);
                     let body_throws = if body_throws.is_empty() {
-                        None
+                        self.new_keyword(Keyword::Never)
                     } else {
-                        Some(self.new_union_type(
+                        self.new_union_type(
                             // TODO: compare string reps of the types for deduplication
                             &body_throws.into_iter().unique().collect_vec(),
-                        ))
+                        )
                     };
 
-                    let sig_throws = sig_throws
-                        .as_mut()
-                        .map(|t| self.infer_type_ann(t, &mut sig_ctx))
-                        .transpose()?;
-
-                    let throws = match (body_throws, sig_throws) {
-                        (Some(call_throws), Some(sig_throws)) => {
-                            self.unify(&sig_ctx, call_throws, sig_throws)?;
-                            Some(sig_throws)
-                        }
-                        (Some(call_throws), None) => Some(call_throws),
-                        // This should probably be a warning.  If the function doesn't
-                        // throw anything, then it shouldn't be marked as such.
-                        (None, Some(sig_throws)) => Some(sig_throws),
-                        (None, None) => None,
+                    let sig_throws = match sig_throws {
+                        Some(t) => self.infer_type_ann(t, &mut sig_ctx)?,
+                        None => self.new_keyword(Keyword::Never),
                     };
+                    // .as_mut()
+                    // .map(|t| self.infer_type_ann(t, &mut sig_ctx))
+                    // .transpose()?;
+
+                    self.unify(&sig_ctx, body_throws, sig_throws)?;
+
+                    let throws = sig_throws;
+
+                    // let throws = match (body_throws, sig_throws) {
+                    //     (Some(call_throws), Some(sig_throws)) => {
+                    //         self.unify(&sig_ctx, call_throws, sig_throws)?;
+                    //         Some(sig_throws)
+                    //     }
+                    //     (Some(call_throws), None) => Some(call_throws),
+                    //     // This should probably be a warning.  If the function doesn't
+                    //     // throw anything, then it shouldn't be marked as such.
+                    //     (None, Some(sig_throws)) => Some(sig_throws),
+                    //     (None, None) => None,
+                    // };
 
                     let name = match name {
                         PropName::Ident(Ident { name, span: _ }) => name.to_owned(),
@@ -350,10 +357,15 @@ impl Checker {
                         None => self.new_type_var(None),
                     };
 
-                    let throws = throws
-                        .as_mut()
-                        .map(|t| self.infer_type_ann(t, &mut sig_ctx))
-                        .transpose()?;
+                    let throws = match throws {
+                        Some(t) => self.infer_type_ann(t, &mut sig_ctx)?,
+                        None => self.new_keyword(Keyword::Never),
+                    };
+
+                    // throws
+                    //     .as_mut()
+                    //     .map(|t| self.infer_type_ann(t, &mut sig_ctx))
+                    //     .transpose()?;
 
                     let mut is_constructor = false;
                     let name: TPropKey = match name {

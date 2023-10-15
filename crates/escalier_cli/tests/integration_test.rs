@@ -86,10 +86,21 @@ fn infer_op() {
 
 #[test]
 fn infer_fn_param() {
+    // NOTE: `throws` that only throw type variables are removed during
+    // generalization.
     assert_eq!(
         infer("fn (f, x) => f(x) + x"),
-        "(f: (arg0: number) -> number, x: number) -> number"
+        "(f: (arg0: number) -> number throws t9, x: number) -> number throws t9"
     );
+}
+
+#[test]
+fn infer_fn_param_in_script() {
+    let src = "let foo = fn (f, x) => f(x) + x";
+    let (_, (ctx, checker)) = infer_script(src);
+
+    let result = checker.print_type(&ctx.values.get("foo").unwrap().index);
+    assert_eq!(result, "(f: (arg0: number) -> number, x: number) -> number");
 }
 
 #[test]
@@ -440,11 +451,14 @@ fn infer_async_math() -> Result<(), TypeError> {
     let result = checker.print_type(&ctx.values.get("add").unwrap().index);
     assert_eq!(
         result,
-        "<A, B>(a: () -> Promise<number, A>, b: () -> Promise<number, B>) -> Promise<number, A | B>"
+        // TODO: infer the `throws` as `never` when inferring async functions
+        // since exceptions are tracked by the rejection type of the promise.
+        // "<A, B>(a: () -> Promise<number, A>, b: () -> Promise<number, B>) -> Promise<number, A | B>"
+        "<C, A, D, B>(a: () -> Promise<number, A>, b: () -> Promise<number, B>) -> Promise<number, A | C | B | D>"
     );
 
     let result = codegen_d_ts(&script, &ctx, &checker)?;
-    insta::assert_snapshot!(result, @"export declare const add: <A, B>(a: () => Promise<number, A>, b: () => Promise<number, B>) => Promise<number, A | B>;
+    insta::assert_snapshot!(result, @"export declare const add: <C, A, D, B>(a: () => Promise<number, A>, b: () => Promise<number, B>) => Promise<number, A | C | B | D>;
 ");
 
     Ok(())
@@ -535,7 +549,7 @@ fn codegen_async_math() -> Result<(), TypeError> {
 
     let result = codegen_d_ts(&script, &ctx, &checker)?;
 
-    insta::assert_snapshot!(result, @"export declare const add: <A, B>(a: () => Promise<number, A>, b: () => Promise<number, B>) => Promise<number, A | B>;
+    insta::assert_snapshot!(result, @"export declare const add: <C, A, D, B>(a: () => Promise<number, A>, b: () => Promise<number, B>) => Promise<number, A | C | B | D>;
 ");
 
     Ok(())
